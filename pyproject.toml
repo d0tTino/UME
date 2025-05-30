@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "ume"
+version = "0.1.0"
+description = ""
+authors = ["Ume Bot <ume-bot@example.com>"]
+readme = "README.md"
+packages = [{include = "ume", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+confluent-kafka = ">=2.4"
+fastavro = ">=1.9"
+pyyaml = "*" # Using "*" for PyYAML as it's a common practice, but can be pinned down if needed.
+
+[tool.poetry.group.dev.dependencies]
+ruff = "*"
+mypy = "*"
+pytest = "*"
+
+[tool.poetry.scripts]
+produce_demo = "ume.producer_demo:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
