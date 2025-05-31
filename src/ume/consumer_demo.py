@@ -9,6 +9,7 @@ corresponding producer_demo.py script.
 import json
 import logging
 from confluent_kafka import Consumer, KafkaException, KafkaError
+from ume import parse_event, EventError # Import parse_event and EventError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -61,10 +62,13 @@ def main():
             # Proper message
             data = msg.value().decode("utf-8")
             try:
-                event = json.loads(data)
-                logger.info(f"Received event: {event}")
+                event_data_dict = json.loads(data)
+                received_event = parse_event(event_data_dict)
+                logger.info(f"Received event object: {received_event}")
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON: {data}, error: {e}")
+            except EventError as e:
+                logger.error(f"Failed to parse event: {data}, error: {e}")
 
     except KeyboardInterrupt:
         logger.info("Interrupted by user, closing consumer.")

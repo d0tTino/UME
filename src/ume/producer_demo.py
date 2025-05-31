@@ -9,6 +9,7 @@ import json
 import logging
 import time
 from confluent_kafka import Producer, KafkaException
+from ume import Event # Import Event
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,15 +40,26 @@ def main():
     }
     producer = Producer(conf)
 
-    # Example event payload
-    event = {
-        "type": "demo_event",
-        "timestamp": int(time.time()),
-        "payload": {"message": "Hello from producer_demo!"}
-    }
-    data = json.dumps(event).encode("utf-8")
+    # Construct an Event instance
+    event_payload_data = {"message": "Hello from producer_demo with Event class!"}
+    event_to_send = Event(
+        event_type="demo_event",
+        timestamp=int(time.time()),
+        payload=event_payload_data,
+        source="producer_demo"  # Add source
+    )
 
-    logger.info(f"Producing event to topic '{TOPIC}': {event}")
+    # Convert Event object to dict for JSON serialization
+    data_dict = {
+        "event_id": event_to_send.event_id,
+        "event_type": event_to_send.event_type,
+        "timestamp": event_to_send.timestamp,
+        "payload": event_to_send.payload,
+        "source": event_to_send.source
+    }
+    data = json.dumps(data_dict).encode("utf-8")
+
+    logger.info(f"Producing event object to topic '{TOPIC}': {event_to_send}")
     # Asynchronously produce a message, the delivery report callback will be triggered from poll()
     try:
         producer.produce(TOPIC, value=data, callback=delivery_report)
