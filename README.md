@@ -173,6 +173,46 @@ For current plans and eventual detailed documentation on the UME graph model, pl
 
 This documentation will be updated as the graph processing components of UME are developed.
 
+## Testing
+
+This project uses [pytest](https://docs.pytest.org/) for unit and integration testing, and [pytest-cov](https://pytest-cov.readthedocs.io/) for test coverage measurement.
+
+### Prerequisites
+
+Ensure you have installed the development dependencies:
+```bash
+poetry install --with dev
+```
+(Note: `poetry install` by default installs dev dependencies unless `--no-dev` is specified. However, explicitly mentioning `--with dev` can be clearer for users who might have installed with `--no-dev` previously).
+
+### Running Tests
+
+1.  **Run all tests:**
+    To execute the entire test suite, navigate to the project root directory and run:
+    ```bash
+    poetry run pytest
+    ```
+
+2.  **Run tests with coverage report:**
+    To run tests and generate a code coverage report for the `src/ume` package, use:
+    ```bash
+    poetry run pytest --cov=src/ume --cov-report=term-missing
+    ```
+    This will print a summary to the terminal, including which lines of code are not covered by tests. An HTML report can also be generated for more detailed inspection (see pytest-cov documentation).
+
+### Test Location
+
+*   Test files are located in the `tests/` directory at the project root.
+*   Test files follow the naming convention `test_*.py`.
+
+### Writing Tests
+
+When contributing new features or fixing bugs, please include relevant tests:
+*   **Unit Tests:** For individual functions, classes, or modules.
+*   **Integration Tests:** For interactions between components (e.g., testing event flow through a mock Kafka setup, though this is a future enhancement).
+
+Strive for clear, concise tests that verify specific behaviors and edge cases.
+
 ## Where to Get Help
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:
