@@ -38,6 +38,32 @@ def test_parse_event_minimal_valid():
     assert isinstance(event.event_id, str)
     assert event.source is None # Should default to None
 
+@pytest.mark.parametrize(
+    "event_type, extra_data",
+    [
+        ("CREATE_EDGE", {"target_node_id": "t1", "label": "LINKS_TO"}),
+        ("DELETE_EDGE", {"target_node_id": "t2", "label": "REMOVES_LINK"}),
+    ]
+)
+def test_parse_event_valid_edge_events(event_type: str, extra_data: dict):
+    """Test parsing valid CREATE_EDGE and DELETE_EDGE events."""
+    timestamp_now = int(time.time())
+    event_data = {
+        "event_type": event_type,
+        "timestamp": timestamp_now,
+        "node_id": "s1", # Source node
+        **extra_data # Adds target_node_id and label
+        # payload is optional for these, parse_event defaults to {}
+    }
+    event = parse_event(event_data)
+    assert isinstance(event, Event)
+    assert event.event_type == event_type
+    assert event.timestamp == timestamp_now
+    assert event.node_id == "s1"
+    assert event.target_node_id == extra_data["target_node_id"]
+    assert event.label == extra_data["label"]
+    assert event.payload == {} # Default empty payload
+
 # The following tests are now covered by test_parse_event_invalid_inputs:
 # - test_parse_event_missing_required_field
 # - test_parse_event_missing_multiple_required_fields
@@ -67,7 +93,50 @@ def test_parse_event_minimal_valid():
         ({"event_type": "test", "timestamp": "not-an-int", "payload": {}}, "Invalid type for 'timestamp'"),
 
         # Case 7: Invalid type for 'payload' (str instead of dict)
-        ({"event_type": "test", "timestamp": int(time.time()), "payload": "not-a-dict"}, "Invalid type for 'payload'"),
+        # This test case assumes event_type is "test", which is not "CREATE_NODE" or "UPDATE_NODE_ATTRIBUTES".
+        # For these specific node event types, payload is required. For "test", it's not strictly required by parse_event top-level.
+        # The new logic in parse_event defaults payload to {} and then checks its type if present for specific event types.
+        # If event_type is "CREATE_NODE" and payload is "not-a-dict", it will fail.
+        # Let's refine this test case for a node event type specifically if payload type is the main concern.
+        # The original test case is fine as a generic test where 'payload' is provided with wrong type.
+        ({"event_type": "test_payload_type", "timestamp": int(time.time()), "payload": "not-a-dict"}, "Invalid type for 'payload' in test_payload_type event (if provided): expected dict"),
+
+        # New cases for CREATE_EDGE
+        # CREATE_EDGE missing target_node_id
+        ({"event_type": "CREATE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "label": "L"}, "Missing required fields for CREATE_EDGE event: target_node_id"),
+        # CREATE_EDGE missing label
+        ({"event_type": "CREATE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": "t1"}, "Missing required fields for CREATE_EDGE event: label"),
+        # CREATE_EDGE target_node_id not string
+        ({"event_type": "CREATE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": 123, "label": "L"}, "Invalid type for 'target_node_id' in CREATE_EDGE event"),
+        # CREATE_EDGE label not string
+        ({"event_type": "CREATE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": "t1", "label": 123}, "Invalid type for 'label' in CREATE_EDGE event"),
+        # CREATE_EDGE node_id (source) missing
+        ({"event_type": "CREATE_EDGE", "timestamp": int(time.time()), "target_node_id": "t1", "label": "L"}, "Missing required fields for CREATE_EDGE event: node_id"),
+        # CREATE_EDGE with payload of wrong type
+        ({"event_type": "CREATE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": "t1", "label": "L", "payload": "not-a-dict"}, "Invalid type for 'payload' in CREATE_EDGE event (if provided): expected dict"),
+
+
+        # New cases for DELETE_EDGE
+        # DELETE_EDGE missing target_node_id
+        ({"event_type": "DELETE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "label": "L"}, "Missing required fields for DELETE_EDGE event: target_node_id"),
+        # DELETE_EDGE missing label
+        ({"event_type": "DELETE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": "t1"}, "Missing required fields for DELETE_EDGE event: label"),
+        # DELETE_EDGE target_node_id not string
+        ({"event_type": "DELETE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": 123, "label": "L"}, "Invalid type for 'target_node_id' in DELETE_EDGE event"),
+        # DELETE_EDGE label not string
+        ({"event_type": "DELETE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": "t1", "label": 123}, "Invalid type for 'label' in DELETE_EDGE event"),
+        # DELETE_EDGE node_id (source) missing
+        ({"event_type": "DELETE_EDGE", "timestamp": int(time.time()), "target_node_id": "t1", "label": "L"}, "Missing required fields for DELETE_EDGE event: node_id"),
+        # DELETE_EDGE with payload of wrong type
+        ({"event_type": "DELETE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": "t1", "label": "L", "payload": "not-a-dict"}, "Invalid type for 'payload' in DELETE_EDGE event (if provided): expected dict"),
+
+        # Cases for CREATE_NODE / UPDATE_NODE_ATTRIBUTES payload validation (if payload key exists but is not dict)
+        ({"event_type": "CREATE_NODE", "timestamp": int(time.time()), "node_id":"n1", "payload": "not-a-dict"}, "Invalid type for 'payload' in CREATE_NODE event: expected dict"),
+        ({"event_type": "UPDATE_NODE_ATTRIBUTES", "timestamp": int(time.time()), "node_id":"n1", "payload": "not-a-dict"}, "Invalid type for 'payload' in UPDATE_NODE_ATTRIBUTES event: expected dict"),
+        # Cases for CREATE_NODE / UPDATE_NODE_ATTRIBUTES missing payload key
+        ({"event_type": "CREATE_NODE", "timestamp": int(time.time()), "node_id":"n1"}, "Missing required field 'payload' for CREATE_NODE event"),
+        ({"event_type": "UPDATE_NODE_ATTRIBUTES", "timestamp": int(time.time()), "node_id":"n1"}, "Missing required field 'payload' for UPDATE_NODE_ATTRIBUTES event"),
+
     ]
 )
 def test_parse_event_invalid_inputs(bad_input: dict, expected_message_part: str):

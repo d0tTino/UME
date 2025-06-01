@@ -177,3 +177,127 @@ def test_apply_unknown_event_type(graph: MockGraph):
     )
     with pytest.raises(ProcessingError, match="Unknown event_type 'UNKNOWN_EVENT_TYPE'"):
         apply_event_to_graph(event, graph)
+
+# --- apply_event_to_graph: CREATE_EDGE tests ---
+def test_apply_create_edge_event_success(graph: MockGraph):
+    """Test successfully applying a CREATE_EDGE event."""
+    graph.add_node("source_node", {})
+    graph.add_node("target_node", {})
+
+    # Assuming parse_event handles creating the Event object correctly for this test
+    # For apply_event_to_graph tests, we typically construct Event objects directly for clarity
+    event = Event(
+        event_type="CREATE_EDGE",
+        timestamp=int(time.time()),
+        node_id="source_node",
+        target_node_id="target_node",
+        label="RELATES_TO",
+        payload={} # Explicitly empty for clarity, though parse_event would default
+    )
+
+    apply_event_to_graph(event, graph)
+
+    # Verify edge was added (MockGraph stores edges as list of tuples)
+    assert ("source_node", "target_node", "RELATES_TO") in graph.get_all_edges()
+
+def test_apply_create_edge_event_missing_source_node(graph: MockGraph):
+    """Test CREATE_EDGE when source node does not exist (error from adapter)."""
+    graph.add_node("target_node", {}) # Target exists
+    event = Event(
+        event_type="CREATE_EDGE",
+        timestamp=int(time.time()),
+        node_id="missing_source",
+        target_node_id="target_node",
+        label="LINKS_TO",
+        payload={}
+    )
+    with pytest.raises(ProcessingError, match="Both source node 'missing_source' and target node 'target_node' must exist"):
+        apply_event_to_graph(event, graph)
+
+def test_apply_create_edge_event_missing_target_node(graph: MockGraph):
+    """Test CREATE_EDGE when target node does not exist (error from adapter)."""
+    graph.add_node("source_node", {}) # Source exists
+    event = Event(
+        event_type="CREATE_EDGE",
+        timestamp=int(time.time()),
+        node_id="source_node",
+        target_node_id="missing_target",
+        label="CONNECTS_TO",
+        payload={}
+    )
+    with pytest.raises(ProcessingError, match="Both source node 'source_node' and target node 'missing_target' must exist"):
+        apply_event_to_graph(event, graph)
+
+def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: MockGraph):
+    """
+    Test CREATE_EDGE when event fields (node_id, target_node_id, label) are not strings.
+    This tests the defensive checks in apply_event_to_graph.
+    """
+    graph.add_node("source_node", {})
+    graph.add_node("target_node", {})
+
+    # Example: target_node_id is int
+    event_bad_target_type = Event(
+        event_type="CREATE_EDGE", timestamp=int(time.time()),
+        node_id="source_node", target_node_id=123, label="LINKS_TO", payload={}
+    )
+    with pytest.raises(ProcessingError, match="Invalid event structure for CREATE_EDGE"):
+        apply_event_to_graph(event_bad_target_type, graph)
+
+    # Example: label is int
+    event_bad_label_type = Event(
+        event_type="CREATE_EDGE", timestamp=int(time.time()),
+        node_id="source_node", target_node_id="target_node", label=456, payload={}
+    )
+    with pytest.raises(ProcessingError, match="Invalid event structure for CREATE_EDGE"):
+        apply_event_to_graph(event_bad_label_type, graph)
+
+
+# --- apply_event_to_graph: DELETE_EDGE tests ---
+def test_apply_delete_edge_event_success(graph: MockGraph):
+    """Test successfully applying a DELETE_EDGE event."""
+    graph.add_node("s_node", {})
+    graph.add_node("t_node", {})
+    graph.add_edge("s_node", "t_node", "TO_DELETE")
+    assert ("s_node", "t_node", "TO_DELETE") in graph.get_all_edges() # Verify setup
+
+    event = Event(
+        event_type="DELETE_EDGE",
+        timestamp=int(time.time()),
+        node_id="s_node",
+        target_node_id="t_node",
+        label="TO_DELETE",
+        payload={}
+    )
+    apply_event_to_graph(event, graph)
+    assert ("s_node", "t_node", "TO_DELETE") not in graph.get_all_edges()
+
+def test_apply_delete_edge_event_edge_not_exist(graph: MockGraph):
+    """Test DELETE_EDGE when the specified edge does not exist (error from adapter)."""
+    graph.add_node("s_node", {})
+    graph.add_node("t_node", {})
+    # Edge is never added
+
+    event = Event(
+        event_type="DELETE_EDGE",
+        timestamp=int(time.time()),
+        node_id="s_node",
+        target_node_id="t_node",
+        label="NON_EXISTENT",
+        payload={}
+    )
+    edge_tuple = ("s_node", "t_node", "NON_EXISTENT")
+    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+        apply_event_to_graph(event, graph)
+
+def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: MockGraph):
+    """
+    Test DELETE_EDGE when event fields (node_id, target_node_id, label) are not strings.
+    This tests the defensive checks in apply_event_to_graph.
+    """
+    event_bad_label_type = Event(
+        event_type="DELETE_EDGE", timestamp=int(time.time()),
+        node_id="s", target_node_id="t", label=123, payload={} # label is int
+    )
+    with pytest.raises(ProcessingError, match="Invalid event structure for DELETE_EDGE"):
+        apply_event_to_graph(event_bad_label_type, graph)

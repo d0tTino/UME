@@ -60,6 +60,56 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
 *   `timestamp` (integer): A Unix timestamp (seconds since epoch) indicating when the event was generated.
 *   `payload` (object): A JSON object containing the actual data of the event. The structure of the payload can vary depending on the event type. For the demo, it includes a simple `message`.
 
+#### CREATE_EDGE Event
+
+Used to create a new directed, labeled edge between two existing nodes.
+
+**Example JSON:**
+```json
+{
+  "event_type": "CREATE_EDGE",
+  "timestamp": 1678954321,
+  "event_id": "evt_edge_create_001",
+  "source": "application_A",
+  "node_id": "source_node_alpha",    // ID of the source node
+  "target_node_id": "target_node_beta",  // ID of the target node
+  "label": "RELATES_TO"             // Label for the edge
+  // "payload" is optional for this event type, defaults to {}
+}
+```
+**Required Fields in Data for `parse_event`:**
+*   `event_type`: Must be "CREATE_EDGE".
+*   `timestamp`: Integer Unix timestamp.
+*   `node_id`: String, ID of the source node.
+*   `target_node_id`: String, ID of the target node.
+*   `label`: String, label for the edge.
+**Optional Fields:** `event_id`, `source`, `payload`.
+
+#### DELETE_EDGE Event
+
+Used to remove a specific directed, labeled edge between two nodes.
+
+**Example JSON:**
+```json
+{
+  "event_type": "DELETE_EDGE",
+  "timestamp": 1678954322,
+  "event_id": "evt_edge_delete_001",
+  "source": "application_B",
+  "node_id": "source_node_alpha",    // ID of the source node
+  "target_node_id": "target_node_beta",  // ID of the target node
+  "label": "RELATES_TO"             // Label of the edge to delete
+  // "payload" is optional for this event type, defaults to {}
+}
+```
+**Required Fields in Data for `parse_event`:**
+*   `event_type`: Must be "DELETE_EDGE".
+*   `timestamp`: Integer Unix timestamp.
+*   `node_id`: String, ID of the source node.
+*   `target_node_id`: String, ID of the target node.
+*   `label`: String, label of the edge.
+**Optional Fields:** `event_id`, `source`, `payload`.
+
 **Data Flow:**
 
 The basic data flow is as follows:
@@ -170,7 +220,7 @@ Restart both demos and observe the consumer logging an error (e.g., `JSONDecodeE
 
 ## Basic Usage
 
-This section outlines the basic programmatic steps to interact with the UME components once the project is set up and services (like Redpanda, if using network-based events) are running.
+This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
 
 1.  **Obtain a Graph Adapter Instance:**
     Choose an implementation of `IGraphAdapter`. For local testing or simple use cases, `MockGraph` can be used:
@@ -180,104 +230,91 @@ This section outlines the basic programmatic steps to interact with the UME comp
     graph_adapter: IGraphAdapter = MockGraph()
     ```
 
-2.  **Prepare Raw Event Data (Node Creation):**
-    Event data typically comes as a Python dictionary, perhaps from a JSON message or another source.
+2.  **Define Event Data Dictionaries:**
+    Event data is typically prepared as Python dictionaries.
     ```python
     import time # Required for timestamp
 
-    raw_event_node1 = {
-        "event_type": "CREATE_NODE",
-        "timestamp": int(time.time()),
-        "payload": {
-            "node_id": "node123",
-            "attributes": {"name": "My First Node", "category": "A"}
-        },
-        "source": "my_application"
+    # Event to create node_A
+    event_data_create_A = {
+        "event_type": "CREATE_NODE", "timestamp": int(time.time()),
+        "node_id": "node_A", # Field used by CREATE_NODE for the node to create
+        "payload": {"name": "Alpha Node", "type": "concept"},
+        "source": "my_script"
     }
-    raw_event_node2 = { # For creating a second node for edge example
-        "event_type": "CREATE_NODE",
-        "timestamp": int(time.time()),
-        "payload": {
-            "node_id": "node456",
-            "attributes": {"name": "My Second Node", "category": "B"}
-        },
-        "source": "my_application"
+
+    # Event to create node_B
+    event_data_create_B = {
+        "event_type": "CREATE_NODE", "timestamp": int(time.time()) + 1,
+        "node_id": "node_B", # Field used by CREATE_NODE for the node to create
+        "payload": {"name": "Beta Node", "value": 42},
+        "source": "my_script"
+    }
+
+    # Event to create an edge from node_A to node_B
+    event_data_create_edge_A_B = {
+        "event_type": "CREATE_EDGE", "timestamp": int(time.time()) + 2,
+        "node_id": "node_A",        # Source node for the edge
+        "target_node_id": "node_B", # Target node for the edge
+        "label": "KNOWS",           # Label of the edge
+        "source": "my_script"
+        # "payload" is optional for CREATE_EDGE, defaults to {}
     }
     ```
 
-3.  **Parse Raw Event Data:**
-    Use `parse_event` to validate and convert raw dictionaries into `Event` objects:
+3.  **Parse and Apply Events:**
+    Use `parse_event` to validate and convert raw dictionaries into `Event` objects, then `apply_event_to_graph` to modify the graph.
     ```python
-    from ume import parse_event, EventError
+    from ume import parse_event, apply_event_to_graph, EventError, ProcessingError
+    # graph_adapter should be initialized as in step 1.
 
-    parsed_events = []
-    for raw_event_dict in [raw_event_node1, raw_event_node2]:
+    events_to_process = [event_data_create_A, event_data_create_B, event_data_create_edge_A_B]
+
+    for raw_event_data in events_to_process:
         try:
-            parsed_event = parse_event(raw_event_dict)
-            print(f"Parsed event: {parsed_event}")
-            parsed_events.append(parsed_event)
+            print(f"Processing raw event: {raw_event_data.get('event_type')} for node {raw_event_data.get('node_id')}")
+            parsed_event = parse_event(raw_event_data)
+            print(f"  Parsed event: {parsed_event}")
+            apply_event_to_graph(parsed_event, graph_adapter)
+            print(f"  Successfully applied event {parsed_event.event_id} to graph.")
         except EventError as e:
-            print(f"Error parsing event: {e}")
-            # Handle error appropriately
-    ```
-
-4.  **Apply Events to Graph (Node Creation):**
-    Use `apply_event_to_graph` to process parsed events and modify the graph:
-    ```python
-    from ume import apply_event_to_graph, ProcessingError
-
-    for event in parsed_events:
-        try:
-            apply_event_to_graph(event, graph_adapter)
-            print(f"Successfully applied event {event.event_id} (type: {event.event_type}) to graph.")
+            print(f"  Error parsing event: {e}")
         except ProcessingError as e:
-            print(f"Error applying event {event.event_id} to graph: {e}")
-            # Handle error appropriately
+            print(f"  Error applying event to graph: {e}")
     ```
 
-5.  **Add an Edge Directly (Optional):**
-    You can also directly manipulate the graph using adapter methods, such as adding an edge:
-    ```python
-    # This assumes node123 and node456 were successfully created by events above
-    if graph_adapter.node_exists("node123") and graph_adapter.node_exists("node456"):
-        try:
-            graph_adapter.add_edge("node123", "node456", "RELATES_TO")
-            print("Edge 'node123' -> 'node456' (RELATES_TO) added.")
-        except ProcessingError as e:
-            print(f"Error adding edge: {e}")
-    else:
-        print("Skipping add_edge example as one or both nodes (node123, node456) may not exist.")
-    ```
-
-6.  **Inspect Graph State (Optional):**
+4.  **Inspect Graph State (Optional):**
     You can inspect the graph's state using adapter methods:
     ```python
-    if graph_adapter.node_exists("node123"):
-        print(f"Node 'node123' data: {graph_adapter.get_node('node123')}")
+    # Check if nodes exist
+    if graph_adapter.node_exists("node_A"):
+        print(f"Node 'node_A' data: {graph_adapter.get_node('node_A')}")
+    if graph_adapter.node_exists("node_B"):
+        print(f"Node 'node_B' data: {graph_adapter.get_node('node_B')}")
 
     # Get all node IDs
-    all_ids = graph_adapter.get_all_node_ids()
-    print(f"All node IDs in graph: {all_ids}")
+    all_node_ids = graph_adapter.get_all_node_ids()
+    print(f"All node IDs in graph: {all_node_ids}")
 
     # Example for find_connected_nodes
-    if graph_adapter.node_exists("node123"):
+    if graph_adapter.node_exists("node_A"):
         try:
-            connected_to_node123 = graph_adapter.find_connected_nodes("node123")
-            print(f"Nodes connected from 'node123': {connected_to_node123}")
+            connected_to_A = graph_adapter.find_connected_nodes("node_A")
+            print(f"Nodes connected from 'node_A': {connected_to_A}") # Expected: ['node_B'] if KNOWS edge was added
 
-            connected_with_label = graph_adapter.find_connected_nodes("node123", edge_label="RELATES_TO")
-            print(f"Nodes connected from 'node123' with label 'RELATES_TO': {connected_with_label}")
-        except ProcessingError as e: # Should not happen if node_exists check passed
-             print(f"Error finding connected nodes: {e}")
+            connected_with_knows_label = graph_adapter.find_connected_nodes("node_A", edge_label="KNOWS")
+            print(f"Nodes connected from 'node_A' with label 'KNOWS': {connected_with_knows_label}") # Expected: ['node_B']
+        except ProcessingError as e:
+             print(f"Error finding connected nodes for node_A: {e}")
 
     # Get a serializable dump of the graph
     graph_dump = graph_adapter.dump()
     print(f"Graph dump: {graph_dump}")
     # Expected output might look like:
-    # {"nodes": {"node123": {...}, "node456": {...}}, "edges": [["node123", "node456", "RELATES_TO"]]}
+    # {"nodes": {"node_A": {"name": "Alpha Node", ...}, "node_B": {...}}, "edges": [["node_A", "node_B", "KNOWS"]]}
     ```
 
-7.  **Snapshot Graph to File (Optional):**
+5.  **Snapshot Graph to File (Optional):**
     Persist the graph's state to a file:
     ```python
     from ume import snapshot_graph_to_file
@@ -292,17 +329,17 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Error saving snapshot: {e}")
     ```
 
-8.  **Load Graph from Snapshot (Optional):**
+6.  **Load Graph from Snapshot (Optional):**
     Restore a graph's state from a previously saved snapshot file:
     ```python
-    from ume import load_graph_from_file, SnapshotError # Assuming IGraphAdapter also imported
+    from ume import load_graph_from_file, SnapshotError, IGraphAdapter # Ensure IGraphAdapter for type hint
     import pathlib # For pathlib.Path(...).exists()
     import json # For json.JSONDecodeError
 
     loaded_graph_adapter: IGraphAdapter = None # Initialize
     try:
         # Assuming snapshot_path = "my_graph_snapshot.json" from previous step
-        if 'snapshot_path' in locals() and pathlib.Path(snapshot_path).exists(): # Ensure snapshot_path is defined and file exists
+        if 'snapshot_path' in locals() and pathlib.Path(snapshot_path).exists():
             loaded_graph_adapter = load_graph_from_file(snapshot_path)
             print(f"Graph loaded successfully from {snapshot_path}")
             print(f"Loaded graph content: {loaded_graph_adapter.dump()}")
@@ -318,8 +355,8 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"An unexpected error occurred while loading snapshot: {e}")
 
     # You can now work with loaded_graph_adapter
-    if loaded_graph_adapter and loaded_graph_adapter.node_exists("node123"):
-        print(f"Node 'node123' from loaded graph: {loaded_graph_adapter.get_node('node123')}")
+    if loaded_graph_adapter and loaded_graph_adapter.node_exists("node_A"):
+        print(f"Node 'node_A' from loaded graph: {loaded_graph_adapter.get_node('node_A')}")
     ```
 This provides a basic flow for event handling and graph interaction within UME.
 

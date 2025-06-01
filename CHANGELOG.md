@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (though currently in pre-release/development phase).
 
+## [0.2.0-dev] - 2023-10-27
+
+### Added
+
+-   **Event-Driven Edge Management:**
+    -   `Event` dataclass (`src/ume/event.py`): Extended to support edge operations by making `node_id` optional and adding optional `target_node_id` and `label` fields.
+    -   `parse_event()`: Updated to validate new event types "CREATE_EDGE" and "DELETE_EDGE", ensuring required fields (`node_id` as source, `target_node_id`, `label`) are present and correctly typed.
+    -   `IGraphAdapter` (`src/ume/graph_adapter.py`): Added `delete_edge()` abstract method.
+    -   `MockGraph` (`src/ume/graph.py`): Implemented `delete_edge()` method.
+    -   `apply_event_to_graph()` (`src/ume/processing.py`): Extended to handle "CREATE_EDGE" and "DELETE_EDGE" events, calling the appropriate `IGraphAdapter` methods (`add_edge`, `delete_edge`).
+-   **Testing:**
+    -   Added unit tests in `tests/test_event.py` for parsing "CREATE_EDGE" and "DELETE_EDGE" event types, including valid and invalid cases.
+    -   Added unit tests in `tests/test_processing.py` for `apply_event_to_graph` processing of "CREATE_EDGE" and "DELETE_EDGE" events (success and error propagation from adapter).
+    -   Added unit tests in `tests/test_graph.py` for `MockGraph.delete_edge()` method (success and error cases).
+-   **Documentation:**
+    *   `README.md`:
+        *   "Event Schema" section updated with JSON examples and descriptions for "CREATE_EDGE" and "DELETE_EDGE" events.
+        *   "Basic Usage" section refactored to demonstrate an event-centric approach for creating nodes and edges via `apply_event_to_graph(parse_event(...))`. Query and dump examples updated to reflect edge presence.
+
+### Changed
+
+-   The `node_id` field in the `Event` dataclass is now `Optional[str]` (was `str`), with `parse_event` enforcing its presence for specific event types.
+-   `apply_event_to_graph()` now includes defensive checks for string types of IDs and labels for new edge events before calling adapter methods.
+
+### Fixed
+
+-   *(No specific bug fixes noted for this version yet, primarily new features)*
+
 ## [0.1.0-dev] - 2023-10-27
 
 ### Added
