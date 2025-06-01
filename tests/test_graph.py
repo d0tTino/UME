@@ -122,4 +122,48 @@ def test_dump_empty_graph_structure(graph: MockGraph):
     assert "nodes" in dump_data
     assert dump_data["nodes"] == {}
 
+# --- get_all_node_ids tests ---
+def test_get_all_node_ids_empty_graph(graph: MockGraph):
+    """Test get_all_node_ids on an empty graph."""
+    assert graph.get_all_node_ids() == []
+
+def test_get_all_node_ids_populated_graph(graph: MockGraph):
+    """Test get_all_node_ids on a graph with multiple nodes."""
+    graph.add_node("node1", {})
+    graph.add_node("node2", {"data": "value"})
+    graph.add_node("alpha", {"name": "Alpha Node"})
+
+    node_ids = graph.get_all_node_ids()
+    assert isinstance(node_ids, list)
+    assert len(node_ids) == 3
+    # Order is not guaranteed by dict.keys(), so check with sets
+    assert set(node_ids) == {"node1", "node2", "alpha"}
+
+# --- find_connected_nodes tests ---
+def test_find_connected_nodes_existing_node_returns_empty_list(graph: MockGraph):
+    """
+    Test find_connected_nodes for an existing node in MockGraph.
+    Should return an empty list as MockGraph doesn't support edges.
+    """
+    graph.add_node("node1", {"name": "Source Node"})
+
+    # Test without edge_label
+    connected_nodes = graph.find_connected_nodes("node1")
+    assert connected_nodes == []
+
+    # Test with an edge_label (should still be empty)
+    connected_nodes_with_label = graph.find_connected_nodes("node1", edge_label="KNOWS")
+    assert connected_nodes_with_label == []
+
+def test_find_connected_nodes_non_existent_node_raises_error(graph: MockGraph):
+    """
+    Test find_connected_nodes for a non-existent node.
+    Should raise ProcessingError.
+    """
+    with pytest.raises(ProcessingError, match="Node 'node_not_found' not found."):
+        graph.find_connected_nodes("node_not_found")
+
+    with pytest.raises(ProcessingError, match="Node 'another_missing' not found."):
+        graph.find_connected_nodes("another_missing", edge_label="ANY_LABEL")
+
 ```
