@@ -38,60 +38,46 @@ def test_parse_event_minimal_valid():
     assert isinstance(event.event_id, str)
     assert event.source is None # Should default to None
 
-def test_parse_event_missing_required_field():
-    """Test parsing an event with a missing required field (e.g., event_type)."""
-    timestamp_now = int(time.time())
-    event_data = {
-        "timestamp": timestamp_now,
-        "payload": {"key": "value"}
-    }
-    with pytest.raises(EventError, match="Missing required event fields: event_type"):
-        parse_event(event_data)
+# The following tests are now covered by test_parse_event_invalid_inputs:
+# - test_parse_event_missing_required_field
+# - test_parse_event_missing_multiple_required_fields
+# - test_parse_event_invalid_type_for_event_type
+# - test_parse_event_invalid_type_for_timestamp
+# - test_parse_event_invalid_type_for_payload
 
-def test_parse_event_missing_multiple_required_fields():
-    """Test parsing an event with multiple missing required fields."""
-    event_data = {
-        "payload": {"key": "value"}
-    }
-    # The order in the match string might vary, so check for individual field names
+@pytest.mark.parametrize(
+    "bad_input, expected_message_part",
+    [
+        # Case 1: Missing all required fields
+        ({}, "Missing required event fields"),
+
+        # Case 2: Missing 'event_type'
+        ({"timestamp": 123, "payload": {}}, "Missing required event fields: event_type"),
+
+        # Case 3: Missing 'timestamp'
+        ({"event_type": "test", "payload": {}}, "Missing required event fields: timestamp"),
+
+        # Case 4: Missing 'payload'
+        ({"event_type": "test", "timestamp": 123}, "Missing required event fields: payload"),
+
+        # Case 5: Invalid type for 'event_type' (int instead of str)
+        ({"event_type": 123, "timestamp": int(time.time()), "payload": {}}, "Invalid type for 'event_type'"),
+
+        # Case 6: Invalid type for 'timestamp' (str instead of int)
+        ({"event_type": "test", "timestamp": "not-an-int", "payload": {}}, "Invalid type for 'timestamp'"),
+
+        # Case 7: Invalid type for 'payload' (str instead of dict)
+        ({"event_type": "test", "timestamp": int(time.time()), "payload": "not-a-dict"}, "Invalid type for 'payload'"),
+    ]
+)
+def test_parse_event_invalid_inputs(bad_input: dict, expected_message_part: str):
+    """
+    Tests parse_event with various malformed input dictionaries,
+    expecting an EventError.
+    """
     with pytest.raises(EventError) as excinfo:
-        parse_event(event_data)
-    assert "Missing required event fields" in str(excinfo.value)
-    assert "event_type" in str(excinfo.value)
-    assert "timestamp" in str(excinfo.value)
-
-
-def test_parse_event_invalid_type_for_event_type():
-    """Test parsing an event with an invalid data type for event_type."""
-    timestamp_now = int(time.time())
-    event_data = {
-        "event_type": 123, # Should be str
-        "timestamp": timestamp_now,
-        "payload": {"key": "value"}
-    }
-    with pytest.raises(EventError, match="Invalid type for 'event_type': expected str, got int"):
-        parse_event(event_data)
-
-def test_parse_event_invalid_type_for_timestamp():
-    """Test parsing an event with an invalid data type for timestamp."""
-    event_data = {
-        "event_type": "test_event",
-        "timestamp": "not-an-int", # Should be int
-        "payload": {"key": "value"}
-    }
-    with pytest.raises(EventError, match="Invalid type for 'timestamp': expected int, got str"):
-        parse_event(event_data)
-
-def test_parse_event_invalid_type_for_payload():
-    """Test parsing an event with an invalid data type for payload."""
-    timestamp_now = int(time.time())
-    event_data = {
-        "event_type": "test_event",
-        "timestamp": timestamp_now,
-        "payload": "not-a-dict" # Should be dict
-    }
-    with pytest.raises(EventError, match="Invalid type for 'payload': expected dict, got str"):
-        parse_event(event_data)
+        parse_event(bad_input)
+    assert expected_message_part in str(excinfo.value)
 
 def test_event_creation_default_id():
     """Test that Event dataclass generates a default UUID for event_id."""

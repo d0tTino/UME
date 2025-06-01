@@ -67,3 +67,16 @@ class MockGraph:
     def node_count(self) -> int:
         """Returns the number of nodes in the graph."""
         return len(self._nodes)
+
+    def dump(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary representation of the graph's current state.
+
+        The primary use case is for serialization (e.g., to JSON) or debugging.
+        Currently, only nodes are included in the dump.
+
+        Returns:
+            A dictionary with a "nodes" key, where the value is a dictionary
+            of all nodes and their attributes.
+        """
+        return {"nodes": self._nodes.copy()} # Return a copy to prevent external modification

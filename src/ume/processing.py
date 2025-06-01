@@ -34,13 +34,23 @@ def apply_event_to_graph(event: Event, graph: MockGraph) -> None:
 
     elif event.event_type == "UPDATE_NODE_ATTRIBUTES":
         node_id = event.payload.get("node_id")
-        attributes = event.payload.get("attributes")
         if not node_id:
             raise ProcessingError(f"Missing 'node_id' in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
-        if not attributes: # Attributes can be an empty dict, but not None or missing for an update
-            raise ProcessingError(f"Missing 'attributes' in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+
+        if "attributes" not in event.payload:
+            raise ProcessingError(f"Missing 'attributes' key in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+
+        attributes = event.payload["attributes"] # Key is present, now get value
+
+        if not isinstance(attributes, dict):
+            raise ProcessingError(f"'attributes' must be a dictionary for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+
+        if not attributes: # This checks if the dictionary is empty
+            raise ProcessingError(f"'attributes' dictionary cannot be empty for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+
         if not graph.node_exists(node_id):
             raise ProcessingError(f"Node '{node_id}' does not exist; cannot update attributes: {event.event_id}")
+
         graph.add_node(node_id, attributes) # add_node also handles updates
 
     # Placeholder for other event types, e.g., DELETE_NODE, ADD_EDGE etc.
