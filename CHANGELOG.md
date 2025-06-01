@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   `parse_event` function for validating and parsing raw event data into `Event` objects.
     -   `EventError` custom exception for event parsing issues.
 -   **Graph Abstraction Layer:**
-    -   `IGraphAdapter` interface defining standard graph operations (`src/ume/graph_adapter.py`), including query methods `get_all_node_ids()` and `find_connected_nodes()`.
-    -   `MockGraph` implementation of `IGraphAdapter` for in-memory graph representation and testing (`src/ume/graph.py`). Includes methods like `add_node`, `update_node`, `get_node`, `node_exists`, `clear`, `dump`, and implementations for `get_all_node_ids()` and `find_connected_nodes()`.
+    -   `IGraphAdapter` interface defining standard graph operations (`src/ume/graph_adapter.py`), including query methods (`get_all_node_ids()`, `find_connected_nodes()`) and new edge management methods (`add_edge()`, `get_all_edges()`).
+    -   `MockGraph` implementation of `IGraphAdapter` for in-memory graph representation and testing (`src/ume/graph.py`). Includes methods for node manipulation, queries, and new implementations for `add_edge()` and `get_all_edges()`.
 -   **Event Processing Logic:**
     -   `apply_event_to_graph` function to apply parsed `Event` objects to an `IGraphAdapter` instance (`src/ume/processing.py`).
     -   Initial support for `CREATE_NODE` and `UPDATE_NODE_ATTRIBUTES` event types.
@@ -29,13 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   Setup `pytest` and `pytest-cov` for unit testing and coverage.
     -   Comprehensive unit tests for:
         -   Event parsing (`tests/test_event.py`).
-        -   `MockGraph` implementation of `IGraphAdapter` (`tests/test_graph.py`), including new query methods.
+        -   `MockGraph` implementation of `IGraphAdapter` (`tests/test_graph.py`), including new query and edge methods (`add_edge`, `get_all_edges`, updated `find_connected_nodes`, `clear`).
         -   Event processing logic (`tests/test_processing.py`).
-        -   Graph serialization and snapshotting (`tests/test_graph_serialization.py`), including `load_graph_from_file` tests.
+        -   Graph serialization and snapshotting (`tests/test_graph_serialization.py`), including `load_graph_from_file` tests and handling of edges in snapshots.
 -   **CI Workflow:**
     -   GitHub Actions CI pipeline (`.github/workflows/ci.yml`) for automated testing, linting (Ruff), formatting checks (Ruff), and coverage reporting on pushes/PRs to main.
 -   **Documentation:**
-    -   Comprehensive `README.md` with sections for Overview, Project Setup, Quickstart, Basic Usage, Architecture, Graph Model (planned), Testing, and Where to Get Help. Updated "Basic Usage" section with examples for `load_graph_from_file` and new query methods.
+    -   Comprehensive `README.md`: Updated "UME Graph Model" and "Basic Usage" sections to reflect edge support, including examples for `add_edge`, `find_connected_nodes` with edges, and snapshot examples showing edge data.
     -   Detailed docstrings for all core modules, public classes, and functions (reviewed and updated).
     -   `CONTRIBUTING.md` guide.
 -   **Project Setup:**
@@ -48,11 +48,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Refactored `apply_event_to_graph` to operate on the `IGraphAdapter` interface, decoupling it from `MockGraph`.
 -   Improved validation logic in `apply_event_to_graph` for event payloads.
 -   Consolidated and parametrized unit tests for better maintainability.
+-   **`MockGraph` Updates for Edge Support:**
+    -   `find_connected_nodes()` method now uses the internal edge list to find actual connections.
+    -   `dump()` method now includes an "edges" list in its output.
+    -   `clear()` method now also clears stored edges.
+-   **Snapshotting (`src/ume/snapshot.py`):**
+    -   `load_graph_from_file()` function updated to load and validate edge data from snapshots if present.
 
 ### Known Issues / Limitations (as of this version)
 
 -   Full end-to-end testing of demo scripts involving Kafka/Redpanda was blocked by environmental issues preventing `confluent-kafka` installation in the test execution environment. Unit tests for core logic are passing.
--   `MockGraph` currently only handles nodes; edge representation and processing are future work.
+-   `MockGraph` now includes basic support for directed, labeled edges (storage, retrieval, and inclusion in snapshots). Advanced edge querying or property support is future work.
 -   Graph persistence is limited to manual snapshotting of `MockGraph` to a file; no automated persistence or database backend yet.
 
 ```

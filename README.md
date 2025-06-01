@@ -76,6 +76,7 @@ This setup demonstrates a simple event-driven architecture, which is foundationa
 A core aspect of the Universal Memory Engine (UME) is its ability to construct a knowledge graph from the events it processes. This graph serves as the dynamic, queryable memory for agents and automations.
 
 The detailed schema of this graph, including node types, relationship types, and their properties, is a key part of UME's design. As the system evolves, this will be critical for understanding how memory is structured and utilized.
+Additionally, the graph supports directed, labeled **edges** connecting these nodes, representing relationships such as `(source_node_id, target_node_id, 'RELATES_TO')`. The `MockGraph` implementation now stores these edges.
 
 For current plans and eventual detailed documentation on the UME graph model, please see:
 
@@ -179,74 +180,104 @@ This section outlines the basic programmatic steps to interact with the UME comp
     graph_adapter: IGraphAdapter = MockGraph()
     ```
 
-2.  **Prepare Raw Event Data:**
+2.  **Prepare Raw Event Data (Node Creation):**
     Event data typically comes as a Python dictionary, perhaps from a JSON message or another source.
     ```python
-    raw_event_dict = {
+    import time # Required for timestamp
+
+    raw_event_node1 = {
         "event_type": "CREATE_NODE",
-        "timestamp": int(time.time()), # Assuming 'import time'
+        "timestamp": int(time.time()),
         "payload": {
             "node_id": "node123",
-            "attributes": {"name": "My Node", "category": "A"}
+            "attributes": {"name": "My First Node", "category": "A"}
         },
         "source": "my_application"
-        # event_id can be omitted to be auto-generated
+    }
+    raw_event_node2 = { # For creating a second node for edge example
+        "event_type": "CREATE_NODE",
+        "timestamp": int(time.time()),
+        "payload": {
+            "node_id": "node456",
+            "attributes": {"name": "My Second Node", "category": "B"}
+        },
+        "source": "my_application"
     }
     ```
 
 3.  **Parse Raw Event Data:**
-    Use `parse_event` to validate and convert the raw dictionary into an `Event` object:
+    Use `parse_event` to validate and convert raw dictionaries into `Event` objects:
     ```python
     from ume import parse_event, EventError
 
-    try:
-        parsed_event = parse_event(raw_event_dict)
-        print(f"Parsed event: {parsed_event}")
-    except EventError as e:
-        print(f"Error parsing event: {e}")
-        # Handle error appropriately
-    ```
-
-4.  **Apply Event to Graph:**
-    Use `apply_event_to_graph` to process the parsed event and modify the graph via the adapter:
-    ```python
-    from ume import apply_event_to_graph, ProcessingError
-
-    if 'parsed_event' in locals(): # Check if event was parsed successfully
+    parsed_events = []
+    for raw_event_dict in [raw_event_node1, raw_event_node2]:
         try:
-            apply_event_to_graph(parsed_event, graph_adapter)
-            print(f"Successfully applied event {parsed_event.event_id} to graph.")
-        except ProcessingError as e:
-            print(f"Error applying event to graph: {e}")
+            parsed_event = parse_event(raw_event_dict)
+            print(f"Parsed event: {parsed_event}")
+            parsed_events.append(parsed_event)
+        except EventError as e:
+            print(f"Error parsing event: {e}")
             # Handle error appropriately
     ```
 
-5.  **Inspect Graph State (Optional):**
+4.  **Apply Events to Graph (Node Creation):**
+    Use `apply_event_to_graph` to process parsed events and modify the graph:
+    ```python
+    from ume import apply_event_to_graph, ProcessingError
+
+    for event in parsed_events:
+        try:
+            apply_event_to_graph(event, graph_adapter)
+            print(f"Successfully applied event {event.event_id} (type: {event.event_type}) to graph.")
+        except ProcessingError as e:
+            print(f"Error applying event {event.event_id} to graph: {e}")
+            # Handle error appropriately
+    ```
+
+5.  **Add an Edge Directly (Optional):**
+    You can also directly manipulate the graph using adapter methods, such as adding an edge:
+    ```python
+    # This assumes node123 and node456 were successfully created by events above
+    if graph_adapter.node_exists("node123") and graph_adapter.node_exists("node456"):
+        try:
+            graph_adapter.add_edge("node123", "node456", "RELATES_TO")
+            print("Edge 'node123' -> 'node456' (RELATES_TO) added.")
+        except ProcessingError as e:
+            print(f"Error adding edge: {e}")
+    else:
+        print("Skipping add_edge example as one or both nodes (node123, node456) may not exist.")
+    ```
+
+6.  **Inspect Graph State (Optional):**
     You can inspect the graph's state using adapter methods:
     ```python
     if graph_adapter.node_exists("node123"):
         print(f"Node 'node123' data: {graph_adapter.get_node('node123')}")
 
-    # Get a serializable dump of the graph (nodes only for MockGraph)
-    graph_dump = graph_adapter.dump()
-    print(f"Graph dump: {graph_dump}")
-
     # Get all node IDs
     all_ids = graph_adapter.get_all_node_ids()
     print(f"All node IDs in graph: {all_ids}")
 
-    # Example for find_connected_nodes (specific to MockGraph's current behavior)
+    # Example for find_connected_nodes
     if graph_adapter.node_exists("node123"):
-        # For MockGraph, this will currently return an empty list
-        # or raise ProcessingError if node123 does not exist (as per recent implementation)
         try:
             connected_to_node123 = graph_adapter.find_connected_nodes("node123")
-            print(f"Nodes connected to 'node123': {connected_to_node123}") # Expected: [] for MockGraph
-        except ProcessingError as e: # If node123 didn't exist (though checked above)
+            print(f"Nodes connected from 'node123': {connected_to_node123}")
+
+            connected_with_label = graph_adapter.find_connected_nodes("node123", edge_label="RELATES_TO")
+            print(f"Nodes connected from 'node123' with label 'RELATES_TO': {connected_with_label}")
+        except ProcessingError as e: # Should not happen if node_exists check passed
              print(f"Error finding connected nodes: {e}")
+
+    # Get a serializable dump of the graph
+    graph_dump = graph_adapter.dump()
+    print(f"Graph dump: {graph_dump}")
+    # Expected output might look like:
+    # {"nodes": {"node123": {...}, "node456": {...}}, "edges": [["node123", "node456", "RELATES_TO"]]}
     ```
 
-6.  **Snapshot Graph to File (Optional):**
+7.  **Snapshot Graph to File (Optional):**
     Persist the graph's state to a file:
     ```python
     from ume import snapshot_graph_to_file
@@ -261,7 +292,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Error saving snapshot: {e}")
     ```
 
-7.  **Load Graph from Snapshot (Optional):**
+8.  **Load Graph from Snapshot (Optional):**
     Restore a graph's state from a previously saved snapshot file:
     ```python
     from ume import load_graph_from_file, SnapshotError # Assuming IGraphAdapter also imported

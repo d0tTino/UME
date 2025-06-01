@@ -94,16 +94,21 @@ def test_node_exists_false(graph: MockGraph):
     assert graph.node_exists("node_not_found") is False
 
 # --- clear tests ---
-def test_clear_graph(graph: MockGraph):
-    """Test clearing the graph."""
-    graph.add_node("node1", {})
-    graph.add_node("node2", {"data": "value"})
+def test_clear_graph_with_nodes_and_edges(graph: MockGraph): # Renamed for clarity
+    """Test clearing the graph with both nodes and edges."""
+    graph.add_node("n1", {})
+    graph.add_node("n2", {})
+    graph.add_edge("n1", "n2", "LINKS_TO")
+
     assert graph.node_count == 2
+    assert len(graph.get_all_edges()) == 1
+
     graph.clear()
+
     assert graph.node_count == 0
-    assert graph.node_exists("node1") is False
-    assert graph.node_exists("node2") is False
-    assert graph.dump()["nodes"] == {}
+    assert graph.get_all_edges() == []
+    assert graph.node_exists("n1") is False
+    assert graph.dump() == {"nodes": {}, "edges": []} # Check dump output
 
 # --- dump tests (basic check, detailed serialization in test_graph_serialization.py) ---
 def test_dump_structure(graph: MockGraph):
@@ -139,21 +144,68 @@ def test_get_all_node_ids_populated_graph(graph: MockGraph):
     # Order is not guaranteed by dict.keys(), so check with sets
     assert set(node_ids) == {"node1", "node2", "alpha"}
 
+# --- add_edge tests (New) ---
+def test_add_edge_success(graph: MockGraph):
+    """Test adding a valid edge successfully."""
+    graph.add_node("nodeS", {})
+    graph.add_node("nodeT", {})
+    graph.add_edge("nodeS", "nodeT", "RELATES_TO")
+    assert ("nodeS", "nodeT", "RELATES_TO") in graph._edges # Accessing protected member for test validation
+    # Check get_all_edges as well
+    all_edges = graph.get_all_edges()
+    assert len(all_edges) == 1
+    assert ("nodeS", "nodeT", "RELATES_TO") in all_edges
+
+def test_add_edge_missing_source_node_raises_error(graph: MockGraph):
+    """Test ProcessingError when adding an edge with a non-existent source node."""
+    graph.add_node("nodeT", {}) # Target node exists
+    with pytest.raises(ProcessingError, match="Both source node 'nodeS_missing' and target node 'nodeT' must exist"):
+        graph.add_edge("nodeS_missing", "nodeT", "LINKS_TO")
+
+def test_add_edge_missing_target_node_raises_error(graph: MockGraph):
+    """Test ProcessingError when adding an edge with a non-existent target node."""
+    graph.add_node("nodeS", {}) # Source node exists
+    with pytest.raises(ProcessingError, match="Both source node 'nodeS' and target node 'nodeT_missing' must exist"):
+        graph.add_edge("nodeS", "nodeT_missing", "CONNECTS_TO")
+
+def test_add_edge_both_nodes_missing_raises_error(graph: MockGraph):
+    """Test ProcessingError when adding an edge with both source and target nodes non-existent."""
+    with pytest.raises(ProcessingError, match="Both source node 'nodeS_missing' and target node 'nodeT_missing' must exist"):
+        graph.add_edge("nodeS_missing", "nodeT_missing", "IS_RELATED_TO")
+
+# --- get_all_edges tests (New) ---
+def test_get_all_edges_empty_graph(graph: MockGraph):
+    """Test get_all_edges on a graph with no edges (and no nodes)."""
+    assert graph.get_all_edges() == []
+
+def test_get_all_edges_no_edges_but_nodes_exist(graph: MockGraph):
+    """Test get_all_edges on a graph with nodes but no edges."""
+    graph.add_node("node1", {})
+    graph.add_node("node2", {})
+    assert graph.get_all_edges() == []
+
+def test_get_all_edges_populated(graph: MockGraph):
+    """Test get_all_edges on a graph with multiple edges."""
+    graph.add_node("n1", {})
+    graph.add_node("n2", {})
+    graph.add_node("n3", {})
+    graph.add_edge("n1", "n2", "L1")
+    graph.add_edge("n2", "n3", "L2")
+    graph.add_edge("n1", "n3", "L3")
+
+    edges = graph.get_all_edges()
+    assert isinstance(edges, list)
+    assert len(edges) == 3
+    # Use set of tuples for order-agnostic comparison
+    expected_edges = {("n1", "n2", "L1"), ("n2", "n3", "L2"), ("n1", "n3", "L3")}
+    assert set(edges) == expected_edges
+
+    # Test that it returns a copy
+    edges.append(("n3", "n1", "L4_local_copy"))
+    assert len(graph.get_all_edges()) == 3
+
 # --- find_connected_nodes tests ---
-def test_find_connected_nodes_existing_node_returns_empty_list(graph: MockGraph):
-    """
-    Test find_connected_nodes for an existing node in MockGraph.
-    Should return an empty list as MockGraph doesn't support edges.
-    """
-    graph.add_node("node1", {"name": "Source Node"})
-
-    # Test without edge_label
-    connected_nodes = graph.find_connected_nodes("node1")
-    assert connected_nodes == []
-
-    # Test with an edge_label (should still be empty)
-    connected_nodes_with_label = graph.find_connected_nodes("node1", edge_label="KNOWS")
-    assert connected_nodes_with_label == []
+# Old test_find_connected_nodes_existing_node_returns_empty_list removed as behavior changed.
 
 def test_find_connected_nodes_non_existent_node_raises_error(graph: MockGraph):
     """
@@ -165,5 +217,40 @@ def test_find_connected_nodes_non_existent_node_raises_error(graph: MockGraph):
 
     with pytest.raises(ProcessingError, match="Node 'another_missing' not found."):
         graph.find_connected_nodes("another_missing", edge_label="ANY_LABEL")
+
+def test_find_connected_nodes_with_edges(graph: MockGraph):
+    """Test find_connected_nodes when edges exist."""
+    graph.add_node("n1", {})
+    graph.add_node("n2", {})
+    graph.add_node("n3", {})
+    graph.add_node("n4", {})
+    graph.add_edge("n1", "n2", "RELATES_TO")
+    graph.add_edge("n1", "n3", "RELATES_TO")
+    graph.add_edge("n1", "n4", "DIFFERENT_REL")
+    graph.add_edge("n2", "n3", "RELATES_TO") # Edge from different source
+
+    # Test without label filter
+    connected = graph.find_connected_nodes("n1")
+    assert isinstance(connected, list)
+    assert set(connected) == {"n2", "n3", "n4"}
+
+    # Test with label filter
+    connected_relates_to = graph.find_connected_nodes("n1", edge_label="RELATES_TO")
+    assert set(connected_relates_to) == {"n2", "n3"}
+
+    connected_different_rel = graph.find_connected_nodes("n1", edge_label="DIFFERENT_REL")
+    assert set(connected_different_rel) == {"n4"}
+
+def test_find_connected_nodes_no_matching_edges(graph: MockGraph):
+    """Test find_connected_nodes when no outgoing edges match."""
+    graph.add_node("n1", {})
+    graph.add_node("n2", {})
+    graph.add_edge("n1", "n2", "RELATES_TO") # Edge exists
+
+    # Test with a non-matching label
+    assert graph.find_connected_nodes("n1", edge_label="NON_EXISTENT_LABEL") == []
+    # Test for a node with no outgoing edges
+    graph.add_node("n3", {})
+    assert graph.find_connected_nodes("n3") == []
 
 ```
