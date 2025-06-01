@@ -103,4 +103,39 @@ class IGraphAdapter(ABC):
         Removes all nodes and edges from the graph, resetting it to an empty state.
         """
         pass
+
+    @abstractmethod
+    def get_all_node_ids(self) -> list[str]:
+        """
+        Retrieves a list of all node identifiers currently in the graph.
+
+        Returns:
+            A list of strings, where each string is a unique node ID.
+            Returns an empty list if the graph contains no nodes.
+        """
+        pass
+
+    @abstractmethod
+    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> list[str]:
+        """
+        Finds nodes connected to a given node, optionally via a specific edge label.
+
+        This method is a placeholder for basic connectivity queries. Implementations
+        may vary based on their support for edges and edge labels.
+
+        Args:
+            node_id: The identifier of the starting node.
+            edge_label: (Optional) If provided, filter connections by this edge label.
+                        If None, consider all connections.
+
+        Returns:
+            A list of node IDs connected to the given node.
+            Returns an empty list if no connected nodes are found or if the
+            starting node does not exist or if edges are not supported.
+
+        Raises:
+            ProcessingError (or similar): If the specified node_id does not exist in the graph
+                                        (implementations may choose this behavior).
+        """
+        pass
 ```

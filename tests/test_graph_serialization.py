@@ -2,7 +2,7 @@
 import json
 import pytest
 import pathlib # Ensure pathlib is imported
-from ume import MockGraph, snapshot_graph_to_file # Add snapshot_graph_to_file
+from ume import MockGraph, snapshot_graph_to_file, load_graph_from_file, SnapshotError # Add new imports
 
 def test_empty_graph_dump_and_serialization():
     """Test dumping an empty graph and serializing it."""
@@ -149,4 +149,88 @@ def test_snapshot_file_content_is_pretty_printed(tmp_path: pathlib.Path):
   "nodes": {
       "node1": {
 ' in content # Allow for slight variations
+```
+
+# --- Tests for load_graph_from_file ---
+
+def test_load_graph_from_file_success_empty_graph(tmp_path: pathlib.Path):
+    """Test loading an empty graph from a valid snapshot file."""
+    graph = MockGraph()
+    snapshot_file = tmp_path / "empty_graph_to_load.json"
+    snapshot_graph_to_file(graph, snapshot_file)
+
+    loaded_graph = load_graph_from_file(snapshot_file)
+    assert isinstance(loaded_graph, MockGraph)
+    assert loaded_graph.node_count == 0
+    assert loaded_graph.dump()["nodes"] == {}
+
+def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
+    """Test loading a populated graph from a valid snapshot file."""
+    original_graph = MockGraph()
+    attrs1 = {"name": "Node 1", "value": 10}
+    attrs2 = {"name": "Node 2", "active": True}
+    original_graph.add_node("n1", attrs1)
+    original_graph.add_node("n2", attrs2)
+
+    snapshot_file = tmp_path / "populated_graph_to_load.json"
+    snapshot_graph_to_file(original_graph, snapshot_file)
+
+    loaded_graph = load_graph_from_file(snapshot_file)
+    assert isinstance(loaded_graph, MockGraph)
+    assert loaded_graph.node_count == 2
+    assert loaded_graph.get_node("n1") == attrs1
+    assert loaded_graph.get_node("n2") == attrs2
+    assert original_graph.dump() == loaded_graph.dump() # Compare full dumps
+
+def test_load_graph_from_file_file_not_found(tmp_path: pathlib.Path):
+    """Test load_graph_from_file with a non-existent file path."""
+    non_existent_file = tmp_path / "this_file_does_not_exist.json"
+    with pytest.raises(FileNotFoundError, match=f"Snapshot file not found at path: {non_existent_file}"):
+        load_graph_from_file(non_existent_file)
+
+def test_load_graph_from_file_malformed_json(tmp_path: pathlib.Path):
+    """Test load_graph_from_file with a file containing malformed JSON."""
+    snapshot_file = tmp_path / "malformed.json"
+    with open(snapshot_file, "w", encoding='utf-8') as f:
+        f.write("{'nodes': 'this is not valid json because of single quotes'...") # Malformed JSON
+
+    with pytest.raises(json.JSONDecodeError): # Check for the specific error type
+        load_graph_from_file(snapshot_file)
+
+def test_load_graph_from_file_invalid_structure_no_nodes_key(tmp_path: pathlib.Path):
+    """Test load_graph_from_file with JSON missing the root 'nodes' key."""
+    snapshot_file = tmp_path / "invalid_structure_no_nodes.json"
+    with open(snapshot_file, "w", encoding='utf-8') as f:
+        json.dump({"other_key": {}}, f) # Missing 'nodes'
+
+    with pytest.raises(SnapshotError, match="Invalid snapshot format: missing 'nodes' key at the root level."):
+        load_graph_from_file(snapshot_file)
+
+def test_load_graph_from_file_invalid_structure_nodes_not_dict(tmp_path: pathlib.Path):
+    """Test load_graph_from_file where 'nodes' is not a dictionary."""
+    snapshot_file = tmp_path / "invalid_structure_nodes_not_dict.json"
+    with open(snapshot_file, "w", encoding='utf-8') as f:
+        json.dump({"nodes": ["not", "a", "dict"]}, f) # 'nodes' is a list
+
+    with pytest.raises(SnapshotError, match="Invalid snapshot format: 'nodes' should be a dictionary"):
+        load_graph_from_file(snapshot_file)
+
+def test_load_graph_from_file_invalid_structure_attributes_not_dict(tmp_path: pathlib.Path):
+    """Test load_graph_from_file where a node's attributes are not a dictionary."""
+    snapshot_file = tmp_path / "invalid_structure_attrs_not_dict.json"
+    with open(snapshot_file, "w", encoding='utf-8') as f:
+        json.dump({"nodes": {"node1": "not_an_attributes_dict"}}, f)
+
+    with pytest.raises(SnapshotError, match="Invalid snapshot format for node 'node1': attributes should be a dictionary"):
+        load_graph_from_file(snapshot_file)
+
+def test_load_graph_from_file_root_not_dict(tmp_path: pathlib.Path):
+    """Test load_graph_from_file where the JSON root is not a dictionary."""
+    snapshot_file = tmp_path / "invalid_root_not_dict.json"
+    with open(snapshot_file, "w", encoding='utf-8') as f:
+        json.dump(["just", "a", "list"], f) # Root is a list
+
+    with pytest.raises(SnapshotError, match="Invalid snapshot format: root should be a dictionary"):
+        load_graph_from_file(snapshot_file)
+
 ```

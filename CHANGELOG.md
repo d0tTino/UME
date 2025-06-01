@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   `parse_event` function for validating and parsing raw event data into `Event` objects.
     -   `EventError` custom exception for event parsing issues.
 -   **Graph Abstraction Layer:**
-    -   `IGraphAdapter` interface defining standard graph operations (`src/ume/graph_adapter.py`).
-    -   `MockGraph` implementation of `IGraphAdapter` for in-memory graph representation and testing (`src/ume/graph.py`). Includes methods like `add_node`, `update_node`, `get_node`, `node_exists`, `clear`, `dump`.
+    -   `IGraphAdapter` interface defining standard graph operations (`src/ume/graph_adapter.py`), including query methods `get_all_node_ids()` and `find_connected_nodes()`.
+    -   `MockGraph` implementation of `IGraphAdapter` for in-memory graph representation and testing (`src/ume/graph.py`). Includes methods like `add_node`, `update_node`, `get_node`, `node_exists`, `clear`, `dump`, and implementations for `get_all_node_ids()` and `find_connected_nodes()`.
 -   **Event Processing Logic:**
     -   `apply_event_to_graph` function to apply parsed `Event` objects to an `IGraphAdapter` instance (`src/ume/processing.py`).
     -   Initial support for `CREATE_NODE` and `UPDATE_NODE_ATTRIBUTES` event types.
@@ -23,18 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   **Snapshotting:**
     -   `MockGraph.dump()` method to export graph state (nodes only currently).
     -   `snapshot_graph_to_file` function to save graph dump to a JSON file (`src/ume/snapshot.py`).
+    -   `load_graph_from_file` function to restore graph state from a JSON snapshot (`src/ume/snapshot.py`).
+    -   `SnapshotError` custom exception for snapshot loading issues.
 -   **Testing Framework:**
     -   Setup `pytest` and `pytest-cov` for unit testing and coverage.
     -   Comprehensive unit tests for:
         -   Event parsing (`tests/test_event.py`).
-        -   `MockGraph` implementation of `IGraphAdapter` (`tests/test_graph.py`).
+        -   `MockGraph` implementation of `IGraphAdapter` (`tests/test_graph.py`), including new query methods.
         -   Event processing logic (`tests/test_processing.py`).
-        -   Graph serialization and snapshotting (`tests/test_graph_serialization.py`).
+        -   Graph serialization and snapshotting (`tests/test_graph_serialization.py`), including `load_graph_from_file` tests.
 -   **CI Workflow:**
     -   GitHub Actions CI pipeline (`.github/workflows/ci.yml`) for automated testing, linting (Ruff), formatting checks (Ruff), and coverage reporting on pushes/PRs to main.
 -   **Documentation:**
-    -   Comprehensive `README.md` with sections for Overview, Project Setup, Quickstart, Basic Usage, Architecture, Graph Model (planned), Testing, and Where to Get Help.
-    -   Detailed docstrings for all core modules, public classes, and functions.
+    -   Comprehensive `README.md` with sections for Overview, Project Setup, Quickstart, Basic Usage, Architecture, Graph Model (planned), Testing, and Where to Get Help. Updated "Basic Usage" section with examples for `load_graph_from_file` and new query methods.
+    -   Detailed docstrings for all core modules, public classes, and functions (reviewed and updated).
     -   `CONTRIBUTING.md` guide.
 -   **Project Setup:**
     -   `pyproject.toml` configured for Poetry, with dependencies (e.g., `confluent-kafka`) and dev dependencies (e.g., `pytest`, `pytest-cov`, `ruff`).

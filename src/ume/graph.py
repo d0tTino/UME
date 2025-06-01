@@ -77,6 +77,40 @@ class MockGraph(IGraphAdapter):
         """
         return node_id in self._nodes
 
+    def get_all_node_ids(self) -> list[str]:
+        """
+        Retrieves a list of all node identifiers currently in the graph.
+
+        Returns:
+            A list of strings, where each string is a unique node ID.
+            Returns an empty list if the graph contains no nodes.
+        """
+        return list(self._nodes.keys())
+
+    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> list[str]:
+        """
+        Finds nodes connected to a given node, optionally via a specific edge label.
+
+        NOTE: MockGraph does not currently support explicit edge structures.
+        This method will return an empty list if the starting node exists,
+        and raise an error if the starting node does not exist.
+
+        Args:
+            node_id: The identifier of the starting node.
+            edge_label: (Optional) If provided, filter connections by this edge label.
+                        Currently ignored by MockGraph.
+
+        Returns:
+            An empty list, as MockGraph does not store edges.
+
+        Raises:
+            ProcessingError: If the specified node_id does not exist in the graph.
+        """
+        if not self.node_exists(node_id): # Or directly check self._nodes
+            raise ProcessingError(f"Node '{node_id}' not found.")
+        # MockGraph does not store edges, so always return an empty list for connected nodes.
+        return []
+
     def clear(self) -> None:
         """Removes all nodes and edges from the graph."""
         self._nodes.clear()

@@ -230,12 +230,28 @@ This section outlines the basic programmatic steps to interact with the UME comp
     # Get a serializable dump of the graph (nodes only for MockGraph)
     graph_dump = graph_adapter.dump()
     print(f"Graph dump: {graph_dump}")
+
+    # Get all node IDs
+    all_ids = graph_adapter.get_all_node_ids()
+    print(f"All node IDs in graph: {all_ids}")
+
+    # Example for find_connected_nodes (specific to MockGraph's current behavior)
+    if graph_adapter.node_exists("node123"):
+        # For MockGraph, this will currently return an empty list
+        # or raise ProcessingError if node123 does not exist (as per recent implementation)
+        try:
+            connected_to_node123 = graph_adapter.find_connected_nodes("node123")
+            print(f"Nodes connected to 'node123': {connected_to_node123}") # Expected: [] for MockGraph
+        except ProcessingError as e: # If node123 didn't exist (though checked above)
+             print(f"Error finding connected nodes: {e}")
     ```
 
 6.  **Snapshot Graph to File (Optional):**
     Persist the graph's state to a file:
     ```python
     from ume import snapshot_graph_to_file
+    # import pathlib # Ensure pathlib is imported if using Path objects for snapshot_path
+    # import json # Ensure json is imported if handling json.JSONDecodeError specifically
 
     try:
         snapshot_path = "my_graph_snapshot.json"
@@ -243,6 +259,36 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Graph snapshot saved to {snapshot_path}")
     except Exception as e: # Catch potential IOErrors etc.
         print(f"Error saving snapshot: {e}")
+    ```
+
+7.  **Load Graph from Snapshot (Optional):**
+    Restore a graph's state from a previously saved snapshot file:
+    ```python
+    from ume import load_graph_from_file, SnapshotError # Assuming IGraphAdapter also imported
+    import pathlib # For pathlib.Path(...).exists()
+    import json # For json.JSONDecodeError
+
+    loaded_graph_adapter: IGraphAdapter = None # Initialize
+    try:
+        # Assuming snapshot_path = "my_graph_snapshot.json" from previous step
+        if 'snapshot_path' in locals() and pathlib.Path(snapshot_path).exists(): # Ensure snapshot_path is defined and file exists
+            loaded_graph_adapter = load_graph_from_file(snapshot_path)
+            print(f"Graph loaded successfully from {snapshot_path}")
+            print(f"Loaded graph content: {loaded_graph_adapter.dump()}")
+        else:
+            print(f"Snapshot file {snapshot_path if 'snapshot_path' in locals() else 'my_graph_snapshot.json'} not found, skipping load example.")
+    except FileNotFoundError:
+        print(f"Error: Snapshot file not found.")
+    except json.JSONDecodeError:
+        print(f"Error: Snapshot file contains invalid JSON.")
+    except SnapshotError as e:
+        print(f"Error: Snapshot file has invalid structure: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred while loading snapshot: {e}")
+
+    # You can now work with loaded_graph_adapter
+    if loaded_graph_adapter and loaded_graph_adapter.node_exists("node123"):
+        print(f"Node 'node123' from loaded graph: {loaded_graph_adapter.get_node('node123')}")
     ```
 This provides a basic flow for event handling and graph interaction within UME.
 
