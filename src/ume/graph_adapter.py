@@ -18,7 +18,8 @@ if TYPE_CHECKING:
 
 class IGraphAdapter(ABC):
     """
-    Abstract Base Class defining the interface for graph operations.
+    Abstract Base Class defining the interface for graph operations,
+    including node and edge manipulation, and graph state retrieval.
 
     This interface allows different graph backend implementations (e.g.,
     in-memory mock, database-backed) to be used interchangeably by
@@ -136,6 +137,37 @@ class IGraphAdapter(ABC):
         Raises:
             ProcessingError (or similar): If the specified node_id does not exist in the graph
                                         (implementations may choose this behavior).
+        """
+        pass
+
+    @abstractmethod
+    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        """
+        Adds a directed, labeled edge between two existing nodes.
+
+        Args:
+            source_node_id: The identifier of the source node (origin of the edge).
+            target_node_id: The identifier of the target node (destination of the edge).
+            label: A string label describing the type of relationship or connection.
+
+        Raises:
+            ProcessingError (or similar): If either the source_node_id or
+                                        target_node_id does not exist in the graph.
+                                        Implementations may also raise errors for
+                                        invalid labels or other constraints.
+        """
+        pass
+
+    @abstractmethod
+    def get_all_edges(self) -> list[tuple[str, str, str]]:
+        """
+        Retrieves a list of all edges currently in the graph.
+
+        Each edge is represented as a tuple: (source_node_id, target_node_id, label).
+
+        Returns:
+            A list of tuples, where each tuple represents an edge.
+            Returns an empty list if the graph contains no edges.
         """
         pass
 ```

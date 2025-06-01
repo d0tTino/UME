@@ -1,6 +1,6 @@
 # src/ume/snapshot.py
 import json
-from typing import Union, TYPE_CHECKING, Dict, Any # Added Dict, Any
+from typing import Union, TYPE_CHECKING, Dict, Any, List, Tuple # Added List, Tuple
 import pathlib # For type hinting path-like objects
 
 # Ensure MockGraph is available for instantiation and type hinting
@@ -41,22 +41,25 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
     Loads a graph state from a JSON snapshot file into a new MockGraph instance.
 
     The JSON file is expected to contain data previously saved by
-    snapshot_graph_to_file, with a top-level "nodes" key.
+    `snapshot_graph_to_file`. It should have a top-level "nodes" key mapping
+    to a dictionary of nodes and their attributes. Optionally, it can also
+    contain an "edges" key mapping to a list of edge tuples
+    (source_node_id, target_node_id, label).
 
     Args:
-        path: The file path (string or pathlib.Path object) from which
-              to load the JSON snapshot.
+        path (Union[str, pathlib.Path]): The file path from which to load
+              the JSON snapshot.
 
     Returns:
-        A new MockGraph instance populated with data from the snapshot file.
+        MockGraph: A new MockGraph instance populated with data from the snapshot file.
 
     Raises:
         FileNotFoundError: If the specified path does not exist.
         json.JSONDecodeError: If the file content is not valid JSON.
         SnapshotError: If the JSON data does not conform to the expected
-                       structure (e.g., missing "nodes" key, "nodes" is not
-                       a dictionary, or individual node attributes are not
-                       dictionaries).
+                       structure (e.g., missing "nodes" key, "nodes" or "edges"
+                       have incorrect types, or individual node/edge items are
+                       malformed).
     """
     try:
         with open(path, "r", encoding='utf-8') as f:
@@ -85,6 +88,33 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
         # Since MockGraph.add_node expects attributes to be Dict[str, Any],
         # and json.load ensures keys are strings, this should be fine.
         graph.add_node(node_id, attributes.copy()) # Use .copy() for attributes
+
+    # Load edges if present
+    if "edges" in data:
+        if not isinstance(data["edges"], list):
+            raise SnapshotError(
+                f"Invalid snapshot format: 'edges' should be a list, got {type(data['edges']).__name__}."
+            )
+
+        loaded_edges: List[Tuple[str, str, str]] = []
+        for i, edge_data in enumerate(data["edges"]):
+            if not isinstance(edge_data, (list, tuple)):
+                raise SnapshotError(
+                    f"Invalid snapshot format for edge at index {i}: each edge should be a list or tuple, "
+                    f"got {type(edge_data).__name__}."
+                )
+            if len(edge_data) != 3:
+                raise SnapshotError(
+                    f"Invalid snapshot format for edge at index {i}: each edge must have 3 elements "
+                    f"(source, target, label), got {len(edge_data)} elements."
+                )
+            if not all(isinstance(item, str) for item in edge_data):
+                raise SnapshotError(
+                    f"Invalid snapshot format for edge at index {i}: all edge elements "
+                    f"(source, target, label) must be strings."
+                )
+            loaded_edges.append(tuple(edge_data)) # Convert to tuple for consistency
+        graph._edges = loaded_edges # Direct assignment after validation
 
     return graph
 ```
