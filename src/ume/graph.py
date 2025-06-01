@@ -1,14 +1,16 @@
 # src/ume/graph.py
 from typing import Dict, Any, Optional
+from .graph_adapter import IGraphAdapter
+from .processing import ProcessingError
 
-class MockGraph:
+class MockGraph(IGraphAdapter):
     """
-    A simple mock graph representation for testing purposes.
+    A simple mock graph representation implementing IGraphAdapter, for testing.
 
     This class simulates a graph by storing nodes and their attributes
     in an in-memory dictionary. It is not intended for production use
     but rather to facilitate testing of graph update logic without
-    requiring a full graph database.
+    requiring a full graph database. It implements the IGraphAdapter interface.
     """
 
     def __init__(self):
@@ -16,23 +18,39 @@ class MockGraph:
         self._nodes: Dict[str, Dict[str, Any]] = {}
         # In a real graph, you might also have self._edges or similar
 
-    def add_node(self, node_id: str, attributes: Optional[Dict[str, Any]] = None) -> None:
+    def add_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
         """
-        Adds a node to the graph or updates an existing node's attributes.
-
-        If the node_id already exists, its attributes will be updated
-        with the new attributes provided. If attributes is None,
-        an empty attribute dictionary will be associated with the node.
+        Adds a new node to the graph. Conforms to IGraphAdapter.
 
         Args:
             node_id: The unique identifier for the node.
-            attributes: A dictionary of attributes for the node.
-        """
-        if node_id in self._nodes and attributes:
-            self._nodes[node_id].update(attributes)
-        elif node_id not in self._nodes : # only add if attributes are not none, or node is new
-             self._nodes[node_id] = attributes if attributes is not None else {}
+            attributes: A dictionary of attributes for the node. An empty dictionary
+                        can be provided if the node has no initial attributes.
 
+        Raises:
+            ProcessingError: If the node_id already exists.
+        """
+        if node_id in self._nodes:
+            raise ProcessingError(f"Node '{node_id}' already exists.")
+        self._nodes[node_id] = attributes # attributes is expected to be a dict per IGraphAdapter
+
+    def update_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
+        """
+        Updates attributes of an existing node. Conforms to IGraphAdapter.
+
+        Args:
+            node_id: The unique identifier for the node to update.
+            attributes: A dictionary of attributes to update.
+                        Existing attributes will be updated; new attributes
+                        will be added. An empty dict for attributes will result
+                        in no changes to existing attributes.
+
+        Raises:
+            ProcessingError: If the node_id does not exist.
+        """
+        if node_id not in self._nodes:
+            raise ProcessingError(f"Node '{node_id}' not found for update.")
+        self._nodes[node_id].update(attributes)
 
     def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:
         """
