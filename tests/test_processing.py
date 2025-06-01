@@ -105,17 +105,68 @@ def test_apply_update_node_attributes_missing_node_id(graph: MockGraph):
     with pytest.raises(ProcessingError, match="Missing 'node_id' in payload for UPDATE_NODE_ATTRIBUTES event"):
         apply_event_to_graph(event, graph)
 
-def test_apply_update_node_attributes_missing_attributes(graph: MockGraph):
-    """Test error for UPDATE_NODE_ATTRIBUTES if 'attributes' is missing."""
-    node_id = "node1"
-    graph.add_node(node_id, {"name": "Initial Name"})
+# This old test is covered by the new parametrized one below for the "Missing 'attributes' key" case.
+# def test_apply_update_node_attributes_missing_attributes(graph: MockGraph):
+#     """Test error for UPDATE_NODE_ATTRIBUTES if 'attributes' is missing."""
+#     node_id = "node1"
+#     graph.add_node(node_id, {"name": "Initial Name"})
+#     event = Event(
+#         event_type="UPDATE_NODE_ATTRIBUTES",
+#         timestamp=int(time.time()),
+#         payload={"node_id": node_id} # Missing attributes field
+#     )
+#     with pytest.raises(ProcessingError, match="Missing 'attributes' in payload for UPDATE_NODE_ATTRIBUTES event"):
+#         apply_event_to_graph(event, graph)
+
+@pytest.mark.parametrize(
+    "attributes_payload, expected_error_message_part",
+    [
+        # Case 1: "attributes" key completely missing from payload
+        ({"node_id": "node1"}, "Missing 'attributes' key in payload"),
+
+        # Case 2: "attributes" key present, but value is None
+        # This will be caught by "must be a dictionary"
+        ({"node_id": "node1", "attributes": None}, "'attributes' must be a dictionary"),
+
+        # Case 3: "attributes" key present, but value is not a dictionary
+        ({"node_id": "node1", "attributes": "not-a-dict"}, "'attributes' must be a dictionary"),
+
+        # Case 4: "attributes" key present, value is an empty dictionary
+        ({"node_id": "node1", "attributes": {}}, "'attributes' dictionary cannot be empty"),
+    ]
+)
+def test_apply_update_node_attributes_invalid_attributes_payload(
+    graph: MockGraph, attributes_payload: dict, expected_error_message_part: str
+):
+    """
+    Tests UPDATE_NODE_ATTRIBUTES with various invalid 'attributes' payloads,
+    checking against the refined validation logic.
+    """
+    node_id = "node1" # Common node_id for these tests
+
+    # Ensure the node exists for update tests, unless the error occurs before that check
+    if "Node 'node1' does not exist" not in expected_error_message_part:
+         if not graph.node_exists(node_id) and \
+            "Missing 'attributes' key" not in expected_error_message_part and \
+            "'attributes' must be a dictionary" not in expected_error_message_part and \
+            "'attributes' dictionary cannot be empty" not in expected_error_message_part :
+            graph.add_node(node_id, {"initial_name": "Test"})
+
+    event_payload = attributes_payload.copy()
+    if "node_id" not in event_payload: # Ensure node_id from parametrization is used if provided, else default
+        event_payload["node_id"] = node_id
+
+
     event = Event(
         event_type="UPDATE_NODE_ATTRIBUTES",
         timestamp=int(time.time()),
-        payload={"node_id": node_id} # Missing attributes field
+        payload=event_payload
     )
-    with pytest.raises(ProcessingError, match="Missing 'attributes' in payload for UPDATE_NODE_ATTRIBUTES event"):
+
+    with pytest.raises(ProcessingError) as excinfo:
         apply_event_to_graph(event, graph)
+
+    assert expected_error_message_part in str(excinfo.value)
 
 def test_apply_unknown_event_type(graph: MockGraph):
     """Test error when an unknown event_type is encountered."""
@@ -126,5 +177,3 @@ def test_apply_unknown_event_type(graph: MockGraph):
     )
     with pytest.raises(ProcessingError, match="Unknown event_type 'UNKNOWN_EVENT_TYPE'"):
         apply_event_to_graph(event, graph)
-
-```
