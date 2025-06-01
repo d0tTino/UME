@@ -170,4 +170,20 @@ class IGraphAdapter(ABC):
             Returns an empty list if the graph contains no edges.
         """
         pass
+
+    @abstractmethod
+    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        """
+        Removes a specific directed, labeled edge from the graph.
+
+        Args:
+            source_node_id: The identifier of the source node of the edge.
+            target_node_id: The identifier of the target node of the edge.
+            label: The label of the edge to remove.
+
+        Raises:
+            ProcessingError (or similar): If the specified edge does not exist,
+                                        or if nodes do not exist (implementation dependent).
+        """
+        pass
 ```

@@ -13,14 +13,28 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
 
     This function uses the IGraphAdapter interface to interact with the graph,
     allowing for different graph backend implementations.
+    Supported event_types:
+    - "CREATE_NODE": Creates a new node. Requires `event.payload` to contain
+      `node_id` (str) and `attributes` (dict).
+    - "UPDATE_NODE_ATTRIBUTES": Updates an existing node's attributes. Requires
+      `event.payload` to contain `node_id` (str) and `attributes` (non-empty dict).
+    - "CREATE_EDGE": Creates a directed, labeled edge between two existing nodes.
+      Requires `event.node_id` (source), `event.target_node_id` (target), and
+      `event.label` (all strings).
+    - "DELETE_EDGE": Removes a specific edge. Requires `event.node_id` (source),
+      `event.target_node_id` (target), and `event.label` (all strings).
 
     Args:
-        event: The Event object to apply.
-        graph: An instance implementing the IGraphAdapter interface.
+        event (Event): The Event object to apply, with fields validated by `parse_event`.
+        graph (IGraphAdapter): An instance implementing the IGraphAdapter interface.
 
     Raises:
-        ProcessingError: If the event payload is missing required fields
-                         for the given event_type, or if the event_type is unknown.
+        ProcessingError: If fields validated by `parse_event` are unexpectedly invalid
+                         (e.g. None when str expected for a given event type),
+                         if event payload is missing required fields for the event_type,
+                         or if the event_type is unknown and not handled.
+                         Also raised by graph adapter methods for graph consistency issues
+                         (e.g., node already exists for CREATE_NODE, node not found for UPDATE_NODE_ATTRIBUTES/CREATE_EDGE).
     """
     if event.event_type == "CREATE_NODE":
         node_id = event.payload.get("node_id")
@@ -53,10 +67,33 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
 
         graph.update_node(node_id, attributes) # Call adapter's update_node
 
-    # Placeholder for other event types, e.g., DELETE_NODE, ADD_EDGE etc.
-    # elif event.event_type == "DELETE_NODE":
-    #     # Implementation for deleting a node
-    #     pass
+    elif event.event_type == "CREATE_EDGE":
+        # parse_event should have validated presence and type of node_id, target_node_id, label
+        source_node_id = event.node_id
+        target_node_id = event.target_node_id
+        label = event.label
+
+        # Defensive checks, though parse_event should ensure these are strings for this event type
+        if not all(isinstance(val, str) for val in [source_node_id, target_node_id, label]):
+            raise ProcessingError(
+                f"Invalid event structure for CREATE_EDGE: source_node_id (event.node_id), target_node_id, "
+                f"and label must be strings and present. Event ID: {event.event_id}"
+            )
+        graph.add_edge(source_node_id, target_node_id, label)
+
+    elif event.event_type == "DELETE_EDGE":
+        # parse_event should have validated presence and type of node_id, target_node_id, label
+        source_node_id = event.node_id
+        target_node_id = event.target_node_id
+        label = event.label
+
+        # Defensive checks
+        if not all(isinstance(val, str) for val in [source_node_id, target_node_id, label]):
+            raise ProcessingError(
+                f"Invalid event structure for DELETE_EDGE: source_node_id (event.node_id), target_node_id, "
+                f"and label must be strings and present. Event ID: {event.event_id}"
+            )
+        graph.delete_edge(source_node_id, target_node_id, label)
 
     else:
         # For now, we can choose to ignore unknown event types or raise an error.

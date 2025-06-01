@@ -253,4 +253,71 @@ def test_find_connected_nodes_no_matching_edges(graph: MockGraph):
     graph.add_node("n3", {})
     assert graph.find_connected_nodes("n3") == []
 
+# --- delete_edge tests (New) ---
+def test_delete_edge_success(graph: MockGraph):
+    """Test deleting an existing edge successfully."""
+    graph.add_node("s1", {})
+    graph.add_node("t1", {})
+    edge_to_delete = ("s1", "t1", "LINKS_TO")
+    graph.add_edge(edge_to_delete[0], edge_to_delete[1], edge_to_delete[2])
+
+    assert edge_to_delete in graph.get_all_edges() # Verify edge exists before deletion
+
+    graph.delete_edge(edge_to_delete[0], edge_to_delete[1], edge_to_delete[2])
+
+    assert edge_to_delete not in graph.get_all_edges()
+    assert len(graph.get_all_edges()) == 0
+
+def test_delete_multiple_edges(graph: MockGraph):
+    """Test deleting one edge when multiple exist."""
+    graph.add_node("s", {})
+    graph.add_node("t1", {})
+    graph.add_node("t2", {})
+    edge1 = ("s", "t1", "L1")
+    edge2 = ("s", "t2", "L2")
+
+    graph.add_edge(edge1[0], edge1[1], edge1[2])
+    graph.add_edge(edge2[0], edge2[1], edge2[2])
+
+    assert edge1 in graph.get_all_edges()
+    assert edge2 in graph.get_all_edges()
+    assert len(graph.get_all_edges()) == 2
+
+    graph.delete_edge(edge1[0], edge1[1], edge1[2]) # Delete edge1
+
+    assert edge1 not in graph.get_all_edges()
+    assert edge2 in graph.get_all_edges() # Edge2 should still be there
+    assert len(graph.get_all_edges()) == 1
+
+def test_delete_edge_non_existent_raises_error(graph: MockGraph):
+    """Test that attempting to delete a non-existent edge raises ProcessingError."""
+    graph.add_node("s1", {})
+    graph.add_node("t1", {})
+    # Edge ("s1", "t1", "DOES_NOT_EXIST") is never added
+
+    edge_tuple = ("s1", "t1", "DOES_NOT_EXIST")
+    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+        graph.delete_edge(edge_tuple[0], edge_tuple[1], edge_tuple[2])
+
+def test_delete_edge_non_existent_source_node_implicitly_fails(graph: MockGraph):
+    """
+    Test deleting an edge where source node doesn't exist.
+    (MockGraph.delete_edge currently doesn't check node existence, only edge tuple).
+    This test confirms it fails because the edge tuple wouldn't be found.
+    """
+    graph.add_node("t1", {})
+    edge_tuple = ("s_missing", "t1", "LINKS_TO")
+    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+        graph.delete_edge(edge_tuple[0], edge_tuple[1], edge_tuple[2])
+
+def test_delete_edge_non_existent_target_node_implicitly_fails(graph: MockGraph):
+    """
+    Test deleting an edge where target node doesn't exist.
+    (Similar to above, fails due to edge tuple not found).
+    """
+    graph.add_node("s1", {})
+    edge_tuple = ("s1", "t_missing", "LINKS_TO")
+    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+        graph.delete_edge(edge_tuple[0], edge_tuple[1], edge_tuple[2])
+
 ```

@@ -120,6 +120,28 @@ class MockGraph(IGraphAdapter):
         """
         return list(self._edges) # Return a copy
 
+    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        """
+        Removes a specific directed, labeled edge from the graph.
+
+        Args:
+            source_node_id: The identifier of the source node of the edge.
+            target_node_id: The identifier of the target node of the edge.
+            label: The label of the edge to remove.
+
+        Raises:
+            ProcessingError: If the specified edge (source, target, label)
+                             does not exist in the graph.
+                             (Note: This implementation does not currently check
+                             if source/target nodes themselves exist prior to attempting
+                             edge removal, relying on the edge's existence.)
+        """
+        edge_to_remove = (source_node_id, target_node_id, label)
+        try:
+            self._edges.remove(edge_to_remove)
+        except ValueError: # .remove() raises ValueError if item not found
+            raise ProcessingError(f"Edge {edge_to_remove} does not exist and cannot be deleted.")
+
     def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
         """
         Finds nodes connected to a given node, optionally via a specific edge label.
