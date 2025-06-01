@@ -167,6 +167,85 @@ producer.flush() # Ensure it's flushed
 ```
 Restart both demos and observe the consumer logging an error (e.g., `JSONDecodeError` or `EventError`) rather than crashing. Remember to remove the test line afterwards.
 
+## Basic Usage
+
+This section outlines the basic programmatic steps to interact with the UME components once the project is set up and services (like Redpanda, if using network-based events) are running.
+
+1.  **Obtain a Graph Adapter Instance:**
+    Choose an implementation of `IGraphAdapter`. For local testing or simple use cases, `MockGraph` can be used:
+    ```python
+    from ume import MockGraph, IGraphAdapter
+
+    graph_adapter: IGraphAdapter = MockGraph()
+    ```
+
+2.  **Prepare Raw Event Data:**
+    Event data typically comes as a Python dictionary, perhaps from a JSON message or another source.
+    ```python
+    raw_event_dict = {
+        "event_type": "CREATE_NODE",
+        "timestamp": int(time.time()), # Assuming 'import time'
+        "payload": {
+            "node_id": "node123",
+            "attributes": {"name": "My Node", "category": "A"}
+        },
+        "source": "my_application"
+        # event_id can be omitted to be auto-generated
+    }
+    ```
+
+3.  **Parse Raw Event Data:**
+    Use `parse_event` to validate and convert the raw dictionary into an `Event` object:
+    ```python
+    from ume import parse_event, EventError
+
+    try:
+        parsed_event = parse_event(raw_event_dict)
+        print(f"Parsed event: {parsed_event}")
+    except EventError as e:
+        print(f"Error parsing event: {e}")
+        # Handle error appropriately
+    ```
+
+4.  **Apply Event to Graph:**
+    Use `apply_event_to_graph` to process the parsed event and modify the graph via the adapter:
+    ```python
+    from ume import apply_event_to_graph, ProcessingError
+
+    if 'parsed_event' in locals(): # Check if event was parsed successfully
+        try:
+            apply_event_to_graph(parsed_event, graph_adapter)
+            print(f"Successfully applied event {parsed_event.event_id} to graph.")
+        except ProcessingError as e:
+            print(f"Error applying event to graph: {e}")
+            # Handle error appropriately
+    ```
+
+5.  **Inspect Graph State (Optional):**
+    You can inspect the graph's state using adapter methods:
+    ```python
+    if graph_adapter.node_exists("node123"):
+        print(f"Node 'node123' data: {graph_adapter.get_node('node123')}")
+
+    # Get a serializable dump of the graph (nodes only for MockGraph)
+    graph_dump = graph_adapter.dump()
+    print(f"Graph dump: {graph_dump}")
+    ```
+
+6.  **Snapshot Graph to File (Optional):**
+    Persist the graph's state to a file:
+    ```python
+    from ume import snapshot_graph_to_file
+
+    try:
+        snapshot_path = "my_graph_snapshot.json"
+        snapshot_graph_to_file(graph_adapter, snapshot_path)
+        print(f"Graph snapshot saved to {snapshot_path}")
+    except Exception as e: # Catch potential IOErrors etc.
+        print(f"Error saving snapshot: {e}")
+    ```
+This provides a basic flow for event handling and graph interaction within UME.
+
 ## Where to Get Help
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:
