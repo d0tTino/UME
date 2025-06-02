@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (though currently in pre-release/development phase).
 
+## [0.3.0-dev] - 2023-10-27
+
+### Added
+
+-   **Command-Line Interface (`ume_cli.py`):**
+    -   Added an interactive REPL/CLI script (`ume_cli.py`) in the project root for interacting with the UME.
+    -   Uses Python's `cmd` module for the command loop.
+    -   Initializes and uses an in-memory `MockGraph` instance.
+    -   Provides commands for:
+        -   Node management: `new_node <node_id> <json_attributes>`
+        -   Edge management: `new_edge <src> <tgt> <lbl>`, `del_edge <src> <tgt> <lbl>`
+        -   Graph queries: `show_nodes`, `show_edges`, `neighbors <node_id> [<lbl>]`
+        -   Snapshotting: `snapshot_save <path>`, `snapshot_load <path>`
+        -   Utility: `clear` (graph), `exit`, `quit`, `help`
+    -   Graph mutations via the CLI are event-sourced (using `parse_event` and `apply_event_to_graph`).
+    -   Includes error handling for UME exceptions and user input.
+-   **CLI Smoke Tests (`tests/test_cli_smoke.py`):**
+    -   Added basic smoke tests for `ume_cli.py` using `subprocess` to verify:
+        -   CLI startup and basic commands (`exit`, `help`).
+        -   Node creation and listing (`new_node`, `show_nodes`).
+        -   Edge creation and listing (`new_edge`, `show_edges`).
+        -   Snapshot save and load functionality.
+        -   Handling of unknown commands.
+-   **Documentation:**
+    -   `README.md`: Added a new "Command-Line Interface (v0.3.0-dev)" section with usage instructions, command overview, and an example session.
+
+### Changed
+
+*(No specific changes to existing features noted for this version yet, primarily new additions)*
+
+### Fixed
+
+-   *(No specific bug fixes noted for this version yet, primarily new features)*
+
 ## [0.2.0-dev] - 2023-10-27
 
 ### Added
