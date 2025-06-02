@@ -360,6 +360,73 @@ This section outlines the basic programmatic steps to interact with the UME comp
     ```
 This provides a basic flow for event handling and graph interaction within UME.
 
+## Command-Line Interface (v0.3.0-dev)
+
+You can interact with UME via an interactive REPL (Read-Eval-Print Loop) command-line interface.
+
+To start the CLI, navigate to the project root directory and run:
+```bash
+poetry run python ume_cli.py
+```
+Alternatively, if you make the script executable (`chmod +x ume_cli.py`), you can run it directly:
+```bash
+./ume_cli.py
+```
+You will see the prompt: `ume> `. Type `help` or `?` to list available commands, or `help <command>` for details on a specific command.
+
+### Available Commands
+
+*   **`new_node <node_id> <json_attributes>`**: Create a new node.
+    *   Example: `new_node user123 '{"name": "Alice", "email": "alice@example.com"}'`
+*   **`new_edge <source_id> <target_id> <label>`**: Create a new directed edge between two existing nodes.
+    *   Example: `new_edge user123 order456 PLACED_ORDER`
+*   **`del_edge <source_id> <target_id> <label>`**: Delete an existing directed edge.
+    *   Example: `del_edge user123 order456 PLACED_ORDER`
+*   **`show_nodes`**: List all node IDs currently in the graph.
+*   **`show_edges`**: List all edges in the graph as `(source -> target) [label]`.
+*   **`neighbors <node_id> [<label>]`**: List all target nodes that `<node_id>` connects to. Optionally filter by edge label.
+    *   Example: `neighbors user123 PLACED_ORDER`
+    *   Example: `neighbors user123`
+*   **`snapshot_save <filepath>`**: Save the current graph state (nodes and edges) to the given JSON file.
+    *   Example: `snapshot_save memory_backup.json`
+*   **`snapshot_load <filepath>`**: Clear the current graph and load state from the given JSON file.
+    *   Example: `snapshot_load memory_backup.json`
+*   **`clear`**: Remove all nodes and edges from the current graph.
+*   **`exit`** or **`quit`** or **`EOF`** (Ctrl+D): Quit the UME CLI.
+*   **`help`** or **`?`**: Display help information.
+
+### Example Session
+
+```text
+ume> new_node alice '{"age": 30, "city": "Wonderland"}'
+Node 'alice' created.
+ume> new_node bob '{"age": 25, "city": "LookingGlass"}'
+Node 'bob' created.
+ume> new_edge alice bob friend_of
+Edge (alice)->(bob) [friend_of] created.
+ume> neighbors alice
+Neighbors of 'alice': ['bob']
+ume> neighbors alice friend_of
+Neighbors of 'alice' with label 'friend_of': ['bob']
+ume> show_edges
+Edges:
+  - alice -> bob [friend_of]
+ume> snapshot_save memory.json
+Snapshot written to memory.json
+ume> clear
+Graph cleared.
+ume> show_nodes
+No nodes in the graph.
+ume> snapshot_load memory.json
+Graph restored from memory.json
+ume> show_nodes
+Nodes:
+  - alice
+  - bob
+ume> exit
+Goodbye!
+```
+
 ## Where to Get Help
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:
