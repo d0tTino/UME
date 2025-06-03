@@ -11,11 +11,14 @@ python = "^3.12"
 confluent-kafka = ">=2.4"
 fastavro = ">=1.9"
 pyyaml = "*" # Using "*" for PyYAML as it's a common practice, but can be pinned down if needed.
+fastapi = "^0.95.2"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
 mypy = "*"
 pytest = "*"
+pytest-cov = "*"
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
