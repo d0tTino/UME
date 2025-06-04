@@ -6,6 +6,7 @@ from .graph import MockGraph
 from .persistent_graph import PersistentGraph
 from .auto_snapshot import enable_periodic_snapshot
 from .graph_adapter import IGraphAdapter
+from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .processing import apply_event_to_graph, ProcessingError
 from .snapshot import snapshot_graph_to_file, load_graph_from_file, SnapshotError
 from .schema_utils import validate_event_dict
@@ -13,4 +14,14 @@ from .schema_utils import validate_event_dict
     "SnapshotError",
     "validate_event_dict",
 
+__all__ = [
+    "Event", "EventType", "parse_event", "EventError",
+    "MockGraph",
+    "IGraphAdapter",
+    "RoleBasedGraphAdapter",
+    "AccessDeniedError",
+    "apply_event_to_graph", "ProcessingError",
+    "snapshot_graph_to_file",
+    "load_graph_from_file",
+    "SnapshotError"
 ]

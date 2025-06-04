@@ -179,6 +179,12 @@ When contributing new features or fixing bugs, please include relevant tests:
 
 Strive for clear, concise tests that verify specific behaviors and edge cases.
 
+## Access Control
+
+UME enforces access restrictions for both Kafka topics and graph operations.
+Example ACL commands for Redpanda and a description of roles are provided in
+[docs/ACCESS_CONTROL.md](docs/ACCESS_CONTROL.md).
+
 ## Quickstart
 
 ### Prerequisites
