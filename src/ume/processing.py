@@ -80,9 +80,11 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
 
+
         # After the defensive check above, mypy still treats these variables as
         # Optional[str]. Use assertions to convince the type checker they are
         # indeed strings before passing them to the adapter methods.
+
         assert isinstance(source_node_id, str)
         assert isinstance(target_node_id, str)
         assert isinstance(label, str)
@@ -103,6 +105,7 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
 
         # As above, assert non-None string values so mypy treats them correctly
         # in the adapter call.
+
         assert isinstance(source_node_id, str)
         assert isinstance(target_node_id, str)
         assert isinstance(label, str)
