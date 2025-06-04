@@ -10,11 +10,7 @@ from typing import Dict, Any, Optional
 # For now, let's assume a generic Exception in docstring, but implementations
 # like MockGraph will use ProcessingError from ume.processing.
 # Alternatively, we could forward declare ProcessingError if it's complex.
-# Let's try importing it under TYPE_CHECKING for now.
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .processing import ProcessingError # Used in docstrings, implementations will raise it
 
 class IGraphAdapter(ABC):
     """

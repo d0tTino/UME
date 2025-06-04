@@ -1,5 +1,5 @@
 # src/ume/graph.py
-from typing import Dict, Any, Optional, List, Tuple # Added List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, DefaultDict
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
@@ -17,7 +17,8 @@ class MockGraph(IGraphAdapter):
     def __init__(self):
         """Initializes an empty graph with no nodes or edges."""
         self._nodes: Dict[str, Dict[str, Any]] = {}
-        self._edges: List[Tuple[str, str, str]] = [] # (source_id, target_id, label)
+        # Store edges in an adjacency list for faster lookups: source_id -> [(target_id, label), ...]
+        self._edges: DefaultDict[str, List[Tuple[str, str]]] = DefaultDict(list)
 
     def add_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
         """
@@ -106,7 +107,7 @@ class MockGraph(IGraphAdapter):
                 f"Both source node '{source_node_id}' and target node '{target_node_id}' "
                 "must exist to add an edge."
             )
-        self._edges.append((source_node_id, target_node_id, label))
+        self._edges[source_node_id].append((target_node_id, label))
 
     def get_all_edges(self) -> List[Tuple[str, str, str]]:
         """
@@ -118,7 +119,11 @@ class MockGraph(IGraphAdapter):
             A list of tuples, where each tuple represents an edge.
             Returns an empty list if the graph contains no edges.
         """
-        return list(self._edges) # Return a copy
+        all_edges: List[Tuple[str, str, str]] = []
+        for src, targets in self._edges.items():
+            for tgt, lbl in targets:
+                all_edges.append((src, tgt, lbl))
+        return all_edges
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         """
@@ -136,11 +141,13 @@ class MockGraph(IGraphAdapter):
                              if source/target nodes themselves exist prior to attempting
                              edge removal, relying on the edge's existence.)
         """
-        edge_to_remove = (source_node_id, target_node_id, label)
-        try:
-            self._edges.remove(edge_to_remove)
-        except ValueError: # .remove() raises ValueError if item not found
-            raise ProcessingError(f"Edge {edge_to_remove} does not exist and cannot be deleted.")
+        edge_to_remove = (target_node_id, label)
+        edges_from_source = self._edges.get(source_node_id)
+        if not edges_from_source or edge_to_remove not in edges_from_source:
+            raise ProcessingError(f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be deleted.")
+        edges_from_source.remove(edge_to_remove)
+        if not edges_from_source:
+            del self._edges[source_node_id]
 
     def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
         """
@@ -164,11 +171,10 @@ class MockGraph(IGraphAdapter):
         if not self.node_exists(node_id):
             raise ProcessingError(f"Node '{node_id}' not found.")
 
-        connected_nodes = []
-        for src, target, lbl in self._edges:
-            if src == node_id:
-                if edge_label is None or lbl == edge_label:
-                    connected_nodes.append(target)
+        connected_nodes: List[str] = []
+        for target, lbl in self._edges.get(node_id, []):
+            if edge_label is None or lbl == edge_label:
+                connected_nodes.append(target)
         return connected_nodes
 
     def clear(self) -> None:
@@ -194,7 +200,11 @@ class MockGraph(IGraphAdapter):
             "edges" maps to a list of all edges, where each edge is a tuple
             (source_node_id, target_node_id, label).
         """
+        edge_list: List[Tuple[str, str, str]] = []
+        for src, targets in self._edges.items():
+            for tgt, lbl in targets:
+                edge_list.append((src, tgt, lbl))
         return {
             "nodes": {nid: attrs.copy() for nid, attrs in self._nodes.items()},
-            "edges": list(self._edges),
+            "edges": edge_list,
         }

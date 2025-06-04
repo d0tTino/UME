@@ -20,6 +20,7 @@ pytest-cov = "*"
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
+ume-cli = "ume_cli:main"
 
 [build-system]
 requires = ["poetry-core"]
