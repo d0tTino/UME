@@ -369,13 +369,14 @@ This provides a basic flow for event handling and graph interaction within UME.
 
 You can interact with UME via an interactive REPL (Read-Eval-Print Loop) command-line interface.
 
-To start the CLI, navigate to the project root directory and run:
+To start the CLI, run the console script installed by Poetry:
+```bash
+poetry run ume-cli
+```
+If you have installed UME into your environment, you can simply run `ume-cli`.
+For development purposes you can still execute the module directly:
 ```bash
 poetry run python ume_cli.py
-```
-Alternatively, if you make the script executable (`chmod +x ume_cli.py`), you can run it directly:
-```bash
-./ume_cli.py
 ```
 You will see the prompt: `ume> `. Type `help` or `?` to list available commands, or `help <command>` for details on a specific command.
 
