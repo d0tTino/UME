@@ -43,8 +43,8 @@ class UMEPrompt(Cmd):
             event_data = {
                 "event_type": "CREATE_NODE",
                 "node_id": node_id,
-                "payload": attributes, # Changed from "attributes" to "payload" to match Event dataclass
-                "timestamp": self._get_timestamp()
+                "payload": {"node_id": node_id, "attributes": attributes},
+                "timestamp": self._get_timestamp(),
             }
             evt = parse_event(event_data)
             apply_event_to_graph(evt, self.graph)
@@ -259,4 +259,3 @@ class UMEPrompt(Cmd):
 if __name__ == "__main__":
     UMEPrompt().cmdloop()
 
-```
