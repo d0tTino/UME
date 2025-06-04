@@ -9,7 +9,9 @@ import json
 import logging
 import time
 from confluent_kafka import Producer, KafkaException  # type: ignore
-from ume import Event # Import Event
+from jsonschema import ValidationError  # type: ignore
+from ume import Event
+from ume.schema_utils import validate_event_dict
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -57,6 +59,13 @@ def main():
         "payload": event_to_send.payload,
         "source": event_to_send.source
     }
+
+    try:
+        validate_event_dict(data_dict)
+    except ValidationError as e:
+        logger.error("Event failed schema validation: %s", e)
+        return
+
     data = json.dumps(data_dict).encode("utf-8")
 
     logger.info(f"Producing event object to topic '{TOPIC}': {event_to_send}")
