@@ -6,6 +6,7 @@ from .graph import MockGraph
 from .graph_adapter import IGraphAdapter
 from .processing import apply_event_to_graph, ProcessingError
 from .snapshot import snapshot_graph_to_file, load_graph_from_file, SnapshotError
+from .schema_utils import validate_event_dict
 
 __all__ = [
     "Event", "EventType", "parse_event", "EventError",
@@ -14,5 +15,6 @@ __all__ = [
     "apply_event_to_graph", "ProcessingError",
     "snapshot_graph_to_file",
     "load_graph_from_file",
-    "SnapshotError"
+    "SnapshotError",
+    "validate_event_dict",
 ]

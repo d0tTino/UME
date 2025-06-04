@@ -11,6 +11,7 @@ python = "^3.12"
 confluent-kafka = ">=2.4"
 fastavro = ">=1.9"
 pyyaml = "*" # Using "*" for PyYAML as it's a common practice, but can be pinned down if needed.
+jsonschema = ">=4.17"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
