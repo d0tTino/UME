@@ -153,6 +153,11 @@ poetry install --with dev
     ```bash
     poetry run pytest
     ```
+    Alternatively, run pytest directly by setting ``PYTHONPATH`` so the
+    source directory is discoverable (Python 3.12 or newer is required):
+    ```bash
+    PYTHONPATH=src pytest
+    ```
 
 2.  **Run tests with coverage report:**
     To run tests and generate a code coverage report for the `src/ume` package, use:
@@ -177,7 +182,7 @@ Strive for clear, concise tests that verify specific behaviors and edge cases.
 ## Quickstart
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.12+
 - Poetry (https://python-poetry.org)
 - Docker & Docker Compose
 
