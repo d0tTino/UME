@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import shlex
 import time # Added for timestamp in event creation
 from cmd import Cmd
@@ -7,8 +8,10 @@ from ume import (
     parse_event,
     apply_event_to_graph,
     load_graph_from_file,
+    load_graph_into_existing,
     snapshot_graph_to_file,
-    MockGraph,
+    PersistentGraph,
+    enable_periodic_snapshot,
     ProcessingError,
     EventError,
     SnapshotError,
@@ -25,8 +28,10 @@ class UMEPrompt(Cmd):
 
     def __init__(self):
         super().__init__()
-        self.graph: IGraphAdapter = MockGraph() # Use interface type hint
-        self.current_timestamp = int(time.time()) # For consistent timestamps in a session if needed, or increment
+        db_path = os.environ.get("UME_CLI_DB", "ume_graph.db")
+        self.graph: IGraphAdapter = PersistentGraph(db_path)
+        enable_periodic_snapshot(self.graph, "ume_snapshot.json", 24 * 3600)
+        self.current_timestamp = int(time.time())
 
     def _get_timestamp(self) -> int:
         # Simple incrementing timestamp for demo purposes within a session
@@ -213,8 +218,7 @@ class UMEPrompt(Cmd):
             # if confirm.lower() != 'y':
             #     print("Load cancelled.")
             #     return
-            new_graph = load_graph_from_file(filepath)
-            self.graph = new_graph # Replace current graph
+            load_graph_into_existing(self.graph, filepath)
             print(f"Graph restored from {filepath}")
         except FileNotFoundError:
             print(f"Error: Snapshot file '{filepath}' not found.")
