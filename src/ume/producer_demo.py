@@ -8,7 +8,7 @@ It's intended to be used with the corresponding consumer_demo.py script.
 import json
 import logging
 import time
-from confluent_kafka import Producer, KafkaException
+from confluent_kafka import Producer, KafkaException  # type: ignore
 from ume import Event # Import Event
 
 # Configure logging

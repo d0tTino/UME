@@ -113,7 +113,10 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
                     f"Invalid snapshot format for edge at index {i}: all edge elements "
                     f"(source, target, label) must be strings."
                 )
-            loaded_edges.append(tuple(edge_data)) # Convert to tuple for consistency
-        graph._edges = loaded_edges # Direct assignment after validation
+            loaded_edges.append(tuple(edge_data))
+
+        # Use public API to add edges for consistency
+        for src, tgt, lbl in loaded_edges:
+            graph.add_edge(src, tgt, lbl)
 
     return graph
