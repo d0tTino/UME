@@ -1,6 +1,7 @@
 # tests/test_processing.py
 import pytest
 import time
+import re
 from ume import Event, MockGraph, apply_event_to_graph, ProcessingError
 
 @pytest.fixture
@@ -92,7 +93,7 @@ def test_apply_update_node_attributes_node_not_exists(graph: MockGraph):
         timestamp=int(time.time()),
         payload={"node_id": node_id, "attributes": {"name": "Updated Name"}}
     )
-    with pytest.raises(ProcessingError, match=f"Node '{node_id}' does not exist"):
+    with pytest.raises(ProcessingError, match=re.escape(f"Node '{node_id}' not found for update.")):
         apply_event_to_graph(event, graph)
 
 def test_apply_update_node_attributes_missing_node_id(graph: MockGraph):
@@ -287,7 +288,8 @@ def test_apply_delete_edge_event_edge_not_exist(graph: MockGraph):
         payload={}
     )
     edge_tuple = ("s_node", "t_node", "NON_EXISTENT")
-    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+    expected = re.escape(f"Edge {edge_tuple} does not exist and cannot be deleted.")
+    with pytest.raises(ProcessingError, match=expected):
         apply_event_to_graph(event, graph)
 
 def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: MockGraph):

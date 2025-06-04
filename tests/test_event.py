@@ -75,16 +75,16 @@ def test_parse_event_valid_edge_events(event_type: str, extra_data: dict):
     "bad_input, expected_message_part",
     [
         # Case 1: Missing all required fields
-        ({}, "Missing required event fields"),
+        ({}, "Missing required event field: event_type"),
 
         # Case 2: Missing 'event_type'
-        ({"timestamp": 123, "payload": {}}, "Missing required event fields: event_type"),
+        ({"timestamp": 123, "payload": {}}, "Missing required event field: event_type"),
 
         # Case 3: Missing 'timestamp'
-        ({"event_type": "test", "payload": {}}, "Missing required event fields: timestamp"),
+        ({"event_type": "test", "payload": {}}, "Missing required event field: timestamp"),
 
-        # Case 4: Missing 'payload'
-        ({"event_type": "test", "timestamp": 123}, "Missing required event fields: payload"),
+        # Case 4: Missing 'payload' for CREATE_NODE
+        ({"event_type": "CREATE_NODE", "timestamp": 123, "node_id": "n1"}, "Missing required field 'payload' for CREATE_NODE event."),
 
         # Case 5: Invalid type for 'event_type' (int instead of str)
         ({"event_type": 123, "timestamp": int(time.time()), "payload": {}}, "Invalid type for 'event_type'"),
@@ -93,13 +93,7 @@ def test_parse_event_valid_edge_events(event_type: str, extra_data: dict):
         ({"event_type": "test", "timestamp": "not-an-int", "payload": {}}, "Invalid type for 'timestamp'"),
 
         # Case 7: Invalid type for 'payload' (str instead of dict)
-        # This test case assumes event_type is "test", which is not "CREATE_NODE" or "UPDATE_NODE_ATTRIBUTES".
-        # For these specific node event types, payload is required. For "test", it's not strictly required by parse_event top-level.
-        # The new logic in parse_event defaults payload to {} and then checks its type if present for specific event types.
-        # If event_type is "CREATE_NODE" and payload is "not-a-dict", it will fail.
-        # Let's refine this test case for a node event type specifically if payload type is the main concern.
-        # The original test case is fine as a generic test where 'payload' is provided with wrong type.
-        ({"event_type": "test_payload_type", "timestamp": int(time.time()), "payload": "not-a-dict"}, "Invalid type for 'payload' in test_payload_type event (if provided): expected dict"),
+        ({"event_type": "CREATE_EDGE", "timestamp": int(time.time()), "node_id": "s1", "target_node_id": "t1", "label": "L", "payload": "not-a-dict"}, "Invalid type for 'payload' in CREATE_EDGE event (if provided): expected dict"),
 
         # New cases for CREATE_EDGE
         # CREATE_EDGE missing target_node_id

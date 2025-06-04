@@ -159,16 +159,11 @@ def test_snapshot_file_content_is_pretty_printed(tmp_path: pathlib.Path):
         content = f.read()
 
     # Check for newlines and spaces indicative of pretty-printing (indent=2)
-    assert '
-  "' in content # Check for typical indentation
-    assert '{
-  "nodes": {
-    "node1": {
-' in content or            '{
-  "nodes": {
-      "node1": {
-' in content # Allow for slight variations
-```
+    assert '\n  "' in content  # Check for typical indentation (newline then spaces before a quote)
+    assert (
+        '{\n  "nodes": {\n    "node1": {' in content
+        or '{\n  "nodes": {\n      "node1": {' in content
+    )  # Allow for slight variations
 
 # --- Tests for load_graph_from_file ---
 
@@ -302,4 +297,3 @@ def test_load_graph_from_file_invalid_structure_edge_element_not_string(tmp_path
 
     with pytest.raises(SnapshotError, match="Invalid snapshot format for edge at index 0: all edge elements .* must be strings"):
         load_graph_from_file(snapshot_file)
-```

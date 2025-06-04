@@ -2,7 +2,8 @@
 import subprocess
 import sys
 import os
-import pytest # For tmp_path if needed later, and general test structure
+import shlex
+import pytest  # For tmp_path if needed later, and general test structure
 
 # Determine the absolute path to ume_cli.py
 # Assuming tests are run from the project root or a similar consistent location.
@@ -144,4 +145,3 @@ def test_cli_unknown_command(tmp_path): # tmp_path not used but is a standard fi
     assert "*** Unknown syntax: unknown_command_test" in stdout # Default Cmd behavior
     assert stderr == ""
 
-```

@@ -120,4 +120,3 @@ def parse_event(data: Dict[str, Any]) -> Event:
         target_node_id=target_node_id_val,
         label=label_val
     )
-```
