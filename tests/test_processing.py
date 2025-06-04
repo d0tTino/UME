@@ -2,7 +2,7 @@
 import pytest
 import time
 import re
-from ume import Event, MockGraph, apply_event_to_graph, ProcessingError
+from ume import Event, EventType, MockGraph, apply_event_to_graph, ProcessingError
 
 @pytest.fixture
 def graph() -> MockGraph:
@@ -16,7 +16,7 @@ def test_apply_create_node_event_success(graph: MockGraph):
     attributes = {"name": "Test Node", "value": 100}
     event = Event(
         event_id=event_id,
-        event_type="CREATE_NODE",
+        event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
         payload={"node_id": node_id, "attributes": attributes}
     )
@@ -29,7 +29,7 @@ def test_apply_create_node_event_no_attributes(graph: MockGraph):
     """Test successfully creating a new node with no initial attributes."""
     node_id = "node_no_attr"
     event = Event(
-        event_type="CREATE_NODE",
+        event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
         payload={"node_id": node_id} # Attributes are optional in payload for create
     )
@@ -42,7 +42,7 @@ def test_apply_create_node_event_already_exists(graph: MockGraph):
     node_id = "node1"
     graph.add_node(node_id, {"name": "Initial Node"}) # Pre-existing node
     event = Event(
-        event_type="CREATE_NODE",
+        event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
         payload={"node_id": node_id, "attributes": {"name": "New Node"}}
     )
@@ -52,7 +52,7 @@ def test_apply_create_node_event_already_exists(graph: MockGraph):
 def test_apply_create_node_missing_node_id(graph: MockGraph):
     """Test error when 'node_id' is missing in payload for CREATE_NODE."""
     event = Event(
-        event_type="CREATE_NODE",
+        event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
         payload={"attributes": {"name": "Test Node"}}
     )
@@ -62,7 +62,7 @@ def test_apply_create_node_missing_node_id(graph: MockGraph):
 def test_apply_create_node_invalid_node_id_type(graph: MockGraph):
     """Test error when 'node_id' is not a string for CREATE_NODE."""
     event = Event(
-        event_type="CREATE_NODE",
+        event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
         payload={"node_id": 123, "attributes": {"name": "Test Node"}} # node_id is int
     )
@@ -78,7 +78,7 @@ def test_apply_update_node_attributes_success(graph: MockGraph):
 
     graph.add_node(node_id, initial_attrs)
     event = Event(
-        event_type="UPDATE_NODE_ATTRIBUTES",
+        event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
         payload={"node_id": node_id, "attributes": updated_attrs}
     )
@@ -89,7 +89,7 @@ def test_apply_update_node_attributes_node_not_exists(graph: MockGraph):
     """Test error when trying to update attributes of a non-existent node."""
     node_id = "node_not_found"
     event = Event(
-        event_type="UPDATE_NODE_ATTRIBUTES",
+        event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
         payload={"node_id": node_id, "attributes": {"name": "Updated Name"}}
     )
@@ -99,7 +99,7 @@ def test_apply_update_node_attributes_node_not_exists(graph: MockGraph):
 def test_apply_update_node_attributes_missing_node_id(graph: MockGraph):
     """Test error for UPDATE_NODE_ATTRIBUTES if 'node_id' is missing."""
     event = Event(
-        event_type="UPDATE_NODE_ATTRIBUTES",
+        event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
         payload={"attributes": {"name": "Updated Name"}}
     )
@@ -159,7 +159,7 @@ def test_apply_update_node_attributes_invalid_attributes_payload(
 
 
     event = Event(
-        event_type="UPDATE_NODE_ATTRIBUTES",
+        event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
         payload=event_payload
     )
@@ -188,7 +188,7 @@ def test_apply_create_edge_event_success(graph: MockGraph):
     # Assuming parse_event handles creating the Event object correctly for this test
     # For apply_event_to_graph tests, we typically construct Event objects directly for clarity
     event = Event(
-        event_type="CREATE_EDGE",
+        event_type=EventType.CREATE_EDGE,
         timestamp=int(time.time()),
         node_id="source_node",
         target_node_id="target_node",
@@ -205,7 +205,7 @@ def test_apply_create_edge_event_missing_source_node(graph: MockGraph):
     """Test CREATE_EDGE when source node does not exist (error from adapter)."""
     graph.add_node("target_node", {}) # Target exists
     event = Event(
-        event_type="CREATE_EDGE",
+        event_type=EventType.CREATE_EDGE,
         timestamp=int(time.time()),
         node_id="missing_source",
         target_node_id="target_node",
@@ -219,7 +219,7 @@ def test_apply_create_edge_event_missing_target_node(graph: MockGraph):
     """Test CREATE_EDGE when target node does not exist (error from adapter)."""
     graph.add_node("source_node", {}) # Source exists
     event = Event(
-        event_type="CREATE_EDGE",
+        event_type=EventType.CREATE_EDGE,
         timestamp=int(time.time()),
         node_id="source_node",
         target_node_id="missing_target",
@@ -239,7 +239,7 @@ def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: Moc
 
     # Example: target_node_id is int
     event_bad_target_type = Event(
-        event_type="CREATE_EDGE", timestamp=int(time.time()),
+        event_type=EventType.CREATE_EDGE, timestamp=int(time.time()),
         node_id="source_node", target_node_id=123, label="LINKS_TO", payload={}
     )
     with pytest.raises(ProcessingError, match="Invalid event structure for CREATE_EDGE"):
@@ -247,7 +247,7 @@ def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: Moc
 
     # Example: label is int
     event_bad_label_type = Event(
-        event_type="CREATE_EDGE", timestamp=int(time.time()),
+        event_type=EventType.CREATE_EDGE, timestamp=int(time.time()),
         node_id="source_node", target_node_id="target_node", label=456, payload={}
     )
     with pytest.raises(ProcessingError, match="Invalid event structure for CREATE_EDGE"):
@@ -263,7 +263,7 @@ def test_apply_delete_edge_event_success(graph: MockGraph):
     assert ("s_node", "t_node", "TO_DELETE") in graph.get_all_edges() # Verify setup
 
     event = Event(
-        event_type="DELETE_EDGE",
+        event_type=EventType.DELETE_EDGE,
         timestamp=int(time.time()),
         node_id="s_node",
         target_node_id="t_node",
@@ -280,7 +280,7 @@ def test_apply_delete_edge_event_edge_not_exist(graph: MockGraph):
     # Edge is never added
 
     event = Event(
-        event_type="DELETE_EDGE",
+        event_type=EventType.DELETE_EDGE,
         timestamp=int(time.time()),
         node_id="s_node",
         target_node_id="t_node",
@@ -298,7 +298,7 @@ def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: Moc
     This tests the defensive checks in apply_event_to_graph.
     """
     event_bad_label_type = Event(
-        event_type="DELETE_EDGE", timestamp=int(time.time()),
+        event_type=EventType.DELETE_EDGE, timestamp=int(time.time()),
         node_id="s", target_node_id="t", label=123, payload={} # label is int
     )
     with pytest.raises(ProcessingError, match="Invalid event structure for DELETE_EDGE"):

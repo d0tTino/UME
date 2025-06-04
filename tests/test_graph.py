@@ -151,8 +151,7 @@ def test_add_edge_success(graph: MockGraph):
     graph.add_node("nodeS", {})
     graph.add_node("nodeT", {})
     graph.add_edge("nodeS", "nodeT", "RELATES_TO")
-    assert ("nodeS", "nodeT", "RELATES_TO") in graph._edges # Accessing protected member for test validation
-    # Check get_all_edges as well
+    # Ensure the edge is present via the public API
     all_edges = graph.get_all_edges()
     assert len(all_edges) == 1
     assert ("nodeS", "nodeT", "RELATES_TO") in all_edges

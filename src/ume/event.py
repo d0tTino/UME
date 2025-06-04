@@ -1,7 +1,17 @@
 # src/ume/event.py
 import uuid
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Dict, Any, Optional
+
+
+class EventType(str, Enum):
+    """Enumeration of built-in event types."""
+
+    CREATE_NODE = "CREATE_NODE"
+    UPDATE_NODE_ATTRIBUTES = "UPDATE_NODE_ATTRIBUTES"
+    CREATE_EDGE = "CREATE_EDGE"
+    DELETE_EDGE = "DELETE_EDGE"
 
 @dataclass(frozen=True)
 class Event:
@@ -80,7 +90,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
     # Default payload to {} if not present; specific event types might require it later
     payload_val = data.get("payload", {})
 
-    if event_type in ["CREATE_NODE", "UPDATE_NODE_ATTRIBUTES"]:
+    if event_type in [EventType.CREATE_NODE.value, EventType.UPDATE_NODE_ATTRIBUTES.value]:
         if "node_id" not in data: # Must be present in data
             raise EventError(f"Missing required field 'node_id' for {event_type} event.")
         if not isinstance(node_id_val, str):
@@ -93,7 +103,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
         if not isinstance(payload_val, dict):
             raise EventError(f"Invalid type for 'payload' in {event_type} event: expected dict, got {type(payload_val).__name__}")
 
-    elif event_type in ["CREATE_EDGE", "DELETE_EDGE"]:
+    elif event_type in [EventType.CREATE_EDGE.value, EventType.DELETE_EDGE.value]:
         required_fields_for_edge = {"node_id", "target_node_id", "label"}
         missing_fields = required_fields_for_edge - data.keys()
         if missing_fields:

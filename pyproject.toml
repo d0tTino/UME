@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ume"
-version = "0.1.0"
+version = "0.3.0-dev"
 description = ""
 authors = ["Ume Bot <ume-bot@example.com>"]
 readme = "README.md"
@@ -20,6 +20,7 @@ pytest-cov = "*"
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
+ume-cli = "ume_cli:main"
 
 [build-system]
 requires = ["poetry-core"]

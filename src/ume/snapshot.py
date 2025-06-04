@@ -1,6 +1,6 @@
 # src/ume/snapshot.py
 import json
-from typing import Union, TYPE_CHECKING, Dict, Any, List, Tuple # Added List, Tuple
+from typing import Union, TYPE_CHECKING, List, Tuple
 import pathlib # For type hinting path-like objects
 
 # Ensure MockGraph is available for instantiation and type hinting
@@ -19,8 +19,8 @@ def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> 
     """
     Snapshots the given MockGraph's current state to a JSON file.
 
-    The snapshot will include the data returned by graph.dump(), which
-    currently consists of nodes. The JSON file is pretty-printed with an
+    The snapshot includes the data returned by ``graph.dump()``, which
+    contains both nodes and edges. The JSON file is pretty-printed with an
     indent of 2 spaces.
 
     Args:
@@ -113,7 +113,10 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
                     f"Invalid snapshot format for edge at index {i}: all edge elements "
                     f"(source, target, label) must be strings."
                 )
-            loaded_edges.append(tuple(edge_data)) # Convert to tuple for consistency
-        graph._edges = loaded_edges # Direct assignment after validation
+            loaded_edges.append(tuple(edge_data))
+
+        # Use public API to add edges for consistency
+        for src, tgt, lbl in loaded_edges:
+            graph.add_edge(src, tgt, lbl)
 
     return graph

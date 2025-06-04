@@ -1,5 +1,5 @@
 # src/ume/processing.py
-from .event import Event
+from .event import Event, EventType
 from .graph_adapter import IGraphAdapter # Use IGraphAdapter
 # MockGraph import removed as it's no longer directly used for type hinting here
 
@@ -36,7 +36,7 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                          Also raised by graph adapter methods for graph consistency issues
                          (e.g., node already exists for CREATE_NODE, node not found for UPDATE_NODE_ATTRIBUTES/CREATE_EDGE).
     """
-    if event.event_type == "CREATE_NODE":
+    if event.event_type == EventType.CREATE_NODE:
         node_id = event.payload.get("node_id")
         if not node_id:
             raise ProcessingError(f"Missing 'node_id' in payload for CREATE_NODE event: {event.event_id}")
@@ -49,7 +49,7 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
 
         graph.add_node(node_id, attributes) # Call adapter's add_node
 
-    elif event.event_type == "UPDATE_NODE_ATTRIBUTES":
+    elif event.event_type == EventType.UPDATE_NODE_ATTRIBUTES:
         node_id = event.payload.get("node_id")
         if not node_id:
             raise ProcessingError(f"Missing 'node_id' in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
@@ -67,7 +67,7 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
 
         graph.update_node(node_id, attributes) # Call adapter's update_node
 
-    elif event.event_type == "CREATE_EDGE":
+    elif event.event_type == EventType.CREATE_EDGE:
         # parse_event should have validated presence and type of node_id, target_node_id, label
         source_node_id = event.node_id
         target_node_id = event.target_node_id
@@ -79,9 +79,12 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                 f"Invalid event structure for CREATE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
+        assert isinstance(source_node_id, str)
+        assert isinstance(target_node_id, str)
+        assert isinstance(label, str)
         graph.add_edge(source_node_id, target_node_id, label)
 
-    elif event.event_type == "DELETE_EDGE":
+    elif event.event_type == EventType.DELETE_EDGE:
         # parse_event should have validated presence and type of node_id, target_node_id, label
         source_node_id = event.node_id
         target_node_id = event.target_node_id
@@ -93,6 +96,9 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                 f"Invalid event structure for DELETE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
+        assert isinstance(source_node_id, str)
+        assert isinstance(target_node_id, str)
+        assert isinstance(label, str)
         graph.delete_edge(source_node_id, target_node_id, label)
 
     else:
