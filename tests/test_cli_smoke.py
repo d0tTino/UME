@@ -175,15 +175,3 @@ def test_cli_snapshot_load_invalid_snapshot(tmp_path):
     assert rc == 0
 
 
-def test_cli_snapshot_load_invalid_snapshot(tmp_path):
-    """Loading a malformed snapshot should print a user-friendly error."""
-    bad_snapshot = tmp_path / "bad_snapshot.json"
-    # Write an invalid snapshot (nodes should be a dict)
-    bad_snapshot.write_text('{"nodes": []}')
-
-    commands = [f"snapshot_load {shlex.quote(str(bad_snapshot))}", "exit"]
-    stdout, stderr = run_cli_commands(commands)
-
-    assert "Error loading snapshot" in stdout
-    assert stderr == ""
-
