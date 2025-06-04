@@ -73,15 +73,13 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         target_node_id = event.target_node_id
         label = event.label
 
-        # Defensive checks, though parse_event should ensure these are strings for this event type
-        if not all(isinstance(val, str) for val in [source_node_id, target_node_id, label]):
+        # Defensive checks in case an improperly constructed Event is passed
+        if not (isinstance(source_node_id, str) and isinstance(target_node_id, str) and isinstance(label, str)):
             raise ProcessingError(
                 f"Invalid event structure for CREATE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
-        assert isinstance(source_node_id, str)
-        assert isinstance(target_node_id, str)
-        assert isinstance(label, str)
+
         graph.add_edge(source_node_id, target_node_id, label)
 
     elif event.event_type == EventType.DELETE_EDGE:
@@ -91,14 +89,12 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         label = event.label
 
         # Defensive checks
-        if not all(isinstance(val, str) for val in [source_node_id, target_node_id, label]):
+        if not (isinstance(source_node_id, str) and isinstance(target_node_id, str) and isinstance(label, str)):
             raise ProcessingError(
                 f"Invalid event structure for DELETE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
-        assert isinstance(source_node_id, str)
-        assert isinstance(target_node_id, str)
-        assert isinstance(label, str)
+
         graph.delete_edge(source_node_id, target_node_id, label)
 
     else:

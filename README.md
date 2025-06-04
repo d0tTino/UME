@@ -223,6 +223,14 @@ producer.flush() # Ensure it's flushed
 ```
 Restart both demos and observe the consumer logging an error (e.g., `JSONDecodeError` or `EventError`) rather than crashing. Remember to remove the test line afterwards.
 
+### 6. Run the Test Suite
+After installing dependencies, you can run the unit tests to verify everything works:
+```bash
+poetry run pytest
+# or
+PYTHONPATH=src pytest
+```
+
 ## Basic Usage
 
 This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
