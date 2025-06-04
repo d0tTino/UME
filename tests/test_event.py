@@ -1,7 +1,7 @@
 # tests/test_event.py
 import pytest
 import time
-from ume import Event, parse_event, EventError # Assuming __init__.py exports these
+from ume import Event, EventType, parse_event, EventError  # EventType constants
 
 def test_parse_event_valid():
     """Test parsing a valid event dictionary."""
@@ -41,15 +41,15 @@ def test_parse_event_minimal_valid():
 @pytest.mark.parametrize(
     "event_type, extra_data",
     [
-        ("CREATE_EDGE", {"target_node_id": "t1", "label": "LINKS_TO"}),
-        ("DELETE_EDGE", {"target_node_id": "t2", "label": "REMOVES_LINK"}),
+        (EventType.CREATE_EDGE, {"target_node_id": "t1", "label": "LINKS_TO"}),
+        (EventType.DELETE_EDGE, {"target_node_id": "t2", "label": "REMOVES_LINK"}),
     ]
 )
-def test_parse_event_valid_edge_events(event_type: str, extra_data: dict):
+def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
     """Test parsing valid CREATE_EDGE and DELETE_EDGE events."""
     timestamp_now = int(time.time())
     event_data = {
-        "event_type": event_type,
+        "event_type": event_type.value,
         "timestamp": timestamp_now,
         "node_id": "s1", # Source node
         **extra_data # Adds target_node_id and label

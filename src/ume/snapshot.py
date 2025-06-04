@@ -1,15 +1,11 @@
 # src/ume/snapshot.py
 import json
-from typing import Union, TYPE_CHECKING, List, Tuple
+from typing import Union, List, Tuple
 import pathlib # For type hinting path-like objects
 
 # Ensure MockGraph is available for instantiation and type hinting
 from .graph import MockGraph
 
-# TYPE_CHECKING block for MockGraph might be redundant if imported directly above,
-# but doesn't harm. It's good practice if snapshot.py were imported by graph.py.
-if TYPE_CHECKING:
-    pass # MockGraph already imported
 
 class SnapshotError(ValueError):
     """Custom exception for snapshot loading or validation errors."""
@@ -32,7 +28,7 @@ def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> 
         IOError: If an error occurs during file writing.
         TypeError: If the data from graph.dump() is not JSON serializable.
     """
-    dumped_data = graph.dump() # This currently returns {"nodes": ...}
+    dumped_data = graph.dump()  # {"nodes": ..., "edges": ...}
     with open(path, "w", encoding='utf-8') as f:
         json.dump(dumped_data, f, indent=2)
 
