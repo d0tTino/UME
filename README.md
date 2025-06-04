@@ -126,7 +126,7 @@ This setup demonstrates a simple event-driven architecture, which is foundationa
 A core aspect of the Universal Memory Engine (UME) is its ability to construct a knowledge graph from the events it processes. This graph serves as the dynamic, queryable memory for agents and automations.
 
 The detailed schema of this graph, including node types, relationship types, and their properties, is a key part of UME's design. As the system evolves, this will be critical for understanding how memory is structured and utilized.
-Additionally, the graph supports directed, labeled **edges** connecting these nodes, representing relationships such as `(source_node_id, target_node_id, 'RELATES_TO')`. The `MockGraph` implementation now stores these edges.
+Additionally, the graph supports directed, labeled **edges** connecting these nodes, representing relationships such as `(source_node_id, target_node_id, 'RELATES_TO')`. Internally, the `MockGraph` stores edges in an adjacency dictionary for faster lookup, while still exposing them as a list of tuples via `get_all_edges()`.
 
 For current plans and eventual detailed documentation on the UME graph model, please see:
 
@@ -153,6 +153,11 @@ poetry install --with dev
     ```bash
     poetry run pytest
     ```
+    Alternatively, run pytest directly by setting ``PYTHONPATH`` so the
+    source directory is discoverable (Python 3.12 or newer is required):
+    ```bash
+    PYTHONPATH=src pytest
+    ```
 
 2.  **Run tests with coverage report:**
     To run tests and generate a code coverage report for the `src/ume` package, use:
@@ -177,7 +182,7 @@ Strive for clear, concise tests that verify specific behaviors and edge cases.
 ## Quickstart
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.12+
 - Poetry (https://python-poetry.org)
 - Docker & Docker Compose
 
@@ -431,5 +436,5 @@ Goodbye!
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:
 
-*   **Open an Issue:** For bug reports, feature requests, or specific questions, please check the [GitHub Issues](https://github.com/your-username/universal-memory-engine/issues) page (please replace `your-username/universal-memory-engine` with the actual repository path).
+*   **Open an Issue:** For bug reports, feature requests, or specific questions, please check the [GitHub Issues](https://github.com/d0tTino/universal-memory-engine/issues) page.
 *   **Check our Contributing Guide:** For information on how to contribute to the project, see the [CONTRIBUTING.md](CONTRIBUTING.md) file.
