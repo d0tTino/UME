@@ -24,13 +24,16 @@ def run_cli_commands(commands: list[str], timeout: int = 5) -> tuple[str, str, i
         A tuple (stdout, stderr, returncode) from the CLI process. If the CLI
         exits with a non-zero status, the test fails.
     """
+    env = os.environ.copy()
+    env["UME_CLI_DB"] = ":memory:"
     process = subprocess.Popen(
         [sys.executable, CLI_SCRIPT_PATH],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        encoding='utf-8' # Be explicit about encoding
+        encoding='utf-8', # Be explicit about encoding
+        env=env,
     )
     # Join commands with newlines and ensure a final newline for the last command
     # and to trigger EOF for cmdloop if 'exit' is not the last command.
