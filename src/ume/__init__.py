@@ -1,4 +1,3 @@
-# src/ume/__init__.py
 """
 Universal Memory Engine (UME) core package.
 """
