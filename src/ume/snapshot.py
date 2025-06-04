@@ -3,8 +3,8 @@ import json
 from typing import Union, List, Tuple
 import pathlib  # For type hinting path-like objects
 
-# Ensure MockGraph is available for instantiation and type hinting
-from .graph import MockGraph
+from .persistent_graph import PersistentGraph
+from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
 
@@ -12,16 +12,16 @@ class SnapshotError(ValueError):
     """Custom exception for snapshot loading or validation errors."""
     pass
 
-def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> None:
+def snapshot_graph_to_file(graph: IGraphAdapter, path: Union[str, pathlib.Path]) -> None:
     """
-    Snapshots the given MockGraph's current state to a JSON file.
+    Snapshots the given graph's current state to a JSON file.
 
     The snapshot includes the data returned by ``graph.dump()``, which
     contains both nodes and edges. The JSON file is pretty-printed with an
     indent of 2 spaces.
 
     Args:
-        graph: The MockGraph instance to snapshot.
+        graph: The graph instance to snapshot.
         path: The file path (string or pathlib.Path object) where the
               JSON snapshot will be saved.
 
@@ -33,9 +33,9 @@ def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> 
     with open(path, "w", encoding='utf-8') as f:
         json.dump(dumped_data, f, indent=2)
 
-def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
+def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
     """
-    Loads a graph state from a JSON snapshot file into a new MockGraph instance.
+    Loads a graph state from a JSON snapshot file into a new PersistentGraph instance.
 
     The JSON file is expected to contain data previously saved by
     `snapshot_graph_to_file`. It should have a top-level "nodes" key mapping
@@ -48,7 +48,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
               the JSON snapshot.
 
     Returns:
-        MockGraph: A new MockGraph instance populated with data from the snapshot file.
+        PersistentGraph: A new PersistentGraph instance populated with data from the snapshot file.
 
     Raises:
         FileNotFoundError: If the specified path does not exist.
@@ -75,15 +75,14 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
     if not isinstance(data["nodes"], dict):
         raise SnapshotError(f"Invalid snapshot format: 'nodes' should be a dictionary, got {type(data['nodes']).__name__}.")
 
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     for node_id, attributes in data["nodes"].items():
         if not isinstance(attributes, dict):
             raise SnapshotError(
                 f"Invalid snapshot format for node '{node_id}': attributes should be a dictionary, "
                 f"got {type(attributes).__name__}."
             )
-        # Since MockGraph.add_node expects attributes to be Dict[str, Any],
-        # and json.load ensures keys are strings, this should be fine.
+        # json.load ensures keys are strings, so this matches the adapter API.
         graph.add_node(node_id, attributes.copy()) # Use .copy() for attributes
 
     # Load edges if present
@@ -122,3 +121,14 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
                 ) from e
 
     return graph
+
+
+def load_graph_into_existing(graph: IGraphAdapter, path: Union[str, pathlib.Path]) -> None:
+    """Load snapshot data from ``path`` into an existing graph adapter."""
+    loaded = load_graph_from_file(path)
+    graph.clear()
+    for node_id in loaded.get_all_node_ids():
+        attrs = loaded.get_node(node_id) or {}
+        graph.add_node(node_id, attrs)
+    for src, tgt, lbl in loaded.get_all_edges():
+        graph.add_edge(src, tgt, lbl)
