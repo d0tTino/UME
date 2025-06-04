@@ -16,3 +16,7 @@ __all__ = [
     "load_graph_from_file",
     "SnapshotError"
 ]
+
+from .client import UMEClient
+
+__all__.append("UMEClient")

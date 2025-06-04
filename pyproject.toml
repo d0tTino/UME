@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "ume"
+name = "ume_mem"
 version = "0.3.0-dev"
 description = ""
 authors = ["Ume Bot <ume-bot@example.com>"]
 readme = "README.md"
-packages = [{include = "ume", from = "src"}]
+packages = [{include = "ume_mem", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -19,7 +19,7 @@ pytest = "*"
 pytest-cov = "*"
 
 [tool.poetry.scripts]
-produce_demo = "ume.producer_demo:main"
+produce_demo = "ume_mem.producer_demo:main"
 ume-cli = "ume_cli:main"
 
 [build-system]

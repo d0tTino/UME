@@ -3,7 +3,7 @@ import json
 import pytest
 import pathlib  # Ensure pathlib is imported
 import re
-from ume import MockGraph, snapshot_graph_to_file, load_graph_from_file, SnapshotError  # Add new imports
+from ume_mem import MockGraph, snapshot_graph_to_file, load_graph_from_file, SnapshotError  # Add new imports
 
 def test_empty_graph_dump_and_serialization():
     """Test dumping an empty graph and serializing it."""

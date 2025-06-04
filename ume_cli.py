@@ -3,7 +3,7 @@ import json
 import shlex
 import time # Added for timestamp in event creation
 from cmd import Cmd
-from ume import (
+from ume_mem import (
     parse_event,
     apply_event_to_graph,
     load_graph_from_file,

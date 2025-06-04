@@ -2,7 +2,7 @@
 import pytest
 import time
 import re
-from ume import Event, EventType, MockGraph, apply_event_to_graph, ProcessingError
+from ume_mem import Event, EventType, MockGraph, apply_event_to_graph, ProcessingError
 
 @pytest.fixture
 def graph() -> MockGraph:

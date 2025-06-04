@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from confluent_kafka import Producer, KafkaException  # type: ignore
-from ume import Event # Import Event
+from ume_mem import Event  # Import Event
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

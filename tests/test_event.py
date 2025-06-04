@@ -1,7 +1,7 @@
 # tests/test_event.py
 import pytest
 import time
-from ume import Event, EventType, parse_event, EventError  # EventType constants
+from ume_mem import Event, EventType, parse_event, EventError  # EventType constants
 
 def test_parse_event_valid():
     """Test parsing a valid event dictionary."""
