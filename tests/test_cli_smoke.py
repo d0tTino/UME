@@ -145,3 +145,16 @@ def test_cli_unknown_command(tmp_path): # tmp_path not used but is a standard fi
     assert "*** Unknown syntax: unknown_command_test" in stdout # Default Cmd behavior
     assert stderr == ""
 
+
+def test_cli_snapshot_load_invalid_snapshot(tmp_path):
+    """Loading a malformed snapshot should print a user-friendly error."""
+    bad_snapshot = tmp_path / "bad_snapshot.json"
+    # Write an invalid snapshot (nodes should be a dict)
+    bad_snapshot.write_text('{"nodes": []}')
+
+    commands = [f"snapshot_load {shlex.quote(str(bad_snapshot))}", "exit"]
+    stdout, stderr = run_cli_commands(commands)
+
+    assert "Error loading snapshot" in stdout
+    assert stderr == ""
+

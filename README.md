@@ -46,7 +46,7 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
 
 ```json
 {
-  "type": "demo_event",
+  "event_type": "demo_event",
   "timestamp": 1678886400,
   "payload": {
     "message": "Hello from producer_demo!"
@@ -56,7 +56,7 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
 
 **Fields:**
 
-*   `type` (string): Describes the kind of event. In the demo, this is hardcoded to `"demo_event"`.
+*   `event_type` (string): Describes the kind of event. In the demo, this is hardcoded to `"demo_event"`.
 *   `timestamp` (integer): A Unix timestamp (seconds since epoch) indicating when the event was generated.
 *   `payload` (object): A JSON object containing the actual data of the event. The structure of the payload can vary depending on the event type. For the demo, it includes a simple `message`.
 
