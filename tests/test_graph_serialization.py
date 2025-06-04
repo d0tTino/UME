@@ -1,8 +1,9 @@
 # tests/test_graph_serialization.py
 import json
 import pytest
-import pathlib # Ensure pathlib is imported
-from ume import MockGraph, snapshot_graph_to_file, load_graph_from_file, SnapshotError # Add new imports
+import pathlib  # Ensure pathlib is imported
+import re
+from ume import MockGraph, snapshot_graph_to_file, load_graph_from_file, SnapshotError  # Add new imports
 
 def test_empty_graph_dump_and_serialization():
     """Test dumping an empty graph and serializing it."""
@@ -296,4 +297,20 @@ def test_load_graph_from_file_invalid_structure_edge_element_not_string(tmp_path
         json.dump({"nodes": {}, "edges": [("n1", "n2", 123)]}, f) # Label is int
 
     with pytest.raises(SnapshotError, match="Invalid snapshot format for edge at index 0: all edge elements .* must be strings"):
+        load_graph_from_file(snapshot_file)
+
+
+def test_load_graph_from_file_edge_references_missing_node(tmp_path: pathlib.Path):
+    """Edges referencing missing nodes should raise SnapshotError."""
+    snapshot_file = tmp_path / "edge_missing_node.json"
+    snapshot_data = {"nodes": {"n1": {"attr": "val"}}, "edges": [("n1", "n2", "REL")]} 
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        json.dump(snapshot_data, f)
+
+    expected_msg = (
+        "Error adding edge (n1, n2, REL): Both source node 'n1' "
+        "and target node 'n2' must exist to add an edge."
+    )
+    pattern = re.escape(expected_msg)
+    with pytest.raises(SnapshotError, match=pattern):
         load_graph_from_file(snapshot_file)

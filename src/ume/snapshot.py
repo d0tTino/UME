@@ -1,10 +1,11 @@
 # src/ume/snapshot.py
 import json
 from typing import Union, List, Tuple
-import pathlib # For type hinting path-like objects
+import pathlib  # For type hinting path-like objects
 
 # Ensure MockGraph is available for instantiation and type hinting
 from .graph import MockGraph
+from .processing import ProcessingError
 
 
 class SnapshotError(ValueError):
@@ -113,6 +114,11 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
 
         # Use public API to add edges for consistency
         for src, tgt, lbl in loaded_edges:
-            graph.add_edge(src, tgt, lbl)
+            try:
+                graph.add_edge(src, tgt, lbl)
+            except ProcessingError as e:
+                raise SnapshotError(
+                    f"Error adding edge ({src}, {tgt}, {lbl}): {e}"
+                ) from e
 
     return graph

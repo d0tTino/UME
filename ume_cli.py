@@ -3,8 +3,17 @@ import json
 import shlex
 import time # Added for timestamp in event creation
 from cmd import Cmd
-from ume import parse_event, apply_event_to_graph, load_graph_from_file, snapshot_graph_to_file
-from ume import MockGraph, ProcessingError, EventError, IGraphAdapter # Added IGraphAdapter for type hint
+from ume import (
+    parse_event,
+    apply_event_to_graph,
+    load_graph_from_file,
+    snapshot_graph_to_file,
+    MockGraph,
+    ProcessingError,
+    EventError,
+    SnapshotError,
+    IGraphAdapter,
+)
 
 # It's good practice to handle potential import errors if ume is not installed,
 # though for poetry run python ume_cli.py this should be fine.
@@ -209,8 +218,8 @@ class UMEPrompt(Cmd):
             print(f"Graph restored from {filepath}")
         except FileNotFoundError:
             print(f"Error: Snapshot file '{filepath}' not found.")
-        except (json.JSONDecodeError, EventError, ProcessingError) as e: # Catch specific load/parse errors
-             print(f"Error loading snapshot: {e}")
+        except (json.JSONDecodeError, EventError, ProcessingError, SnapshotError) as e:  # Catch specific load/parse errors
+            print(f"Error loading snapshot: {e}")
         except Exception as e:
             print(f"An unexpected error occurred during load: {e}")
 
