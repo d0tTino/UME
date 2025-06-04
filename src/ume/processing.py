@@ -79,6 +79,9 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                 f"Invalid event structure for CREATE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
+        assert isinstance(source_node_id, str)
+        assert isinstance(target_node_id, str)
+        assert isinstance(label, str)
         graph.add_edge(source_node_id, target_node_id, label)
 
     elif event.event_type == "DELETE_EDGE":
@@ -93,6 +96,9 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                 f"Invalid event structure for DELETE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
+        assert isinstance(source_node_id, str)
+        assert isinstance(target_node_id, str)
+        assert isinstance(label, str)
         graph.delete_edge(source_node_id, target_node_id, label)
 
     else:

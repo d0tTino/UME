@@ -256,6 +256,11 @@ class UMEPrompt(Cmd):
     # def do_help(self, arg):
     #    Cmd.do_help(self, arg)
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for the ``ume-cli`` console script."""
     UMEPrompt().cmdloop()
+
+
+if __name__ == "__main__":
+    main()
 
