@@ -21,7 +21,7 @@ This section provides a high-level overview of the Universal Memory Engine (UME)
 
 The current system consists of the following main components:
 
-1.  **Event Producer (`src/ume_mem/producer_demo.py`):**
+1.  **Event Producer (`src/ume/producer_demo.py`):**
     *   This script is responsible for generating and sending events to the message broker.
     *   In the demo, it creates a sample JSON event with a `type`, `timestamp`, and `payload`.
     *   It connects to the Kafka/Redpanda broker at `localhost:9092` and sends the event to a predefined topic.
@@ -33,7 +33,7 @@ The current system consists of the following main components:
     *   The demo uses a topic named `ume_demo`.
     *   The Docker setup also includes Redpanda Console, which provides a UI and schema registry capabilities, accessible typically on `localhost:8081` (for the console) while Redpanda itself exposes a schema registry via Pandaproxy on `localhost:8082`.
 
-3.  **Event Consumer (`src/ume_mem/consumer_demo.py`):**
+3.  **Event Consumer (`src/ume/consumer_demo.py`):**
     *   This script subscribes to topics on the message broker to receive and process events.
     *   In the demo, it connects to the Kafka/Redpanda broker at `localhost:9092`, subscribes to the `ume_demo` topic using the group ID `ume_demo_group`.
     *   Upon receiving an event, it logs the event's content. In a more complete system, this component would be responsible for parsing the event, updating the memory graph, triggering actions, or other processing tasks.
@@ -160,9 +160,9 @@ poetry install --with dev
     ```
 
 2.  **Run tests with coverage report:**
-    To run tests and generate a code coverage report for the `src/ume_mem` package, use:
+    To run tests and generate a code coverage report for the `src/ume` package, use:
     ```bash
-    poetry run pytest --cov=src/ume_mem --cov-report=term-missing
+    poetry run pytest --cov=src/ume --cov-report=term-missing
     ```
     This will print a summary to the terminal, including which lines of code are not covered by tests. An HTML report can also be generated for more detailed inspection (see pytest-cov documentation).
 
@@ -202,18 +202,18 @@ docker compose -f docker/docker-compose.yml up -d
 
 ### 3. Run the Consumer Demo
 ```bash
-poetry run python src/ume_mem/consumer_demo.py
+poetry run python src/ume/consumer_demo.py
 ```
 This script subscribes to topic `ume_demo` on `localhost:9092` and waits for messages.
 
 ### 4. Run the Producer Demo
 ```bash
-poetry run python src/ume_mem/producer_demo.py
+poetry run python src/ume/producer_demo.py
 ```
 You should see a log entry in the consumer terminal indicating the event was received, parsed, and processed.
 
 ### 5. (Optional) Test Malformed Message Handling
-Edit `src/ume_mem/producer_demo.py`, add a bad message:
+Edit `src/ume/producer_demo.py`, add a bad message:
 ```python
 # Example:
 # Find the line: producer.produce(TOPIC, value=data, callback=delivery_report)
@@ -238,7 +238,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 1.  **Obtain a Graph Adapter Instance:**
     Choose an implementation of `IGraphAdapter`. For local testing or simple use cases, `MockGraph` can be used:
     ```python
-    from ume_mem import MockGraph, IGraphAdapter
+    from ume import MockGraph, IGraphAdapter
 
     graph_adapter: IGraphAdapter = MockGraph()
     ```
@@ -278,7 +278,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 3.  **Parse and Apply Events:**
     Use `parse_event` to validate and convert raw dictionaries into `Event` objects, then `apply_event_to_graph` to modify the graph.
     ```python
-    from ume_mem import parse_event, apply_event_to_graph, EventError, ProcessingError
+    from ume import parse_event, apply_event_to_graph, EventError, ProcessingError
     # graph_adapter should be initialized as in step 1.
 
     events_to_process = [event_data_create_A, event_data_create_B, event_data_create_edge_A_B]
@@ -330,7 +330,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 5.  **Snapshot Graph to File (Optional):**
     Persist the graph's state to a file:
     ```python
-    from ume_mem import snapshot_graph_to_file
+    from ume import snapshot_graph_to_file
     # import pathlib # Ensure pathlib is imported if using Path objects for snapshot_path
     # import json # Ensure json is imported if handling json.JSONDecodeError specifically
 
@@ -345,7 +345,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 6.  **Load Graph from Snapshot (Optional):**
     Restore a graph's state from a previously saved snapshot file:
     ```python
-    from ume_mem import load_graph_from_file, SnapshotError, IGraphAdapter  # Ensure IGraphAdapter for type hint
+    from ume import load_graph_from_file, SnapshotError, IGraphAdapter # Ensure IGraphAdapter for type hint
     import pathlib # For pathlib.Path(...).exists()
     import json # For json.JSONDecodeError
 
@@ -372,28 +372,6 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Node 'node_A' from loaded graph: {loaded_graph_adapter.get_node('node_A')}")
     ```
 This provides a basic flow for event handling and graph interaction within UME.
-
-## How to Use `UMEClient`
-
-External agents can interact with UME through the convenience client class. The
-client wraps the event processing APIs and uses a graph adapter under the hood.
-
-```python
-from ume_mem import UMEClient, EventError, ProcessingError
-
-# Connect to a broker/topic if desired; for local graphs these can be omitted
-client = UMEClient(broker="localhost:9092", topic="ume_demo")
-
-try:
-    client.create_node("agent1", {"role": "tester"})
-    client.create_node("agent2", {})
-    client.create_edge("agent1", "agent2", "KNOWS")
-
-    neighbors = client.query_neighbors("agent1")
-    print(f"agent1 connects to: {neighbors}")
-except (EventError, ProcessingError) as exc:
-    print(f"Problem interacting with UME: {exc}")
-```
 
 ## Command-Line Interface (v0.3.0-dev)
 

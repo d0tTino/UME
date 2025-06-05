@@ -7,7 +7,6 @@ from .graph import MockGraph
 from .graph_adapter import IGraphAdapter
 from .processing import apply_event_to_graph, ProcessingError
 from .snapshot import snapshot_graph_to_file, load_graph_from_file, SnapshotError
-from .client import UMEClient
 
 __all__ = [
     "Event",
@@ -21,5 +20,4 @@ __all__ = [
     "snapshot_graph_to_file",
     "load_graph_from_file",
     "SnapshotError",
-    "UMEClient",
 ]

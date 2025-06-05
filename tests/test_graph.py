@@ -1,11 +1,11 @@
 # tests/test_graph.py
 import pytest
 import re
-from ume_mem import (
+from ume import (
     MockGraph,
     ProcessingError,
 )  # IGraphAdapter is implicitly tested by testing MockGraph's adherence
-from ume_mem.graph_adapter import IGraphAdapter  # Import for isinstance check if needed
+from ume.graph_adapter import IGraphAdapter  # Import for isinstance check if needed
 
 
 # Fixture for a clean MockGraph instance

@@ -40,7 +40,7 @@ jobs:
 
       - name: Check coverage (pytest-cov)
         run: |
-          poetry run pytest --cov=src/ume_mem --cov-report=xml --cov-report=term-missing tests/
+          poetry run pytest --cov=src/ume --cov-report=xml --cov-report=term-missing tests/
           # Generates term-missing report for console and xml for potential external tools
 
       - name: Lint with Ruff

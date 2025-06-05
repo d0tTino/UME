@@ -3,7 +3,7 @@ import json
 import pytest
 import pathlib  # Ensure pathlib is imported
 import re
-from ume_mem import (
+from ume import (
     MockGraph,
     snapshot_graph_to_file,
     load_graph_from_file,

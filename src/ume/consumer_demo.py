@@ -10,7 +10,7 @@ corresponding producer_demo.py script.
 import json
 import logging
 from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
-from ume_mem import parse_event, EventError  # Import from package
+from ume import parse_event, EventError  # Import parse_event and EventError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
