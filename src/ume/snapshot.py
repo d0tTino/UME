@@ -4,7 +4,6 @@ from typing import Union, List, Tuple
 import pathlib  # For type hinting path-like objects
 
 from .persistent_graph import PersistentGraph
-from .graph import MockGraph
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
@@ -15,7 +14,7 @@ class SnapshotError(ValueError):
     pass
 
 
-def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> None:
+def snapshot_graph_to_file(graph: IGraphAdapter, path: Union[str, pathlib.Path]) -> None:
 
     """
     Snapshots the given graph's current state to a JSON file.
@@ -38,7 +37,7 @@ def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> 
         json.dump(dumped_data, f, indent=2)
 
 
-def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
+def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
     """
     Loads a graph state from a JSON snapshot file into a new PersistentGraph instance.
 

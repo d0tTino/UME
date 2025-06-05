@@ -38,6 +38,12 @@ __all__ = [
     "load_graph_into_existing",
     "SnapshotError",
     "enable_snapshot_autosave_and_restore",
+    "enable_periodic_snapshot",
+    "Neo4jQueryEngine",
+    "shortest_path",
+    "find_communities",
+    "temporal_node_counts",
+    "api_app",
     "validate_event_dict",
 ]
 
