@@ -18,7 +18,7 @@ def test_mockgraph_is_igraph_adapter_instance(graph: MockGraph):
 def test_add_node_success(graph: MockGraph):
     """Test adding a new node successfully."""
     node_id = "node1"
-    attributes = {"name": "Test Node", "value": 123}
+    attributes: dict[str, object] = {"name": "Test Node", "value": 123}
     graph.add_node(node_id, attributes)
     assert graph.node_exists(node_id)
     assert graph.get_node(node_id) == attributes
@@ -27,7 +27,7 @@ def test_add_node_success(graph: MockGraph):
 def test_add_node_empty_attributes_success(graph: MockGraph):
     """Test adding a new node with empty attributes successfully."""
     node_id = "node_empty_attr"
-    attributes = {}
+    attributes: dict[str, object] = {}
     graph.add_node(node_id, attributes)
     assert graph.node_exists(node_id)
     assert graph.get_node(node_id) == {}
@@ -45,8 +45,8 @@ def test_add_node_duplicate_raises_error(graph: MockGraph):
 def test_update_node_success(graph: MockGraph):
     """Test updating an existing node's attributes successfully."""
     node_id = "node1"
-    initial_attributes = {"name": "Initial Name", "version": 1}
-    update_attributes = {"version": 2, "status": "updated"}
+    initial_attributes: dict[str, object] = {"name": "Initial Name", "version": 1}
+    update_attributes: dict[str, object] = {"version": 2, "status": "updated"}
     expected_attributes = {"name": "Initial Name", "version": 2, "status": "updated"}
 
     graph.add_node(node_id, initial_attributes)
@@ -57,7 +57,7 @@ def test_update_node_success(graph: MockGraph):
 def test_update_node_with_empty_attributes_dict(graph: MockGraph):
     """Test updating with an empty attributes dictionary (should result in no change)."""
     node_id = "node1"
-    initial_attributes = {"name": "Initial Name"}
+    initial_attributes: dict[str, object] = {"name": "Initial Name"}
     graph.add_node(node_id, initial_attributes.copy()) # Add with copy
 
     graph.update_node(node_id, {}) # Update with empty dict
@@ -67,7 +67,7 @@ def test_update_node_with_empty_attributes_dict(graph: MockGraph):
 def test_update_node_non_existent_raises_error(graph: MockGraph):
     """Test that updating a non-existent node raises ProcessingError."""
     node_id = "node_not_found"
-    attributes = {"name": "Attempted Update"}
+    attributes: dict[str, object] = {"name": "Attempted Update"}
     with pytest.raises(ProcessingError, match=f"Node '{node_id}' not found for update."):
         graph.update_node(node_id, attributes)
 
@@ -75,7 +75,7 @@ def test_update_node_non_existent_raises_error(graph: MockGraph):
 def test_get_node_exists(graph: MockGraph):
     """Test get_node for an existing node."""
     node_id = "node1"
-    attributes = {"data": "some_data"}
+    attributes: dict[str, object] = {"data": "some_data"}
     graph.add_node(node_id, attributes)
     assert graph.get_node(node_id) == attributes
 
@@ -115,7 +115,7 @@ def test_clear_graph_with_nodes_and_edges(graph: MockGraph): # Renamed for clari
 def test_dump_structure(graph: MockGraph):
     """Test the basic structure of the dump method output."""
     node_id = "node1"
-    attributes = {"key": "value"}
+    attributes: dict[str, object] = {"key": "value"}
     graph.add_node(node_id, attributes)
     dump_data = graph.dump()
     assert "nodes" in dump_data
