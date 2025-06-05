@@ -3,6 +3,7 @@ import pytest
 import re
 from ume import (
     MockGraph,
+    PersistentGraph,
     ProcessingError,
 )  # IGraphAdapter is implicitly tested by testing MockGraph's adherence
 from ume.graph_adapter import IGraphAdapter  # Import for isinstance check if needed

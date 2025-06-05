@@ -4,6 +4,7 @@ from typing import Union, List, Tuple
 import pathlib  # For type hinting path-like objects
 
 from .persistent_graph import PersistentGraph
+from .graph import MockGraph
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
