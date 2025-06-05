@@ -240,16 +240,16 @@ def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: Per
     # Example: target_node_id is int
     event_bad_target_type = Event(
         event_type=EventType.CREATE_EDGE, timestamp=int(time.time()),
-        node_id="source_node", target_node_id=123, label="LINKS_TO", payload={}
-    )
+        node_id="source_node", target_node_id=123, label="LINKS_TO", payload={},  # type: ignore[arg-type]
+    )  # type: ignore[arg-type]
     with pytest.raises(ProcessingError, match="Invalid event structure for CREATE_EDGE"):
         apply_event_to_graph(event_bad_target_type, graph)
 
     # Example: label is int
     event_bad_label_type = Event(
         event_type=EventType.CREATE_EDGE, timestamp=int(time.time()),
-        node_id="source_node", target_node_id="target_node", label=456, payload={}
-    )
+        node_id="source_node", target_node_id="target_node", label=456, payload={},  # type: ignore[arg-type]
+    )  # type: ignore[arg-type]
     with pytest.raises(ProcessingError, match="Invalid event structure for CREATE_EDGE"):
         apply_event_to_graph(event_bad_label_type, graph)
 
@@ -299,7 +299,7 @@ def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: Per
     """
     event_bad_label_type = Event(
         event_type=EventType.DELETE_EDGE, timestamp=int(time.time()),
-        node_id="s", target_node_id="t", label=123, payload={} # label is int
-    )
+        node_id="s", target_node_id="t", label=123, payload={},  # type: ignore[arg-type] # label is int
+    )  # type: ignore[arg-type]
     with pytest.raises(ProcessingError, match="Invalid event structure for DELETE_EDGE"):
         apply_event_to_graph(event_bad_label_type, graph)

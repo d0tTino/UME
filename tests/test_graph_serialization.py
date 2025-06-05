@@ -118,7 +118,7 @@ def test_snapshot_graph_with_nodes_roundtrip(tmp_path: pathlib.Path):
     graph = PersistentGraph(":memory:")
     node_a_attrs = {"name": "Alice", "age": 30, "tags": ["dev", "python"]}
     node_b_attrs = {"name": "Bob", "department": "HR", "active": True}
-    node_c_attrs = {} # Node with empty attributes
+    node_c_attrs: dict[str, object] = {}  # Node with empty attributes
 
     graph.add_node("nodeA", node_a_attrs)
     graph.add_node("nodeB", node_b_attrs)
