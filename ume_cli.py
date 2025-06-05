@@ -12,7 +12,6 @@ from cmd import Cmd
 from ume import (
     parse_event,
     apply_event_to_graph,
-    load_graph_from_file,
     load_graph_into_existing,
     snapshot_graph_to_file,
     PersistentGraph,

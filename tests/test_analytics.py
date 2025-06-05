@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ume import MockGraph
 from ume.analytics import shortest_path, find_communities, temporal_node_counts
@@ -35,7 +35,7 @@ def test_find_communities():
 
 def test_temporal_node_counts():
     g = MockGraph()
-    today = datetime.utcnow()
+    today = datetime.now(timezone.utc)
     g.add_node("n1", {"timestamp": int(today.timestamp())})
     g.add_node("n2", {"timestamp": int((today - timedelta(days=1)).timestamp())})
     g.add_node("n3", {"timestamp": int((today - timedelta(days=3)).timestamp())})

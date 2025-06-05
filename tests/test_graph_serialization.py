@@ -5,7 +5,6 @@ import pathlib  # Ensure pathlib is imported
 import re
 
 from ume import (
-    MockGraph,
     PersistentGraph,
     snapshot_graph_to_file,
     load_graph_from_file,

@@ -1,7 +1,7 @@
 """Graph analytics utilities built on top of :class:`~ume.graph_adapter.IGraphAdapter`."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Set
 
 import networkx as nx
@@ -47,13 +47,13 @@ def temporal_node_counts(graph: IGraphAdapter, past_n_days: int) -> Dict[str, in
     The timestamp attribute is assumed to be a Unix epoch integer.
     The return value maps ISO date strings (YYYY-MM-DD) to counts.
     """
-    cutoff = datetime.utcnow() - timedelta(days=past_n_days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=past_n_days)
     buckets: Dict[str, int] = {}
     for node_id in graph.get_all_node_ids():
         data = graph.get_node(node_id) or {}
         ts = data.get("timestamp")
         if isinstance(ts, (int, float)):
-            dt = datetime.utcfromtimestamp(int(ts))
+            dt = datetime.fromtimestamp(int(ts), timezone.utc)
             if dt >= cutoff:
                 key = dt.date().isoformat()
                 buckets[key] = buckets.get(key, 0) + 1

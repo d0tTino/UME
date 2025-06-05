@@ -10,7 +10,9 @@ import json
 import logging
 import time
 from confluent_kafka import Producer, KafkaException  # type: ignore
-from ume import Event  # Import Event
+from ume import Event
+from ume.schema_utils import validate_event_dict
+from jsonschema import ValidationError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
