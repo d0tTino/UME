@@ -14,7 +14,9 @@ CLI_SCRIPT_PATH = os.path.abspath(
 
 
 # Helper function to run CLI commands
-def run_cli_commands(commands: list[str], timeout: int = 5) -> tuple[str, str, int]:
+def run_cli_commands(
+    commands: list[str], cli_args: list[str] | None = None, timeout: int = 5
+) -> tuple[str, str, int]:
     """
     Runs the UME CLI as a subprocess and feeds it a list of commands.
 
@@ -30,7 +32,7 @@ def run_cli_commands(commands: list[str], timeout: int = 5) -> tuple[str, str, i
     env = os.environ.copy()
     env["UME_CLI_DB"] = ":memory:"
     process = subprocess.Popen(
-        [sys.executable, CLI_SCRIPT_PATH],
+        [sys.executable, CLI_SCRIPT_PATH] + (cli_args or []),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -182,5 +184,26 @@ def test_cli_snapshot_load_invalid_snapshot(tmp_path):
     stdout, stderr, rc = run_cli_commands(commands)
 
     assert "Error loading snapshot" in stdout
+    assert stderr == ""
+    assert rc == 0
+
+
+def test_cli_runs_with_show_warnings_flag():
+    """Ensure CLI starts and exits cleanly with the --show-warnings flag."""
+    stdout, stderr, rc = run_cli_commands(["exit"], cli_args=["--show-warnings"])
+    assert "Welcome to UME CLI." in stdout
+    assert "Goodbye!" in stdout
+    assert stderr == ""
+    assert rc == 0
+
+
+def test_cli_creates_warnings_log_file(tmp_path):
+    """Running with --warnings-log should create the log file."""
+    log_file = tmp_path / "warnings.log"
+    stdout, stderr, rc = run_cli_commands(
+        ["exit"], cli_args=["--warnings-log", str(log_file)]
+    )
+    assert log_file.is_file()
+    assert "Goodbye!" in stdout
     assert stderr == ""
     assert rc == 0

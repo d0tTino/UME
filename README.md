@@ -408,6 +408,9 @@ poetry run python ume_cli.py
 ```
 You will see the prompt: `ume> `. Type `help` or `?` to list available commands, or `help <command>` for details on a specific command.
 
+Pass `--show-warnings` to display Python warnings or `--warnings-log <file>` to
+log them for debugging.
+
 ### Available Commands
 
 *   **`new_node <node_id> <json_attributes>`**: Create a new node.

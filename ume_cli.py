@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import argparse
 import json
+import logging
 import os
 import shlex
 import sys
 import time  # Added for timestamp in event creation
+import warnings
 from pathlib import Path
 
 # Ensure local package import when run directly without installation
@@ -25,6 +28,7 @@ from ume import (
 # It's good practice to handle potential import errors if ume is not installed,
 # though for poetry run python ume_cli.py this should be fine.
 # For direct ./ume_cli.py, PYTHONPATH or editable install is needed.
+
 
 class UMEPrompt(Cmd):
     intro = "Welcome to UME CLI. Type help or ? to list commands.\n"
@@ -90,10 +94,10 @@ class UMEPrompt(Cmd):
             source_id, target_id, label = parts
             event_data = {
                 "event_type": "CREATE_EDGE",
-                "node_id": source_id, # node_id is source for edges
+                "node_id": source_id,  # node_id is source for edges
                 "target_node_id": target_id,
                 "label": label,
-                "timestamp": self._get_timestamp()
+                "timestamp": self._get_timestamp(),
             }
             evt = parse_event(event_data)
             apply_event_to_graph(evt, self.graph)
@@ -102,7 +106,6 @@ class UMEPrompt(Cmd):
             print(f"Error: {e}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-
 
     def do_del_edge(self, arg):
         """
@@ -118,10 +121,10 @@ class UMEPrompt(Cmd):
             source_id, target_id, label = parts
             event_data = {
                 "event_type": "DELETE_EDGE",
-                "node_id": source_id, # node_id is source for edges
+                "node_id": source_id,  # node_id is source for edges
                 "target_node_id": target_id,
                 "label": label,
-                "timestamp": self._get_timestamp()
+                "timestamp": self._get_timestamp(),
             }
             evt = parse_event(event_data)
             apply_event_to_graph(evt, self.graph)
@@ -143,11 +146,10 @@ class UMEPrompt(Cmd):
                 print("No nodes in the graph.")
                 return
             print("Nodes:")
-            for n in sorted(list(nodes)): # Sort for consistent output
+            for n in sorted(list(nodes)):  # Sort for consistent output
                 print(f"  - {n}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-
 
     def do_show_edges(self, arg):
         """
@@ -166,7 +168,6 @@ class UMEPrompt(Cmd):
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
-
     def do_neighbors(self, arg):
         """
         neighbors <node_id> [<label>]
@@ -184,10 +185,17 @@ class UMEPrompt(Cmd):
 
             targets = self.graph.find_connected_nodes(node_id, label)
             if not targets:
-                 print(f"No neighbors found for '{node_id}'" + (f" with label '{label}'." if label else "."))
+                print(
+                    f"No neighbors found for '{node_id}'"
+                    + (f" with label '{label}'." if label else ".")
+                )
             else:
-                print(f"Neighbors of '{node_id}'" + (f" with label '{label}'" if label else "") + f": {sorted(list(targets))}")
-        except ProcessingError as e: # Expected error if node_id not found
+                print(
+                    f"Neighbors of '{node_id}'"
+                    + (f" with label '{label}'" if label else "")
+                    + f": {sorted(list(targets))}"
+                )
+        except ProcessingError as e:  # Expected error if node_id not found
             print(f"Error: {e}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
@@ -199,14 +207,16 @@ class UMEPrompt(Cmd):
         Save current graph state (nodes + edges) to the given JSON file.
         Example: snapshot_save my_graph.json
         """
-        filepath = shlex.split(arg)[0] if arg else None # shlex.split to handle potential spaces if not quoted
+        filepath = (
+            shlex.split(arg)[0] if arg else None
+        )  # shlex.split to handle potential spaces if not quoted
         if not filepath:
             print("Usage: snapshot_save <filepath>")
             return
         try:
             snapshot_graph_to_file(self.graph, filepath)
             print(f"Snapshot written to {filepath}")
-        except Exception as e: # Catch specific IOErrors, etc. if possible
+        except Exception as e:  # Catch specific IOErrors, etc. if possible
             print(f"Error saving snapshot: {e}")
 
     def do_snapshot_load(self, arg):
@@ -229,11 +239,15 @@ class UMEPrompt(Cmd):
             print(f"Graph restored from {filepath}")
         except FileNotFoundError:
             print(f"Error: Snapshot file '{filepath}' not found.")
-        except (json.JSONDecodeError, EventError, ProcessingError, SnapshotError) as e:  # Catch specific load/parse errors
+        except (
+            json.JSONDecodeError,
+            EventError,
+            ProcessingError,
+            SnapshotError,
+        ) as e:  # Catch specific load/parse errors
             print(f"Error loading snapshot: {e}")
         except Exception as e:
             print(f"An unexpected error occurred during load: {e}")
-
 
     # ----- Utility commands -----
     def do_clear(self, arg):
@@ -269,18 +283,66 @@ class UMEPrompt(Cmd):
         EOF (Ctrl+D)
         Quit the UME CLI.
         """
-        print("\nGoodbye!") # Print newline after Ctrl+D
+        print("\nGoodbye!")  # Print newline after Ctrl+D
         return True
 
     # Override to provide custom help intro or suppress default
     # def do_help(self, arg):
     #    Cmd.do_help(self, arg)
 
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
+    parser = argparse.ArgumentParser(description="UME interactive CLI")
+    parser.add_argument(
+        "--show-warnings",
+        action="store_true",
+        help="Display Python warnings during CLI execution",
+    )
+    parser.add_argument(
+        "--warnings-log",
+        metavar="PATH",
+        help="File to log warnings even when they are not displayed",
+    )
+
+    args = parser.parse_args()
+
+    _setup_warnings(args.show_warnings, args.warnings_log)
+
     UMEPrompt().cmdloop()
+
+
+def _setup_warnings(display: bool, log_file: str | None) -> None:
+    """Configure how Python warnings are handled."""
+    warnings.simplefilter("default")
+
+    logger = None
+    if log_file:
+        logger = logging.getLogger("ume_cli.warnings")
+        handler = logging.FileHandler(log_file)
+        logger.addHandler(handler)
+        logger.propagate = False
+        logger.setLevel(logging.WARNING)
+
+    orig_showwarning = warnings.showwarning
+
+    def custom_showwarning(
+        message: str | Warning,
+        category: type[Warning],
+        filename: str,
+        lineno: int,
+        file=None,
+        line: str | None = None,
+    ) -> None:
+        if display:
+            orig_showwarning(message, category, filename, lineno, file, line)
+        if logger:
+            logger.warning(
+                "%s:%s: %s: %s", filename, lineno, category.__name__, message
+            )
+
+    warnings.showwarning = custom_showwarning
 
 
 if __name__ == "__main__":
     main()
-
