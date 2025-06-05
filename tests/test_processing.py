@@ -2,7 +2,14 @@
 import pytest
 import time
 import re
-from ume import Event, EventType, PersistentGraph, apply_event_to_graph, ProcessingError
+from ume import (
+    Event,
+    EventType,
+    PersistentGraph,
+    MockGraph,
+    apply_event_to_graph,
+    ProcessingError,
+)
 
 
 @pytest.fixture

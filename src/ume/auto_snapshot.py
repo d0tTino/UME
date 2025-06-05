@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Union
 from .graph_adapter import IGraphAdapter
-from .snapshot import snapshot_graph_to_file
+from .snapshot import snapshot_graph_to_file, load_graph_into_existing
 
 
 def enable_periodic_snapshot(graph: IGraphAdapter, path: Union[str, Path], interval_seconds: int = 3600) -> None:
@@ -22,3 +22,19 @@ def enable_periodic_snapshot(graph: IGraphAdapter, path: Union[str, Path], inter
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
     atexit.register(_snapshot)
+
+
+def enable_snapshot_autosave_and_restore(
+    graph: IGraphAdapter, path: Union[str, Path], interval_seconds: int = 3600
+) -> None:
+    """Restore graph from snapshot if present and enable periodic autosave."""
+
+    snapshot_path = Path(path)
+
+    if snapshot_path.is_file():
+        try:
+            load_graph_into_existing(graph, snapshot_path)
+        except Exception:
+            pass  # Corrupt snapshot should not prevent startup
+
+    enable_periodic_snapshot(graph, snapshot_path, interval_seconds)

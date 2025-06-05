@@ -6,6 +6,7 @@ import re
 
 from ume import (
     MockGraph,
+    PersistentGraph,
     snapshot_graph_to_file,
     load_graph_from_file,
     SnapshotError,
@@ -110,7 +111,7 @@ def test_dump_returns_copy_not_reference():
     assert original_node_attrs is not None
     assert original_node_attrs["feature"] == "original"
     assert graph.node_exists("new_node_in_dump") is False
-    assert len(graph._nodes) == 1  # Accessing protected member for test validation
+    assert graph.node_count == 1
 
 
 # New tests for snapshot_graph_to_file

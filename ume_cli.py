@@ -2,7 +2,12 @@
 import json
 import os
 import shlex
-import time # Added for timestamp in event creation
+import sys
+import time  # Added for timestamp in event creation
+from pathlib import Path
+
+# Ensure local package import when run directly without installation
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 from cmd import Cmd
 from ume import (
     parse_event,
@@ -11,7 +16,7 @@ from ume import (
     load_graph_into_existing,
     snapshot_graph_to_file,
     PersistentGraph,
-    enable_periodic_snapshot,
+    enable_snapshot_autosave_and_restore,
     ProcessingError,
     EventError,
     SnapshotError,
@@ -28,9 +33,12 @@ class UMEPrompt(Cmd):
 
     def __init__(self):
         super().__init__()
-        db_path = os.environ.get("UME_CLI_DB", "ume_graph.db")
+        db_path = os.environ.get("UME_CLI_DB", ":memory:")
         self.graph: IGraphAdapter = PersistentGraph(db_path)
-        enable_periodic_snapshot(self.graph, "ume_snapshot.json", 24 * 3600)
+        if db_path != ":memory:":
+            enable_snapshot_autosave_and_restore(
+                self.graph, "ume_snapshot.json", 24 * 3600
+            )
         self.current_timestamp = int(time.time())
 
     def _get_timestamp(self) -> int:

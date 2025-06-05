@@ -30,7 +30,7 @@ The current system consists of the following main components:
     *   Redpanda is a Kafka-compatible streaming data platform. It is run locally using Docker, as defined in the `docker/docker-compose.yml` file.
     *   It receives events from producers and stores them durably in topics.
     *   It allows multiple consumers to subscribe to these topics and read events.
-    *   The demo uses a topic named `ume_demo`, configured for unlimited retention so it serves as an immutable event log.
+    *   The demo uses a topic named `ume_demo`, configured for unlimited retention and immutable append-only storage so it acts as the canonical audit trail.
     *   The Docker setup also includes Redpanda Console, which provides a UI and schema registry capabilities, accessible typically on `localhost:8081` (for the console) while Redpanda itself exposes a schema registry via Pandaproxy on `localhost:8082`.
 
 3.  **Event Consumer (`src/ume/consumer_demo.py`):**
@@ -346,6 +346,15 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Graph snapshot saved to {snapshot_path}")
     except Exception as e: # Catch potential IOErrors etc.
         print(f"Error saving snapshot: {e}")
+    ```
+
+    To automatically restore a previous snapshot and save updates at regular
+    intervals, use:
+
+    ```python
+    from ume import enable_snapshot_autosave_and_restore
+
+    enable_snapshot_autosave_and_restore(graph_adapter, "ume_snapshot.json")
     ```
 
 6.  **Load Graph from Snapshot (Optional):**
