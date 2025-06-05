@@ -15,8 +15,13 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
     """Load JSON schema for a specific event type."""
     if event_type not in _SCHEMAS:
         filename = f"{event_type.lower()}.schema.json"
-        with resources.files("ume.schemas").joinpath(filename).open("r", encoding="utf-8") as f:
-            _SCHEMAS[event_type] = json.load(f)
+        try:
+            with resources.files("ume.schemas").joinpath(filename).open(
+                "r", encoding="utf-8"
+            ) as f:
+                _SCHEMAS[event_type] = json.load(f)
+        except FileNotFoundError as exc:
+            raise ValidationError(f"Unknown event_type: {event_type}") from exc
     return _SCHEMAS[event_type]
 
 
