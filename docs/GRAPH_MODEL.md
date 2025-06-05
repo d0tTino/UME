@@ -1,12 +1,46 @@
-# UME Graph Model (Planned)
+# UME Graph Model
 
-The Universal Memory Engine (UME) is designed to build and utilize a knowledge graph based on ingested events. This document will detail the schema and structure of that graph, including:
+This document defines the initial ontology used by the Universal Memory Engine.
+It describes node types, edge labels and general versioning guidelines for the
+graph representation.
 
-*   **Node Types:** The different kinds of entities that will be represented as nodes in the graph (e.g., users, sessions, concepts, external data points).
-*   **Relationship Types:** The types of connections or edges that can exist between nodes (e.g., `HAS_SESSION`, `MENTIONED_CONCEPT`, `RELATED_TO`).
-*   **Properties:** The attributes associated with nodes and relationships.
-*   **Labels:** How nodes and relationships are categorized or labeled for efficient querying and reasoning.
+## Node Types
 
-This section is currently a placeholder. As the UME system's graph processing capabilities are implemented and refined, this document will be updated with the concrete details of the graph model.
+### UserMemory
+Represents memory items about a specific user.
 
-The goal is to create a flexible yet structured graph that can provide rich, context-aware memory for AI agents and automations.
+Properties:
+- `user_id` *(string, required)*: unique identifier of the user.
+- `data` *(object)*: free form attributes describing the memory.
+
+### AgentIntent
+Captures an intention produced by an agent.
+
+Properties:
+- `intent_id` *(string, required)*: unique identifier for the intent.
+- `description` *(string)*: short human friendly description.
+
+### PerceptualContext
+Stores sensory observations that provide context for reasoning.
+
+Properties:
+- `context_id` *(string, required)*: unique identifier.
+- `modality` *(string)*: e.g. `vision`, `audio`.
+- `payload` *(object)*: raw or processed perceptual data.
+
+## Edge Labels
+
+- `REMEMBERS`: connects a `UserMemory` node to an `AgentIntent` that created it.
+- `ASSOCIATED_WITH`: generic association between any two nodes.
+- `CAUSES`: expresses a causal relationship from one event or context to another.
+
+Each edge is directed and labeled and may carry optional properties in the
+future.  At minimum an edge stores the source node ID, target node ID and
+its label.
+
+## Versioning
+
+The schema is expected to evolve.  Node and edge type definitions should be
+additive where possible.  Breaking changes to existing types require a new major
+schema version.  Each schema file will include a `version` field so producers and
+consumers can negotiate compatibility.

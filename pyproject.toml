@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ume"
-version = "0.3.0-dev"
+version = "0.4.0-dev"
 description = ""
 authors = ["Ume Bot <ume-bot@example.com>"]
 readme = "README.md"
@@ -11,12 +11,17 @@ python = "^3.12"
 confluent-kafka = ">=2.4"
 fastavro = ">=1.9"
 pyyaml = "*" # Using "*" for PyYAML as it's a common practice, but can be pinned down if needed.
+neo4j = "*"
+networkx = "*"
+fastapi = "*"
+
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
 mypy = "*"
 pytest = "*"
 pytest-cov = "*"
+httpx = "*"
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"

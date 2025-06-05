@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DELETE_EDGE event",
+  "type": "object",
+  "required": ["event_type", "timestamp", "node_id", "target_node_id", "label"],
+  "properties": {
+    "event_type": {"const": "DELETE_EDGE"},
+    "timestamp": {"type": "integer"},
+    "event_id": {"type": "string"},
+    "source": {"type": "string"},
+    "node_id": {"type": "string"},
+    "target_node_id": {"type": "string"},
+    "label": {"type": "string"},
+    "payload": {"type": "object"}
+  }
+}

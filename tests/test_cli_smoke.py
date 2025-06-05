@@ -27,6 +27,8 @@ def run_cli_commands(commands: list[str], timeout: int = 5) -> tuple[str, str, i
         A tuple (stdout, stderr, returncode) from the CLI process. If the CLI
         exits with a non-zero status, the test fails.
     """
+    env = os.environ.copy()
+    env["UME_CLI_DB"] = ":memory:"
     process = subprocess.Popen(
         [sys.executable, CLI_SCRIPT_PATH],
         stdin=subprocess.PIPE,

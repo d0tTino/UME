@@ -60,6 +60,13 @@ def main():
         "payload": event_to_send.payload,
         "source": event_to_send.source,
     }
+
+    try:
+        validate_event_dict(data_dict)
+    except ValidationError as e:
+        logger.error("Event failed schema validation: %s", e)
+        return
+
     data = json.dumps(data_dict).encode("utf-8")
 
     logger.info(f"Producing event object to topic '{TOPIC}': {event_to_send}")

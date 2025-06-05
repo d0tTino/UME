@@ -3,6 +3,7 @@ import json
 import pytest
 import pathlib  # Ensure pathlib is imported
 import re
+
 from ume import (
     MockGraph,
     snapshot_graph_to_file,
@@ -13,7 +14,7 @@ from ume import (
 
 def test_empty_graph_dump_and_serialization():
     """Test dumping an empty graph and serializing it."""
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     dumped_data = graph.dump()
 
     assert "nodes" in dumped_data
@@ -33,7 +34,7 @@ def test_empty_graph_dump_and_serialization():
 
 def test_graph_serialization_roundtrip_with_nodes_and_edges():
     """Test dumping a graph with nodes and edges, serializing, and deserializing."""
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     node_a_attrs = {"name": "Alice", "type": "person"}
     node_b_attrs = {"name": "Bob", "value": 42}
 
@@ -94,7 +95,7 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
 
 def test_dump_returns_copy_not_reference():
     """Test that graph.dump()['nodes'] is a copy, not a reference to internal _nodes."""
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     node_attrs = {"feature": "original"}
     graph.add_node("node1", node_attrs)
 
@@ -117,7 +118,7 @@ def test_dump_returns_copy_not_reference():
 
 def test_snapshot_empty_graph_roundtrip(tmp_path: pathlib.Path):
     """Test snapshotting an empty graph and restoring it from file."""
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     snapshot_file_path = tmp_path / "empty_snapshot.json"
 
     # Create snapshot
@@ -136,10 +137,11 @@ def test_snapshot_empty_graph_roundtrip(tmp_path: pathlib.Path):
 
 def test_snapshot_graph_with_nodes_roundtrip(tmp_path: pathlib.Path):
     """Test snapshotting a graph with nodes and restoring it from file."""
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     node_a_attrs = {"name": "Alice", "age": 30, "tags": ["dev", "python"]}
     node_b_attrs = {"name": "Bob", "department": "HR", "active": True}
     node_c_attrs = {}  # Node with empty attributes
+
 
     graph.add_node("nodeA", node_a_attrs)
     graph.add_node("nodeB", node_b_attrs)
@@ -171,7 +173,7 @@ def test_snapshot_graph_with_nodes_roundtrip(tmp_path: pathlib.Path):
 
 def test_snapshot_file_content_is_pretty_printed(tmp_path: pathlib.Path):
     """Verify that the snapshot JSON file is pretty-printed."""
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     graph.add_node("node1", {"name": "Test", "data": [1, 2]})
     snapshot_file_path = tmp_path / "pretty_print_test.json"
 
@@ -195,12 +197,12 @@ def test_snapshot_file_content_is_pretty_printed(tmp_path: pathlib.Path):
 
 def test_load_graph_from_file_success_empty_graph(tmp_path: pathlib.Path):
     """Test loading an empty graph from a valid snapshot file."""
-    graph = MockGraph()
+    graph = PersistentGraph(":memory:")
     snapshot_file = tmp_path / "empty_graph_to_load.json"
     snapshot_graph_to_file(graph, snapshot_file)
 
     loaded_graph = load_graph_from_file(snapshot_file)
-    assert isinstance(loaded_graph, MockGraph)
+    assert isinstance(loaded_graph, PersistentGraph)
     assert loaded_graph.node_count == 0
     assert loaded_graph.dump()["nodes"] == {}
     assert loaded_graph.get_all_edges() == []  # New assertion
@@ -208,7 +210,7 @@ def test_load_graph_from_file_success_empty_graph(tmp_path: pathlib.Path):
 
 def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
     """Test loading a populated graph from a valid snapshot file."""
-    original_graph = MockGraph()
+    original_graph = PersistentGraph(":memory:")
     attrs1 = {"name": "Node 1", "value": 10}
     attrs2 = {"name": "Node 2", "active": True}
     original_graph.add_node("n1", attrs1)
@@ -220,7 +222,7 @@ def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
     snapshot_graph_to_file(original_graph, snapshot_file)
 
     loaded_graph = load_graph_from_file(snapshot_file)
-    assert isinstance(loaded_graph, MockGraph)
+    assert isinstance(loaded_graph, PersistentGraph)
     assert loaded_graph.node_count == 2
     assert loaded_graph.get_node("n1") == attrs1
     assert loaded_graph.get_node("n2") == attrs2
