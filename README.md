@@ -60,6 +60,11 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
 *   `timestamp` (integer): A Unix timestamp (seconds since epoch) indicating when the event was generated.
 *   `payload` (object): A JSON object containing the actual data of the event. The structure of the payload can vary depending on the event type. For the demo, it includes a simple `message`.
 
+All official event types such as `CREATE_NODE` or `CREATE_EDGE` have
+corresponding JSON Schema definitions under `src/ume/schemas`.  Producers
+should validate events using `ume.validate_event_dict()` before publishing to
+Kafka or any other broker.
+
 #### CREATE_EDGE Event
 
 Used to create a new directed, labeled edge between two existing nodes.

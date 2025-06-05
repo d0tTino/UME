@@ -1,16 +1,42 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "CREATE_NODE event",
+  "description": "Schema for CREATE_NODE events emitted by UME producers.",
+  "version": "1.0.0",
   "type": "object",
   "required": ["event_type", "timestamp", "node_id", "payload"],
   "properties": {
-    "event_type": {"const": "CREATE_NODE"},
-    "timestamp": {"type": "integer"},
-    "event_id": {"type": "string"},
-    "source": {"type": "string"},
-    "node_id": {"type": "string"},
-    "payload": {"type": "object"},
-    "target_node_id": {"type": "string"},
-    "label": {"type": "string"}
+    "event_type": {
+      "const": "CREATE_NODE",
+      "description": "Must be the literal string 'CREATE_NODE'"
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix timestamp when the event occurred"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Unique identifier for this event"
+    },
+    "source": {
+      "type": "string",
+      "description": "Originating system of the event"
+    },
+    "node_id": {
+      "type": "string",
+      "description": "Identifier of the node to create"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Attributes for the node"
+    },
+    "target_node_id": {
+      "type": "string",
+      "description": "Unused for this event type"
+    },
+    "label": {
+      "type": "string",
+      "description": "Unused for this event type"
+    }
   }
 }
