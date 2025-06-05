@@ -1,11 +1,14 @@
 # src/ume/processing.py
 from .event import Event, EventType
-from .graph_adapter import IGraphAdapter # Use IGraphAdapter
+from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
 # MockGraph import removed as it's no longer directly used for type hinting here
+
 
 class ProcessingError(ValueError):
     """Custom exception for event processing errors."""
+
     pass
+
 
 def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
     """
@@ -39,33 +42,53 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
     if event.event_type == EventType.CREATE_NODE:
         node_id = event.payload.get("node_id")
         if not node_id:
-            raise ProcessingError(f"Missing 'node_id' in payload for CREATE_NODE event: {event.event_id}")
+            raise ProcessingError(
+                f"Missing 'node_id' in payload for CREATE_NODE event: {event.event_id}"
+            )
         if not isinstance(node_id, str):
-            raise ProcessingError(f"'node_id' must be a string for CREATE_NODE event: {event.event_id}")
+            raise ProcessingError(
+                f"'node_id' must be a string for CREATE_NODE event: {event.event_id}"
+            )
 
-        attributes = event.payload.get("attributes", {}) # Default to empty dict if 'attributes' key is missing
-        if not isinstance(attributes, dict): # Ensure attributes, if provided, is a dict
-             raise ProcessingError(f"'attributes' must be a dictionary for CREATE_NODE event, if provided. Got: {type(attributes).__name__} for event: {event.event_id}")
+        attributes = event.payload.get(
+            "attributes", {}
+        )  # Default to empty dict if 'attributes' key is missing
+        if not isinstance(
+            attributes, dict
+        ):  # Ensure attributes, if provided, is a dict
+            raise ProcessingError(
+                f"'attributes' must be a dictionary for CREATE_NODE event, if provided. Got: {type(attributes).__name__} for event: {event.event_id}"
+            )
 
-        graph.add_node(node_id, attributes) # Call adapter's add_node
+        graph.add_node(node_id, attributes)  # Call adapter's add_node
 
     elif event.event_type == EventType.UPDATE_NODE_ATTRIBUTES:
         node_id = event.payload.get("node_id")
         if not node_id:
-            raise ProcessingError(f"Missing 'node_id' in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+            raise ProcessingError(
+                f"Missing 'node_id' in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
+            )
         if not isinstance(node_id, str):
-            raise ProcessingError(f"'node_id' must be a string for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+            raise ProcessingError(
+                f"'node_id' must be a string for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
+            )
 
         if "attributes" not in event.payload:
-            raise ProcessingError(f"Missing 'attributes' key in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+            raise ProcessingError(
+                f"Missing 'attributes' key in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
+            )
 
         attributes = event.payload["attributes"]
         if not isinstance(attributes, dict):
-            raise ProcessingError(f"'attributes' must be a dictionary for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+            raise ProcessingError(
+                f"'attributes' must be a dictionary for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
+            )
         if not attributes:
-            raise ProcessingError(f"'attributes' dictionary cannot be empty for UPDATE_NODE_ATTRIBUTES event: {event.event_id}")
+            raise ProcessingError(
+                f"'attributes' dictionary cannot be empty for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
+            )
 
-        graph.update_node(node_id, attributes) # Call adapter's update_node
+        graph.update_node(node_id, attributes)  # Call adapter's update_node
 
     elif event.event_type == EventType.CREATE_EDGE:
         # parse_event should have validated presence and type of node_id, target_node_id, label
@@ -74,12 +97,15 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         label = event.label
 
         # Defensive checks in case an improperly constructed Event is passed
-        if not (isinstance(source_node_id, str) and isinstance(target_node_id, str) and isinstance(label, str)):
+        if not (
+            isinstance(source_node_id, str)
+            and isinstance(target_node_id, str)
+            and isinstance(label, str)
+        ):
             raise ProcessingError(
                 f"Invalid event structure for CREATE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
             )
-
 
         # After the defensive check above, mypy still treats these variables as
         # Optional[str]. Use assertions to convince the type checker they are
@@ -97,7 +123,11 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         label = event.label
 
         # Defensive checks
-        if not (isinstance(source_node_id, str) and isinstance(target_node_id, str) and isinstance(label, str)):
+        if not (
+            isinstance(source_node_id, str)
+            and isinstance(target_node_id, str)
+            and isinstance(label, str)
+        ):
             raise ProcessingError(
                 f"Invalid event structure for DELETE_EDGE: source_node_id (event.node_id), target_node_id, "
                 f"and label must be strings and present. Event ID: {event.event_id}"
@@ -116,4 +146,6 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         # Raising an error is often better for catching unexpected event types.
         # However, for a very basic demo, one might choose to log and ignore.
         # Let's raise an error for stricter processing.
-        raise ProcessingError(f"Unknown event_type '{event.event_type}' for event: {event.event_id}")
+        raise ProcessingError(
+            f"Unknown event_type '{event.event_type}' for event: {event.event_id}"
+        )

@@ -6,6 +6,7 @@ configuring the consumer, subscribing to a topic, polling for messages,
 and handling potential errors. It's intended to be used with the
 corresponding producer_demo.py script.
 """
+
 import json
 import logging
 from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
@@ -19,6 +20,7 @@ logger = logging.getLogger("consumer_demo")
 BOOTSTRAP_SERVERS = "localhost:9092"
 TOPIC = "ume_demo"
 GROUP_ID = "ume_demo_group"
+
 
 def main():
     """Creates a Kafka consumer, subscribes to a topic, and processes messages.
@@ -34,7 +36,7 @@ def main():
     conf = {
         "bootstrap.servers": BOOTSTRAP_SERVERS,
         "group.id": GROUP_ID,
-        "auto.offset.reset": "earliest"  # Start reading from the beginning of the topic
+        "auto.offset.reset": "earliest",  # Start reading from the beginning of the topic
     }
     consumer = Consumer(conf)
     consumer.subscribe([TOPIC])
@@ -44,7 +46,9 @@ def main():
     try:
         while True:
             # Poll for new messages; timeout ensures the loop doesn't block indefinitely if no messages.
-            msg = consumer.poll(timeout=1.0)  # Poll for messages with a 1-second timeout
+            msg = consumer.poll(
+                timeout=1.0
+            )  # Poll for messages with a 1-second timeout
             if msg is None:
                 continue  # No message, poll again
             if msg.error():
@@ -52,7 +56,9 @@ def main():
                 # _PARTITION_EOF is not an error but an informational event from the broker.
                 if msg.error().code() == KafkaError._PARTITION_EOF:
                     # End of partition event (not necessarily an error)
-                    logger.info(f"Reached end of partition for {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
+                    logger.info(
+                        f"Reached end of partition for {msg.topic()} [{msg.partition()}] at offset {msg.offset()}"
+                    )
                     continue
                 else:
                     # Actual error
@@ -78,6 +84,7 @@ def main():
         # Cleanly close the consumer
         consumer.close()
         logger.info("Consumer closed.")
+
 
 if __name__ == "__main__":
     main()

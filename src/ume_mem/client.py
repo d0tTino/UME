@@ -6,13 +6,18 @@ from typing import Optional
 from .event import Event, EventType
 from .graph import MockGraph
 from .graph_adapter import IGraphAdapter
-from .processing import apply_event_to_graph, ProcessingError
+from .processing import apply_event_to_graph
 
 
 class UMEClient:
     """Convenience client for interacting with a graph using UME events."""
 
-    def __init__(self, broker: Optional[str] = None, topic: Optional[str] = None, graph: Optional[IGraphAdapter] = None) -> None:
+    def __init__(
+        self,
+        broker: Optional[str] = None,
+        topic: Optional[str] = None,
+        graph: Optional[IGraphAdapter] = None,
+    ) -> None:
         self.broker = broker
         self.topic = topic
         self.graph: IGraphAdapter = graph or MockGraph()
@@ -20,7 +25,9 @@ class UMEClient:
     def _timestamp(self) -> int:
         return int(time.time())
 
-    def create_node(self, node_id: str, attributes: Optional[dict[str, object]] = None) -> None:
+    def create_node(
+        self, node_id: str, attributes: Optional[dict[str, object]] = None
+    ) -> None:
         event = Event(
             event_type=EventType.CREATE_NODE,
             timestamp=self._timestamp(),

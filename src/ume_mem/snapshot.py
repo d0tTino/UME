@@ -10,7 +10,9 @@ from .processing import ProcessingError
 
 class SnapshotError(ValueError):
     """Custom exception for snapshot loading or validation errors."""
+
     pass
+
 
 def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> None:
     """
@@ -30,8 +32,9 @@ def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> 
         TypeError: If the data from graph.dump() is not JSON serializable.
     """
     dumped_data = graph.dump()  # {"nodes": ..., "edges": ...}
-    with open(path, "w", encoding='utf-8') as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(dumped_data, f, indent=2)
+
 
 def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
     """
@@ -59,21 +62,29 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
                        malformed).
     """
     try:
-        with open(path, "r", encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
     except FileNotFoundError:
         raise FileNotFoundError(f"Snapshot file not found at path: {path}")
     except json.JSONDecodeError as e:
-        raise json.JSONDecodeError(f"Error decoding JSON from snapshot file {path}: {e.msg}", e.doc, e.pos)
+        raise json.JSONDecodeError(
+            f"Error decoding JSON from snapshot file {path}: {e.msg}", e.doc, e.pos
+        )
 
     if not isinstance(data, dict):
-        raise SnapshotError(f"Invalid snapshot format: root should be a dictionary, got {type(data).__name__}.")
+        raise SnapshotError(
+            f"Invalid snapshot format: root should be a dictionary, got {type(data).__name__}."
+        )
 
     if "nodes" not in data:
-        raise SnapshotError("Invalid snapshot format: missing 'nodes' key at the root level.")
+        raise SnapshotError(
+            "Invalid snapshot format: missing 'nodes' key at the root level."
+        )
 
     if not isinstance(data["nodes"], dict):
-        raise SnapshotError(f"Invalid snapshot format: 'nodes' should be a dictionary, got {type(data['nodes']).__name__}.")
+        raise SnapshotError(
+            f"Invalid snapshot format: 'nodes' should be a dictionary, got {type(data['nodes']).__name__}."
+        )
 
     graph = MockGraph()
     for node_id, attributes in data["nodes"].items():
@@ -84,7 +95,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
             )
         # Since MockGraph.add_node expects attributes to be Dict[str, Any],
         # and json.load ensures keys are strings, this should be fine.
-        graph.add_node(node_id, attributes.copy()) # Use .copy() for attributes
+        graph.add_node(node_id, attributes.copy())  # Use .copy() for attributes
 
     # Load edges if present
     if "edges" in data:
