@@ -1,6 +1,7 @@
 # tests/test_event.py
 import pytest
 import time
+import logging
 from ume import Event, EventType, parse_event, EventError  # EventType constants
 
 
@@ -301,3 +302,13 @@ def test_event_creation_default_id():
     # A simple check for UUID-like structure (36 chars, with hyphens)
     assert len(event.event_id) == 36
     assert "-" in event.event_id
+
+
+def test_parse_event_logs_error(caplog):
+    """Ensure parse_event logs an error when required fields are missing."""
+    with caplog.at_level("ERROR"):
+        with pytest.raises(EventError):
+            parse_event({})
+        assert any(
+            "Missing required event field: event_type" in rec.message for rec in caplog.records
+        )

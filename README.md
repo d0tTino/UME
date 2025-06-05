@@ -242,6 +242,13 @@ poetry run pytest
 PYTHONPATH=src pytest
 ```
 
+## Configuration Templates
+
+Sample configuration files for common environments are provided in
+[`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md). These templates
+demonstrate how to select different storage backends or event stores for
+development, staging, and production setups.
+
 ## Basic Usage
 
 This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
