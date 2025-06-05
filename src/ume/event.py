@@ -13,6 +13,7 @@ class EventType(str, Enum):
     CREATE_EDGE = "CREATE_EDGE"
     DELETE_EDGE = "DELETE_EDGE"
 
+
 @dataclass(frozen=True)
 class Event:
     """
@@ -37,18 +38,22 @@ class Event:
         label (Optional[str]): A label describing an edge or a relationship, used for edge-related events.
                                  Defaults to None.
     """
+
     event_type: str
     timestamp: int
-    payload: Dict[str, Any] # Main content, e.g., attributes for a node
+    payload: Dict[str, Any]  # Main content, e.g., attributes for a node
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     source: Optional[str] = None
     node_id: Optional[str] = None  # Source node for edges, or target for node ops
-    target_node_id: Optional[str] = None # Target node for edges
-    label: Optional[str] = None # Label for edges
+    target_node_id: Optional[str] = None  # Target node for edges
+    label: Optional[str] = None  # Label for edges
+
 
 class EventError(ValueError):
     """Custom exception for event parsing or validation errors."""
+
     pass
+
 
 def parse_event(data: Dict[str, Any]) -> Event:
     """
@@ -75,13 +80,17 @@ def parse_event(data: Dict[str, Any]) -> Event:
         raise EventError("Missing required event field: event_type")
     event_type = data["event_type"]
     if not isinstance(event_type, str):
-        raise EventError(f"Invalid type for 'event_type': expected str, got {type(event_type).__name__}")
+        raise EventError(
+            f"Invalid type for 'event_type': expected str, got {type(event_type).__name__}"
+        )
 
     if "timestamp" not in data:
         raise EventError("Missing required event field: timestamp")
     timestamp = data["timestamp"]
     if not isinstance(timestamp, int):
-        raise EventError(f"Invalid type for 'timestamp': expected int, got {type(timestamp).__name__}")
+        raise EventError(
+            f"Invalid type for 'timestamp': expected int, got {type(timestamp).__name__}"
+        )
 
     # Get potential values, to be validated by type-specific logic or used if optional
     node_id_val = data.get("node_id")
@@ -90,43 +99,65 @@ def parse_event(data: Dict[str, Any]) -> Event:
     # Default payload to {} if not present; specific event types might require it later
     payload_val = data.get("payload", {})
 
-    if event_type in [EventType.CREATE_NODE.value, EventType.UPDATE_NODE_ATTRIBUTES.value]:
-        if "node_id" not in data: # Must be present in data
-            raise EventError(f"Missing required field 'node_id' for {event_type} event.")
+    if event_type in [
+        EventType.CREATE_NODE.value,
+        EventType.UPDATE_NODE_ATTRIBUTES.value,
+    ]:
+        if "node_id" not in data:  # Must be present in data
+            raise EventError(
+                f"Missing required field 'node_id' for {event_type} event."
+            )
         if not isinstance(node_id_val, str):
-            raise EventError(f"Invalid type for 'node_id' in {event_type} event: expected str, got {type(node_id_val).__name__}")
+            raise EventError(
+                f"Invalid type for 'node_id' in {event_type} event: expected str, got {type(node_id_val).__name__}"
+            )
 
-        if "payload" not in data: # Must be present in data for these types
-             raise EventError(f"Missing required field 'payload' for {event_type} event.")
+        if "payload" not in data:  # Must be present in data for these types
+            raise EventError(
+                f"Missing required field 'payload' for {event_type} event."
+            )
         # Ensure payload_val (which could be the default {} if "payload" key was missing,
         # or the actual value if present) is a dict for these event types.
         if not isinstance(payload_val, dict):
-            raise EventError(f"Invalid type for 'payload' in {event_type} event: expected dict, got {type(payload_val).__name__}")
+            raise EventError(
+                f"Invalid type for 'payload' in {event_type} event: expected dict, got {type(payload_val).__name__}"
+            )
 
     elif event_type in [EventType.CREATE_EDGE.value, EventType.DELETE_EDGE.value]:
         required_fields_for_edge = {"node_id", "target_node_id", "label"}
         missing_fields = required_fields_for_edge - data.keys()
         if missing_fields:
-            raise EventError(f"Missing required fields for {event_type} event: {', '.join(sorted(list(missing_fields)))}")
+            raise EventError(
+                f"Missing required fields for {event_type} event: {', '.join(sorted(list(missing_fields)))}"
+            )
 
         # Validate types for these required fields
-        for field_name, field_val_check in [("node_id", node_id_val), ("target_node_id", target_node_id_val), ("label", label_val)]:
-            if not isinstance(field_val_check, str): # Already checked for presence by missing_fields logic
-                raise EventError(f"Invalid type for '{field_name}' in {event_type} event: expected str, got {type(field_val_check).__name__}")
+        for field_name, field_val_check in [
+            ("node_id", node_id_val),
+            ("target_node_id", target_node_id_val),
+            ("label", label_val),
+        ]:
+            if not isinstance(
+                field_val_check, str
+            ):  # Already checked for presence by missing_fields logic
+                raise EventError(
+                    f"Invalid type for '{field_name}' in {event_type} event: expected str, got {type(field_val_check).__name__}"
+                )
 
         # For edge events, payload_val will use its default {} if "payload" was not in data.
         # If "payload" was in data, we still need to ensure it's a dict.
         if "payload" in data and not isinstance(payload_val, dict):
-             raise EventError(f"Invalid type for 'payload' in {event_type} event (if provided): expected dict, got {type(payload_val).__name__}")
-
+            raise EventError(
+                f"Invalid type for 'payload' in {event_type} event (if provided): expected dict, got {type(payload_val).__name__}"
+            )
 
     return Event(
         event_id=data.get("event_id", str(uuid.uuid4())),
         event_type=event_type,
         timestamp=timestamp,
-        payload=payload_val, # Use payload_val which is defaulted to {} or the actual value
+        payload=payload_val,  # Use payload_val which is defaulted to {} or the actual value
         source=data.get("source"),
         node_id=node_id_val,
         target_node_id=target_node_id_val,
-        label=label_val
+        label=label_val,
     )

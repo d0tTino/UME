@@ -113,7 +113,9 @@ class IGraphAdapter(ABC):
         pass
 
     @abstractmethod
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> list[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> list[str]:
         """
         Finds nodes connected to a given node, optionally via a specific edge label.
 

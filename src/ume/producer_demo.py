@@ -5,13 +5,12 @@ This script demonstrates the basic functionality of a Kafka producer, including
 configuring the producer, sending a message, and handling delivery reports.
 It's intended to be used with the corresponding consumer_demo.py script.
 """
+
 import json
 import logging
 import time
 from confluent_kafka import Producer, KafkaException  # type: ignore
-from jsonschema import ValidationError  # type: ignore
-from ume import Event
-from ume.schema_utils import validate_event_dict
+from ume import Event  # Import Event
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,12 +20,16 @@ logger = logging.getLogger("producer_demo")
 BOOTSTRAP_SERVERS = "localhost:9092"
 TOPIC = "ume_demo"
 
+
 def delivery_report(err, msg):
-    """ Called once for each message produced to indicate delivery result. """
+    """Called once for each message produced to indicate delivery result."""
     if err is not None:
         logger.error(f"Message delivery failed: {err}")
     else:
-        logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
+        logger.info(
+            f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}"
+        )
+
 
 def main():
     """Creates a Kafka producer, constructs a sample event, and sends it.
@@ -37,9 +40,7 @@ def main():
     The script waits for the message to be delivered using producer.flush().
     """
     # Create Producer instance
-    conf = {
-        "bootstrap.servers": BOOTSTRAP_SERVERS
-    }
+    conf = {"bootstrap.servers": BOOTSTRAP_SERVERS}
     producer = Producer(conf)
 
     # Construct an Event instance
@@ -48,7 +49,7 @@ def main():
         event_type="demo_event",
         timestamp=int(time.time()),
         payload=event_payload_data,
-        source="producer_demo"  # Add source
+        source="producer_demo",  # Add source
     )
 
     # Convert Event object to dict for JSON serialization
@@ -57,7 +58,7 @@ def main():
         "event_type": event_to_send.event_type,
         "timestamp": event_to_send.timestamp,
         "payload": event_to_send.payload,
-        "source": event_to_send.source
+        "source": event_to_send.source,
     }
 
     try:
@@ -76,6 +77,7 @@ def main():
         producer.flush()  # Block until all messages are sent/acknowledged or timeout occurs.
     except KafkaException as e:
         logger.error(f"Failed to produce message: {e}")
+
 
 if __name__ == "__main__":
     main()

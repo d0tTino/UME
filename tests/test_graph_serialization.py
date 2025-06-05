@@ -3,7 +3,14 @@ import json
 import pytest
 import pathlib  # Ensure pathlib is imported
 import re
-from ume import PersistentGraph, snapshot_graph_to_file, load_graph_from_file, SnapshotError  # Add new imports
+
+from ume import (
+    MockGraph,
+    snapshot_graph_to_file,
+    load_graph_from_file,
+    SnapshotError,
+)  # Add new imports
+
 
 def test_empty_graph_dump_and_serialization():
     """Test dumping an empty graph and serializing it."""
@@ -13,7 +20,7 @@ def test_empty_graph_dump_and_serialization():
     assert "nodes" in dumped_data
     assert dumped_data["nodes"] == {}
     assert "edges" in dumped_data  # New assertion
-    assert dumped_data["edges"] == [] # New assertion
+    assert dumped_data["edges"] == []  # New assertion
 
     # Test JSON serialization of the empty graph dump
     json_str = json.dumps(dumped_data)
@@ -22,7 +29,8 @@ def test_empty_graph_dump_and_serialization():
     assert "nodes" in restored_data
     assert restored_data["nodes"] == {}
     assert "edges" in restored_data  # New assertion
-    assert restored_data["edges"] == [] # New assertion
+    assert restored_data["edges"] == []  # New assertion
+
 
 def test_graph_serialization_roundtrip_with_nodes_and_edges():
     """Test dumping a graph with nodes and edges, serializing, and deserializing."""
@@ -32,7 +40,7 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
 
     graph.add_node("a", node_a_attrs)
     graph.add_node("b", node_b_attrs)
-    graph.add_node("c", {}) # Node with empty attributes
+    graph.add_node("c", {})  # Node with empty attributes
 
     # Add some edges
     graph.add_edge("a", "b", "RELATES_TO")
@@ -50,7 +58,9 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
     assert dumped_data["nodes"]["c"] == {}
     assert "edges" in dumped_data
     assert len(dumped_data["edges"]) == 2
-    assert set(map(tuple, dumped_data["edges"])) == set(map(tuple, expected_edges)) # Compare content, order-agnostic
+    assert set(map(tuple, dumped_data["edges"])) == set(
+        map(tuple, expected_edges)
+    )  # Compare content, order-agnostic
 
     # Perform JSON serialization and deserialization (roundtrip)
     json_str = json.dumps(dumped_data)
@@ -64,15 +74,23 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
     assert restored_data_from_json["nodes"]["c"] == {}
     assert "edges" in restored_data_from_json
     assert len(restored_data_from_json["edges"]) == 2
-    assert set(map(tuple, restored_data_from_json["edges"])) == set(map(tuple, expected_edges))
+    assert set(map(tuple, restored_data_from_json["edges"])) == set(
+        map(tuple, expected_edges)
+    )
 
     # Ensure original graph is not affected by modifications to dumped_data (due to .copy())
     dumped_data["nodes"]["a"]["name"] = "Changed Name"
     assert graph.get_node("a")["name"] == "Alice"
-    if dumped_data["edges"]: # If there are edges
-        dumped_data["edges"][0] = ("c", "a", "MODIFIED_REL") # Try to modify dumped edge
-        original_edges_in_graph = graph.get_all_edges() # Get fresh copy
-        assert set(map(tuple, original_edges_in_graph)) == set(map(tuple, expected_edges))
+    if dumped_data["edges"]:  # If there are edges
+        dumped_data["edges"][0] = (
+            "c",
+            "a",
+            "MODIFIED_REL",
+        )  # Try to modify dumped edge
+        original_edges_in_graph = graph.get_all_edges()  # Get fresh copy
+        assert set(map(tuple, original_edges_in_graph)) == set(
+            map(tuple, expected_edges)
+        )
 
 
 def test_dump_returns_copy_not_reference():
@@ -92,8 +110,11 @@ def test_dump_returns_copy_not_reference():
     assert original_node_attrs is not None
     assert original_node_attrs["feature"] == "original"
     assert graph.node_exists("new_node_in_dump") is False
+    assert len(graph._nodes) == 1  # Accessing protected member for test validation
+
 
 # New tests for snapshot_graph_to_file
+
 
 def test_snapshot_empty_graph_roundtrip(tmp_path: pathlib.Path):
     """Test snapshotting an empty graph and restoring it from file."""
@@ -107,18 +128,20 @@ def test_snapshot_empty_graph_roundtrip(tmp_path: pathlib.Path):
     assert snapshot_file_path.is_file()
 
     # Read back and verify
-    with open(snapshot_file_path, "r", encoding='utf-8') as f:
+    with open(snapshot_file_path, "r", encoding="utf-8") as f:
         restored_data = json.load(f)
 
     assert "nodes" in restored_data
-    assert restored_data["nodes"] == {} # Empty graph should have empty nodes dict
+    assert restored_data["nodes"] == {}  # Empty graph should have empty nodes dict
+
 
 def test_snapshot_graph_with_nodes_roundtrip(tmp_path: pathlib.Path):
     """Test snapshotting a graph with nodes and restoring it from file."""
     graph = PersistentGraph(":memory:")
     node_a_attrs = {"name": "Alice", "age": 30, "tags": ["dev", "python"]}
     node_b_attrs = {"name": "Bob", "department": "HR", "active": True}
-    node_c_attrs: dict[str, object] = {}  # Node with empty attributes
+    node_c_attrs = {}  # Node with empty attributes
+
 
     graph.add_node("nodeA", node_a_attrs)
     graph.add_node("nodeB", node_b_attrs)
@@ -133,7 +156,7 @@ def test_snapshot_graph_with_nodes_roundtrip(tmp_path: pathlib.Path):
     assert snapshot_file_path.is_file()
 
     # Read back and verify
-    with open(snapshot_file_path, "r", encoding='utf-8') as f:
+    with open(snapshot_file_path, "r", encoding="utf-8") as f:
         restored_data = json.load(f)
 
     assert "nodes" in restored_data
@@ -147,6 +170,7 @@ def test_snapshot_graph_with_nodes_roundtrip(tmp_path: pathlib.Path):
     # Verify a non-existent node is not in restored data
     assert "nodeD" not in restored_data["nodes"]
 
+
 def test_snapshot_file_content_is_pretty_printed(tmp_path: pathlib.Path):
     """Verify that the snapshot JSON file is pretty-printed."""
     graph = PersistentGraph(":memory:")
@@ -155,17 +179,21 @@ def test_snapshot_file_content_is_pretty_printed(tmp_path: pathlib.Path):
 
     snapshot_graph_to_file(graph, snapshot_file_path)
 
-    with open(snapshot_file_path, "r", encoding='utf-8') as f:
+    with open(snapshot_file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     # Check for newlines and spaces indicative of pretty-printing (indent=2)
-    assert '\n  "' in content  # Check for typical indentation (newline then spaces before a quote)
+    assert (
+        '\n  "' in content
+    )  # Check for typical indentation (newline then spaces before a quote)
     assert (
         '{\n  "nodes": {\n    "node1": {' in content
         or '{\n  "nodes": {\n      "node1": {' in content
     )  # Allow for slight variations
 
+
 # --- Tests for load_graph_from_file ---
+
 
 def test_load_graph_from_file_success_empty_graph(tmp_path: pathlib.Path):
     """Test loading an empty graph from a valid snapshot file."""
@@ -177,7 +205,8 @@ def test_load_graph_from_file_success_empty_graph(tmp_path: pathlib.Path):
     assert isinstance(loaded_graph, PersistentGraph)
     assert loaded_graph.node_count == 0
     assert loaded_graph.dump()["nodes"] == {}
-    assert loaded_graph.get_all_edges() == [] # New assertion
+    assert loaded_graph.get_all_edges() == []  # New assertion
+
 
 def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
     """Test loading a populated graph from a valid snapshot file."""
@@ -197,112 +226,158 @@ def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
     assert loaded_graph.node_count == 2
     assert loaded_graph.get_node("n1") == attrs1
     assert loaded_graph.get_node("n2") == attrs2
-    assert set(map(tuple, loaded_graph.get_all_edges())) == set(map(tuple, expected_edges))
-    assert original_graph.dump() == loaded_graph.dump() # Compare full dumps
+    assert set(map(tuple, loaded_graph.get_all_edges())) == set(
+        map(tuple, expected_edges)
+    )
+    assert original_graph.dump() == loaded_graph.dump()  # Compare full dumps
+
 
 def test_load_graph_from_file_file_not_found(tmp_path: pathlib.Path):
     """Test load_graph_from_file with a non-existent file path."""
     non_existent_file = tmp_path / "this_file_does_not_exist.json"
-    with pytest.raises(FileNotFoundError, match=f"Snapshot file not found at path: {non_existent_file}"):
+    with pytest.raises(
+        FileNotFoundError, match=f"Snapshot file not found at path: {non_existent_file}"
+    ):
         load_graph_from_file(non_existent_file)
+
 
 def test_load_graph_from_file_malformed_json(tmp_path: pathlib.Path):
     """Test load_graph_from_file with a file containing malformed JSON."""
     snapshot_file = tmp_path / "malformed.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
-        f.write("{'nodes': 'this is not valid json because of single quotes'...") # Malformed JSON
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        f.write(
+            "{'nodes': 'this is not valid json because of single quotes'..."
+        )  # Malformed JSON
 
-    with pytest.raises(json.JSONDecodeError): # Check for the specific error type
+    with pytest.raises(json.JSONDecodeError):  # Check for the specific error type
         load_graph_from_file(snapshot_file)
+
 
 def test_load_graph_from_file_invalid_structure_no_nodes_key(tmp_path: pathlib.Path):
     """Test load_graph_from_file with JSON missing the root 'nodes' key."""
     snapshot_file = tmp_path / "invalid_structure_no_nodes.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
-        json.dump({"other_key": {}}, f) # Missing 'nodes'
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        json.dump({"other_key": {}}, f)  # Missing 'nodes'
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format: missing 'nodes' key at the root level."):
+    with pytest.raises(
+        SnapshotError,
+        match="Invalid snapshot format: missing 'nodes' key at the root level.",
+    ):
         load_graph_from_file(snapshot_file)
+
 
 def test_load_graph_from_file_invalid_structure_nodes_not_dict(tmp_path: pathlib.Path):
     """Test load_graph_from_file where 'nodes' is not a dictionary."""
     snapshot_file = tmp_path / "invalid_structure_nodes_not_dict.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
-        json.dump({"nodes": ["not", "a", "dict"]}, f) # 'nodes' is a list
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        json.dump({"nodes": ["not", "a", "dict"]}, f)  # 'nodes' is a list
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format: 'nodes' should be a dictionary"):
+    with pytest.raises(
+        SnapshotError, match="Invalid snapshot format: 'nodes' should be a dictionary"
+    ):
         load_graph_from_file(snapshot_file)
 
-def test_load_graph_from_file_invalid_structure_attributes_not_dict(tmp_path: pathlib.Path):
+
+def test_load_graph_from_file_invalid_structure_attributes_not_dict(
+    tmp_path: pathlib.Path,
+):
     """Test load_graph_from_file where a node's attributes are not a dictionary."""
     snapshot_file = tmp_path / "invalid_structure_attrs_not_dict.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
+    with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump({"nodes": {"node1": "not_an_attributes_dict"}}, f)
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format for node 'node1': attributes should be a dictionary"):
+    with pytest.raises(
+        SnapshotError,
+        match="Invalid snapshot format for node 'node1': attributes should be a dictionary",
+    ):
         load_graph_from_file(snapshot_file)
+
 
 def test_load_graph_from_file_root_not_dict(tmp_path: pathlib.Path):
     """Test load_graph_from_file where the JSON root is not a dictionary."""
     snapshot_file = tmp_path / "invalid_root_not_dict.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
-        json.dump(["just", "a", "list"], f) # Root is a list
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        json.dump(["just", "a", "list"], f)  # Root is a list
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format: root should be a dictionary"):
+    with pytest.raises(
+        SnapshotError, match="Invalid snapshot format: root should be a dictionary"
+    ):
         load_graph_from_file(snapshot_file)
+
 
 def test_load_graph_from_file_snapshot_with_empty_edges_list(tmp_path: pathlib.Path):
     """Test loading a snapshot that explicitly contains an empty 'edges' list."""
     snapshot_file = tmp_path / "snapshot_empty_edges.json"
     snapshot_data = {"nodes": {"n1": {"attr": "val"}}, "edges": []}
-    with open(snapshot_file, "w", encoding='utf-8') as f:
+    with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump(snapshot_data, f)
 
     loaded_graph = load_graph_from_file(snapshot_file)
     assert loaded_graph.node_exists("n1")
     assert loaded_graph.get_all_edges() == []
 
+
 def test_load_graph_from_file_invalid_structure_edges_not_list(tmp_path: pathlib.Path):
     """Test load_graph_from_file where 'edges' is not a list."""
     snapshot_file = tmp_path / "invalid_edges_not_list.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
+    with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump({"nodes": {}, "edges": {"not": "a list"}}, f)
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format: 'edges' should be a list"):
+    with pytest.raises(
+        SnapshotError, match="Invalid snapshot format: 'edges' should be a list"
+    ):
         load_graph_from_file(snapshot_file)
 
-def test_load_graph_from_file_invalid_structure_edge_item_not_list_or_tuple(tmp_path: pathlib.Path):
+
+def test_load_graph_from_file_invalid_structure_edge_item_not_list_or_tuple(
+    tmp_path: pathlib.Path,
+):
     """Test load_graph_from_file where an edge item is not a list/tuple."""
     snapshot_file = tmp_path / "invalid_edge_item_type.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
+    with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump({"nodes": {}, "edges": ["not-a-list-or-tuple"]}, f)
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format for edge at index 0: each edge should be a list or tuple"):
+    with pytest.raises(
+        SnapshotError,
+        match="Invalid snapshot format for edge at index 0: each edge should be a list or tuple",
+    ):
         load_graph_from_file(snapshot_file)
 
-def test_load_graph_from_file_invalid_structure_edge_item_wrong_length(tmp_path: pathlib.Path):
+
+def test_load_graph_from_file_invalid_structure_edge_item_wrong_length(
+    tmp_path: pathlib.Path,
+):
     """Test load_graph_from_file where an edge item does not have 3 elements."""
     snapshot_file = tmp_path / "invalid_edge_item_length.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
-        json.dump({"nodes": {}, "edges": [("n1", "n2")]}, f) # Only 2 elements
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        json.dump({"nodes": {}, "edges": [("n1", "n2")]}, f)  # Only 2 elements
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format for edge at index 0: each edge must have 3 elements"):
+    with pytest.raises(
+        SnapshotError,
+        match="Invalid snapshot format for edge at index 0: each edge must have 3 elements",
+    ):
         load_graph_from_file(snapshot_file)
 
-def test_load_graph_from_file_invalid_structure_edge_element_not_string(tmp_path: pathlib.Path):
+
+def test_load_graph_from_file_invalid_structure_edge_element_not_string(
+    tmp_path: pathlib.Path,
+):
     """Test load_graph_from_file where an edge element (source, target, or label) is not a string."""
     snapshot_file = tmp_path / "invalid_edge_element_type.json"
-    with open(snapshot_file, "w", encoding='utf-8') as f:
-        json.dump({"nodes": {}, "edges": [("n1", "n2", 123)]}, f) # Label is int
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        json.dump({"nodes": {}, "edges": [("n1", "n2", 123)]}, f)  # Label is int
 
-    with pytest.raises(SnapshotError, match="Invalid snapshot format for edge at index 0: all edge elements .* must be strings"):
+    with pytest.raises(
+        SnapshotError,
+        match="Invalid snapshot format for edge at index 0: all edge elements .* must be strings",
+    ):
         load_graph_from_file(snapshot_file)
 
 
 def test_load_graph_from_file_edge_references_missing_node(tmp_path: pathlib.Path):
     """Edges referencing missing nodes should raise SnapshotError."""
     snapshot_file = tmp_path / "edge_missing_node.json"
-    snapshot_data = {"nodes": {"n1": {"attr": "val"}}, "edges": [("n1", "n2", "REL")]} 
+    snapshot_data = {"nodes": {"n1": {"attr": "val"}}, "edges": [("n1", "n2", "REL")]}
     with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump(snapshot_data, f)
 

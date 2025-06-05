@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional, List, Tuple, DefaultDict
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
+
 class MockGraph(IGraphAdapter):
     """
     A simple mock graph representation implementing IGraphAdapter, for testing.
@@ -144,12 +145,16 @@ class MockGraph(IGraphAdapter):
         edge_to_remove = (target_node_id, label)
         edges_from_source = self._edges.get(source_node_id)
         if not edges_from_source or edge_to_remove not in edges_from_source:
-            raise ProcessingError(f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be deleted.")
+            raise ProcessingError(
+                f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be deleted."
+            )
         edges_from_source.remove(edge_to_remove)
         if not edges_from_source:
             del self._edges[source_node_id]
 
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> List[str]:
         """
         Finds nodes connected to a given node, optionally via a specific edge label.
 
