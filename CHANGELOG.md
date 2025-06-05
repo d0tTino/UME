@@ -2,8 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (though currently in pre-release/development phase).
+
+## [0.4.0-dev] - 2025-06-09
+### Added
+-   `PersistentGraph` SQLite-backed adapter replacing the in-memory `MockGraph`.
+-   Automatic graph snapshotting utilities and CLI integration.
+-   Documentation describing the immutable `ume_demo` event log.
+
+### Changed
+-   CLI and tests now use `PersistentGraph` by default.
+-   README updated to reflect automatic persistence.
 
 ## [0.3.0-dev] - 2023-10-27
 
@@ -120,7 +131,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Known Issues / Limitations (as of this version)
 
 -   Full end-to-end testing of demo scripts involving Kafka/Redpanda was blocked by environmental issues preventing `confluent-kafka` installation in the test execution environment. Unit tests for core logic are passing.
--   `MockGraph` now includes basic support for directed, labeled edges (storage, retrieval, and inclusion in snapshots). Advanced edge querying or property support is future work.
--   Graph persistence is limited to manual snapshotting of `MockGraph` to a file; no automated persistence or database backend yet.
+-   `PersistentGraph` provides only basic edge support; advanced queries and properties remain future work.
 
 ```

@@ -2,14 +2,14 @@
 import pytest
 import time
 import re
-from ume import Event, EventType, MockGraph, apply_event_to_graph, ProcessingError
+from ume import Event, EventType, PersistentGraph, apply_event_to_graph, ProcessingError
 
 @pytest.fixture
-def graph() -> MockGraph:
-    """Pytest fixture to provide a clean MockGraph instance for each test."""
-    return MockGraph()
+def graph() -> PersistentGraph:
+    """Pytest fixture to provide a clean in-memory PersistentGraph instance."""
+    return PersistentGraph(":memory:")
 
-def test_apply_create_node_event_success(graph: MockGraph):
+def test_apply_create_node_event_success(graph: PersistentGraph):
     """Test successfully creating a new node."""
     event_id = "event1"
     node_id = "node1"
@@ -25,7 +25,7 @@ def test_apply_create_node_event_success(graph: MockGraph):
     assert graph.get_node(node_id) == attributes
     assert graph.node_count == 1
 
-def test_apply_create_node_event_no_attributes(graph: MockGraph):
+def test_apply_create_node_event_no_attributes(graph: PersistentGraph):
     """Test successfully creating a new node with no initial attributes."""
     node_id = "node_no_attr"
     event = Event(
@@ -37,7 +37,7 @@ def test_apply_create_node_event_no_attributes(graph: MockGraph):
     assert graph.node_exists(node_id)
     assert graph.get_node(node_id) == {} # Should be an empty dict
 
-def test_apply_create_node_event_already_exists(graph: MockGraph):
+def test_apply_create_node_event_already_exists(graph: PersistentGraph):
     """Test error when trying to create a node that already exists."""
     node_id = "node1"
     graph.add_node(node_id, {"name": "Initial Node"}) # Pre-existing node
@@ -49,7 +49,7 @@ def test_apply_create_node_event_already_exists(graph: MockGraph):
     with pytest.raises(ProcessingError, match=f"Node '{node_id}' already exists"):
         apply_event_to_graph(event, graph)
 
-def test_apply_create_node_missing_node_id(graph: MockGraph):
+def test_apply_create_node_missing_node_id(graph: PersistentGraph):
     """Test error when 'node_id' is missing in payload for CREATE_NODE."""
     event = Event(
         event_type=EventType.CREATE_NODE,
@@ -59,7 +59,7 @@ def test_apply_create_node_missing_node_id(graph: MockGraph):
     with pytest.raises(ProcessingError, match="Missing 'node_id' in payload for CREATE_NODE event"):
         apply_event_to_graph(event, graph)
 
-def test_apply_create_node_invalid_node_id_type(graph: MockGraph):
+def test_apply_create_node_invalid_node_id_type(graph: PersistentGraph):
     """Test error when 'node_id' is not a string for CREATE_NODE."""
     event = Event(
         event_type=EventType.CREATE_NODE,
@@ -69,7 +69,7 @@ def test_apply_create_node_invalid_node_id_type(graph: MockGraph):
     with pytest.raises(ProcessingError, match="'node_id' must be a string for CREATE_NODE event"):
         apply_event_to_graph(event, graph)
 
-def test_apply_update_node_attributes_success(graph: MockGraph):
+def test_apply_update_node_attributes_success(graph: PersistentGraph):
     """Test successfully updating attributes of an existing node."""
     node_id = "node1"
     initial_attrs = {"name": "Initial Name", "status": "active"}
@@ -85,7 +85,7 @@ def test_apply_update_node_attributes_success(graph: MockGraph):
     apply_event_to_graph(event, graph)
     assert graph.get_node(node_id) == expected_final_attrs
 
-def test_apply_update_node_attributes_node_not_exists(graph: MockGraph):
+def test_apply_update_node_attributes_node_not_exists(graph: PersistentGraph):
     """Test error when trying to update attributes of a non-existent node."""
     node_id = "node_not_found"
     event = Event(
@@ -96,7 +96,7 @@ def test_apply_update_node_attributes_node_not_exists(graph: MockGraph):
     with pytest.raises(ProcessingError, match=re.escape(f"Node '{node_id}' not found for update.")):
         apply_event_to_graph(event, graph)
 
-def test_apply_update_node_attributes_missing_node_id(graph: MockGraph):
+def test_apply_update_node_attributes_missing_node_id(graph: PersistentGraph):
     """Test error for UPDATE_NODE_ATTRIBUTES if 'node_id' is missing."""
     event = Event(
         event_type=EventType.UPDATE_NODE_ATTRIBUTES,
@@ -107,7 +107,7 @@ def test_apply_update_node_attributes_missing_node_id(graph: MockGraph):
         apply_event_to_graph(event, graph)
 
 # This old test is covered by the new parametrized one below for the "Missing 'attributes' key" case.
-# def test_apply_update_node_attributes_missing_attributes(graph: MockGraph):
+# def test_apply_update_node_attributes_missing_attributes(graph: PersistentGraph):
 #     """Test error for UPDATE_NODE_ATTRIBUTES if 'attributes' is missing."""
 #     node_id = "node1"
 #     graph.add_node(node_id, {"name": "Initial Name"})
@@ -137,7 +137,7 @@ def test_apply_update_node_attributes_missing_node_id(graph: MockGraph):
     ]
 )
 def test_apply_update_node_attributes_invalid_attributes_payload(
-    graph: MockGraph, attributes_payload: dict, expected_error_message_part: str
+    graph: PersistentGraph, attributes_payload: dict, expected_error_message_part: str
 ):
     """
     Tests UPDATE_NODE_ATTRIBUTES with various invalid 'attributes' payloads,
@@ -169,7 +169,7 @@ def test_apply_update_node_attributes_invalid_attributes_payload(
 
     assert expected_error_message_part in str(excinfo.value)
 
-def test_apply_unknown_event_type(graph: MockGraph):
+def test_apply_unknown_event_type(graph: PersistentGraph):
     """Test error when an unknown event_type is encountered."""
     event = Event(
         event_type="UNKNOWN_EVENT_TYPE",
@@ -180,7 +180,7 @@ def test_apply_unknown_event_type(graph: MockGraph):
         apply_event_to_graph(event, graph)
 
 # --- apply_event_to_graph: CREATE_EDGE tests ---
-def test_apply_create_edge_event_success(graph: MockGraph):
+def test_apply_create_edge_event_success(graph: PersistentGraph):
     """Test successfully applying a CREATE_EDGE event."""
     graph.add_node("source_node", {})
     graph.add_node("target_node", {})
@@ -198,10 +198,10 @@ def test_apply_create_edge_event_success(graph: MockGraph):
 
     apply_event_to_graph(event, graph)
 
-    # Verify edge was added (MockGraph stores edges as list of tuples)
+    # Verify edge was added (PersistentGraph stores edges as list of tuples)
     assert ("source_node", "target_node", "RELATES_TO") in graph.get_all_edges()
 
-def test_apply_create_edge_event_missing_source_node(graph: MockGraph):
+def test_apply_create_edge_event_missing_source_node(graph: PersistentGraph):
     """Test CREATE_EDGE when source node does not exist (error from adapter)."""
     graph.add_node("target_node", {}) # Target exists
     event = Event(
@@ -215,7 +215,7 @@ def test_apply_create_edge_event_missing_source_node(graph: MockGraph):
     with pytest.raises(ProcessingError, match="Both source node 'missing_source' and target node 'target_node' must exist"):
         apply_event_to_graph(event, graph)
 
-def test_apply_create_edge_event_missing_target_node(graph: MockGraph):
+def test_apply_create_edge_event_missing_target_node(graph: PersistentGraph):
     """Test CREATE_EDGE when target node does not exist (error from adapter)."""
     graph.add_node("source_node", {}) # Source exists
     event = Event(
@@ -229,7 +229,7 @@ def test_apply_create_edge_event_missing_target_node(graph: MockGraph):
     with pytest.raises(ProcessingError, match="Both source node 'source_node' and target node 'missing_target' must exist"):
         apply_event_to_graph(event, graph)
 
-def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: MockGraph):
+def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: PersistentGraph):
     """
     Test CREATE_EDGE when event fields (node_id, target_node_id, label) are not strings.
     This tests the defensive checks in apply_event_to_graph.
@@ -255,7 +255,7 @@ def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: Moc
 
 
 # --- apply_event_to_graph: DELETE_EDGE tests ---
-def test_apply_delete_edge_event_success(graph: MockGraph):
+def test_apply_delete_edge_event_success(graph: PersistentGraph):
     """Test successfully applying a DELETE_EDGE event."""
     graph.add_node("s_node", {})
     graph.add_node("t_node", {})
@@ -273,7 +273,7 @@ def test_apply_delete_edge_event_success(graph: MockGraph):
     apply_event_to_graph(event, graph)
     assert ("s_node", "t_node", "TO_DELETE") not in graph.get_all_edges()
 
-def test_apply_delete_edge_event_edge_not_exist(graph: MockGraph):
+def test_apply_delete_edge_event_edge_not_exist(graph: PersistentGraph):
     """Test DELETE_EDGE when the specified edge does not exist (error from adapter)."""
     graph.add_node("s_node", {})
     graph.add_node("t_node", {})
@@ -292,7 +292,7 @@ def test_apply_delete_edge_event_edge_not_exist(graph: MockGraph):
     with pytest.raises(ProcessingError, match=expected):
         apply_event_to_graph(event, graph)
 
-def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: MockGraph):
+def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: PersistentGraph):
     """
     Test DELETE_EDGE when event fields (node_id, target_node_id, label) are not strings.
     This tests the defensive checks in apply_event_to_graph.

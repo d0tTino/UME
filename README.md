@@ -30,7 +30,7 @@ The current system consists of the following main components:
     *   Redpanda is a Kafka-compatible streaming data platform. It is run locally using Docker, as defined in the `docker/docker-compose.yml` file.
     *   It receives events from producers and stores them durably in topics.
     *   It allows multiple consumers to subscribe to these topics and read events.
-    *   The demo uses a topic named `ume_demo`.
+    *   The demo uses a topic named `ume_demo`, configured for unlimited retention so it serves as an immutable event log.
     *   The Docker setup also includes Redpanda Console, which provides a UI and schema registry capabilities, accessible typically on `localhost:8081` (for the console) while Redpanda itself exposes a schema registry via Pandaproxy on `localhost:8082`.
 
 3.  **Event Consumer (`src/ume/consumer_demo.py`):**
@@ -126,7 +126,7 @@ This setup demonstrates a simple event-driven architecture, which is foundationa
 A core aspect of the Universal Memory Engine (UME) is its ability to construct a knowledge graph from the events it processes. This graph serves as the dynamic, queryable memory for agents and automations.
 
 The detailed schema of this graph, including node types, relationship types, and their properties, is a key part of UME's design. As the system evolves, this will be critical for understanding how memory is structured and utilized.
-Additionally, the graph supports directed, labeled **edges** connecting these nodes, representing relationships such as `(source_node_id, target_node_id, 'RELATES_TO')`. Internally, the `MockGraph` stores edges in an adjacency dictionary for faster lookup, while still exposing them as a list of tuples via `get_all_edges()`.
+Additionally, the graph supports directed, labeled **edges** connecting these nodes, representing relationships such as `(source_node_id, target_node_id, 'RELATES_TO')`. The default implementation, `PersistentGraph`, stores this data in a lightweight SQLite database for durability while still exposing edges as a list of tuples via `get_all_edges()`.
 
 For current plans and eventual detailed documentation on the UME graph model, please see:
 
@@ -178,6 +178,12 @@ When contributing new features or fixing bugs, please include relevant tests:
 *   **Integration Tests:** For interactions between components (e.g., testing event flow through a mock Kafka setup, though this is a future enhancement).
 
 Strive for clear, concise tests that verify specific behaviors and edge cases.
+
+## Access Control
+
+UME enforces access restrictions for both Kafka topics and graph operations.
+Example ACL commands for Redpanda and a description of roles are provided in
+[docs/ACCESS_CONTROL.md](docs/ACCESS_CONTROL.md).
 
 ## Quickstart
 
@@ -236,11 +242,11 @@ PYTHONPATH=src pytest
 This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
 
 1.  **Obtain a Graph Adapter Instance:**
-    Choose an implementation of `IGraphAdapter`. For local testing or simple use cases, `MockGraph` can be used:
+    The default adapter is `PersistentGraph`, which stores data in an SQLite database:
     ```python
-    from ume import MockGraph, IGraphAdapter
+    from ume import PersistentGraph, IGraphAdapter
 
-    graph_adapter: IGraphAdapter = MockGraph()
+    graph_adapter: IGraphAdapter = PersistentGraph("memory.db")
     ```
 
 2.  **Define Event Data Dictionaries:**
@@ -328,7 +334,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
     ```
 
 5.  **Snapshot Graph to File (Optional):**
-    Persist the graph's state to a file:
+    The `PersistentGraph` persists automatically, but you can manually dump the graph to a JSON file:
     ```python
     from ume import snapshot_graph_to_file
     # import pathlib # Ensure pathlib is imported if using Path objects for snapshot_path
