@@ -8,12 +8,18 @@ services:
       - --smp 1
       - --overprovisioned
       - --node-id 0
-      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://localhost:9092
-      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,SSL://0.0.0.0:29093,OUTSIDE://localhost:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,SSL://redpanda:29093,OUTSIDE://localhost:9092
       - --pandaproxy-addr PLAINTEXT://0.0.0.0:28082,OUTSIDE://localhost:8082
       - --advertise-pandaproxy-addr PLAINTEXT://redpanda:28082,OUTSIDE://localhost:8082
+      - --tls-key /etc/redpanda/certs/redpanda.key
+      - --tls-cert /etc/redpanda/certs/redpanda.crt
+      - --tls-truststore-file /etc/redpanda/certs/ca.crt
+    volumes:
+      - ./certs:/etc/redpanda/certs:ro
     ports:
-      - "9092:9092"    # Kafka API
+      - "9092:9092"    # Kafka API (PLAINTEXT)
+      - "29093:29093"  # Kafka API over TLS
       - "8082:8082"    # Pandaproxy HTTP API (includes schema registry if not separated)
     healthcheck:
       test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]

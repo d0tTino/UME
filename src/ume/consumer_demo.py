@@ -9,6 +9,7 @@ corresponding producer_demo.py script.
 
 import json
 import logging
+import os
 from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
 from ume import parse_event, EventError  # Import parse_event and EventError
 
@@ -17,9 +18,25 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("consumer_demo")
 
 # Kafka broker and topic
+# Set KAFKA_CA_CERT, KAFKA_CLIENT_CERT and KAFKA_CLIENT_KEY to enable TLS.
 BOOTSTRAP_SERVERS = "localhost:9092"
 TOPIC = "ume_demo"
 GROUP_ID = "ume_demo_group"
+
+
+def ssl_config() -> dict:
+    """Return Kafka SSL configuration if cert env vars are set."""
+    ca = os.environ.get("KAFKA_CA_CERT")
+    cert = os.environ.get("KAFKA_CLIENT_CERT")
+    key = os.environ.get("KAFKA_CLIENT_KEY")
+    if ca and cert and key:
+        return {
+            "security.protocol": "SSL",
+            "ssl.ca.location": ca,
+            "ssl.certificate.location": cert,
+            "ssl.key.location": key,
+        }
+    return {}
 
 
 def main():
@@ -38,6 +55,7 @@ def main():
         "group.id": GROUP_ID,
         "auto.offset.reset": "earliest",  # Start reading from the beginning of the topic
     }
+    conf.update(ssl_config())
     consumer = Consumer(conf)
     consumer.subscribe([TOPIC])
 

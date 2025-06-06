@@ -31,6 +31,28 @@ If you find a bug or have an idea for a new feature, please check our issue trac
     ```
 6.  **Submit a Pull Request (PR):** Open a pull request from your branch to the main UME repository. Provide a clear description of your changes in the PR.
 
+### Coding Style
+
+- **Black** is used for code formatting. Run `black` on your changes before committing.
+- **Ruff** enforces linting rules and also checks formatting. The CI will fail if Ruff reports issues.
+
+### Branch Naming & Pre-commit Hooks
+
+- Create branches using the pattern `feat/`, `fix/`, `docs/`, or `chore/` followed by a short description, e.g. `feat/add-api-endpoint`.
+- Install the Git hooks once per clone:
+  ```bash
+  pre-commit install
+  ```
+  Afterwards `pre-commit` will run automatically on each commit. You can manually run all hooks with:
+  ```bash
+  pre-commit run --all-files
+  ```
+
+### Pull Requests
+
+- Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR.
+- All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, and formatting checks) before merging.
+
 ## Development Setup
 
 Please refer to the `README.md` for instructions on setting up your development environment.

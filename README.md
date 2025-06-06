@@ -210,6 +210,11 @@ poetry install
 # (Correction: The docker-compose.yml is in the 'docker/' subdirectory)
 docker compose -f docker/docker-compose.yml up -d
 ```
+If you want to enable TLS for the broker and API, generate certificates first:
+```bash
+bash docker/generate-certs.sh
+```
+See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 
 ### 3. Run the Consumer Demo
 ```bash
@@ -255,6 +260,12 @@ Sample configuration files for common environments are provided in
 [`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md). These templates
 demonstrate how to select different storage backends or event stores for
 development, staging, and production setups.
+
+## Federated Deployments
+
+Running UME in multiple data centers may require synchronizing memory across
+regions. Several strategies are summarized in
+[`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 ## Basic Usage
 
