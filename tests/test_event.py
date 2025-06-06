@@ -1,7 +1,6 @@
 # tests/test_event.py
 import pytest
 import time
-import logging
 from ume import Event, EventType, parse_event, EventError  # EventType constants
 
 

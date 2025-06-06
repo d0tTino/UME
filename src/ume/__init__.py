@@ -13,6 +13,11 @@ from .query import Neo4jQueryEngine
 from .analytics import shortest_path, find_communities, temporal_node_counts
 from .api import app as api_app
 from .processing import apply_event_to_graph, ProcessingError
+from .listeners import (
+    GraphListener,
+    register_listener,
+    unregister_listener,
+)
 from .snapshot import (
     snapshot_graph_to_file,
     load_graph_from_file,
@@ -45,5 +50,8 @@ __all__ = [
     "temporal_node_counts",
     "api_app",
     "validate_event_dict",
+    "GraphListener",
+    "register_listener",
+    "unregister_listener",
 ]
 
