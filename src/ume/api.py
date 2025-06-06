@@ -55,3 +55,21 @@ class ShortestPathRequest(BaseModel):
 def api_shortest_path(req: ShortestPathRequest, _: None = Depends(require_token), graph: IGraphAdapter = Depends(get_graph)) -> Dict[str, Any]:
     path = shortest_path(graph, req.source, req.target)
     return {"path": path}
+
+
+@app.post("/redact/node/{node_id}")
+def api_redact_node(node_id: str, _: None = Depends(require_token), graph: IGraphAdapter = Depends(get_graph)) -> Dict[str, Any]:
+    graph.redact_node(node_id)
+    return {"status": "ok"}
+
+
+class RedactEdgeRequest(BaseModel):
+    source: str
+    target: str
+    label: str
+
+
+@app.post("/redact/edge")
+def api_redact_edge(req: RedactEdgeRequest, _: None = Depends(require_token), graph: IGraphAdapter = Depends(get_graph)) -> Dict[str, Any]:
+    graph.redact_edge(req.source, req.target, req.label)
+    return {"status": "ok"}

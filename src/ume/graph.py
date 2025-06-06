@@ -1,5 +1,5 @@
 # src/ume/graph.py
-from typing import Dict, Any, Optional, List, Tuple, DefaultDict
+from typing import Dict, Any, Optional, List, Tuple, DefaultDict, Set
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
@@ -18,6 +18,9 @@ class MockGraph(IGraphAdapter):
     def __init__(self):
         """Initializes an empty graph with no nodes or edges."""
         self._nodes: Dict[str, Dict[str, Any]] = {}
+        # Track nodes/edges that have been redacted
+        self._redacted_nodes: set[str] = set()
+        self._redacted_edges: set[Tuple[str, str, str]] = set()
         # Store edges in an adjacency list for faster lookups: source_id -> [(target_id, label), ...]
         self._edges: DefaultDict[str, List[Tuple[str, str]]] = DefaultDict(list)
 
@@ -66,6 +69,8 @@ class MockGraph(IGraphAdapter):
             A dictionary of the node's attributes if the node exists,
             otherwise None.
         """
+        if node_id in self._redacted_nodes:
+            return None
         return self._nodes.get(node_id)
 
     def node_exists(self, node_id: str) -> bool:
@@ -78,7 +83,7 @@ class MockGraph(IGraphAdapter):
         Returns:
             True if the node exists, False otherwise.
         """
-        return node_id in self._nodes
+        return node_id in self._nodes and node_id not in self._redacted_nodes
 
     def get_all_node_ids(self) -> List[str]:
         """
@@ -88,7 +93,7 @@ class MockGraph(IGraphAdapter):
             A list of strings, where each string is a unique node ID.
             Returns an empty list if the graph contains no nodes.
         """
-        return list(self._nodes.keys())
+        return [nid for nid in self._nodes.keys() if nid not in self._redacted_nodes]
 
     def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         """
@@ -123,7 +128,12 @@ class MockGraph(IGraphAdapter):
         all_edges: List[Tuple[str, str, str]] = []
         for src, targets in self._edges.items():
             for tgt, lbl in targets:
-                all_edges.append((src, tgt, lbl))
+                if (
+                    src not in self._redacted_nodes
+                    and tgt not in self._redacted_nodes
+                    and (src, tgt, lbl) not in self._redacted_edges
+                ):
+                    all_edges.append((src, tgt, lbl))
         return all_edges
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
@@ -151,6 +161,7 @@ class MockGraph(IGraphAdapter):
         edges_from_source.remove(edge_to_remove)
         if not edges_from_source:
             del self._edges[source_node_id]
+        self._redacted_edges.discard((source_node_id, target_node_id, label))
 
     def find_connected_nodes(
         self, node_id: str, edge_label: Optional[str] = None
@@ -178,7 +189,13 @@ class MockGraph(IGraphAdapter):
 
         connected_nodes: List[str] = []
         for target, lbl in self._edges.get(node_id, []):
-            if edge_label is None or lbl == edge_label:
+            if (
+                edge_label is None or lbl == edge_label
+            ) and (
+                node_id not in self._redacted_nodes
+                and target not in self._redacted_nodes
+                and (node_id, target, lbl) not in self._redacted_edges
+            ):
                 connected_nodes.append(target)
         return connected_nodes
 
@@ -186,6 +203,8 @@ class MockGraph(IGraphAdapter):
         """Removes all nodes and edges from the graph."""
         self._nodes.clear()
         self._edges.clear()
+        self._redacted_nodes.clear()
+        self._redacted_edges.clear()
 
     @property
     def node_count(self) -> int:
@@ -208,8 +227,30 @@ class MockGraph(IGraphAdapter):
         edge_list: List[Tuple[str, str, str]] = []
         for src, targets in self._edges.items():
             for tgt, lbl in targets:
-                edge_list.append((src, tgt, lbl))
+                if (
+                    src not in self._redacted_nodes
+                    and tgt not in self._redacted_nodes
+                    and (src, tgt, lbl) not in self._redacted_edges
+                ):
+                    edge_list.append((src, tgt, lbl))
         return {
-            "nodes": {nid: attrs.copy() for nid, attrs in self._nodes.items()},
+            "nodes": {
+                nid: attrs.copy()
+                for nid, attrs in self._nodes.items()
+                if nid not in self._redacted_nodes
+            },
             "edges": edge_list,
         }
+
+    def redact_node(self, node_id: str) -> None:
+        if node_id not in self._nodes:
+            raise ProcessingError(f"Node '{node_id}' not found to redact.")
+        self._redacted_nodes.add(node_id)
+
+    def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        edge_tuple = (target_node_id, label)
+        if edge_tuple not in self._edges.get(source_node_id, []):
+            raise ProcessingError(
+                f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be redacted."
+            )
+        self._redacted_edges.add((source_node_id, target_node_id, label))

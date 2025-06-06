@@ -130,6 +130,29 @@ def test_cli_create_and_show_edge(
     assert rc == 0
 
 
+def test_cli_redact_node_and_edge():
+    commands = [
+        'new_node n1 "{}"',
+        'new_node n2 "{}"',
+        'new_edge n1 n2 L',
+        'redact_node n1',
+        'redact_edge n1 n2 L',
+        'show_nodes',
+        'show_edges',
+        'exit',
+    ]
+    stdout, stderr, rc = run_cli_commands(commands)
+    assert "Node 'n1' redacted." in stdout
+    assert "Edge (n1)->(n2) [L] redacted." in stdout
+    # After redaction only n2 should be listed
+    assert "- n1" not in stdout
+    assert "- n2" in stdout
+    # All edges should be hidden
+    assert "No edges in the graph." in stdout
+    assert stderr == ""
+    assert rc == 0
+
+
 def test_cli_snapshot_save_and_load_and_verify(tmp_path):
     """Test snapshot save, clear, load, and verify content."""
     snapshot_file = tmp_path / "cli_test_snapshot.json"

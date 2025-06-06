@@ -64,3 +64,9 @@ class RoleBasedGraphAdapter(IGraphAdapter):
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         self._adapter.delete_edge(source_node_id, target_node_id, label)
+
+    def redact_node(self, node_id: str) -> None:
+        self._adapter.redact_node(node_id)
+
+    def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        self._adapter.redact_edge(source_node_id, target_node_id, label)

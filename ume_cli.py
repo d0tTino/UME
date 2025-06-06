@@ -149,6 +149,37 @@ class UMEPrompt(Cmd):
             print(f"An unexpected error occurred: {e}")
             self._log_audit(str(e))
 
+    def do_redact_node(self, arg):
+        """redact_node <node_id>\nMark a node as redacted so it no longer appears in queries."""
+        node_id = shlex.split(arg)[0] if arg else None
+        if not node_id:
+            print("Usage: redact_node <node_id>")
+            return
+        try:
+            self.graph.redact_node(node_id)
+            print(f"Node '{node_id}' redacted.")
+        except ProcessingError as e:
+            print(f"Error: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+    def do_redact_edge(self, arg):
+        """redact_edge <source_id> <target_id> <label>\nMark an edge as redacted so it no longer appears in queries."""
+        try:
+            parts = shlex.split(arg)
+            if len(parts) != 3:
+                print("Usage: redact_edge <source_id> <target_id> <label>")
+                return
+            source_id, target_id, label = parts
+            self.graph.redact_edge(source_id, target_id, label)
+            print(
+                f"Edge ({source_id})->({target_id}) [{label}] redacted."
+            )
+        except ProcessingError as e:
+            print(f"Error: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
     # ----- Query commands -----
     def do_show_nodes(self, arg):
         """
