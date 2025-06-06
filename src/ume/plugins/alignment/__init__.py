@@ -8,6 +8,8 @@ import importlib
 import pkgutil
 
 from ...event import Event
+from ...audit import log_audit_entry
+import os
 
 
 class PolicyViolationError(ValueError):
@@ -30,7 +32,23 @@ _plugins: List[AlignmentPlugin] = []
 
 
 def register_plugin(plugin: AlignmentPlugin) -> None:
-    """Register a plugin instance."""
+    """Register a plugin instance.
+
+    The plugin's ``validate`` method is wrapped so that any
+    :class:`PolicyViolationError` raised will trigger an audit log entry.
+    """
+
+    original_validate = plugin.validate
+
+    def wrapped_validate(event: Event) -> None:
+        try:
+            original_validate(event)
+        except PolicyViolationError as exc:
+            user_id = os.environ.get("UME_AGENT_ID", "UNKNOWN")
+            log_audit_entry(user_id, str(exc))
+            raise
+
+    plugin.validate = wrapped_validate  # type: ignore[assignment]
     _plugins.append(plugin)
 
 
