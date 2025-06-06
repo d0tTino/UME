@@ -1,7 +1,8 @@
 # tests/test_graph_serialization.py
 import json
 import pytest
-import pathlib # Ensure pathlib is imported
+import pathlib  # Ensure pathlib is imported
+from typing import Any
 from ume import MockGraph, snapshot_graph_to_file, load_graph_from_file, SnapshotError # Add new imports
 
 def test_empty_graph_dump_and_serialization():
@@ -118,7 +119,7 @@ def test_snapshot_graph_with_nodes_roundtrip(tmp_path: pathlib.Path):
     graph = MockGraph()
     node_a_attrs = {"name": "Alice", "age": 30, "tags": ["dev", "python"]}
     node_b_attrs = {"name": "Bob", "department": "HR", "active": True}
-    node_c_attrs = {} # Node with empty attributes
+    node_c_attrs: dict[str, Any] = {}  # Node with empty attributes
 
     graph.add_node("nodeA", node_a_attrs)
     graph.add_node("nodeB", node_b_attrs)

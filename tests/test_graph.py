@@ -1,6 +1,7 @@
 # tests/test_graph.py
 import pytest
 import re
+from typing import Any
 from ume import MockGraph, ProcessingError  # IGraphAdapter is implicitly tested by testing MockGraph's adherence
 from ume.graph_adapter import IGraphAdapter # Import for isinstance check if needed
 
@@ -18,7 +19,7 @@ def test_mockgraph_is_igraph_adapter_instance(graph: MockGraph):
 def test_add_node_success(graph: MockGraph):
     """Test adding a new node successfully."""
     node_id = "node1"
-    attributes = {"name": "Test Node", "value": 123}
+    attributes: dict[str, Any] = {"name": "Test Node", "value": 123}
     graph.add_node(node_id, attributes)
     assert graph.node_exists(node_id)
     assert graph.get_node(node_id) == attributes
@@ -27,7 +28,7 @@ def test_add_node_success(graph: MockGraph):
 def test_add_node_empty_attributes_success(graph: MockGraph):
     """Test adding a new node with empty attributes successfully."""
     node_id = "node_empty_attr"
-    attributes = {}
+    attributes: dict[str, Any] = {}
     graph.add_node(node_id, attributes)
     assert graph.node_exists(node_id)
     assert graph.get_node(node_id) == {}

@@ -1,6 +1,6 @@
 # src/ume/snapshot.py
 import json
-from typing import Union, TYPE_CHECKING, Dict, Any, List, Tuple # Added List, Tuple
+from typing import Union, TYPE_CHECKING, List, Tuple
 import pathlib # For type hinting path-like objects
 
 # Ensure MockGraph is available for instantiation and type hinting

@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .processing import ProcessingError # Used in docstrings, implementations will raise it
+    from .processing import ProcessingError  # noqa: F401 - used in docstrings only
 
 class IGraphAdapter(ABC):
     """
