@@ -242,6 +242,13 @@ poetry run pytest
 PYTHONPATH=src pytest
 ```
 
+### 7. Run the Agent Integration Example
+This example shows how an AutoDev agent can send events to UME and forward them
+to Culture.ai:
+```bash
+poetry run python examples/agent_integration.py
+```
+
 ## Configuration Templates
 
 Sample configuration files for common environments are provided in
