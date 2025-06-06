@@ -117,4 +117,3 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
         graph._edges = loaded_edges # Direct assignment after validation
 
     return graph
-```

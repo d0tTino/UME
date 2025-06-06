@@ -61,14 +61,18 @@ def parse_event(data: Dict[str, Any]) -> Event:
         EventError: If required fields are missing or have incorrect types for the given event_type.
     """
     # Basic presence and type checks for common fields
+    missing_base_fields = []
     if "event_type" not in data:
-        raise EventError("Missing required event field: event_type")
+        missing_base_fields.append("event_type")
+    if "timestamp" not in data:
+        missing_base_fields.append("timestamp")
+    if missing_base_fields:
+        raise EventError(f"Missing required event fields: {', '.join(missing_base_fields)}")
+
     event_type = data["event_type"]
     if not isinstance(event_type, str):
         raise EventError(f"Invalid type for 'event_type': expected str, got {type(event_type).__name__}")
 
-    if "timestamp" not in data:
-        raise EventError("Missing required event field: timestamp")
     timestamp = data["timestamp"]
     if not isinstance(timestamp, int):
         raise EventError(f"Invalid type for 'timestamp': expected int, got {type(timestamp).__name__}")
@@ -109,15 +113,22 @@ def parse_event(data: Dict[str, Any]) -> Event:
         if "payload" in data and not isinstance(payload_val, dict):
              raise EventError(f"Invalid type for 'payload' in {event_type} event (if provided): expected dict, got {type(payload_val).__name__}")
 
+    else:
+        if "payload" not in data:
+            raise EventError("Missing required event fields: payload")
+        if not isinstance(payload_val, dict):
+            raise EventError(
+                f"Invalid type for 'payload' in {event_type} event (if provided): expected dict"
+            )
+
 
     return Event(
         event_id=data.get("event_id", str(uuid.uuid4())),
         event_type=event_type,
         timestamp=timestamp,
-        payload=payload_val, # Use payload_val which is defaulted to {} or the actual value
+        payload=payload_val,  # Use payload_val which is defaulted to {} or the actual value
         source=data.get("source"),
         node_id=node_id_val,
         target_node_id=target_node_id_val,
-        label=label_val
+        label=label_val,
     )
-```

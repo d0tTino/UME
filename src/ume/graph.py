@@ -194,5 +194,5 @@ class MockGraph(IGraphAdapter):
             "edges" maps to a list of all edges, where each edge is a tuple
             (source_node_id, target_node_id, label).
         """
-        return {"nodes": self._nodes.copy(), "edges": list(self._edges)}
-```
+        node_copies = {k: v.copy() for k, v in self._nodes.items()}
+        return {"nodes": node_copies, "edges": list(self._edges)}

@@ -1,6 +1,7 @@
 # tests/test_graph.py
 import pytest
-from ume import MockGraph, ProcessingError # IGraphAdapter is implicitly tested by testing MockGraph's adherence
+import re
+from ume import MockGraph, ProcessingError  # IGraphAdapter is implicitly tested by testing MockGraph's adherence
 from ume.graph_adapter import IGraphAdapter # Import for isinstance check if needed
 
 # Fixture for a clean MockGraph instance
@@ -296,7 +297,7 @@ def test_delete_edge_non_existent_raises_error(graph: MockGraph):
     # Edge ("s1", "t1", "DOES_NOT_EXIST") is never added
 
     edge_tuple = ("s1", "t1", "DOES_NOT_EXIST")
-    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+    with pytest.raises(ProcessingError, match=re.escape(f"Edge {edge_tuple} does not exist and cannot be deleted.")):
         graph.delete_edge(edge_tuple[0], edge_tuple[1], edge_tuple[2])
 
 def test_delete_edge_non_existent_source_node_implicitly_fails(graph: MockGraph):
@@ -307,7 +308,7 @@ def test_delete_edge_non_existent_source_node_implicitly_fails(graph: MockGraph)
     """
     graph.add_node("t1", {})
     edge_tuple = ("s_missing", "t1", "LINKS_TO")
-    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+    with pytest.raises(ProcessingError, match=re.escape(f"Edge {edge_tuple} does not exist and cannot be deleted.")):
         graph.delete_edge(edge_tuple[0], edge_tuple[1], edge_tuple[2])
 
 def test_delete_edge_non_existent_target_node_implicitly_fails(graph: MockGraph):
@@ -317,7 +318,5 @@ def test_delete_edge_non_existent_target_node_implicitly_fails(graph: MockGraph)
     """
     graph.add_node("s1", {})
     edge_tuple = ("s1", "t_missing", "LINKS_TO")
-    with pytest.raises(ProcessingError, match=f"Edge {edge_tuple} does not exist and cannot be deleted."):
+    with pytest.raises(ProcessingError, match=re.escape(f"Edge {edge_tuple} does not exist and cannot be deleted.")):
         graph.delete_edge(edge_tuple[0], edge_tuple[1], edge_tuple[2])
-
-```

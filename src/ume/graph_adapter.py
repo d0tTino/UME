@@ -186,4 +186,3 @@ class IGraphAdapter(ABC):
                                         or if nodes do not exist (implementation dependent).
         """
         pass
-```
