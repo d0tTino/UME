@@ -3,6 +3,7 @@
 from .event import Event, EventType, parse_event, EventError
 from .graph import MockGraph
 from .persistent_graph import PersistentGraph
+from .neo4j_graph import Neo4jGraph
 from .auto_snapshot import (
     enable_periodic_snapshot,
     enable_snapshot_autosave_and_restore,
@@ -10,6 +11,8 @@ from .auto_snapshot import (
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .query import Neo4jQueryEngine
+from .plugins.alignment import PolicyViolationError
+from .audit import log_audit_entry, get_audit_entries
 from .analytics import shortest_path, find_communities, temporal_node_counts
 from .api import app as api_app
 from .processing import apply_event_to_graph, ProcessingError
@@ -35,6 +38,7 @@ __all__ = [
     "EventError",
     "MockGraph",
     "PersistentGraph",
+    "Neo4jGraph",
     "IGraphAdapter",
     "RoleBasedGraphAdapter",
     "AccessDeniedError",
@@ -55,5 +59,8 @@ __all__ = [
     "GraphListener",
     "register_listener",
     "unregister_listener",
+    "PolicyViolationError",
+    "log_audit_entry",
+    "get_audit_entries",
 ]
 
