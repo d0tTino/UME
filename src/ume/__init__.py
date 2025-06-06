@@ -21,6 +21,7 @@ from .snapshot import (
     SnapshotError,
 )
 from .schema_utils import validate_event_dict
+from .client import UMEClient
 
 __all__ = [
     "Event",
