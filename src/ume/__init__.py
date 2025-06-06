@@ -66,5 +66,4 @@ __all__ = [
     "unregister_listener",
     "log_audit_entry",
     "get_audit_entries",
-    "PolicyViolationError",
 ]
