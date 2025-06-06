@@ -1,6 +1,7 @@
 # src/ume/processing.py
 from .event import Event, EventType
 from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
+from .plugins.alignment import PolicyViolationError, get_plugins
 # MockGraph import removed as it's no longer directly used for type hinting here
 
 
@@ -32,6 +33,7 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         graph (IGraphAdapter): An instance implementing the IGraphAdapter interface.
 
     Raises:
+        PolicyViolationError: If an alignment plugin rejects the event.
         ProcessingError: If fields validated by `parse_event` are unexpectedly invalid
                          (e.g. None when str expected for a given event type),
                          if event payload is missing required fields for the event_type,
@@ -39,6 +41,8 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                          Also raised by graph adapter methods for graph consistency issues
                          (e.g., node already exists for CREATE_NODE, node not found for UPDATE_NODE_ATTRIBUTES/CREATE_EDGE).
     """
+    for plugin in get_plugins():
+        plugin.validate(event)
     if event.event_type == EventType.CREATE_NODE:
         node_id = event.payload.get("node_id")
         if not node_id:
