@@ -454,11 +454,11 @@ event = {
 }
 
 try:
-    # Schema validation and Kafka publishing happen inside publish_event
-    client.publish_event(event)
-    print("Event published successfully")
+    # Schema validation and Kafka publishing happen inside produce_event
+    client.produce_event(event)
+    print("Event produced successfully")
 except UMEClientError as e:
-    print(f"Failed to publish event: {e}")
+    print(f"Failed to produce event: {e}")
 ```
 
 The client raises `UMEClientError` for issues such as failed validation or
