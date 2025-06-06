@@ -2,6 +2,7 @@
 from .event import Event, EventType
 from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
 from .listeners import get_registered_listeners
+from .plugins.alignment import get_plugins
 
 class ProcessingError(ValueError):
     """Custom exception for event processing errors."""
