@@ -18,6 +18,8 @@ from .listeners import (
     register_listener,
     unregister_listener,
 )
+from .audit import log_audit_entry, get_audit_entries
+from .plugins.alignment import PolicyViolationError
 
 from .snapshot import (
     snapshot_graph_to_file,
@@ -55,5 +57,7 @@ __all__ = [
     "GraphListener",
     "register_listener",
     "unregister_listener",
+    "log_audit_entry",
+    "get_audit_entries",
+    "PolicyViolationError",
 ]
-
