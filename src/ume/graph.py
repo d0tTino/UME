@@ -1,7 +1,8 @@
 # src/ume/graph.py
-from typing import Dict, Any, Optional, List, Tuple # Added List, Tuple
+from typing import Dict, Any, Optional, List, Tuple  # Added List, Tuple
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
+
 
 class MockGraph(IGraphAdapter):
     """
@@ -17,7 +18,7 @@ class MockGraph(IGraphAdapter):
     def __init__(self):
         """Initializes an empty graph with no nodes or edges."""
         self._nodes: Dict[str, Dict[str, Any]] = {}
-        self._edges: List[Tuple[str, str, str]] = [] # (source_id, target_id, label)
+        self._edges: List[Tuple[str, str, str]] = []  # (source_id, target_id, label)
 
     def add_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
         """
@@ -118,7 +119,7 @@ class MockGraph(IGraphAdapter):
             A list of tuples, where each tuple represents an edge.
             Returns an empty list if the graph contains no edges.
         """
-        return list(self._edges) # Return a copy
+        return list(self._edges)  # Return a copy
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         """
@@ -139,10 +140,14 @@ class MockGraph(IGraphAdapter):
         edge_to_remove = (source_node_id, target_node_id, label)
         try:
             self._edges.remove(edge_to_remove)
-        except ValueError: # .remove() raises ValueError if item not found
-            raise ProcessingError(f"Edge {edge_to_remove} does not exist and cannot be deleted.")
+        except ValueError:  # .remove() raises ValueError if item not found
+            raise ProcessingError(
+                f"Edge {edge_to_remove} does not exist and cannot be deleted."
+            )
 
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> List[str]:
         """
         Finds nodes connected to a given node, optionally via a specific edge label.
 
