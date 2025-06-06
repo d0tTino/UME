@@ -20,6 +20,7 @@ from .snapshot import (
     SnapshotError,
 )
 from .schema_utils import validate_event_dict
+from .audit import log_audit_entry, get_audit_entries
 
 __all__ = [
     "Event",
@@ -45,5 +46,7 @@ __all__ = [
     "temporal_node_counts",
     "api_app",
     "validate_event_dict",
+    "log_audit_entry",
+    "get_audit_entries",
 ]
 
