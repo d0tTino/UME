@@ -418,6 +418,39 @@ This section outlines the basic programmatic steps to interact with the UME comp
     ```
 This provides a basic flow for event handling and graph interaction within UME.
 
+## How to Use UMEClient
+
+`UMEClient` is a small helper for publishing events to the broker. It validates
+the payload using UME's schemas before sending so your application only needs to
+prepare a dictionary and handle any errors.
+
+```python
+from ume.client import UMEClient, UMEClientError
+import time
+
+# Connect to the broker and topic used by your deployment
+client = UMEClient(bootstrap_servers="localhost:9092", topic="ume_demo")
+
+# Example event dictionary (CREATE_NODE)
+event = {
+    "event_type": "CREATE_NODE",
+    "timestamp": int(time.time()),
+    "node_id": "demo_node",
+    "payload": {"name": "Demo"},
+    "source": "umeclient_example",
+}
+
+try:
+    # Schema validation and Kafka publishing happen inside publish_event
+    client.publish_event(event)
+    print("Event published successfully")
+except UMEClientError as e:
+    print(f"Failed to publish event: {e}")
+```
+
+The client raises `UMEClientError` for issues such as failed validation or
+broker communication errors so they can be handled cleanly.
+
 ## Command-Line Interface (v0.3.0-dev)
 
 You can interact with UME via an interactive REPL (Read-Eval-Print Loop) command-line interface.
