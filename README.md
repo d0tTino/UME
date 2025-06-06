@@ -249,6 +249,12 @@ Sample configuration files for common environments are provided in
 demonstrate how to select different storage backends or event stores for
 development, staging, and production setups.
 
+## Federated Deployments
+
+Running UME in multiple data centers may require synchronizing memory across
+regions. Several strategies are summarized in
+[`docs/FEDERATION.md`](docs/FEDERATION.md).
+
 ## Basic Usage
 
 This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
