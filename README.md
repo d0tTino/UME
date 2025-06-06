@@ -136,6 +136,7 @@ Additionally, the graph supports directed, labeled **edges** connecting these no
 For current plans and eventual detailed documentation on the UME graph model, please see:
 
 *   [**Graph Model Documentation (docs/GRAPH_MODEL.md)**](docs/GRAPH_MODEL.md)
+*   [**Graph Listener Guide (docs/GRAPH_LISTENERS.md)**](docs/GRAPH_LISTENERS.md)
 
 This documentation will be updated as the graph processing components of UME are developed.
 
@@ -458,11 +459,11 @@ event = {
 }
 
 try:
-    # Schema validation and Kafka publishing happen inside publish_event
-    client.publish_event(event)
-    print("Event published successfully")
+    # Schema validation and Kafka publishing happen inside produce_event
+    client.produce_event(event)
+    print("Event produced successfully")
 except UMEClientError as e:
-    print(f"Failed to publish event: {e}")
+    print(f"Failed to produce event: {e}")
 ```
 
 The client raises `UMEClientError` for issues such as failed validation or
