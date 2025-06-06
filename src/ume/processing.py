@@ -1,9 +1,7 @@
 # src/ume/processing.py
 from .event import Event, EventType
 from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
-from .plugins.alignment import PolicyViolationError, get_plugins
-# MockGraph import removed as it's no longer directly used for type hinting here
-
+from .listeners import get_registered_listeners
 
 class ProcessingError(ValueError):
     """Custom exception for event processing errors."""
@@ -65,6 +63,8 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
             )
 
         graph.add_node(node_id, attributes)  # Call adapter's add_node
+        for listener in get_registered_listeners():
+            listener.on_node_created(node_id, attributes)
 
     elif event.event_type == EventType.UPDATE_NODE_ATTRIBUTES:
         node_id = event.payload.get("node_id")
@@ -93,6 +93,8 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
             )
 
         graph.update_node(node_id, attributes)  # Call adapter's update_node
+        for listener in get_registered_listeners():
+            listener.on_node_updated(node_id, attributes)
 
     elif event.event_type == EventType.CREATE_EDGE:
         # parse_event should have validated presence and type of node_id, target_node_id, label
@@ -119,6 +121,8 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         assert isinstance(target_node_id, str)
         assert isinstance(label, str)
         graph.add_edge(source_node_id, target_node_id, label)
+        for listener in get_registered_listeners():
+            listener.on_edge_created(source_node_id, target_node_id, label)
 
     elif event.event_type == EventType.DELETE_EDGE:
         # parse_event should have validated presence and type of node_id, target_node_id, label
@@ -144,6 +148,8 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         assert isinstance(target_node_id, str)
         assert isinstance(label, str)
         graph.delete_edge(source_node_id, target_node_id, label)
+        for listener in get_registered_listeners():
+            listener.on_edge_deleted(source_node_id, target_node_id, label)
 
     else:
         # For now, we can choose to ignore unknown event types or raise an error.
