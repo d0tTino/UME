@@ -426,6 +426,8 @@ log them for debugging.
     *   Example: `new_edge user123 order456 PLACED_ORDER`
 *   **`del_edge <source_id> <target_id> <label>`**: Delete an existing directed edge.
     *   Example: `del_edge user123 order456 PLACED_ORDER`
+*   **`redact_node <node_id>`**: Mark a node as redacted so it no longer shows up in queries.
+*   **`redact_edge <source_id> <target_id> <label>`**: Mark a specific edge as redacted.
 *   **`show_nodes`**: List all node IDs currently in the graph.
 *   **`show_edges`**: List all edges in the graph as `(source -> target) [label]`.
 *   **`neighbors <node_id> [<label>]`**: List all target nodes that `<node_id>` connects to. Optionally filter by edge label.
@@ -466,6 +468,11 @@ Graph restored from memory.json
 ume> show_nodes
 Nodes:
   - alice
+  - bob
+ume> redact_node alice
+Node 'alice' redacted.
+ume> show_nodes
+Nodes:
   - bob
 ume> exit
 Goodbye!

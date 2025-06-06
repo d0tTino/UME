@@ -184,3 +184,13 @@ class IGraphAdapter(ABC):
                                         or if nodes do not exist (implementation dependent).
         """
         pass
+
+    @abstractmethod
+    def redact_node(self, node_id: str) -> None:
+        """Mark the specified node as redacted so it no longer appears in queries."""
+        pass
+
+    @abstractmethod
+    def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        """Mark the specified edge as redacted so it no longer appears in queries."""
+        pass
