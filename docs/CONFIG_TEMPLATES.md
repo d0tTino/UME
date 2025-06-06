@@ -29,3 +29,12 @@ event_store:
     - kafka1.prod.example.com:9092
     - kafka2.prod.example.com:9092
 ```
+
+## Stream Processor
+```yaml
+faust:
+  broker: "kafka://localhost:9092"
+  input_topic: "ume_demo"
+  edge_topic: "ume_edges"
+  node_topic: "ume_nodes"
+```
