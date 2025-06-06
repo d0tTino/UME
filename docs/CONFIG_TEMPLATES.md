@@ -7,6 +7,10 @@ your infrastructure.
 ## Development
 ```yaml
 db_path: ":memory:"
+neo4j:
+  uri: bolt://localhost:7687
+  user: neo4j
+  password: changeme
 event_store:
   type: in-memory
 ```
@@ -14,6 +18,10 @@ event_store:
 ## Staging
 ```yaml
 db_path: staging.db
+neo4j:
+  uri: bolt://staging-neo4j:7687
+  user: neo4j
+  password: secret
 event_store:
   type: kafka
   brokers:
@@ -23,6 +31,10 @@ event_store:
 ## Production
 ```yaml
 db_path: /var/lib/ume/graph.db
+neo4j:
+  uri: bolt://neo4j.prod.example.com:7687
+  user: neo4j
+  password: prodpass
 event_store:
   type: kafka
   brokers:

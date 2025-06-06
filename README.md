@@ -136,6 +136,7 @@ Additionally, the graph supports directed, labeled **edges** connecting these no
 For current plans and eventual detailed documentation on the UME graph model, please see:
 
 *   [**Graph Model Documentation (docs/GRAPH_MODEL.md)**](docs/GRAPH_MODEL.md)
+*   [**Graph Listener Guide (docs/GRAPH_LISTENERS.md)**](docs/GRAPH_LISTENERS.md)
 
 This documentation will be updated as the graph processing components of UME are developed.
 
@@ -285,11 +286,15 @@ regions. Several strategies are summarized in
 This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
 
 1.  **Obtain a Graph Adapter Instance:**
-    The default adapter is `PersistentGraph`, which stores data in an SQLite database:
+    The library provides multiple adapters. The default is `PersistentGraph`, which uses SQLite, but you can also connect to Neo4j using `Neo4jGraph`:
     ```python
-    from ume import PersistentGraph, IGraphAdapter
+    from ume import PersistentGraph, Neo4jGraph, IGraphAdapter
 
+    # SQLite-backed graph
     graph_adapter: IGraphAdapter = PersistentGraph("memory.db")
+
+    # Or connect to Neo4j
+    neo4j_graph = Neo4jGraph("bolt://localhost:7687", "neo4j", "password")
     ```
 
 2.  **Define Event Data Dictionaries:**
@@ -454,11 +459,11 @@ event = {
 }
 
 try:
-    # Schema validation and Kafka publishing happen inside publish_event
-    client.publish_event(event)
-    print("Event published successfully")
+    # Schema validation and Kafka publishing happen inside produce_event
+    client.produce_event(event)
+    print("Event produced successfully")
 except UMEClientError as e:
-    print(f"Failed to publish event: {e}")
+    print(f"Failed to produce event: {e}")
 ```
 
 The client raises `UMEClientError` for issues such as failed validation or
