@@ -190,6 +190,19 @@ UME enforces access restrictions for both Kafka topics and graph operations.
 Example ACL commands for Redpanda and a description of roles are provided in
 [docs/ACCESS_CONTROL.md](docs/ACCESS_CONTROL.md).
 
+## Alignment Plugins
+
+Before events modify the graph, UME runs any installed *alignment plugins*.
+Plugins implement a simple interface with a `validate(event)` method and are
+loaded from the `ume.plugins.alignment` package. A plugin should raise
+`PolicyViolationError` if an event violates its policy. When this happens the
+event is rejected and the error propagates to the caller.
+
+The repository includes a basic example plugin that forbids creating a node with
+ID `"forbidden"`. Additional policies can be added by dropping new modules in
+`ume/plugins/alignment/` that register themselves using
+`register_plugin()`.
+
 ## Quickstart
 
 ### Prerequisites
