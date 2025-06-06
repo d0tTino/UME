@@ -1,8 +1,11 @@
 import sqlite3
 import json
+import os
 from typing import Dict, Any, Optional, List, Tuple
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
+from .audit import log_audit_entry
+
 
 class PersistentGraph(IGraphAdapter):
     """SQLite-backed persistent graph implementation."""
@@ -95,9 +98,7 @@ class PersistentGraph(IGraphAdapter):
             WHERE e.redacted=0 AND s.redacted=0 AND t.redacted=0
             """
         )
-        return [
-            (row["source"], row["target"], row["label"]) for row in cur.fetchall()
-        ]
+        return [(row["source"], row["target"], row["label"]) for row in cur.fetchall()]
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         with self.conn:
@@ -111,7 +112,9 @@ class PersistentGraph(IGraphAdapter):
                     f"Edge {edge_tuple} does not exist and cannot be deleted."
                 )
 
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> List[str]:
         if not self.node_exists(node_id):
             raise ProcessingError(f"Node '{node_id}' not found.")
         if edge_label:
@@ -144,9 +147,7 @@ class PersistentGraph(IGraphAdapter):
 
     @property
     def node_count(self) -> int:
-        cur = self.conn.execute(
-            "SELECT COUNT(*) AS cnt FROM nodes WHERE redacted=0"
-        )
+        cur = self.conn.execute("SELECT COUNT(*) AS cnt FROM nodes WHERE redacted=0")
         row = cur.fetchone()
         return int(row["cnt"]) if row else 0
 
@@ -167,6 +168,8 @@ class PersistentGraph(IGraphAdapter):
             )
             if cur.rowcount == 0:
                 raise ProcessingError(f"Node '{node_id}' not found to redact.")
+        user_id = os.environ.get("UME_AGENT_ID", "SYSTEM")
+        log_audit_entry(user_id, f"redact_node {node_id}")
 
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         with self.conn:
@@ -179,3 +182,8 @@ class PersistentGraph(IGraphAdapter):
                 raise ProcessingError(
                     f"Edge {edge_tuple} does not exist and cannot be redacted."
                 )
+        user_id = os.environ.get("UME_AGENT_ID", "SYSTEM")
+        log_audit_entry(
+            user_id,
+            f"redact_edge {source_node_id} {target_node_id} {label}",
+        )
