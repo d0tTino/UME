@@ -210,6 +210,11 @@ poetry install
 # (Correction: The docker-compose.yml is in the 'docker/' subdirectory)
 docker compose -f docker/docker-compose.yml up -d
 ```
+If you want to enable TLS for the broker and API, generate certificates first:
+```bash
+bash docker/generate-certs.sh
+```
+See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 
 ### 3. Run the Consumer Demo
 ```bash
