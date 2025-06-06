@@ -23,6 +23,8 @@ from ume import (
     EventError,
     SnapshotError,
     IGraphAdapter,
+    log_audit_entry,
+    get_audit_entries,
 )
 
 # It's good practice to handle potential import errors if ume is not installed,
@@ -43,6 +45,13 @@ class UMEPrompt(Cmd):
                 self.graph, "ume_snapshot.json", 24 * 3600
             )
         self.current_timestamp = int(time.time())
+
+    def _log_audit(self, reason: str) -> None:
+        user_id = os.environ.get("UME_AGENT_ID", "CLI")
+        try:
+            log_audit_entry(user_id, reason)
+        except Exception as e:  # pragma: no cover - logging failure shouldn't crash
+            logging.getLogger(__name__).error("Audit log failure: %s", e)
 
     def _get_timestamp(self) -> int:
         # Simple incrementing timestamp for demo purposes within a session
@@ -76,8 +85,10 @@ class UMEPrompt(Cmd):
             print(f"Node '{node_id}' created.")
         except (json.JSONDecodeError, EventError, ProcessingError) as e:
             print(f"Error: {e}")
+            self._log_audit(str(e))
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+            self._log_audit(str(e))
 
     # ----- Edge commands -----
     def do_new_edge(self, arg):
@@ -104,8 +115,10 @@ class UMEPrompt(Cmd):
             print(f"Edge ({source_id})->({target_id}) [{label}] created.")
         except (EventError, ProcessingError) as e:
             print(f"Error: {e}")
+            self._log_audit(str(e))
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+            self._log_audit(str(e))
 
     def do_del_edge(self, arg):
         """
@@ -131,8 +144,10 @@ class UMEPrompt(Cmd):
             print(f"Edge ({source_id})->({target_id}) [{label}] deleted.")
         except (EventError, ProcessingError) as e:
             print(f"Error: {e}")
+            self._log_audit(str(e))
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+            self._log_audit(str(e))
 
     # ----- Query commands -----
     def do_show_nodes(self, arg):
@@ -200,6 +215,17 @@ class UMEPrompt(Cmd):
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
+    def do_show_audit(self, arg):
+        """show_audit
+        Display audit log entries recorded for rejected or redacted events."""
+        entries = get_audit_entries()
+        if not entries:
+            print("No audit entries.")
+            return
+        for e in entries:
+            ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(e["timestamp"])))
+            print(f"{ts} | {e.get('user_id')} | {e.get('reason')}")
+
     # ----- Snapshot commands -----
     def do_snapshot_save(self, arg):
         """
@@ -218,6 +244,7 @@ class UMEPrompt(Cmd):
             print(f"Snapshot written to {filepath}")
         except Exception as e:  # Catch specific IOErrors, etc. if possible
             print(f"Error saving snapshot: {e}")
+            self._log_audit(str(e))
 
     def do_snapshot_load(self, arg):
         """
@@ -237,8 +264,10 @@ class UMEPrompt(Cmd):
             #     return
             load_graph_into_existing(self.graph, filepath)
             print(f"Graph restored from {filepath}")
+            self._log_audit(f"snapshot loaded from {filepath}")
         except FileNotFoundError:
             print(f"Error: Snapshot file '{filepath}' not found.")
+            self._log_audit("snapshot file not found")
         except (
             json.JSONDecodeError,
             EventError,
@@ -246,8 +275,10 @@ class UMEPrompt(Cmd):
             SnapshotError,
         ) as e:  # Catch specific load/parse errors
             print(f"Error loading snapshot: {e}")
+            self._log_audit(str(e))
         except Exception as e:
             print(f"An unexpected error occurred during load: {e}")
+            self._log_audit(str(e))
 
     # ----- Utility commands -----
     def do_clear(self, arg):
@@ -262,6 +293,7 @@ class UMEPrompt(Cmd):
         #     return
         self.graph.clear()
         print("Graph cleared.")
+        self._log_audit("graph cleared")
 
     def do_exit(self, arg):
         """

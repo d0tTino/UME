@@ -18,6 +18,7 @@ from .listeners import (
     register_listener,
     unregister_listener,
 )
+
 from .snapshot import (
     snapshot_graph_to_file,
     load_graph_from_file,
@@ -25,6 +26,7 @@ from .snapshot import (
     SnapshotError,
 )
 from .schema_utils import validate_event_dict
+from .stream_processor import app as stream_app
 
 __all__ = [
     "Event",

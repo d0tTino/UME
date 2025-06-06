@@ -15,6 +15,7 @@ neo4j = "*"
 networkx = "*"
 fastapi = "*"
 jsonschema = "*"
+faust-streaming = "*"
 
 
 [tool.poetry.group.dev.dependencies]

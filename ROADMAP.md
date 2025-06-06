@@ -1,30 +1,37 @@
 Below is a **phase-by-phase technical road map** that turns Universal Memory + Guardian-Angel into a production-grade, 24 × 7 platform.  Tasks are grouped by the P0–P3 priorities you already approved; “exit criteria” show when to advance.  Hardware guidance and DevOps notes ensure a smooth hand-off from your powerful desktop to a persistent server.
 
 ---
+## Exocortic Eudaemon pillars
+
+| Pillar | Description |
+| ------ | ----------- |
+| **Memory** | Durable event capture and recall. |
+| **Ethical Safeguards** | Privacy, policy enforcement and security boundaries. |
+| **Productive Collaboration** | Features that help users act on knowledge and share updates. |
+| **Self-Improvement** | Automated tuning and continual learning loops. |
+| **Operational Resilience** | CI/CD, observability and power efficiency for 24×7 use. |
+
+---
+
 
 ## 0 · Dev-foundations (local, Week 0)
 
-| Goal                    | Tasks                                                                                                                   | Exit criteria                                  |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| **Containerised stack** | \* Docker Desktop + WSL2 (Ubuntu 24.04)<br>\* `docker-compose.yml` with Redpanda, LanceDB, TerminusDB, Minio (back-ups) | `docker compose up` shows all services healthy |
-| **Python workspace**    | \* Python 3.12, `poetry` <br>\* Black, Ruff, MyPy pre-commit hooks<br>\* GH Actions CI (pytest + build/push images)     | CI badge green on `main`                       |
-| **Access to repos**     | \* PAT with `repo` scope<br>\* gh-cli helper that emits `Repo.Create`, `Repo.Push` events                               | Universal-memory shows first GitHub event      |
-
----
+| Goal | Pillar | Stakeholders | Acceptance Criteria | Effort |
+| ---- | ------ | ------------ | ------------------- | ------ |
+| **Containerised stack** | Operational Resilience | DevOps team | `docker compose up` shows all services healthy | M |
+| **Python workspace** | Operational Resilience | Dev team | CI badge green on `main` | S |
+| **Access to repos** | Memory | Dev team | Universal-memory shows first GitHub event | S |
 
 ## P0 · Bootstrapping Autonomy & Memory (Sprint 1–3)
 
-| Capability                 | Key Implementations                                                                                         | Exit criteria                             |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **0-A Event Bus**          | \* Redpanda single-node, 1 × NVMe partition<br>\* Avro schema (`branch_id`, `share`, ActivityStreams verbs) | `kcat -C` shows replay; seek works        |
-| **0-B Privacy Filter**     | \* Rego policy + `nsfw-detector` + DataFog<br>\* ActivityWatch exclude list<br>\* Tauri toast signer        | Porn tab blocked; false-positive restored |
-| **0-C Dev-log Watchers**   | \* ActivityWatch → producer scripts for IDE, clipboard                                                      | Code edit appears within < 50 ms          |
-| **0-D Task DAG Manager**   | \* Tiny Dagster project; checkpoints require Angel approval                                                 | Dag visualises, waits for human           |
-| **0-E Resource Scheduler** | \* `psutil` + `nvitop`; throttles ETL if CPU > 80 %                                                         | Gaming session shows zero dropped FPS     |
-| **0-F Angel Bridge**       | \* Semantic-Kernel agent subscribes, writes `belief.update` events                                          | Angel digest summarises daily log         |
-
----
-
+| ID | Feature | Pillar | Stakeholders | Acceptance Criteria | Effort |
+| --- | ------- | ------ | ------------ | ------------------- | ------ |
+| **0-A** | Event Bus | Memory | Data engineers | `kcat -C` shows replay; seek works | L |
+| **0-B** | Privacy Filter | Ethical Safeguards | Privacy officer | Porn tab blocked; false-positive restored | M |
+| **0-C** | Dev-log Watchers | Memory | Developers | Code edit appears within < 50 ms | S |
+| **0-D** | Task DAG Manager | Memory | Data scientists | Dag visualises, waits for human | M |
+| **0-E** | Resource Scheduler | Operational Resilience | Ops team | Gaming session shows zero dropped FPS | S |
+| **0-F** | Angel Bridge | Productive Collaboration | Product owner | Angel digest summarises daily log | M |
 ## Hardware pivot planning (parallel with P0)
 
 ### Why EPYC
@@ -46,34 +53,33 @@ Redpanda’s sizing guide shows a single such node easily handles 100 MB/s susta
 
 ## P1 · Productivity & Public Face (Sprint 4–8)
 
-| ID      | Feature                    | Notes                                                    |
-| ------- | -------------------------- | -------------------------------------------------------- |
-| **1-A** | LLM Ferry bot (Playwright) | Ferries chats Cursor ⇆ Gemini, logs `llm.chat.*`         |
-| **1-B** | Tweet-bot + UI             | Draft on `code.test.pass`; React UI inside Tauri panel   |
-| **1-C** | Document Guru              | LangGraph chain to re-format + ask approval              |
-| **1-D** | Dashboard                  | Next.js front end ↔ WebSockets (Redpanda “digest” topic) |
-| **1-E** | OPA “work-mode” toggle     | Rego rule blocks distracting events during meetings      |
-| **1-F** | Mobile capture             | Syncthing Mobile SDK ► `idea.note` events                |
+| ID | Feature | Pillar | Stakeholders | Acceptance Criteria | Effort |
+| --- | ------- | ------ | ------------ | ------------------- | ------ |
+| **1-A** | LLM Ferry bot | Productive Collaboration | Developers | Chats mirrored and logged | M |
+| **1-B** | Tweet-bot + UI | Productive Collaboration | Community manager | Posts appear in digest | M |
+| **1-C** | Document Guru | Productive Collaboration | Docs team | Reformatted files awaiting approval | M |
+| **1-D** | Dashboard | Productive Collaboration | All users | Web UI shows digests | M |
+| **1-E** | OPA “work-mode” toggle | Ethical Safeguards | Ops team | Rego rule blocks distractions during meetings | S |
+| **1-F** | Mobile capture | Memory | Users | Notes sync via events | M |
 
 Exit: weekly digest contains tweets, doc reforms, and mobile notes without manual intervention.
-
----
-
 ## P2 · Self-Improvement & Collective IQ (Q2 – Q3)
 
-* **Auto-LoRA Tuner** – nightly job samples approved Q/A, fine-tunes 4-bit Llama, hot-swaps adapters.
-* **Micro-agent Swarm Writer** – AutoGen 0.3 pipeline; 1-manager + 20 workers drafting wiki pages.
-* **Model Autotuner** – bench llama-cpp, Mixtral-8x22B, GPT-4o; store best pick per task.
-* **Provenance Explorer** – TerminusDB React app; diff belief graph across time.
+| Feature | Pillar | Stakeholders | Acceptance Criteria | Effort |
+| ------- | ------ | ------------ | ------------------- | ------ |
+| Auto-LoRA Tuner | Self-Improvement | ML engineers | Adapter swapped nightly | L |
+| Micro-agent Swarm Writer | Productive Collaboration | Knowledge team | Wiki drafts generated | L |
+| Model Autotuner | Self-Improvement | ML engineers | Faster model selected per task | M |
+| Provenance Explorer | Self-Improvement | All users | UI explains belief changes | M |
+Exit: Angel suggests faster model when task slows; provenance UI shows why a belief changed.|
 
-Exit: Angel suggests faster model when task slows; provenance UI shows why a belief changed.
-
----
-
-## P3 · Delight & Moonshots (back-log)
-
-* Dreaming mode, phone LLM-lite, peer mesh, gamified focus, e-ink tile, etc.
-
+| Feature | Pillar | Stakeholders | Acceptance Criteria | Effort |
+| ------- | ------ | ------------ | ------------------- | ------ |
+| Dreaming mode | Self-Improvement | Users | Prompts captured during sleep | L |
+| Phone LLM-lite | Productive Collaboration | Mobile users | Offline responses within 1s | L |
+| Peer mesh | Productive Collaboration | Community | Peers share events securely | L |
+| Gamified focus | Self-Improvement | Users | Focus sessions logged | M |
+| E-ink tile | Operational Resilience | Hardware team | Display updates from dashboard | M |
 ---
 
 ## DevOps & lifecycle pillars
