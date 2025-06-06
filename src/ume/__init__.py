@@ -27,6 +27,8 @@ from .snapshot import (
 )
 from .schema_utils import validate_event_dict
 from .stream_processor import app as stream_app
+from .plugins.alignment import PolicyViolationError
+from .audit import log_audit_entry, get_audit_entries
 
 __all__ = [
     "Event",
@@ -52,8 +54,11 @@ __all__ = [
     "temporal_node_counts",
     "api_app",
     "validate_event_dict",
+    "PolicyViolationError",
     "GraphListener",
     "register_listener",
     "unregister_listener",
+    "log_audit_entry",
+    "get_audit_entries",
 ]
 
