@@ -190,6 +190,19 @@ UME enforces access restrictions for both Kafka topics and graph operations.
 Example ACL commands for Redpanda and a description of roles are provided in
 [docs/ACCESS_CONTROL.md](docs/ACCESS_CONTROL.md).
 
+## Alignment Plugins
+
+Before events modify the graph, UME runs any installed *alignment plugins*.
+Plugins implement a simple interface with a `validate(event)` method and are
+loaded from the `ume.plugins.alignment` package. A plugin should raise
+`PolicyViolationError` if an event violates its policy. When this happens the
+event is rejected and the error propagates to the caller.
+
+The repository includes a basic example plugin that forbids creating a node with
+ID `"forbidden"`. Additional policies can be added by dropping new modules in
+`ume/plugins/alignment/` that register themselves using
+`register_plugin()`.
+
 ## Quickstart
 
 ### Prerequisites
@@ -210,6 +223,11 @@ poetry install
 # (Correction: The docker-compose.yml is in the 'docker/' subdirectory)
 docker compose -f docker/docker-compose.yml up -d
 ```
+If you want to enable TLS for the broker and API, generate certificates first:
+```bash
+bash docker/generate-certs.sh
+```
+See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 
 ### 3. Run the Consumer Demo
 ```bash
@@ -242,12 +260,25 @@ poetry run pytest
 PYTHONPATH=src pytest
 ```
 
+### 7. Run the Agent Integration Example
+This example shows how an AutoDev agent can send events to UME and forward them
+to Culture.ai:
+```bash
+poetry run python examples/agent_integration.py
+```
+
 ## Configuration Templates
 
 Sample configuration files for common environments are provided in
 [`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md). These templates
 demonstrate how to select different storage backends or event stores for
 development, staging, and production setups.
+
+## Federated Deployments
+
+Running UME in multiple data centers may require synchronizing memory across
+regions. Several strategies are summarized in
+[`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 ## Basic Usage
 
@@ -399,6 +430,39 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Node 'node_A' from loaded graph: {loaded_graph_adapter.get_node('node_A')}")
     ```
 This provides a basic flow for event handling and graph interaction within UME.
+
+## How to Use UMEClient
+
+`UMEClient` is a small helper for publishing events to the broker. It validates
+the payload using UME's schemas before sending so your application only needs to
+prepare a dictionary and handle any errors.
+
+```python
+from ume.client import UMEClient, UMEClientError
+import time
+
+# Connect to the broker and topic used by your deployment
+client = UMEClient(bootstrap_servers="localhost:9092", topic="ume_demo")
+
+# Example event dictionary (CREATE_NODE)
+event = {
+    "event_type": "CREATE_NODE",
+    "timestamp": int(time.time()),
+    "node_id": "demo_node",
+    "payload": {"name": "Demo"},
+    "source": "umeclient_example",
+}
+
+try:
+    # Schema validation and Kafka publishing happen inside publish_event
+    client.publish_event(event)
+    print("Event published successfully")
+except UMEClientError as e:
+    print(f"Failed to publish event: {e}")
+```
+
+The client raises `UMEClientError` for issues such as failed validation or
+broker communication errors so they can be handled cleanly.
 
 ## Command-Line Interface (v0.3.0-dev)
 
