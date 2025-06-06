@@ -21,7 +21,7 @@ from .snapshot import (
     SnapshotError,
 )
 from .schema_utils import validate_event_dict
-from .client import UMEClient
+from .stream_processor import app as stream_app
 
 __all__ = [
     "Event",
@@ -47,9 +47,7 @@ __all__ = [
     "temporal_node_counts",
     "api_app",
     "validate_event_dict",
-    "PolicyViolationError",
-    "AlignmentPlugin",
-    "register_plugin",
-    "get_plugins",
+    "stream_app",
+
 ]
 
