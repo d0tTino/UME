@@ -13,8 +13,10 @@ from typing import Dict, Any, Optional
 # Let's try importing it under TYPE_CHECKING for now.
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from .processing import ProcessingError # Used in docstrings, implementations will raise it
+    from .processing import ProcessingError  # noqa: F401 - used in docstrings only
+
 
 class IGraphAdapter(ABC):
     """
@@ -117,7 +119,9 @@ class IGraphAdapter(ABC):
         pass
 
     @abstractmethod
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> list[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> list[str]:
         """
         Finds nodes connected to a given node, optionally via a specific edge label.
 
@@ -186,4 +190,3 @@ class IGraphAdapter(ABC):
                                         or if nodes do not exist (implementation dependent).
         """
         pass
-```
