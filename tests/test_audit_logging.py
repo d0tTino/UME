@@ -9,7 +9,11 @@ def test_audit_entry_on_policy_violation(tmp_path, monkeypatch):
     import importlib
     import ume
 
+    importlib.reload(ume.config)
     importlib.reload(ume.audit)
+    importlib.reload(ume.plugins.alignment)
+    importlib.reload(ume.plugins.alignment.sample_policy)
+    importlib.reload(ume.persistent_graph)
     importlib.reload(ume)
 
     from ume import (
@@ -44,7 +48,11 @@ def test_audit_entry_on_redactions(tmp_path, monkeypatch):
     import importlib
     import ume
 
+    importlib.reload(ume.config)
     importlib.reload(ume.audit)
+    importlib.reload(ume.plugins.alignment)
+    importlib.reload(ume.plugins.alignment.sample_policy)
+    importlib.reload(ume.persistent_graph)
     importlib.reload(ume)
 
     from ume import PersistentGraph, get_audit_entries

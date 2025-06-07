@@ -1,17 +1,17 @@
 import sqlite3
 import json
-import os
 from typing import Dict, Any, Optional, List, Tuple
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .audit import log_audit_entry
+from .config import settings
 
 
 class PersistentGraph(IGraphAdapter):
     """SQLite-backed persistent graph implementation."""
 
-    def __init__(self, db_path: str = "ume_graph.db") -> None:
-        self.db_path = db_path
+    def __init__(self, db_path: str | None = None) -> None:
+        self.db_path = db_path or settings.UME_DB_PATH
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
@@ -168,7 +168,7 @@ class PersistentGraph(IGraphAdapter):
             )
             if cur.rowcount == 0:
                 raise ProcessingError(f"Node '{node_id}' not found to redact.")
-        user_id = os.environ.get("UME_AGENT_ID", "SYSTEM")
+        user_id = settings.UME_AGENT_ID
         log_audit_entry(user_id, f"redact_node {node_id}")
 
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
@@ -182,7 +182,7 @@ class PersistentGraph(IGraphAdapter):
                 raise ProcessingError(
                     f"Edge {edge_tuple} does not exist and cannot be redacted."
                 )
-        user_id = os.environ.get("UME_AGENT_ID", "SYSTEM")
+        user_id = settings.UME_AGENT_ID
         log_audit_entry(
             user_id,
             f"redact_edge {source_node_id} {target_node_id} {label}",

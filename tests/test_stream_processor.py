@@ -1,6 +1,6 @@
 import asyncio
 import json
-from ume.stream_processor import build_app, EDGE_TOPIC, NODE_TOPIC
+from ume.stream_processor import build_app
 
 
 def _encoded(event: dict) -> bytes:

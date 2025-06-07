@@ -30,7 +30,7 @@ def run_cli_commands(
         exits with a non-zero status, the test fails.
     """
     env = os.environ.copy()
-    env["UME_CLI_DB"] = ":memory:"
+    env["UME_DB_PATH"] = ":memory:"
     process = subprocess.Popen(
         [sys.executable, CLI_SCRIPT_PATH] + (cli_args or []),
         stdin=subprocess.PIPE,
@@ -38,6 +38,7 @@ def run_cli_commands(
         stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",  # Be explicit about encoding
+        env=env,
     )
     # Join commands with newlines and ensure a final newline for the last command
     # and to trigger EOF for cmdloop if 'exit' is not the last command.

@@ -1,6 +1,4 @@
 import logging
-import pathlib
-from ume.auto_snapshot import enable_snapshot_autosave_and_restore
 from ume import PersistentGraph
 
 

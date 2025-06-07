@@ -1,4 +1,4 @@
-import os
+from .config import settings
 import json
 import time
 import hmac
@@ -13,8 +13,8 @@ except Exception:  # pragma: no cover - boto3 optional
 
 logger = logging.getLogger(__name__)
 
-AUDIT_LOG_PATH = os.environ.get("UME_AUDIT_LOG_PATH", "audit.log")
-SIGNING_KEY = os.environ.get("UME_AUDIT_SIGNING_KEY", "default-key").encode()
+AUDIT_LOG_PATH = settings.UME_AUDIT_LOG_PATH
+SIGNING_KEY = settings.UME_AUDIT_SIGNING_KEY.encode()
 
 
 def _parse_s3(path: str) -> tuple[str, str]:
