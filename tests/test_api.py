@@ -37,3 +37,24 @@ def test_shortest_path_endpoint():
     res = client.post("/analytics/shortest_path", json=payload, headers={"Authorization": "Bearer secret-token"})
     assert res.status_code == 200
     assert res.json() == {"path": ["a", "b"]}
+
+
+def test_token_header_whitespace_and_case():
+    client = TestClient(app)
+    res = client.get(
+        "/query",
+        params={"cypher": "MATCH (n)"},
+        headers={"Authorization": "  bearer secret-token  "},
+    )
+    assert res.status_code == 200
+
+
+def test_malformed_authorization_header():
+    client = TestClient(app)
+    res = client.get(
+        "/query",
+        params={"cypher": "MATCH (n)"},
+        headers={"Authorization": "Token bad"},
+    )
+    assert res.status_code == 401
+    assert res.json()["detail"] == "Malformed Authorization header"
