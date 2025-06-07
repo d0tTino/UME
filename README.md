@@ -275,6 +275,16 @@ Sample configuration files for common environments are provided in
 demonstrate how to select different storage backends or event stores for
 development, staging, and production setups.
 
+### Runtime Settings
+
+Configuration defaults live in [`src/ume/config.py`](src/ume/config.py). This
+module exposes a `Settings` dataclass whose attributes correspond to the various
+UME options. When imported it first loads a `.env` file from the project root if
+present and then applies any matching environment variables, allowing you to
+override the defaults without modifying the code.
+
+See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for a minimal `.env` template.
+
 ## Federated Deployments
 
 Running UME in multiple data centers may require synchronizing memory across
@@ -440,14 +450,20 @@ This provides a basic flow for event handling and graph interaction within UME.
 
 `UMEClient` is a small helper for publishing events to the broker. It validates
 the payload using UME's schemas before sending so your application only needs to
-prepare a dictionary and handle any errors.
+prepare a dictionary and handle any errors. Configuration values can be read
+from :class:`ume.config.Settings` and overridden by environment variables at
+runtime.
 
 ```python
+from ume.config import Settings
 from ume.client import UMEClient, UMEClientError
 import time
 
-# Connect to the broker and topic used by your deployment
-with UMEClient(bootstrap_servers="localhost:9092", topic="ume_demo") as client:
+# Create Settings (environment variables may override defaults)
+settings = Settings()
+
+# Connect to the broker and topic defined in Settings
+with UMEClient(settings) as client:
     # Example event dictionary (CREATE_NODE)
     event = {
         "event_type": "CREATE_NODE",

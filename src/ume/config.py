@@ -5,3 +5,4 @@ class Settings:
         self.UME_API_TOKEN = os.environ.get("UME_API_TOKEN", "secret-token")
 
 settings = Settings()
+
