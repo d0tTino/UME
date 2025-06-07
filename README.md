@@ -447,23 +447,22 @@ from ume.client import UMEClient, UMEClientError
 import time
 
 # Connect to the broker and topic used by your deployment
-client = UMEClient(bootstrap_servers="localhost:9092", topic="ume_demo")
+with UMEClient(bootstrap_servers="localhost:9092", topic="ume_demo") as client:
+    # Example event dictionary (CREATE_NODE)
+    event = {
+        "event_type": "CREATE_NODE",
+        "timestamp": int(time.time()),
+        "node_id": "demo_node",
+        "payload": {"name": "Demo"},
+        "source": "umeclient_example",
+    }
 
-# Example event dictionary (CREATE_NODE)
-event = {
-    "event_type": "CREATE_NODE",
-    "timestamp": int(time.time()),
-    "node_id": "demo_node",
-    "payload": {"name": "Demo"},
-    "source": "umeclient_example",
-}
-
-try:
-    # Schema validation and Kafka publishing happen inside produce_event
-    client.produce_event(event)
-    print("Event produced successfully")
-except UMEClientError as e:
-    print(f"Failed to produce event: {e}")
+    try:
+        # Schema validation and Kafka publishing happen inside produce_event
+        client.produce_event(event)
+        print("Event produced successfully")
+    except UMEClientError as e:
+        print(f"Failed to produce event: {e}")
 ```
 
 The client raises `UMEClientError` for issues such as failed validation or
