@@ -3,8 +3,10 @@ import logging
 from typing import Iterator
 
 from confluent_kafka import Consumer, Producer, KafkaError, KafkaException  # type: ignore
+from jsonschema import ValidationError
 
 from .event import Event, parse_event
+from .schema_utils import validate_event_dict
 
 
 class UMEClientError(Exception):
@@ -49,8 +51,12 @@ class UMEClient:
             "label": event.label,
         }
         try:
+            validate_event_dict(data_dict)
             self.producer.produce(self.topic, json.dumps(data_dict).encode("utf-8"))
             self.producer.flush()
+        except ValidationError as e:
+            logger.error("Event validation failed: %s", e.message)
+            raise UMEClientError(f"Event validation failed: {e.message}") from e
         except Exception as e:  # pragma: no cover - confluent_kafka may raise various errors
             logger.error("Failed to produce event: %s", e)
             raise UMEClientError(f"Failed to produce event: {e}") from e
