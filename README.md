@@ -275,6 +275,16 @@ Sample configuration files for common environments are provided in
 demonstrate how to select different storage backends or event stores for
 development, staging, and production setups.
 
+### Runtime Settings
+
+Configuration defaults live in [`src/ume/config.py`](src/ume/config.py). This
+module exposes a `Settings` dataclass whose attributes correspond to the various
+UME options. When imported it first loads a `.env` file from the project root if
+present and then applies any matching environment variables, allowing you to
+override the defaults without modifying the code.
+
+See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for a minimal `.env` template.
+
 ## Federated Deployments
 
 Running UME in multiple data centers may require synchronizing memory across
