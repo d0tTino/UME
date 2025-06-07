@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from ume.api import app
 from ume import MockGraph
+from ume.config import settings
 
 
 def setup_module(_):
@@ -20,7 +21,7 @@ def setup_module(_):
 
 def test_run_query_authorized():
     client = TestClient(app)
-    res = client.get("/query", params={"cypher": "MATCH (n) RETURN n"}, headers={"Authorization": "Bearer secret-token"})
+    res = client.get("/query", params={"cypher": "MATCH (n) RETURN n"}, headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"})
     assert res.status_code == 200
     assert res.json() == [{"q": "MATCH (n) RETURN n"}]
 
@@ -34,7 +35,7 @@ def test_run_query_unauthorized():
 def test_shortest_path_endpoint():
     client = TestClient(app)
     payload = {"source": "a", "target": "b"}
-    res = client.post("/analytics/shortest_path", json=payload, headers={"Authorization": "Bearer secret-token"})
+    res = client.post("/analytics/shortest_path", json=payload, headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"})
     assert res.status_code == 200
     assert res.json() == {"path": ["a", "b"]}
 
@@ -44,7 +45,7 @@ def test_token_header_whitespace_and_case():
     res = client.get(
         "/query",
         params={"cypher": "MATCH (n)"},
-        headers={"Authorization": "  bearer secret-token  "},
+        headers={"Authorization": f"  bearer {settings.UME_API_TOKEN}  "},
     )
     assert res.status_code == 200
 

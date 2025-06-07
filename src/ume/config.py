@@ -22,3 +22,4 @@ class Settings(BaseSettings):
 
 # Create a single, importable instance
 settings = Settings()
+
