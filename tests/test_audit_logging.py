@@ -65,3 +65,19 @@ def test_audit_entry_on_redactions(tmp_path, monkeypatch):
     assert entries[-2]["reason"].startswith("redact_node")
     assert entries[-1]["reason"].startswith("redact_edge")
     assert all(e["user_id"] == "redactor" for e in entries[-2:])
+
+
+def test_s3_path_without_boto3(monkeypatch):
+    """Using an S3 path without boto3 should raise ImportError."""
+    import sys
+    import importlib
+
+    monkeypatch.setitem(sys.modules, "boto3", None)
+    import ume.audit as audit
+
+    importlib.reload(audit)
+
+    with pytest.raises(ImportError):
+        audit._read_lines("s3://bucket/key")
+    with pytest.raises(ImportError):
+        audit._write_lines("s3://bucket/key", ["x"])
