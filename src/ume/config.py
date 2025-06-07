@@ -1,10 +1,8 @@
-from dataclasses import dataclass
+import os
 
-@dataclass
 class Settings:
-    """Configuration options for UME components."""
+    def __init__(self) -> None:
+        self.UME_API_TOKEN = os.environ.get("UME_API_TOKEN", "secret-token")
 
-    bootstrap_servers: str = "localhost:9092"
-    topic: str = "ume_demo"
-    group_id: str = "ume_client_group"
+settings = Settings()
 
