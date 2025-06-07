@@ -22,8 +22,16 @@ app.state.graph = None  # type: ignore[assignment]
 
 def require_token(authorization: str | None = Header(default=None)) -> None:
     """Simple token-based auth using the Authorization header."""
-    if authorization is None or authorization != f"Bearer {API_TOKEN}":
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    if authorization is None:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    auth_header = authorization.strip()
+    if not auth_header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Malformed Authorization header")
+
+    token = auth_header[7:].strip()  # len("Bearer ") == 7
+    if token != API_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid API token")
 
 
 def get_query_engine() -> Neo4jQueryEngine:
