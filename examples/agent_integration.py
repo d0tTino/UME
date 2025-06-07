@@ -4,6 +4,7 @@ import logging
 import time
 
 from ume import Event, EventType, UMEClient
+from ume.config import Settings
 
 # Configure logging so we can observe the flow
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +32,8 @@ def forward_to_culture(events) -> None:
 
 
 if __name__ == "__main__":
-    client = UMEClient()
+    settings = Settings()
+    client = UMEClient(settings)
 
     # Step 1: AutoDev produces an event
     autodev_produce_event(client)
@@ -41,3 +43,4 @@ if __name__ == "__main__":
 
     # Step 3: Forward those events to Culture.ai (simulated)
     forward_to_culture(consumed)
+
