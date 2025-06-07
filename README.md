@@ -440,14 +440,20 @@ This provides a basic flow for event handling and graph interaction within UME.
 
 `UMEClient` is a small helper for publishing events to the broker. It validates
 the payload using UME's schemas before sending so your application only needs to
-prepare a dictionary and handle any errors.
+prepare a dictionary and handle any errors. Configuration values can be read
+from :class:`ume.config.Settings` and overridden by environment variables at
+runtime.
 
 ```python
+from ume.config import Settings
 from ume.client import UMEClient, UMEClientError
 import time
 
-# Connect to the broker and topic used by your deployment
-with UMEClient(bootstrap_servers="localhost:9092", topic="ume_demo") as client:
+# Create Settings (environment variables may override defaults)
+settings = Settings()
+
+# Connect to the broker and topic defined in Settings
+with UMEClient(settings) as client:
     # Example event dictionary (CREATE_NODE)
     event = {
         "event_type": "CREATE_NODE",
