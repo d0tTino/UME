@@ -331,7 +331,12 @@ class UMEPrompt(Cmd):
         exit
         Quit the UME CLI.
         """
-        self.graph.close()
+        close_method = getattr(self.graph, "close", None)
+        if callable(close_method):
+            try:
+                close_method()
+            except Exception as e:  # pragma: no cover - cleanup failure should not crash CLI
+                logging.getLogger(__name__).error("Error closing graph: %s", e)
         print("Goodbye!")
         return True  # returning True exits the Cmd loop
 

@@ -194,3 +194,8 @@ class IGraphAdapter(ABC):
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         """Mark the specified edge as redacted so it no longer appears in queries."""
         pass
+
+    @abstractmethod
+    def close(self) -> None:
+        """Release any resources held by the graph adapter."""
+        pass

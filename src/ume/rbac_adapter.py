@@ -70,3 +70,6 @@ class RoleBasedGraphAdapter(IGraphAdapter):
 
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         self._adapter.redact_edge(source_node_id, target_node_id, label)
+
+    def close(self) -> None:
+        self._adapter.close()
