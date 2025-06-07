@@ -2,8 +2,9 @@ import json
 import logging
 from typing import Iterator
 
-from confluent_kafka import Consumer, Producer, KafkaError, KafkaException  # type: ignore
+from confluent_kafka import Consumer, Producer, KafkaError  # type: ignore
 from jsonschema import ValidationError
+from .config import Settings
 
 from .event import Event, parse_event
 from .schema_utils import validate_event_dict
@@ -21,22 +22,19 @@ logger = logging.getLogger(__name__)
 class UMEClient:
     """Simple Kafka-based client for producing and consuming UME events."""
 
-    def __init__(
-        self,
-        bootstrap_servers: str = "localhost:9092",
-        topic: str = "ume_demo",
-        group_id: str = "ume_client_group",
-    ) -> None:
-        self.topic = topic
-        self.producer = Producer({"bootstrap.servers": bootstrap_servers})
+    def __init__(self, settings: Settings) -> None:
+        self.topic = settings.KAFKA_IN_TOPIC
+        bootstrap = settings.KAFKA_BOOTSTRAP_SERVERS
+        group_id = settings.KAFKA_GROUP_ID
+        self.producer = Producer({"bootstrap.servers": bootstrap})
         self.consumer = Consumer(
             {
-                "bootstrap.servers": bootstrap_servers,
+                "bootstrap.servers": bootstrap,
                 "group.id": group_id,
                 "auto.offset.reset": "earliest",
             }
         )
-        self.consumer.subscribe([topic])
+        self.consumer.subscribe([self.topic])
 
     def produce_event(self, event: Event) -> None:
         """Serialize and send an Event to the configured topic."""

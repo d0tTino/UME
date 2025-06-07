@@ -10,6 +10,7 @@ corresponding producer_demo.py script.
 import json
 import logging
 import os
+from ume.config import settings
 from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
 from ume import parse_event, EventError  # Import parse_event and EventError
 
@@ -19,9 +20,9 @@ logger = logging.getLogger("consumer_demo")
 
 # Kafka broker and topic
 # Set KAFKA_CA_CERT, KAFKA_CLIENT_CERT and KAFKA_CLIENT_KEY to enable TLS.
-BOOTSTRAP_SERVERS = "localhost:9092"
-TOPIC = "ume_demo"
-GROUP_ID = "ume_demo_group"
+BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
+TOPIC = settings.KAFKA_IN_TOPIC
+GROUP_ID = settings.KAFKA_GROUP_ID
 
 
 def ssl_config() -> dict:

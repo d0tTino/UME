@@ -1,7 +1,7 @@
 """HTTP API exposing graph queries and analytics."""
 from __future__ import annotations
 
-import os
+from .config import settings
 from typing import Any, Dict, List
 
 from fastapi import Depends, FastAPI, HTTPException, Header
@@ -11,7 +11,7 @@ from .analytics import shortest_path
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
 
-API_TOKEN = os.environ.get("UME_API_TOKEN", "secret-token")
+API_TOKEN = settings.UME_API_TOKEN
 
 app = FastAPI()
 

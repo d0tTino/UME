@@ -2,7 +2,7 @@
 import argparse
 import json
 import logging
-import os
+from ume.config import settings
 import shlex
 import sys
 import time  # Added for timestamp in event creation
@@ -38,16 +38,16 @@ class UMEPrompt(Cmd):
 
     def __init__(self):
         super().__init__()
-        db_path = os.environ.get("UME_CLI_DB", ":memory:")
+        db_path = settings.UME_DB_PATH
         self.graph: IGraphAdapter = PersistentGraph(db_path)
         if db_path != ":memory:":
             enable_snapshot_autosave_and_restore(
-                self.graph, "ume_snapshot.json", 24 * 3600
+                self.graph, settings.UME_SNAPSHOT_PATH, 24 * 3600
             )
         self.current_timestamp = int(time.time())
 
     def _log_audit(self, reason: str) -> None:
-        user_id = os.environ.get("UME_AGENT_ID", "CLI")
+        user_id = settings.UME_AGENT_ID
         try:
             log_audit_entry(user_id, reason)
         except Exception as e:  # pragma: no cover - logging failure shouldn't crash

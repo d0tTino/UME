@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 """Alignment plugin interface and registry."""
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import List
@@ -9,7 +8,7 @@ import pkgutil
 
 from ...event import Event
 from ...audit import log_audit_entry
-import os
+from ...config import settings
 
 
 class PolicyViolationError(ValueError):
@@ -44,7 +43,7 @@ def register_plugin(plugin: AlignmentPlugin) -> None:
         try:
             original_validate(event)
         except PolicyViolationError as exc:
-            user_id = os.environ.get("UME_AGENT_ID", "UNKNOWN")
+            user_id = settings.UME_AGENT_ID
             log_audit_entry(user_id, str(exc))
             raise
 

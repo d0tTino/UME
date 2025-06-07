@@ -7,10 +7,11 @@ import json
 from typing import Dict
 
 from ume import EventType, parse_event, EventError
+from .config import settings
 
-IN_TOPIC = "ume_demo"
-EDGE_TOPIC = "ume_edges"
-NODE_TOPIC = "ume_nodes"
+IN_TOPIC = settings.KAFKA_IN_TOPIC
+EDGE_TOPIC = settings.KAFKA_EDGE_TOPIC
+NODE_TOPIC = settings.KAFKA_NODE_TOPIC
 
 # Map event types to destination topics
 EVENT_TOPIC_MAP: Dict[str, str] = {
@@ -19,7 +20,7 @@ EVENT_TOPIC_MAP: Dict[str, str] = {
 }
 
 
-def build_app(broker: str = "kafka://localhost:9092") -> faust.App:
+def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS) -> faust.App:
     """Create a Faust App instance."""
     app = faust.App("ume_stream_processor", broker=broker)
     app.conf.web_enabled = False
