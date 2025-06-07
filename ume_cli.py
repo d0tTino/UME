@@ -331,6 +331,7 @@ class UMEPrompt(Cmd):
         exit
         Quit the UME CLI.
         """
+        self.graph.close()
         print("Goodbye!")
         return True  # returning True exits the Cmd loop
 
