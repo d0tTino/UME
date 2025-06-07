@@ -28,6 +28,7 @@ from .snapshot import (
     SnapshotError,
 )
 from .schema_utils import validate_event_dict
+from .config import Settings
 
 __all__ = [
     "Event",
@@ -60,4 +61,5 @@ __all__ = [
     "unregister_listener",
     "log_audit_entry",
     "get_audit_entries",
+    "Settings",
 ]
