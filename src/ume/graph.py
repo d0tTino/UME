@@ -1,5 +1,5 @@
 # src/ume/graph.py
-from typing import Dict, Any, Optional, List, Tuple, DefaultDict, Set
+from typing import Dict, Any, Optional, List, Tuple, DefaultDict
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
@@ -254,3 +254,7 @@ class MockGraph(IGraphAdapter):
                 f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be redacted."
             )
         self._redacted_edges.add((source_node_id, target_node_id, label))
+
+    def close(self) -> None:
+        """Mock adapter does not hold resources."""
+        pass
