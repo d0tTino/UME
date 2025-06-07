@@ -7,6 +7,12 @@ from confluent_kafka import Consumer, Producer, KafkaError, KafkaException  # ty
 from .event import Event, parse_event
 
 
+class UMEClientError(Exception):
+    """Exception raised for errors occurring within :class:`UMEClient`."""
+
+    pass
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,8 +48,12 @@ class UMEClient:
             "target_node_id": event.target_node_id,
             "label": event.label,
         }
-        self.producer.produce(self.topic, json.dumps(data_dict).encode("utf-8"))
-        self.producer.flush()
+        try:
+            self.producer.produce(self.topic, json.dumps(data_dict).encode("utf-8"))
+            self.producer.flush()
+        except Exception as e:  # pragma: no cover - confluent_kafka may raise various errors
+            logger.error("Failed to produce event: %s", e)
+            raise UMEClientError(f"Failed to produce event: {e}") from e
 
     def consume_events(self, timeout: float = 1.0) -> Iterator[Event]:
         """Yield Events from the configured topic until no message is available."""
@@ -54,6 +64,19 @@ class UMEClient:
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
                     break
-                raise KafkaException(msg.error())
+                raise UMEClientError(f"Consumer error: {msg.error()}")
             data = json.loads(msg.value().decode("utf-8"))
             yield parse_event(data)
+
+    def close(self) -> None:
+        """Flush the producer and close the consumer."""
+        try:
+            self.producer.flush()
+        finally:
+            self.consumer.close()
+
+    def __enter__(self) -> "UMEClient":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
