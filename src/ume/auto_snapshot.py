@@ -3,8 +3,11 @@ import threading
 import time
 from pathlib import Path
 from typing import Union
+import logging
 from .graph_adapter import IGraphAdapter
 from .snapshot import snapshot_graph_to_file, load_graph_into_existing
+
+logger = logging.getLogger(__name__)
 
 
 def enable_periodic_snapshot(graph: IGraphAdapter, path: Union[str, Path], interval_seconds: int = 3600) -> None:
@@ -34,7 +37,9 @@ def enable_snapshot_autosave_and_restore(
     if snapshot_path.is_file():
         try:
             load_graph_into_existing(graph, snapshot_path)
-        except Exception:
-            pass  # Corrupt snapshot should not prevent startup
+        except Exception as e:  # pragma: no cover - logging only
+            logger.warning(
+                "Failed to restore snapshot from %s: %s", snapshot_path, e
+            )
 
     enable_periodic_snapshot(graph, snapshot_path, interval_seconds)
