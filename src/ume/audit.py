@@ -3,12 +3,15 @@ import json
 import time
 import hmac
 import hashlib
+import logging
 from typing import List, Dict
 
 try:
     import boto3  # type: ignore
 except Exception:  # pragma: no cover - boto3 optional
     boto3 = None  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 AUDIT_LOG_PATH = os.environ.get("UME_AUDIT_LOG_PATH", "audit.log")
 SIGNING_KEY = os.environ.get("UME_AUDIT_SIGNING_KEY", "default-key").encode()
@@ -21,7 +24,11 @@ def _parse_s3(path: str) -> tuple[str, str]:
 
 
 def _read_lines(path: str) -> List[str]:
-    if path.startswith("s3://") and boto3:
+    if path.startswith("s3://"):
+        if not boto3:
+            raise ImportError(
+                "boto3 is required to read from S3 paths but is not installed"
+            )
         bucket, key = _parse_s3(path)
         s3 = boto3.client("s3")
         try:
@@ -33,14 +40,18 @@ def _read_lines(path: str) -> List[str]:
     else:
         try:
             with open(path, "r", encoding="utf-8") as f:
-                return [l.rstrip("\n") for l in f]
+                return [line.rstrip("\n") for line in f]
         except FileNotFoundError:
             return []
 
 
 def _write_lines(path: str, lines: List[str]) -> None:
     data = "\n".join(lines) + "\n"
-    if path.startswith("s3://") and boto3:
+    if path.startswith("s3://"):
+        if not boto3:
+            raise ImportError(
+                "boto3 is required to write to S3 paths but is not installed"
+            )
         bucket, key = _parse_s3(path)
         s3 = boto3.client("s3")
         s3.put_object(Bucket=bucket, Key=key, Body=data.encode())
