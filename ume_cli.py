@@ -2,6 +2,7 @@
 import argparse
 import json
 import logging
+import os
 from ume.config import settings
 import shlex
 import sys
@@ -18,6 +19,7 @@ from ume import (
     load_graph_into_existing,
     snapshot_graph_to_file,
     PersistentGraph,
+    RoleBasedGraphAdapter,
     enable_snapshot_autosave_and_restore,
     ProcessingError,
     EventError,
@@ -39,10 +41,16 @@ class UMEPrompt(Cmd):
     def __init__(self):
         super().__init__()
         db_path = settings.UME_DB_PATH
-        self.graph: IGraphAdapter = PersistentGraph(db_path)
+        base_graph = PersistentGraph(db_path)
+        role = os.environ.get("UME_ROLE")
+        if role:
+            print(f"Active role: {role}")
+            self.graph: IGraphAdapter = RoleBasedGraphAdapter(base_graph, role)
+        else:
+            self.graph: IGraphAdapter = base_graph
         if db_path != ":memory:":
             enable_snapshot_autosave_and_restore(
-                self.graph, settings.UME_SNAPSHOT_PATH, 24 * 3600
+                base_graph, settings.UME_SNAPSHOT_PATH, 24 * 3600
             )
         self.current_timestamp = int(time.time())
 
