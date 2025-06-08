@@ -216,6 +216,7 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 git clone https://github.com/d0tTino/universal-memory-engine.git
 cd universal-memory-engine
 poetry install
+poetry run python -m spacy download en_core_web_lg
 ```
 
 ### 2. Start Redpanda (Kafka) via Docker
