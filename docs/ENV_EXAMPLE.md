@@ -11,4 +11,7 @@ UME_AUDIT_LOG_PATH=./audit.log
 
 # Token used by the API server for authentication
 UME_API_TOKEN=secret-token
+
+# Optional role for the CLI (leave unset for full permissions)
+UME_ROLE=view-only
 ```

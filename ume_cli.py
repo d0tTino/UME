@@ -44,13 +44,14 @@ class UMEPrompt(Cmd):
 
     def __init__(self):
         super().__init__()
-        db_path = settings.UME_DB_PATH
+        db_path = os.environ.get("UME_CLI_DB", settings.UME_DB_PATH)
         base_graph = PersistentGraph(db_path)
         role = os.environ.get("UME_ROLE")
         if role:
-            print(f"Active role: {role}")
+            print(f"INFO: UME-CLI running with role: '{role}'")
             self.graph: IGraphAdapter = RoleBasedGraphAdapter(base_graph, role)
         else:
+            print("INFO: UME-CLI running without a specific role (full permissions).")
             self.graph: IGraphAdapter = base_graph
         if db_path != ":memory:":
             enable_snapshot_autosave_and_restore(
