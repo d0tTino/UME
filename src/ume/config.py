@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     KAFKA_IN_TOPIC: str = "ume_demo"
     KAFKA_EDGE_TOPIC: str = "ume_edges"
     KAFKA_NODE_TOPIC: str = "ume_nodes"
+    KAFKA_RAW_EVENTS_TOPIC: str = "ume-raw-events"
+    KAFKA_QUARANTINE_TOPIC: str = "ume-quarantine-events"
     KAFKA_GROUP_ID: str = "ume_client_group"
 
     # API
