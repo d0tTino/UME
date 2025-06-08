@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 from .config import settings
+import os
 from typing import Any, Dict, List
 
 from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .analytics import shortest_path
+from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
 
@@ -18,6 +21,19 @@ app = FastAPI()
 # These can be configured by the embedding application or tests
 app.state.query_engine = None  # type: ignore[assignment]
 app.state.graph = None  # type: ignore[assignment]
+
+
+def configure_graph(graph: IGraphAdapter) -> None:
+    """Set ``app.state.graph`` applying RBAC if ``UME_API_ROLE`` is defined."""
+    role = os.getenv("UME_API_ROLE")
+    if role:
+        graph = RoleBasedGraphAdapter(graph, role=role)
+    app.state.graph = graph
+
+
+@app.exception_handler(AccessDeniedError)
+async def access_denied_handler(request, exc: AccessDeniedError) -> JSONResponse:
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
 def require_token(authorization: str | None = Header(default=None)) -> None:

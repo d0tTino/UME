@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Set
 
+from collections import deque
 import networkx as nx
 
 from .graph_adapter import IGraphAdapter
@@ -23,15 +24,31 @@ def _to_networkx(graph: IGraphAdapter) -> nx.DiGraph:
 def shortest_path(graph: IGraphAdapter, src: str, dst: str) -> List[str]:
     """Return the shortest directed path from ``src`` to ``dst``.
 
+    This implementation relies on ``graph.find_connected_nodes`` so role-based
+    access checks are enforced by :class:`~ume.rbac_adapter.RoleBasedGraphAdapter`.
     If no path exists an empty list is returned.
     """
-    g = _to_networkx(graph)
-    try:
-        return nx.shortest_path(g, src, dst)
-    except nx.NetworkXNoPath:
+    visited: Dict[str, str | None] = {src: None}
+    queue: deque[str] = deque([src])
+    while queue:
+        current = queue.popleft()
+        if current == dst:
+            break
+        for neighbor in graph.find_connected_nodes(current):
+            if neighbor not in visited:
+                visited[neighbor] = current
+                queue.append(neighbor)
+
+    if dst not in visited:
         return []
-    except nx.NodeNotFound:
-        return []
+
+    path = [dst]
+    while visited[path[-1]] is not None:
+        prev = visited[path[-1]]
+        assert prev is not None
+        path.append(prev)
+    path.reverse()
+    return path
 
 
 def find_communities(graph: IGraphAdapter) -> List[Set[str]]:
