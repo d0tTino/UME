@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 import argparse
 import json
 import logging
 import os
-from ume.config import settings
 import shlex
 import sys
 import time  # Added for timestamp in event creation
@@ -11,9 +11,13 @@ import warnings
 from pathlib import Path
 
 # Ensure local package import when run directly without installation
-sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
-from cmd import Cmd
-from ume import (
+_src_path = Path(__file__).resolve().parent / "src"
+if _src_path.exists() and str(_src_path) not in sys.path:
+    sys.path.insert(0, str(_src_path))
+
+from ume.config import settings  # noqa: E402
+from cmd import Cmd  # noqa: E402
+from ume import (  # noqa: E402
     parse_event,
     apply_event_to_graph,
     load_graph_into_existing,
