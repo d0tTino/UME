@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from ume.api import app
+from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
 
@@ -16,7 +16,7 @@ def setup_module(_):
     g.add_node("a", {})
     g.add_node("b", {})
     g.add_edge("a", "b", "L")
-    app.state.graph = g
+    configure_graph(g)
 
 
 def test_run_query_authorized():
