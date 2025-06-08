@@ -503,6 +503,10 @@ You will see the prompt: `ume> `. Type `help` or `?` to list available commands,
 Pass `--show-warnings` to display Python warnings or `--warnings-log <file>` to
 log them for debugging.
 
+You can set `UME_CLI_DB` to override where the CLI stores its SQLite database.
+If you define `UME_ROLE`, the CLI will run with that role's permissions and
+display an informational message at startup.
+
 ### Available Commands
 
 *   **`new_node <node_id> <json_attributes>`**: Create a new node.

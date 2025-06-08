@@ -12,6 +12,6 @@ UME_AUDIT_LOG_PATH=./audit.log
 # Token used by the API server for authentication
 UME_API_TOKEN=secret-token
 
-# Consumer group ID for the privacy agent
-KAFKA_PRIVACY_AGENT_GROUP_ID=ume-privacy-agent-group
+# Optional role for the CLI (leave unset for full permissions)
+UME_ROLE=view-only
 ```
