@@ -12,7 +12,9 @@ class Settings(BaseSettings):
 
     # Kafka/Redpanda
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_RAW_EVENTS_TOPIC: str = "ume_raw"
     KAFKA_IN_TOPIC: str = "ume_demo"
+    KAFKA_QUARANTINE_TOPIC: str = "ume_quarantine"
     KAFKA_EDGE_TOPIC: str = "ume_edges"
     KAFKA_NODE_TOPIC: str = "ume_nodes"
     KAFKA_GROUP_ID: str = "ume_client_group"

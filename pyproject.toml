@@ -17,6 +17,8 @@ fastapi = "*"
 jsonschema = "*"
 faust-streaming = "*"
 pydantic-settings = "^2.9.1"
+presidio-analyzer = "*"
+presidio-anonymizer = "*"
 
 
 [tool.poetry.group.dev.dependencies]
