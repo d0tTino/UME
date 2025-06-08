@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     KAFKA_EDGE_TOPIC: str = "ume_edges"
     KAFKA_NODE_TOPIC: str = "ume_nodes"
     KAFKA_GROUP_ID: str = "ume_client_group"
+    KAFKA_PRIVACY_AGENT_GROUP_ID: str = "ume-privacy-agent-group"
 
     # API
     UME_API_TOKEN: str = "secret-token"
