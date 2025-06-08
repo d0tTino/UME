@@ -14,6 +14,7 @@ from .query import Neo4jQueryEngine
 from .plugins.alignment import PolicyViolationError
 from .audit import log_audit_entry, get_audit_entries
 from .analytics import shortest_path, find_communities, temporal_node_counts
+from .anonymizer import anonymize_email
 from .api import app as api_app
 from .processing import apply_event_to_graph, ProcessingError
 from .listeners import (
@@ -61,5 +62,6 @@ __all__ = [
     "unregister_listener",
     "log_audit_entry",
     "get_audit_entries",
+    "anonymize_email",
     "Settings",
 ]
