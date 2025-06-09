@@ -85,3 +85,11 @@ services:
       # Let's simplify and assume Redpanda Console exposes schema registry functionality
       # through its main port (8080 internally) when connected to Redpanda.
       # The user's requirement "schema-registry ... on localhost:8081" will be met by this.
+
+  privacy-agent:
+    build:
+      context: ..
+      dockerfile: Dockerfile.privacy-agent
+    depends_on:
+      redpanda:
+        condition: service_healthy

@@ -46,7 +46,7 @@ event_store:
 ```yaml
 faust:
   broker: "kafka://localhost:9092"
-  input_topic: "ume_demo"
+  input_topic: "ume-clean-events"
   edge_topic: "ume_edges"
   node_topic: "ume_nodes"
 ```

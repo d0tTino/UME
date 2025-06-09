@@ -30,12 +30,12 @@ The current system consists of the following main components:
     *   Redpanda is a Kafka-compatible streaming data platform. It is run locally using Docker, as defined in the `docker/docker-compose.yml` file.
     *   It receives events from producers and stores them durably in topics.
     *   It allows multiple consumers to subscribe to these topics and read events.
-    *   The demo uses a topic named `ume_demo`, configured for unlimited retention and immutable append-only storage so it acts as the canonical audit trail.
+    *   The demo uses a topic named `ume-clean-events`, configured for unlimited retention and immutable append-only storage so it acts as the canonical audit trail.
     *   The Docker setup also includes Redpanda Console, which provides a UI and schema registry capabilities, accessible typically on `localhost:8081` (for the console) while Redpanda itself exposes a schema registry via Pandaproxy on `localhost:8082`.
 
 3.  **Event Consumer (`src/ume/consumer_demo.py`):**
     *   This script subscribes to topics on the message broker to receive and process events.
-    *   In the demo, it connects to the Kafka/Redpanda broker at `localhost:9092`, subscribes to the `ume_demo` topic using the group ID `ume_demo_group`.
+    *   In the demo, it connects to the Kafka/Redpanda broker at `localhost:9092`, subscribes to the `ume-clean-events` topic using the group ID `ume_client_group`.
     *   Upon receiving an event, it logs the event's content. In a more complete system, this component would be responsible for parsing the event, updating the memory graph, triggering actions, or other processing tasks.
 
 ### Event Schema
@@ -119,9 +119,9 @@ Used to remove a specific directed, labeled edge between two nodes.
 
 The basic data flow is as follows:
 
-*   The `producer_demo.py` script sends an event to the `ume_demo` topic in Redpanda.
+*   The `producer_demo.py` script sends an event to the `ume-raw-events` topic in Redpanda.
 *   Redpanda stores this event.
-*   The `consumer_demo.py` script, subscribed to the `ume_demo` topic, receives this event from Redpanda.
+*   The `consumer_demo.py` script, subscribed to the `ume-clean-events` topic, receives this event from Redpanda.
 *   The consumer then processes the event (currently, by logging it).
 
 This setup demonstrates a simple event-driven architecture, which is foundational for the UME concept where events are captured and processed to build up a knowledge graph or memory representation.
@@ -235,7 +235,7 @@ See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 ```bash
 poetry run python src/ume/consumer_demo.py
 ```
-This script subscribes to topic `ume_demo` on `localhost:9092` and waits for messages.
+This script subscribes to topic `ume-clean-events` on `localhost:9092` and waits for messages.
 
 ### 4. Run the Producer Demo
 ```bash

@@ -23,7 +23,7 @@ logger = logging.getLogger("producer_demo")
 # Kafka broker and topic
 # Set KAFKA_CA_CERT, KAFKA_CLIENT_CERT and KAFKA_CLIENT_KEY to enable TLS.
 BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
-TOPIC = settings.KAFKA_IN_TOPIC
+TOPIC = settings.KAFKA_RAW_EVENTS_TOPIC
 
 
 def ssl_config() -> dict:

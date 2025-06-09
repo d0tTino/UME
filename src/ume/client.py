@@ -23,7 +23,8 @@ class UMEClient:
     """Simple Kafka-based client for producing and consuming UME events."""
 
     def __init__(self, settings: Settings) -> None:
-        self.topic = settings.KAFKA_IN_TOPIC
+        self.produce_topic = settings.KAFKA_RAW_EVENTS_TOPIC
+        self.consume_topic = settings.KAFKA_CLEAN_EVENTS_TOPIC
         bootstrap = settings.KAFKA_BOOTSTRAP_SERVERS
         group_id = settings.KAFKA_GROUP_ID
         self.producer = Producer({"bootstrap.servers": bootstrap})
@@ -34,7 +35,7 @@ class UMEClient:
                 "auto.offset.reset": "earliest",
             }
         )
-        self.consumer.subscribe([self.topic])
+        self.consumer.subscribe([self.consume_topic])
 
     def produce_event(self, event: Event) -> None:
         """Serialize and send an Event to the configured topic."""
@@ -50,7 +51,9 @@ class UMEClient:
         }
         try:
             validate_event_dict(data_dict)
-            self.producer.produce(self.topic, json.dumps(data_dict).encode("utf-8"))
+            self.producer.produce(
+                self.produce_topic, json.dumps(data_dict).encode("utf-8")
+            )
             self.producer.flush()
         except ValidationError as e:
             logger.error("Event validation failed: %s", e.message)
