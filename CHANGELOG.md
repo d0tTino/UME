@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 -   `PersistentGraph` SQLite-backed adapter replacing the in-memory `MockGraph`.
 -   Automatic graph snapshotting utilities and CLI integration.
--   Documentation describing the immutable `ume_demo` event log.
+-   Documentation describing the immutable `ume-clean-events` event log.
 -   `ume-cli` now accepts `--show-warnings` and `--warnings-log` for managing
     Python warnings.
 

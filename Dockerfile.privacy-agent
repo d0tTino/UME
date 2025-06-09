@@ -1,0 +1,9 @@
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install poetry
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-root --no-dev
+RUN poetry run python -m spacy download en_core_web_lg
+COPY src/ /app/src
+ENV PYTHONPATH=/app
+CMD ["poetry", "run", "python", "src/ume/privacy_agent.py"]

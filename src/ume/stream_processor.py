@@ -9,7 +9,7 @@ from typing import Dict
 from ume import EventType, parse_event, EventError
 from .config import settings
 
-IN_TOPIC = settings.KAFKA_IN_TOPIC
+IN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 EDGE_TOPIC = settings.KAFKA_EDGE_TOPIC
 NODE_TOPIC = settings.KAFKA_NODE_TOPIC
 

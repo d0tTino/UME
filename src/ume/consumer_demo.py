@@ -21,7 +21,7 @@ logger = logging.getLogger("consumer_demo")
 # Kafka broker and topic
 # Set KAFKA_CA_CERT, KAFKA_CLIENT_CERT and KAFKA_CLIENT_KEY to enable TLS.
 BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
-TOPIC = settings.KAFKA_IN_TOPIC
+TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 GROUP_ID = settings.KAFKA_GROUP_ID
 
 

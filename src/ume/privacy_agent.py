@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
 RAW_TOPIC = settings.KAFKA_RAW_EVENTS_TOPIC
-IN_TOPIC = settings.KAFKA_IN_TOPIC
+CLEAN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 QUARANTINE_TOPIC = settings.KAFKA_QUARANTINE_TOPIC
 GROUP_ID = settings.KAFKA_PRIVACY_AGENT_GROUP_ID
 
@@ -106,7 +106,9 @@ def run_privacy_agent() -> None:
             data["payload"] = redacted_payload
 
             try:
-                producer.produce(IN_TOPIC, value=json.dumps(data).encode("utf-8"))
+                producer.produce(
+                    CLEAN_TOPIC, value=json.dumps(data).encode("utf-8")
+                )
             except KafkaException as exc:
                 logger.error("Failed to produce sanitized event: %s", exc)
 
