@@ -32,7 +32,7 @@ def test_audit_entry_on_policy_violation(tmp_path, monkeypatch):
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
-        payload={"node_id": "forbidden", "attributes": {}},
+        payload={"node_id": "forbidden", "attributes": {"type": "UserMemory"}},
     )
     with pytest.raises(PolicyViolationError):
         apply_event_to_graph(event, graph)

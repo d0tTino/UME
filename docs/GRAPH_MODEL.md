@@ -66,3 +66,18 @@ Version numbers follow `MAJOR.MINOR.PATCH` semantics.  Adding a new optional
 property bumps the MINOR version.  Changing required fields or the meaning of an
 existing property increments MAJOR.  The PATCH component is reserved for
 documentation fixes or clarifications that do not alter validation rules.
+
+## Programmatic Schema Loading
+
+UME ships with a default graph schema definition stored in
+`ume/schemas/graph_schema.yaml`.  The :class:`ume.graph_schema.GraphSchema`
+class provides helpers to load this file and validate node types and edge labels
+at runtime.  The function :func:`ume.graph_schema.load_default_schema` returns a
+schema instance, which is imported during module initialization as
+`ume.graph_schema.DEFAULT_SCHEMA`.
+
+`apply_event_to_graph` consults this default schema whenever a node or edge is
+created.  If a ``type`` attribute is present for a new node it must match one of
+the defined node types.  Edge creation will fail if the provided label is not in
+the schema.  Each node type and edge label entry contains a `version` field so
+applications can coordinate upgrades over time.
