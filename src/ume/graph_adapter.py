@@ -199,3 +199,43 @@ class IGraphAdapter(ABC):
     def close(self) -> None:
         """Release any resources held by the graph adapter."""
         pass
+
+    # ---- Traversal and pathfinding -------------------------------------
+
+    @abstractmethod
+    def shortest_path(self, source_id: str, target_id: str) -> list[str]:
+        """Return the shortest path from ``source_id`` to ``target_id``.
+
+        Implementations should return an empty list if no path exists.
+        """
+
+    @abstractmethod
+    def traverse(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+    ) -> list[str]:
+        """Traverse outward from ``start_node_id`` up to ``depth`` hops.
+
+        ``edge_label`` may be used to restrict traversal to edges with the
+        given label. The return value is a list of visited node IDs in BFS
+        order.
+        """
+
+    @abstractmethod
+    def extract_subgraph(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Return a dictionary describing a subgraph rooted at ``start_node_id``.
+
+        ``since_timestamp`` filters nodes to those whose ``timestamp`` attribute
+        is greater than or equal to the given epoch integer.
+        The returned dictionary must contain ``nodes`` and ``edges`` keys using
+        the same structure as :meth:`dump`.
+        """
+        pass

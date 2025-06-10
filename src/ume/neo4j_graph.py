@@ -1,8 +1,9 @@
 # src/ume/neo4j_graph.py
 """Neo4j-backed implementation of :class:`~ume.graph_adapter.IGraphAdapter`."""
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from neo4j import GraphDatabase, Driver
 
@@ -14,6 +15,7 @@ class Neo4jGraph(IGraphAdapter):
     """Graph adapter using the Neo4j Bolt driver."""
 
     def __init__(self, uri: str, user: str, password: str, driver: Optional[Driver] = None, *, use_gds: bool = False) -> None:
+
         self._driver = driver or GraphDatabase.driver(uri, auth=(user, password))
         self._use_gds = use_gds
 
@@ -85,7 +87,9 @@ class Neo4jGraph(IGraphAdapter):
             )
             return [record["id"] for record in result]
 
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> List[str]:
         if not self.node_exists(node_id):
             raise ProcessingError(f"Node '{node_id}' not found.")
         with self._driver.session() as session:
@@ -121,7 +125,9 @@ class Neo4jGraph(IGraphAdapter):
                 {"src": source_node_id, "tgt": target_node_id},
             )
             if result.single()["cnt"] > 0:
-                raise ProcessingError(f"Edge ({source_node_id}, {target_node_id}, {label}) already exists.")
+                raise ProcessingError(
+                    f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
+                )
             session.run(
                 f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{label}` {{redacted:false}}]->(t)",
                 {"src": source_node_id, "tgt": target_node_id},
@@ -146,7 +152,9 @@ class Neo4jGraph(IGraphAdapter):
             )
             if result.single()["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
-                raise ProcessingError(f"Edge {edge_tuple} does not exist and cannot be deleted.")
+                raise ProcessingError(
+                    f"Edge {edge_tuple} does not exist and cannot be deleted."
+                )
 
     def redact_node(self, node_id: str) -> None:
         with self._driver.session() as session:
@@ -215,4 +223,5 @@ class Neo4jGraph(IGraphAdapter):
                 (rec["source"], rec["target"], rec["similarity"])
                 for rec in result
             ]
+
 

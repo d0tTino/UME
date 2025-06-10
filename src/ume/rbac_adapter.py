@@ -1,4 +1,5 @@
 """Role-based wrapper around IGraphAdapter."""
+
 from typing import Dict, Any, Optional
 
 from .graph_adapter import IGraphAdapter
@@ -52,7 +53,9 @@ class RoleBasedGraphAdapter(IGraphAdapter):
     def get_all_node_ids(self) -> list[str]:
         return self._adapter.get_all_node_ids()
 
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> list[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> list[str]:
         self._require_analytics_role()
         return self._adapter.find_connected_nodes(node_id, edge_label)
 
@@ -73,3 +76,30 @@ class RoleBasedGraphAdapter(IGraphAdapter):
 
     def close(self) -> None:
         self._adapter.close()
+
+    # ---- Traversal and pathfinding ---------------------------------
+
+    def shortest_path(self, source_id: str, target_id: str) -> list[str]:
+        self._require_analytics_role()
+        return self._adapter.shortest_path(source_id, target_id)
+
+    def traverse(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+    ) -> list[str]:
+        self._require_analytics_role()
+        return self._adapter.traverse(start_node_id, depth, edge_label)
+
+    def extract_subgraph(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        self._require_analytics_role()
+        return self._adapter.extract_subgraph(
+            start_node_id, depth, edge_label, since_timestamp
+        )
