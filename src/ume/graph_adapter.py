@@ -208,6 +208,7 @@ class IGraphAdapter(ABC):
 
         Implementations should return an empty list if no path exists.
         """
+        pass
 
     @abstractmethod
     def traverse(
@@ -222,6 +223,7 @@ class IGraphAdapter(ABC):
         given label. The return value is a list of visited node IDs in BFS
         order.
         """
+        pass
 
     @abstractmethod
     def extract_subgraph(
