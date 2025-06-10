@@ -590,6 +590,20 @@ print(recent)
 If GDS is not available or another adapter is used, these functions fall back to
 `networkx` implementations.
 
+### Graph Similarity
+
+You can also measure how similar two graphs are using `graph_similarity`:
+
+```python
+from ume import Neo4jGraph
+from ume.analytics import graph_similarity
+
+g1 = Neo4jGraph("bolt://localhost:7687", "neo4j", "password", use_gds=True)
+g2 = Neo4jGraph("bolt://localhost:7687", "neo4j", "password", use_gds=True)
+score = graph_similarity(g1, g2)
+print(score)
+```
+
 ## Where to Get Help
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:

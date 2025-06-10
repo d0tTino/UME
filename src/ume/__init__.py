@@ -19,6 +19,10 @@ from .analytics import (
     temporal_node_counts,
     temporal_community_detection,
     time_varying_centrality,
+    pagerank_centrality,
+    betweenness_centrality,
+    node_similarity,
+    graph_similarity,
 )
 from . import query_helpers
 from .query_helpers import constrained_path
@@ -65,6 +69,10 @@ __all__ = [
     "shortest_path",
     "constrained_path",
     "find_communities",
+    "pagerank_centrality",
+    "betweenness_centrality",
+    "node_similarity",
+    "graph_similarity",
     "temporal_node_counts",
     "temporal_community_detection",
     "time_varying_centrality",
