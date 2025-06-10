@@ -29,6 +29,7 @@ from .snapshot import (
     SnapshotError,
 )
 from .schema_utils import validate_event_dict
+from .graph_schema import GraphSchema, load_default_schema
 from .config import Settings
 
 __all__ = [
@@ -56,6 +57,8 @@ __all__ = [
     "temporal_node_counts",
     "api_app",
     "validate_event_dict",
+    "GraphSchema",
+    "load_default_schema",
     "PolicyViolationError",
     "GraphListener",
     "register_listener",

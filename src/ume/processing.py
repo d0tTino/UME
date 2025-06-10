@@ -3,6 +3,7 @@ from .event import Event, EventType
 from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
 from .listeners import get_registered_listeners
 from .plugins.alignment import get_plugins
+from .graph_schema import DEFAULT_SCHEMA
 
 class ProcessingError(ValueError):
     """Custom exception for event processing errors."""
@@ -63,6 +64,10 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                 f"'attributes' must be a dictionary for CREATE_NODE event, if provided. Got: {type(attributes).__name__} for event: {event.event_id}"
             )
 
+        node_type = attributes.get("type")
+        if node_type is not None:
+            DEFAULT_SCHEMA.validate_node_type(str(node_type))
+
         graph.add_node(node_id, attributes)  # Call adapter's add_node
         for listener in get_registered_listeners():
             listener.on_node_created(node_id, attributes)
@@ -121,6 +126,7 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         assert isinstance(source_node_id, str)
         assert isinstance(target_node_id, str)
         assert isinstance(label, str)
+        DEFAULT_SCHEMA.validate_edge_label(label)
         graph.add_edge(source_node_id, target_node_id, label)
         for listener in get_registered_listeners():
             listener.on_edge_created(source_node_id, target_node_id, label)

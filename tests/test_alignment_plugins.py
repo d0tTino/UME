@@ -8,7 +8,7 @@ def test_forbidden_node_policy():
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
-        payload={"node_id": "forbidden", "attributes": {}},
+        payload={"node_id": "forbidden", "attributes": {"type": "UserMemory"}},
     )
     with pytest.raises(PolicyViolationError):
         apply_event_to_graph(event, graph)

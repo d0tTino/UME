@@ -34,12 +34,12 @@ def test_listener_receives_node_created_callback(graph: MockGraph) -> None:
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
-        payload={"node_id": "n1", "attributes": {"a": 1}},
+        payload={"node_id": "n1", "attributes": {"a": 1, "type": "UserMemory"}},
     )
     apply_event_to_graph(event, graph)
     unregister_listener(listener)
 
-    assert ("node_created", ("n1", {"a": 1})) in listener.calls
+    assert ("node_created", ("n1", {"a": 1, "type": "UserMemory"})) in listener.calls
 
 
 def test_listener_receives_edge_created_callback(graph: MockGraph) -> None:

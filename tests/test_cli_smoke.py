@@ -114,9 +114,9 @@ def test_cli_create_and_show_edge(
 ):  # tmp_path not used here, but good to have for snapshot tests
     """Test creating nodes, an edge, and then showing edges."""
     commands = [
-        'new_node source_n \'{"type":"source"}\'',
-        'new_node target_n \'{"type":"target"}\'',
-        "new_edge source_n target_n IS_CONNECTED_TO",
+        'new_node source_n \'{"type":"UserMemory"}\'',
+        'new_node target_n \'{"type":"UserMemory"}\'',
+        "new_edge source_n target_n ASSOCIATED_WITH",
         "show_edges",
         "exit",
     ]
@@ -124,9 +124,9 @@ def test_cli_create_and_show_edge(
 
     assert "Node 'source_n' created." in stdout
     assert "Node 'target_n' created." in stdout
-    assert "Edge (source_n)->(target_n) [IS_CONNECTED_TO] created." in stdout
+    assert "Edge (source_n)->(target_n) [ASSOCIATED_WITH] created." in stdout
     assert "Edges:" in stdout
-    assert "- source_n -> target_n [IS_CONNECTED_TO]" in stdout
+    assert "- source_n -> target_n [ASSOCIATED_WITH]" in stdout
     assert stderr == ""
     assert rc == 0
 
@@ -160,7 +160,7 @@ def test_cli_snapshot_save_and_load_and_verify(tmp_path):
     commands_part1 = [
         'new_node nodeA \'{"data":"A"}\'',
         'new_node nodeB \'{"data":"B"}\'',
-        "new_edge nodeA nodeB LINKED_TO",
+        "new_edge nodeA nodeB L",
         f"snapshot_save {shlex.quote(str(snapshot_file))}",  # Use shlex.quote for filepath
     ]
     # Run first part to save
@@ -184,7 +184,7 @@ def test_cli_snapshot_save_and_load_and_verify(tmp_path):
     assert f"Graph restored from {str(snapshot_file)}" in stdout2
     assert "- nodeA" in stdout2
     assert "- nodeB" in stdout2
-    assert "- nodeA -> nodeB [LINKED_TO]" in stdout2
+    assert "- nodeA -> nodeB [L]" in stdout2
     assert stderr2 == ""
     assert rc2 == 0
 

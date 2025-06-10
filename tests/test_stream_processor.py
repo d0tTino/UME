@@ -36,7 +36,12 @@ def test_stream_routing():
         }
     )
     node_event = _encoded(
-        {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "n1",
+            "payload": {"attributes": {"type": "UserMemory"}, "node_id": "n1"},
+        }
     )
 
     async def run() -> None:

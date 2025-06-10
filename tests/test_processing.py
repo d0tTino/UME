@@ -23,7 +23,7 @@ def test_apply_create_node_event_success(graph: MockGraph):
     """Test successfully creating a new node."""
     event_id = "event1"
     node_id = "node1"
-    attributes = {"name": "Test Node", "value": 100}
+    attributes = {"name": "Test Node", "value": 100, "type": "UserMemory"}
     event = Event(
         event_id=event_id,
         event_type=EventType.CREATE_NODE,
@@ -57,7 +57,7 @@ def test_apply_create_node_event_already_exists(graph: PersistentGraph):
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
-        payload={"node_id": node_id, "attributes": {"name": "New Node"}},
+        payload={"node_id": node_id, "attributes": {"name": "New Node", "type": "UserMemory"}},
     )
     with pytest.raises(ProcessingError, match=f"Node '{node_id}' already exists"):
         apply_event_to_graph(event, graph)
@@ -300,7 +300,7 @@ def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: Moc
         event_type=EventType.CREATE_EDGE,
         timestamp=int(time.time()),
         node_id="source_node",
-        target_node_id=123,
+        target_node_id=123,  # type: ignore[arg-type]
         label="LINKS_TO",
         payload={},
     )
@@ -316,7 +316,7 @@ def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: Moc
         timestamp=int(time.time()),
         node_id="source_node",
         target_node_id="target_node",
-        label=456,
+        label=456,  # type: ignore[arg-type]
         payload={},
     )
     with pytest.raises(
@@ -378,7 +378,7 @@ def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: Moc
         timestamp=int(time.time()),
         node_id="s",
         target_node_id="t",
-        label=123,
+        label=123,  # type: ignore[arg-type]
         payload={},  # label is int
     )
     with pytest.raises(
