@@ -42,12 +42,12 @@ class DummyDriver:
 def test_node_and_edge_crud():
     results = [
         DummyResult({"cnt": 0}),  # check node1
-        DummyResult(None),        # create node1
+        DummyResult(None),  # create node1
         DummyResult({"cnt": 0}),  # check node2
-        DummyResult(None),        # create node2
+        DummyResult(None),  # create node2
         DummyResult({"scnt": 1, "tcnt": 1}),  # check nodes exist for edge
         DummyResult({"cnt": 0}),  # check existing edge
-        DummyResult(None),        # create edge
+        DummyResult(None),  # create edge
         DummyResult({"cnt": 1}),  # delete edge
     ]
     driver = DummyDriver(results)
@@ -70,7 +70,7 @@ def test_add_node_duplicate_raises():
 
 
 def test_gds_methods_issue_queries():
-    results = [[], [], [], []]
+    results = [[], [], [], [], [], []]
     driver = DummyDriver(results)
     graph = Neo4jGraph(
         "bolt://localhost:7687",
@@ -84,10 +84,13 @@ def test_gds_methods_issue_queries():
     graph.betweenness_centrality()
     graph.community_detection()
     graph.node_similarity()
+    graph.temporal_community_detection(5)
+    graph.time_varying_centrality(5)
 
     queries = [q for q, _ in driver.session_obj.calls]
     assert "gds.pageRank.stream" in queries[0]
     assert "gds.betweenness.stream" in queries[1]
     assert "gds.louvain.stream" in queries[2]
     assert "gds.nodeSimilarity.stream" in queries[3]
-
+    assert "gds.beta.temporalClustering.stream" in queries[4]
+    assert "gds.beta.timeWeightedPageRank.stream" in queries[5]

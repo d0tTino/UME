@@ -163,6 +163,24 @@ class Neo4jGraph(IGraphAdapter):
                     f"Edge {edge_tuple} does not exist and cannot be deleted."
                 )
 
+    # ---- Traversal and pathfinding stubs -----------------------------------
+    def shortest_path(self, source_id: str, target_id: str) -> List[str]:
+        raise NotImplementedError
+
+    def traverse(
+        self, start_node_id: str, depth: int, edge_label: Optional[str] = None
+    ) -> List[str]:
+        raise NotImplementedError
+
+    def extract_subgraph(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
+
     def redact_node(self, node_id: str) -> None:
         with self._driver.session() as session:
             result = session.run(
@@ -230,31 +248,30 @@ class Neo4jGraph(IGraphAdapter):
             )
             return [(rec["source"], rec["target"], rec["similarity"]) for rec in result]
 
-    # ---- Constrained pathfinding -----------------------------------------
-    def constrained_path(
-        self,
-        source_id: str,
-        target_id: str,
-        max_depth: int | None = None,
-        edge_label: str | None = None,
-        since_timestamp: int | None = None,
-    ) -> List[str]:
-        depth_range = "*"
-        if max_depth is not None:
-            depth_range = f"*1..{max_depth}"
-        rel = f":`{edge_label}`" if edge_label else ""
-        query = (
-            f"MATCH p=(s {{id: $src}})-[{rel}{depth_range}]->(t {{id: $tgt}}) "
-            "WHERE all(n IN nodes(p) WHERE coalesce(n.redacted,false) = false)"
-        )
-        params = {"src": source_id, "tgt": target_id}
-        if since_timestamp is not None:
-            query += " AND all(n IN nodes(p) WHERE n.timestamp >= $ts)"
-            params["ts"] = since_timestamp
-        query += (
-            " RETURN [n IN nodes(p) | n.id] AS path ORDER BY size(nodes(p)) LIMIT 1"
-        )
+    def temporal_community_detection(self, window: int) -> List[set[str]]:
+        """Detect communities over a moving time window."""
+        self._ensure_gds_enabled()
         with self._driver.session() as session:
-            result = session.run(query, params)
-            rec = result.single()
-            return rec["path"] if rec else []
+            result = session.run(
+                "CALL gds.beta.temporalClustering.stream({"
+                "nodeProjection:'*', relationshipProjection:'*', windowSize:$window}) "
+                "YIELD nodeId, communityId RETURN gds.util.asNode(nodeId).id AS id, communityId",
+                {"window": window},
+            )
+            communities: Dict[int, set[str]] = {}
+            for rec in result:
+                cid = rec["communityId"]
+                communities.setdefault(cid, set()).add(rec["id"])
+            return list(communities.values())
+
+    def time_varying_centrality(self, window: int) -> Dict[str, float]:
+        """Compute centrality scores within a moving time window."""
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.beta.timeWeightedPageRank.stream({"
+                "nodeProjection:'*', relationshipProjection:'*', windowSize:$window}) "
+                "YIELD nodeId, score RETURN gds.util.asNode(nodeId).id AS id, score",
+                {"window": window},
+            )
+            return {rec["id"]: rec["score"] for rec in result}

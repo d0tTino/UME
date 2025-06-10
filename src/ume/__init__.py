@@ -13,7 +13,13 @@ from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .query import Neo4jQueryEngine
 from .plugins.alignment import PolicyViolationError
 from .audit import log_audit_entry, get_audit_entries
-from .analytics import shortest_path, find_communities, temporal_node_counts
+from .analytics import (
+    shortest_path,
+    find_communities,
+    temporal_node_counts,
+    temporal_community_detection,
+    time_varying_centrality,
+)
 from . import query_helpers
 from . import graph_queries
 from .anonymizer import anonymize_email
@@ -57,6 +63,8 @@ __all__ = [
     "shortest_path",
     "find_communities",
     "temporal_node_counts",
+    "temporal_community_detection",
+    "time_varying_centrality",
     "api_app",
     "query_helpers",
     "graph_queries",
