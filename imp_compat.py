@@ -1,4 +1,8 @@
-"""Compatibility shim for deprecated imp module on Python >=3.12."""
+"""Minimal replacement for the deprecated ``imp`` module used only during tests.
+
+The file is stored at the repository root so it doesn't shadow the standard
+module. Refer to the README for context on these compatibility shims.
+"""
 import importlib.util
 import types
 
