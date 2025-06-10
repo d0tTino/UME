@@ -3,7 +3,10 @@ from .event import Event, EventType
 from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
 from .listeners import get_registered_listeners
 from .plugins.alignment import get_plugins
-from .graph_schema import DEFAULT_SCHEMA
+from .schema_manager import DEFAULT_SCHEMA_MANAGER
+from .graph_schema import load_default_schema
+
+DEFAULT_VERSION = load_default_schema().version
 
 class ProcessingError(ValueError):
     """Custom exception for event processing errors."""
@@ -11,7 +14,7 @@ class ProcessingError(ValueError):
     pass
 
 
-def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
+def apply_event_to_graph(event: Event, graph: IGraphAdapter, *, schema_version: str = DEFAULT_VERSION) -> None:
     """
     Applies an event to a graph, modifying the graph based on event type and payload.
 
@@ -31,6 +34,7 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
     Args:
         event (Event): The Event object to apply, with fields validated by `parse_event`.
         graph (IGraphAdapter): An instance implementing the IGraphAdapter interface.
+        schema_version (str, optional): Version of the graph schema to validate against.
 
     Raises:
         PolicyViolationError: If an alignment plugin rejects the event.
@@ -66,7 +70,8 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
 
         node_type = attributes.get("type")
         if node_type is not None:
-            DEFAULT_SCHEMA.validate_node_type(str(node_type))
+            schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
+            schema.validate_node_type(str(node_type))
 
         graph.add_node(node_id, attributes)  # Call adapter's add_node
         for listener in get_registered_listeners():
@@ -126,7 +131,8 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
         assert isinstance(source_node_id, str)
         assert isinstance(target_node_id, str)
         assert isinstance(label, str)
-        DEFAULT_SCHEMA.validate_edge_label(label)
+        schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
+        schema.validate_edge_label(label)
         graph.add_edge(source_node_id, target_node_id, label)
         for listener in get_registered_listeners():
             listener.on_edge_created(source_node_id, target_node_id, label)

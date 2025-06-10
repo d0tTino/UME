@@ -225,6 +225,24 @@ class Neo4jGraph(IGraphAdapter):
             )
             return {rec["id"]: rec["score"] for rec in result}
 
+    # ---- Traversal and pathfinding ----
+    def shortest_path(self, source_id: str, target_id: str) -> List[str]:
+        raise NotImplementedError
+
+    def traverse(
+        self, start_node_id: str, depth: int, edge_label: Optional[str] = None
+    ) -> List[str]:
+        raise NotImplementedError
+
+    def extract_subgraph(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
+
     def community_detection(self) -> List[set[str]]:
         self._ensure_gds_enabled()
         with self._driver.session() as session:

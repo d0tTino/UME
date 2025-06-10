@@ -1,0 +1,25 @@
+version: "2.0.0"
+node_types:
+  UserMemory:
+    version: "2.0.0"
+  AgentIntent:
+    version: "2.0.0"
+  PerceptualContext:
+    version: "2.0.0"
+  NewType:
+    version: "2.0.0"
+edge_labels:
+  REMEMBERS:
+    version: "2.0.0"
+  ASSOCIATED_WITH:
+    version: "2.0.0"
+  CAUSES:
+    version: "2.0.0"
+  LINKS_TO:
+    version: "2.0.0"
+  CONNECTS_TO:
+    version: "2.0.0"
+  RELATES_TO:
+    version: "2.0.0"
+  NEW_LABEL:
+    version: "2.0.0"
