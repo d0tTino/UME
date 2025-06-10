@@ -76,6 +76,12 @@ at runtime.  The function :func:`ume.graph_schema.load_default_schema` returns a
 schema instance, which is imported during module initialization as
 `ume.graph_schema.DEFAULT_SCHEMA`.
 
+Custom schema files can also be loaded using
+``GraphSchema.load("path/to/schema.yaml")``.  The loader accepts YAML or JSON
+formats and constructs :class:`NodeType` and :class:`EdgeLabel` objects with
+their associated version metadata.  ``GraphSchema.load_default()`` is a
+convenient wrapper that reads the built-in schema shipped with UME.
+
 `apply_event_to_graph` consults this default schema whenever a node or edge is
 created.  If a ``type`` attribute is present for a new node it must match one of
 the defined node types.  Edge creation will fail if the provided label is not in
