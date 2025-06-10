@@ -1,7 +1,14 @@
 from datetime import datetime, timedelta, timezone
 
 from ume import MockGraph
-from ume.analytics import shortest_path, find_communities, temporal_node_counts
+from ume.analytics import (
+    shortest_path,
+    find_communities,
+    temporal_node_counts,
+    pagerank_centrality,
+    betweenness_centrality,
+    node_similarity,
+)
 
 
 def build_basic_graph():
@@ -42,3 +49,13 @@ def test_temporal_node_counts():
     counts = temporal_node_counts(g, 2)
     assert len(counts) == 2
     assert sum(counts.values()) == 2
+
+
+def test_centrality_and_similarity():
+    g = build_basic_graph()
+    pr = pagerank_centrality(g)
+    bc = betweenness_centrality(g)
+    sims = node_similarity(g)
+    assert set(pr) == {"a", "b", "c"}
+    assert set(bc) == {"a", "b", "c"}
+    assert all(len(t) == 3 for t in sims)

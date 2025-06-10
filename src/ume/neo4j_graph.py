@@ -14,10 +14,10 @@ from .processing import ProcessingError
 class Neo4jGraph(IGraphAdapter):
     """Graph adapter using the Neo4j Bolt driver."""
 
-    def __init__(
-        self, uri: str, user: str, password: str, driver: Optional[Driver] = None
-    ) -> None:
+    def __init__(self, uri: str, user: str, password: str, driver: Optional[Driver] = None, *, use_gds: bool = False) -> None:
+
         self._driver = driver or GraphDatabase.driver(uri, auth=(user, password))
+        self._use_gds = use_gds
 
     def close(self) -> None:
         self._driver.close()
@@ -173,90 +173,55 @@ class Neo4jGraph(IGraphAdapter):
             )
             if result.single()["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
-                raise ProcessingError(
-                    f"Edge {edge_tuple} does not exist and cannot be redacted."
-                )
+                raise ProcessingError(f"Edge {edge_tuple} does not exist and cannot be redacted.")
 
-    # ---- Traversal and pathfinding ---------------------------------
+    # ---- Graph Data Science helpers --------------------------------------------
+    def _ensure_gds_enabled(self) -> None:
+        if not getattr(self, "_use_gds", False):
+            raise NotImplementedError("GDS integration not enabled")
 
-    def shortest_path(self, source_id: str, target_id: str) -> List[str]:
-        if not self.node_exists(source_id) or not self.node_exists(target_id):
-            return []
-        visited = {source_id: None}
-        queue: List[str] = [source_id]
-        while queue:
-            current = queue.pop(0)
-            if current == target_id:
-                break
-            for neighbor in self.find_connected_nodes(current):
-                if neighbor not in visited:
-                    visited[neighbor] = current
-                    queue.append(neighbor)
-        if target_id not in visited:
-            return []
-        path = [target_id]
-        while visited[path[-1]] is not None:
-            prev = visited[path[-1]]
-            assert prev is not None
-            path.append(prev)
-        path.reverse()
-        return path
+    def pagerank_centrality(self) -> Dict[str, float]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.pageRank.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD nodeId, score RETURN gds.util.asNode(nodeId).id AS id, score"
+            )
+            return {rec["id"]: rec["score"] for rec in result}
 
-    def traverse(
-        self,
-        start_node_id: str,
-        depth: int,
-        edge_label: Optional[str] = None,
-    ) -> List[str]:
-        if not self.node_exists(start_node_id):
-            raise ProcessingError(f"Node '{start_node_id}' not found.")
-        visited: set[str] = {start_node_id}
-        queue: List[tuple[str, int]] = [(start_node_id, 0)]
-        result: List[str] = []
-        while queue:
-            node, d = queue.pop(0)
-            if d >= depth:
-                continue
-            for neighbor in self.find_connected_nodes(node, edge_label):
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    result.append(neighbor)
-                    queue.append((neighbor, d + 1))
-        return result
+    def betweenness_centrality(self) -> Dict[str, float]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.betweenness.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD nodeId, score RETURN gds.util.asNode(nodeId).id AS id, score"
+            )
+            return {rec["id"]: rec["score"] for rec in result}
 
-    def extract_subgraph(
-        self,
-        start_node_id: str,
-        depth: int,
-        edge_label: Optional[str] = None,
-        since_timestamp: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        nodes: Dict[str, Dict[str, Any]] = {}
-        edges: List[Tuple[str, str, str]] = []
-        all_edges = self.get_all_edges()
-        adj: Dict[str, List[Tuple[str, str]]] = {}
-        for src, tgt, lbl in all_edges:
-            adj.setdefault(src, []).append((tgt, lbl))
+    def community_detection(self) -> List[set[str]]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.louvain.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD nodeId, communityId RETURN gds.util.asNode(nodeId).id AS id, communityId"
+            )
+            communities: Dict[int, set[str]] = {}
+            for rec in result:
+                cid = rec["communityId"]
+                communities.setdefault(cid, set()).add(rec["id"])
+            return list(communities.values())
 
-        to_visit = [(start_node_id, 0)]
-        visited: set[str] = set()
-        while to_visit:
-            node, d = to_visit.pop(0)
-            if node in visited or d > depth:
-                continue
-            visited.add(node)
-            data = self.get_node(node) or {}
-            include = True
-            if since_timestamp is not None:
-                ts = data.get("timestamp")
-                if ts is None or int(ts) < since_timestamp:
-                    include = False
-            if include:
-                nodes[node] = data.copy()
-            if d == depth:
-                continue
-            for tgt, lbl in adj.get(node, []):
-                if edge_label is None or lbl == edge_label:
-                    edges.append((node, tgt, lbl))
-                    to_visit.append((tgt, d + 1))
-        return {"nodes": nodes, "edges": edges}
+    def node_similarity(self) -> List[tuple[str, str, float]]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.nodeSimilarity.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD node1, node2, similarity "
+                "RETURN gds.util.asNode(node1).id AS source, gds.util.asNode(node2).id AS target, similarity"
+            )
+            return [
+                (rec["source"], rec["target"], rec["similarity"])
+                for rec in result
+            ]
+
+

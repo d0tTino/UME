@@ -567,6 +567,26 @@ ume> exit
 Goodbye!
 ```
 
+## Graph Analytics with Neo4j GDS
+
+When using `Neo4jGraph` with the `use_gds=True` option, UME can delegate graph
+analytics to Neo4j's Graph Data Science (GDS) library. Functions in
+`ume.analytics` such as `pagerank_centrality`, `betweenness_centrality`,
+`find_communities`, and `node_similarity` will execute the corresponding GDS
+procedures instead of using NetworkX.
+
+```python
+from ume import Neo4jGraph
+from ume.analytics import pagerank_centrality
+
+graph = Neo4jGraph("bolt://localhost:7687", "neo4j", "password", use_gds=True)
+scores = pagerank_centrality(graph)
+print(scores)
+```
+
+If GDS is not available or another adapter is used, these functions fall back to
+`networkx` implementations.
+
 ## Where to Get Help
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:
