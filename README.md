@@ -5,6 +5,20 @@ UME (Universal Memory Engine) is designed to provide a robust, evolving memory f
 
 The primary motivation behind UME is to equip AI agents with a form of persistent, long-term memory that can adapt over time. This capability is crucial for enabling more complex reasoning, facilitating nuanced inter-agent communication through shared contextual understanding, and ultimately, building more intelligent and autonomous systems. By structuring memory as an event-sourced knowledge graph, UME aims to offer a flexible and scalable solution for these challenges.
 
+## Core Modules
+
+- **Privacy Agent** (`src/ume/privacy_agent.py`)
+  - Redacts personally identifiable information (PII) from incoming events using Presidio.
+  - Forwards sanitized events to downstream Kafka topics.
+- **FastAPI API** (`src/ume/api.py`)
+  - HTTP service exposing graph queries and analytics endpoints.
+  - Enforces role-based access to graph operations.
+- **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
+  - Define a common interface for manipulating different graph backends.
+  - Includes adapters for in-memory, SQLite, and Neo4j storage as well as RBAC wrappers.
+- **CLI** (`ume_cli.py`)
+  - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
+
 ## Project Setup
 
 This section outlines the necessary tools for developing and running the Universal Memory Engine (UME). For step-by-step installation and setup instructions, please refer to the [Quickstart](#quickstart) section.
@@ -115,16 +129,19 @@ Used to remove a specific directed, labeled edge between two nodes.
 *   `label`: String, label of the edge.
 **Optional Fields:** `event_id`, `source`, `payload`.
 
-**Data Flow:**
+**Event Flow:**
 
-The basic data flow is as follows:
+```
+Producer --> ume-raw-events --> Privacy Agent --> ume-clean-events
+     --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j)
+```
 
-*   The `producer_demo.py` script sends an event to the `ume-raw-events` topic in Redpanda.
-*   Redpanda stores this event.
-*   The `consumer_demo.py` script, subscribed to the `ume-clean-events` topic, receives this event from Redpanda.
-*   The consumer then processes the event (currently, by logging it).
+1. `producer_demo.py` publishes raw events to the `ume-raw-events` Kafka topic.
+2. The **Privacy Agent** consumes these events, redacts PII, and forwards sanitized messages to `ume-clean-events`.
+3. A graph consumer reads sanitized events and applies them via the configured **Graph Adapter**.
+4. The adapter persists nodes and edges to the chosen backend, such as SQLite or Neo4j.
 
-This setup demonstrates a simple event-driven architecture, which is foundational for the UME concept where events are captured and processed to build up a knowledge graph or memory representation.
+This pipeline demonstrates how UME transforms incoming events into a persistent knowledge graph.
 
 ## UME Graph Model
 
