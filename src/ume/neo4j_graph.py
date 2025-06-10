@@ -13,8 +13,9 @@ from .processing import ProcessingError
 class Neo4jGraph(IGraphAdapter):
     """Graph adapter using the Neo4j Bolt driver."""
 
-    def __init__(self, uri: str, user: str, password: str, driver: Optional[Driver] = None) -> None:
+    def __init__(self, uri: str, user: str, password: str, driver: Optional[Driver] = None, *, use_gds: bool = False) -> None:
         self._driver = driver or GraphDatabase.driver(uri, auth=(user, password))
+        self._use_gds = use_gds
 
     def close(self) -> None:
         self._driver.close()
@@ -165,3 +166,53 @@ class Neo4jGraph(IGraphAdapter):
             if result.single()["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
                 raise ProcessingError(f"Edge {edge_tuple} does not exist and cannot be redacted.")
+
+    # ---- Graph Data Science helpers --------------------------------------------
+    def _ensure_gds_enabled(self) -> None:
+        if not getattr(self, "_use_gds", False):
+            raise NotImplementedError("GDS integration not enabled")
+
+    def pagerank_centrality(self) -> Dict[str, float]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.pageRank.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD nodeId, score RETURN gds.util.asNode(nodeId).id AS id, score"
+            )
+            return {rec["id"]: rec["score"] for rec in result}
+
+    def betweenness_centrality(self) -> Dict[str, float]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.betweenness.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD nodeId, score RETURN gds.util.asNode(nodeId).id AS id, score"
+            )
+            return {rec["id"]: rec["score"] for rec in result}
+
+    def community_detection(self) -> List[set[str]]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.louvain.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD nodeId, communityId RETURN gds.util.asNode(nodeId).id AS id, communityId"
+            )
+            communities: Dict[int, set[str]] = {}
+            for rec in result:
+                cid = rec["communityId"]
+                communities.setdefault(cid, set()).add(rec["id"])
+            return list(communities.values())
+
+    def node_similarity(self) -> List[tuple[str, str, float]]:
+        self._ensure_gds_enabled()
+        with self._driver.session() as session:
+            result = session.run(
+                "CALL gds.nodeSimilarity.stream({nodeProjection:'*', relationshipProjection:'*'}) "
+                "YIELD node1, node2, similarity "
+                "RETURN gds.util.asNode(node1).id AS source, gds.util.asNode(node2).id AS target, similarity"
+            )
+            return [
+                (rec["source"], rec["target"], rec["similarity"])
+                for rec in result
+            ]
+

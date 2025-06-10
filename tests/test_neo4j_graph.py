@@ -68,3 +68,26 @@ def test_add_node_duplicate_raises():
     with pytest.raises(ProcessingError):
         graph.add_node("dup", {})
 
+
+def test_gds_methods_issue_queries():
+    results = [[], [], [], []]
+    driver = DummyDriver(results)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=driver,
+        use_gds=True,
+    )
+
+    graph.pagerank_centrality()
+    graph.betweenness_centrality()
+    graph.community_detection()
+    graph.node_similarity()
+
+    queries = [q for q, _ in driver.session_obj.calls]
+    assert "gds.pageRank.stream" in queries[0]
+    assert "gds.betweenness.stream" in queries[1]
+    assert "gds.louvain.stream" in queries[2]
+    assert "gds.nodeSimilarity.stream" in queries[3]
+

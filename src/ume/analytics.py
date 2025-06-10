@@ -52,10 +52,56 @@ def shortest_path(graph: IGraphAdapter, src: str, dst: str) -> List[str]:
 
 
 def find_communities(graph: IGraphAdapter) -> List[Set[str]]:
-    """Detect communities using a greedy modularity algorithm."""
+    """Detect communities in the graph."""
+    db_method = getattr(graph, "community_detection", None)
+    if callable(db_method):
+        try:
+            return db_method()
+        except NotImplementedError:
+            pass
+
     g = _to_networkx(graph).to_undirected()
     communities = nx.algorithms.community.greedy_modularity_communities(g)
     return [set(c) for c in communities]
+
+
+def pagerank_centrality(graph: IGraphAdapter) -> Dict[str, float]:
+    """Return PageRank centrality scores for all nodes."""
+    db_method = getattr(graph, "pagerank_centrality", None)
+    if callable(db_method):
+        try:
+            return db_method()
+        except NotImplementedError:
+            pass
+
+    g = _to_networkx(graph)
+    return nx.pagerank(g)
+
+
+def betweenness_centrality(graph: IGraphAdapter) -> Dict[str, float]:
+    """Return betweenness centrality scores for all nodes."""
+    db_method = getattr(graph, "betweenness_centrality", None)
+    if callable(db_method):
+        try:
+            return db_method()
+        except NotImplementedError:
+            pass
+
+    g = _to_networkx(graph).to_undirected()
+    return nx.betweenness_centrality(g)
+
+
+def node_similarity(graph: IGraphAdapter) -> List[tuple[str, str, float]]:
+    """Return node similarity scores as `(source, target, score)` tuples."""
+    db_method = getattr(graph, "node_similarity", None)
+    if callable(db_method):
+        try:
+            return db_method()
+        except NotImplementedError:
+            pass
+
+    g = _to_networkx(graph).to_undirected()
+    return [(u, v, p) for u, v, p in nx.jaccard_coefficient(g)]
 
 
 def temporal_node_counts(graph: IGraphAdapter, past_n_days: int) -> Dict[str, int]:
