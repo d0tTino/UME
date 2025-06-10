@@ -3,15 +3,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from neo4j import GraphDatabase, Driver
 
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
+from .graph_algorithms import GraphAlgorithmsMixin
 
 
-class Neo4jGraph(IGraphAdapter):
+class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
     """Graph adapter using the Neo4j Bolt driver."""
 
     def __init__(
@@ -207,136 +208,6 @@ class Neo4jGraph(IGraphAdapter):
             )
             return {rec["id"]: rec["score"] for rec in result}
 
-    # ---- Traversal and pathfinding ----
-    def shortest_path(self, source_id: str, target_id: str) -> List[str]:
-        if not self.node_exists(source_id) or not self.node_exists(target_id):
-            return []
-        visited: Dict[str, Optional[str]] = {source_id: None}
-        queue: List[str] = [source_id]
-        while queue:
-            current = queue.pop(0)
-            if current == target_id:
-                break
-            for neighbor in self.find_connected_nodes(current):
-                if neighbor not in visited:
-                    visited[neighbor] = current
-                    queue.append(neighbor)
-        if target_id not in visited:
-            return []
-        path = [target_id]
-        while visited[path[-1]] is not None:
-            prev = visited[path[-1]]
-            assert prev is not None
-            path.append(prev)
-        path.reverse()
-        return path
-
-    def traverse(
-        self, start_node_id: str, depth: int, edge_label: Optional[str] = None
-    ) -> List[str]:
-        if not self.node_exists(start_node_id):
-            raise ProcessingError(f"Node '{start_node_id}' not found.")
-        visited: set[str] = {start_node_id}
-        queue: List[tuple[str, int]] = [(start_node_id, 0)]
-        result: List[str] = []
-        while queue:
-            node, d = queue.pop(0)
-            if d >= depth:
-                continue
-            for neighbor in self.find_connected_nodes(node, edge_label):
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    result.append(neighbor)
-                    queue.append((neighbor, d + 1))
-        return result
-
-    def extract_subgraph(
-        self,
-        start_node_id: str,
-        depth: int,
-        edge_label: Optional[str] = None,
-        since_timestamp: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        nodes: Dict[str, Dict[str, Any]] = {}
-        edges: List[Tuple[str, str, str]] = []
-        to_visit = [(start_node_id, 0)]
-        visited: set[str] = set()
-        while to_visit:
-            node, d = to_visit.pop(0)
-            if node in visited or d > depth:
-                continue
-            visited.add(node)
-            data = self.get_node(node) or {}
-            include = True
-            if since_timestamp is not None:
-                ts = data.get("timestamp")
-                if ts is None or int(ts) < since_timestamp:
-                    include = False
-            if include:
-                nodes[node] = data.copy()
-            if d == depth:
-                continue
-            with self._driver.session() as session:
-                if edge_label:
-                    query = (
-                        f"MATCH (n {{id: $node}})-[r:`{edge_label}`]->(m) "
-                        "WHERE coalesce(r.redacted, false) = false "
-                        "AND coalesce(m.redacted, false) = false "
-                        "RETURN m.id AS id, type(r) AS label"
-                    )
-                    records = session.run(query, {"node": node})
-                else:
-                    query = (
-                        "MATCH (n {id: $node})-[r]->(m) "
-                        "WHERE coalesce(r.redacted, false) = false "
-                        "AND coalesce(m.redacted, false) = false "
-                        "RETURN m.id AS id, type(r) AS label"
-                    )
-                    records = session.run(query, {"node": node})
-                for rec in records:
-                    tgt = rec["id"]
-                    lbl = rec["label"]
-                    edges.append((node, tgt, lbl))
-                    to_visit.append((tgt, d + 1))
-        return {"nodes": nodes, "edges": edges}
-
-    def constrained_path(
-        self,
-        source_id: str,
-        target_id: str,
-        max_depth: Optional[int] = None,
-        edge_label: Optional[str] = None,
-        since_timestamp: Optional[int] = None,
-    ) -> List[str]:
-        if not self.node_exists(source_id) or not self.node_exists(target_id):
-            return []
-        visited: Dict[str, Optional[str]] = {source_id: None}
-        queue: List[tuple[str, int]] = [(source_id, 0)]
-        while queue:
-            node, depth = queue.pop(0)
-            if node == target_id:
-                break
-            if max_depth is not None and depth >= max_depth:
-                continue
-            for neighbor in self.find_connected_nodes(node, edge_label):
-                if neighbor in visited:
-                    continue
-                if since_timestamp is not None:
-                    data = self.get_node(neighbor) or {}
-                    ts = data.get("timestamp")
-                    if ts is None or int(ts) < since_timestamp:
-                        continue
-                visited[neighbor] = node
-                queue.append((neighbor, depth + 1))
-        if target_id not in visited:
-            return []
-        path = [target_id]
-        while visited[path[-1]] is not None:
-            prev = visited[path[-1]]
-            assert prev is not None
-            path.append(prev)
-        path.reverse()
-        return path
 
     def community_detection(self) -> List[set[str]]:
         self._ensure_gds_enabled()
@@ -367,7 +238,7 @@ class Neo4jGraph(IGraphAdapter):
         if self._driver is not other._driver:
             raise NotImplementedError("Graphs must share the same driver")
         edges1 = set(self.get_all_edges())
-        edges2 = set(other.get_all_edges())
+        edges2 = edges1 if other is self else set(other.get_all_edges())
         if not edges1 and not edges2:
             return 1.0
         return len(edges1 & edges2) / len(edges1 | edges2)

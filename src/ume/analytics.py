@@ -7,6 +7,7 @@ from typing import Dict, List, Set
 
 from collections import deque
 import networkx as nx
+import numpy as np
 
 from .graph_adapter import IGraphAdapter
 
@@ -20,6 +21,37 @@ def _to_networkx(graph: IGraphAdapter) -> nx.DiGraph:
     for src, tgt, label in graph.get_all_edges():
         g.add_edge(src, tgt, label=label)
     return g
+
+
+def _pagerank_numpy(
+    g: nx.DiGraph,
+    alpha: float = 0.85,
+    max_iter: int = 100,
+    tol: float = 1.0e-6,
+) -> Dict[str, float]:
+    """Compute PageRank scores using ``numpy`` only.
+
+    This is a lightweight fallback used when SciPy is unavailable.
+    """
+    n = len(g)
+    if n == 0:
+        return {}
+    nodes = list(g)
+    A = nx.to_numpy_array(g, nodelist=nodes, weight="weight", dtype=float)
+    S = A.sum(axis=1)
+    S[S != 0] = 1.0 / S[S != 0]
+    A = (S[:, None] * A)
+
+    x = np.repeat(1.0 / n, n)
+    p = x.copy()
+    dangling = np.where(S == 0)[0]
+    for _ in range(max_iter):
+        xlast = x
+        x = alpha * (x @ A + x[dangling].sum() * p) + (1 - alpha) * p
+        err = np.abs(x - xlast).sum()
+        if err < n * tol:
+            return {nodes[i]: float(x[i]) for i in range(n)}
+    raise nx.PowerIterationFailedConvergence(max_iter)
 
 
 def shortest_path(graph: IGraphAdapter, src: str, dst: str) -> List[str]:
@@ -76,7 +108,11 @@ def pagerank_centrality(graph: IGraphAdapter) -> Dict[str, float]:
             pass
 
     g = _to_networkx(graph)
-    return nx.pagerank(g)
+    try:
+        return nx.pagerank(g)
+    except Exception:
+        # networkx>=3.5 relies on SciPy; fall back to a numpy implementation
+        return _pagerank_numpy(g)
 
 
 def betweenness_centrality(graph: IGraphAdapter) -> Dict[str, float]:
@@ -186,4 +222,7 @@ def time_varying_centrality(graph: IGraphAdapter, past_n_days: int) -> Dict[str,
     sub = g.subgraph(nodes).copy()
     if sub.number_of_nodes() == 0:
         return {}
-    return nx.pagerank(sub)
+    try:
+        return nx.pagerank(sub)
+    except Exception:
+        return _pagerank_numpy(sub)
