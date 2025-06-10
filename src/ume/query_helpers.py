@@ -29,3 +29,21 @@ def extract_subgraph(
 ) -> Dict[str, Any]:
     """Wrapper around :meth:`IGraphAdapter.extract_subgraph`."""
     return graph.extract_subgraph(start_node_id, depth, edge_label, since_timestamp)
+
+
+def constrained_path(
+    graph: IGraphAdapter,
+    source_id: str,
+    target_id: str,
+    max_depth: Optional[int] = None,
+    edge_label: Optional[str] = None,
+    since_timestamp: Optional[int] = None,
+) -> List[str]:
+    """Wrapper around :meth:`IGraphAdapter.constrained_path`."""
+    return graph.constrained_path(
+        source_id,
+        target_id,
+        max_depth=max_depth,
+        edge_label=edge_label,
+        since_timestamp=since_timestamp,
+    )

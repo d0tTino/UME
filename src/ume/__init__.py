@@ -21,6 +21,7 @@ from .analytics import (
     time_varying_centrality,
 )
 from . import query_helpers
+from .query_helpers import constrained_path
 from . import graph_queries
 from .anonymizer import anonymize_email
 from .api import app as api_app
@@ -62,6 +63,7 @@ __all__ = [
     "enable_periodic_snapshot",
     "Neo4jQueryEngine",
     "shortest_path",
+    "constrained_path",
     "find_communities",
     "temporal_node_counts",
     "temporal_community_detection",
