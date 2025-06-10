@@ -21,6 +21,7 @@ from .analytics import (
     time_varying_centrality,
 )
 from . import query_helpers
+from . import graph_queries
 from .anonymizer import anonymize_email
 from .api import app as api_app
 from .processing import apply_event_to_graph, ProcessingError
@@ -66,6 +67,7 @@ __all__ = [
     "time_varying_centrality",
     "api_app",
     "query_helpers",
+    "graph_queries",
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",

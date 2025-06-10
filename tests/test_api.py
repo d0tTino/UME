@@ -8,9 +8,7 @@ from ume.config import settings
 def setup_module(_):
     # configure app state for tests
     app.state.query_engine = type(
-        "QE",
-        (),
-        {"execute_cypher": lambda self, q: [{"q": q}]}
+        "QE", (), {"execute_cypher": lambda self, q: [{"q": q}]}
     )()
     g = MockGraph()
     g.add_node("a", {})
@@ -21,7 +19,11 @@ def setup_module(_):
 
 def test_run_query_authorized():
     client = TestClient(app)
-    res = client.get("/query", params={"cypher": "MATCH (n) RETURN n"}, headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"})
+    res = client.get(
+        "/query",
+        params={"cypher": "MATCH (n) RETURN n"},
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
     assert res.status_code == 200
     assert res.json() == [{"q": "MATCH (n) RETURN n"}]
 
@@ -35,9 +37,37 @@ def test_run_query_unauthorized():
 def test_shortest_path_endpoint():
     client = TestClient(app)
     payload = {"source": "a", "target": "b"}
-    res = client.post("/analytics/shortest_path", json=payload, headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"})
+    res = client.post(
+        "/analytics/shortest_path",
+        json=payload,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
     assert res.status_code == 200
     assert res.json() == {"path": ["a", "b"]}
+
+
+def test_constrained_path_endpoint():
+    client = TestClient(app)
+    payload = {"source": "a", "target": "b", "max_depth": 1}
+    res = client.post(
+        "/analytics/path",
+        json=payload,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"path": ["a", "b"]}
+
+
+def test_subgraph_endpoint():
+    client = TestClient(app)
+    payload = {"start": "a", "depth": 1}
+    res = client.post(
+        "/analytics/subgraph",
+        json=payload,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 200
+    assert set(res.json()["nodes"].keys()) == {"a", "b"}
 
 
 def test_token_header_whitespace_and_case():

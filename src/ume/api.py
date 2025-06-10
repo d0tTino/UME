@@ -1,4 +1,5 @@
 """HTTP API exposing graph queries and analytics."""
+
 from __future__ import annotations
 
 from .config import settings
@@ -65,7 +66,11 @@ def get_graph() -> IGraphAdapter:
 
 
 @app.get("/query")
-def run_cypher(cypher: str, _: None = Depends(require_token), engine: Neo4jQueryEngine = Depends(get_query_engine)) -> List[Dict[str, Any]]:
+def run_cypher(
+    cypher: str,
+    _: None = Depends(require_token),
+    engine: Neo4jQueryEngine = Depends(get_query_engine),
+) -> List[Dict[str, Any]]:
     """Execute an arbitrary Cypher query and return the result set."""
     return engine.execute_cypher(cypher)
 
@@ -75,14 +80,67 @@ class ShortestPathRequest(BaseModel):
     target: str
 
 
+class PathRequest(BaseModel):
+    source: str
+    target: str
+    max_depth: int | None = None
+    edge_label: str | None = None
+    since_timestamp: int | None = None
+
+
+class SubgraphRequest(BaseModel):
+    start: str
+    depth: int
+    edge_label: str | None = None
+    since_timestamp: int | None = None
+
+
 @app.post("/analytics/shortest_path")
-def api_shortest_path(req: ShortestPathRequest, _: None = Depends(require_token), graph: IGraphAdapter = Depends(get_graph)) -> Dict[str, Any]:
+def api_shortest_path(
+    req: ShortestPathRequest,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
     path = shortest_path(graph, req.source, req.target)
     return {"path": path}
 
 
+@app.post("/analytics/path")
+def api_constrained_path(
+    req: PathRequest,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    path = graph.constrained_path(
+        req.source,
+        req.target,
+        req.max_depth,
+        req.edge_label,
+        req.since_timestamp,
+    )
+    return {"path": path}
+
+
+@app.post("/analytics/subgraph")
+def api_subgraph(
+    req: SubgraphRequest,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    return graph.extract_subgraph(
+        req.start,
+        req.depth,
+        req.edge_label,
+        req.since_timestamp,
+    )
+
+
 @app.post("/redact/node/{node_id}")
-def api_redact_node(node_id: str, _: None = Depends(require_token), graph: IGraphAdapter = Depends(get_graph)) -> Dict[str, Any]:
+def api_redact_node(
+    node_id: str,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
     graph.redact_node(node_id)
     return {"status": "ok"}
 
@@ -94,6 +152,10 @@ class RedactEdgeRequest(BaseModel):
 
 
 @app.post("/redact/edge")
-def api_redact_edge(req: RedactEdgeRequest, _: None = Depends(require_token), graph: IGraphAdapter = Depends(get_graph)) -> Dict[str, Any]:
+def api_redact_edge(
+    req: RedactEdgeRequest,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
     graph.redact_edge(req.source, req.target, req.label)
     return {"status": "ok"}

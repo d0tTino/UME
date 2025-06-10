@@ -239,3 +239,22 @@ class IGraphAdapter(ABC):
         the same structure as :meth:`dump`.
         """
         pass
+
+    @abstractmethod
+    def constrained_path(
+        self,
+        source_id: str,
+        target_id: str,
+        max_depth: Optional[int] = None,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> list[str]:
+        """Return a path from ``source_id`` to ``target_id`` using constraints.
+
+        If ``max_depth`` is provided the search will stop after that many hops.
+        ``edge_label`` restricts traversal to edges with the given label and
+        ``since_timestamp`` requires all visited nodes to have a ``timestamp``
+        attribute greater than or equal to the provided value.  Implementations
+        must return an empty list when no path satisfies the constraints.
+        """
+        pass
