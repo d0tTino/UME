@@ -81,3 +81,24 @@ created.  If a ``type`` attribute is present for a new node it must match one of
 the defined node types.  Edge creation will fail if the provided label is not in
 the schema.  Each node type and edge label entry contains a `version` field so
 applications can coordinate upgrades over time.
+
+## Schema Management Utilities
+
+The :class:`ume.schema_manager.GraphSchemaManager` class discovers all schema
+files shipped with UME and exposes them by version.  `apply_event_to_graph`
+accepts a ``schema_version`` parameter, allowing events to be validated against
+different revisions of the ontology.  This makes it possible to evolve node and
+edge types while maintaining backward compatibility.
+
+```python
+from ume import Event, EventType, apply_event_to_graph, DEFAULT_SCHEMA_MANAGER
+
+schema = DEFAULT_SCHEMA_MANAGER.get_schema("2.0.0")
+event = Event(
+    event_type=EventType.CREATE_NODE,
+    timestamp=123,
+    payload={"node_id": "n1", "attributes": {"type": "NewType"}},
+)
+
+apply_event_to_graph(event, graph, schema_version=schema.version)
+```
