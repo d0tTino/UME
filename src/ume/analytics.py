@@ -1,4 +1,5 @@
 """Graph analytics utilities built on top of :class:`~ume.graph_adapter.IGraphAdapter`."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -121,3 +122,52 @@ def temporal_node_counts(graph: IGraphAdapter, past_n_days: int) -> Dict[str, in
                 key = dt.date().isoformat()
                 buckets[key] = buckets.get(key, 0) + 1
     return buckets
+
+
+def temporal_community_detection(
+    graph: IGraphAdapter, past_n_days: int
+) -> List[Set[str]]:
+    """Detect communities considering nodes within ``past_n_days``."""
+    db_method = getattr(graph, "temporal_community_detection", None)
+    if callable(db_method):
+        try:
+            return db_method(past_n_days)
+        except NotImplementedError:
+            pass
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=past_n_days)
+    g = _to_networkx(graph).to_undirected()
+    nodes = [
+        n
+        for n, data in g.nodes(data=True)
+        if isinstance(data.get("timestamp"), (int, float))
+        and datetime.fromtimestamp(int(data["timestamp"]), timezone.utc) >= cutoff
+    ]
+    sub = g.subgraph(nodes).copy()
+    if sub.number_of_nodes() == 0:
+        return []
+    communities = nx.algorithms.community.greedy_modularity_communities(sub)
+    return [set(c) for c in communities]
+
+
+def time_varying_centrality(graph: IGraphAdapter, past_n_days: int) -> Dict[str, float]:
+    """Compute PageRank centrality over nodes seen in ``past_n_days``."""
+    db_method = getattr(graph, "time_varying_centrality", None)
+    if callable(db_method):
+        try:
+            return db_method(past_n_days)
+        except NotImplementedError:
+            pass
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=past_n_days)
+    g = _to_networkx(graph)
+    nodes = [
+        n
+        for n, data in g.nodes(data=True)
+        if isinstance(data.get("timestamp"), (int, float))
+        and datetime.fromtimestamp(int(data["timestamp"]), timezone.utc) >= cutoff
+    ]
+    sub = g.subgraph(nodes).copy()
+    if sub.number_of_nodes() == 0:
+        return {}
+    return nx.pagerank(sub)

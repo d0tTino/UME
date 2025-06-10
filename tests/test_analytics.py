@@ -5,6 +5,8 @@ from ume.analytics import (
     shortest_path,
     find_communities,
     temporal_node_counts,
+    temporal_community_detection,
+    time_varying_centrality,
     pagerank_centrality,
     betweenness_centrality,
     node_similarity,
@@ -59,3 +61,19 @@ def test_centrality_and_similarity():
     assert set(pr) == {"a", "b", "c"}
     assert set(bc) == {"a", "b", "c"}
     assert all(len(t) == 3 for t in sims)
+
+
+def test_temporal_algorithms():
+    g = MockGraph()
+    now = datetime.now(timezone.utc)
+    g.add_node("n1", {"timestamp": int(now.timestamp())})
+    g.add_node("n2", {"timestamp": int((now - timedelta(days=1)).timestamp())})
+    g.add_node("n3", {"timestamp": int((now - timedelta(days=10)).timestamp())})
+    g.add_edge("n1", "n2", "L")
+    g.add_edge("n2", "n3", "L")
+
+    comms = temporal_community_detection(g, 5)
+    cent = time_varying_centrality(g, 5)
+
+    assert any("n1" in c for c in comms)
+    assert "n1" in cent
