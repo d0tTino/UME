@@ -30,6 +30,7 @@ class EdgeLabel:
 class GraphSchema:
     """Container for node and edge definitions."""
 
+    version: str = "0.0.0"
     node_types: Dict[str, NodeType] = field(default_factory=dict)
     edge_labels: Dict[str, EdgeLabel] = field(default_factory=dict)
 
@@ -49,7 +50,8 @@ class GraphSchema:
             label: EdgeLabel(label=label, version=str(info.get("version", "0.0.0")))
             for label, info in data.get("edge_labels", {}).items()
         }
-        return GraphSchema(node_types=node_types, edge_labels=edge_labels)
+        version = str(data.get("version", "0.0.0"))
+        return GraphSchema(version=version, node_types=node_types, edge_labels=edge_labels)
 
     @classmethod
     def load_default(cls) -> "GraphSchema":

@@ -3,7 +3,8 @@
 import logging
 import time
 
-from ume import Event, EventType, UMEClient
+from ume import Event, EventType
+from ume.client import UMEClient
 from ume.config import Settings
 
 # Configure logging so we can observe the flow

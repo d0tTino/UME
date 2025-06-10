@@ -31,6 +31,7 @@ from .snapshot import (
 )
 from .schema_utils import validate_event_dict
 from .graph_schema import GraphSchema, load_default_schema
+from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 
 __all__ = [
@@ -61,6 +62,8 @@ __all__ = [
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",
+    "GraphSchemaManager",
+    "DEFAULT_SCHEMA_MANAGER",
     "PolicyViolationError",
     "GraphListener",
     "register_listener",

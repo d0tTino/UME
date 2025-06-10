@@ -262,7 +262,7 @@ class MockGraph(IGraphAdapter):
     def shortest_path(self, source_id: str, target_id: str) -> List[str]:
         if not self.node_exists(source_id) or not self.node_exists(target_id):
             return []
-        visited = {source_id: None}
+        visited: Dict[str, Optional[str]] = {source_id: None}
         queue: List[str] = [source_id]
         while queue:
             current = queue.pop(0)

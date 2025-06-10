@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from neo4j import GraphDatabase, Driver
 
@@ -197,6 +197,24 @@ class Neo4jGraph(IGraphAdapter):
                 "YIELD nodeId, score RETURN gds.util.asNode(nodeId).id AS id, score"
             )
             return {rec["id"]: rec["score"] for rec in result}
+
+    # ---- Traversal and pathfinding ----
+    def shortest_path(self, source_id: str, target_id: str) -> List[str]:
+        raise NotImplementedError
+
+    def traverse(
+        self, start_node_id: str, depth: int, edge_label: Optional[str] = None
+    ) -> List[str]:
+        raise NotImplementedError
+
+    def extract_subgraph(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
 
     def community_detection(self) -> List[set[str]]:
         self._ensure_gds_enabled()
