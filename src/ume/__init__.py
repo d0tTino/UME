@@ -19,6 +19,10 @@ from .analytics import (
     temporal_node_counts,
     temporal_community_detection,
     time_varying_centrality,
+    pagerank_centrality,
+    betweenness_centrality,
+    node_similarity,
+    graph_similarity,
 )
 from . import query_helpers
 from . import graph_queries
@@ -63,6 +67,10 @@ __all__ = [
     "Neo4jQueryEngine",
     "shortest_path",
     "find_communities",
+    "pagerank_centrality",
+    "betweenness_centrality",
+    "node_similarity",
+    "graph_similarity",
     "temporal_node_counts",
     "temporal_community_detection",
     "time_varying_centrality",

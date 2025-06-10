@@ -163,7 +163,6 @@ class Neo4jGraph(IGraphAdapter):
                     f"Edge {edge_tuple} does not exist and cannot be deleted."
                 )
 
-
     def redact_node(self, node_id: str) -> None:
         with self._driver.session() as session:
             result = session.run(
@@ -361,6 +360,17 @@ class Neo4jGraph(IGraphAdapter):
                 "RETURN gds.util.asNode(node1).id AS source, gds.util.asNode(node2).id AS target, similarity"
             )
             return [(rec["source"], rec["target"], rec["similarity"]) for rec in result]
+
+    def graph_similarity(self, other: "Neo4jGraph") -> float:
+        """Compute a Jaccard similarity between this graph and ``other``."""
+        self._ensure_gds_enabled()
+        if self._driver is not other._driver:
+            raise NotImplementedError("Graphs must share the same driver")
+        edges1 = set(self.get_all_edges())
+        edges2 = set(other.get_all_edges())
+        if not edges1 and not edges2:
+            return 1.0
+        return len(edges1 & edges2) / len(edges1 | edges2)
 
     def temporal_community_detection(self, window: int) -> List[set[str]]:
         """Detect communities over a moving time window."""

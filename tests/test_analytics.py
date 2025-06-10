@@ -10,6 +10,7 @@ from ume.analytics import (
     pagerank_centrality,
     betweenness_centrality,
     node_similarity,
+    graph_similarity,
 )
 
 
@@ -58,9 +59,11 @@ def test_centrality_and_similarity():
     pr = pagerank_centrality(g)
     bc = betweenness_centrality(g)
     sims = node_similarity(g)
+    sim_score = graph_similarity(g, g)
     assert set(pr) == {"a", "b", "c"}
     assert set(bc) == {"a", "b", "c"}
     assert all(len(t) == 3 for t in sims)
+    assert sim_score == 1.0
 
 
 def test_temporal_algorithms():

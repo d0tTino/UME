@@ -105,6 +105,22 @@ def node_similarity(graph: IGraphAdapter) -> List[tuple[str, str, float]]:
     return [(u, v, p) for u, v, p in nx.jaccard_coefficient(g)]
 
 
+def graph_similarity(graph1: IGraphAdapter, graph2: IGraphAdapter) -> float:
+    """Return a Jaccard similarity score between two graphs."""
+    db_method = getattr(graph1, "graph_similarity", None)
+    if callable(db_method) and type(graph1) is type(graph2):
+        try:
+            return db_method(graph2)
+        except NotImplementedError:
+            pass
+
+    edges1 = set(graph1.get_all_edges())
+    edges2 = set(graph2.get_all_edges())
+    if not edges1 and not edges2:
+        return 1.0
+    return len(edges1 & edges2) / len(edges1 | edges2)
+
+
 def temporal_node_counts(graph: IGraphAdapter, past_n_days: int) -> Dict[str, int]:
     """Count nodes with a ``timestamp`` attribute over the last ``past_n_days``.
 

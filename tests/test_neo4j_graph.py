@@ -70,7 +70,7 @@ def test_add_node_duplicate_raises():
 
 
 def test_gds_methods_issue_queries():
-    results = [[], [], [], [], [], []]
+    results = [[], [], [], [], [], [], []]
     driver = DummyDriver(results)
     graph = Neo4jGraph(
         "bolt://localhost:7687",
@@ -84,6 +84,7 @@ def test_gds_methods_issue_queries():
     graph.betweenness_centrality()
     graph.community_detection()
     graph.node_similarity()
+    graph.graph_similarity(graph)
     graph.temporal_community_detection(5)
     graph.time_varying_centrality(5)
 
@@ -92,5 +93,6 @@ def test_gds_methods_issue_queries():
     assert "gds.betweenness.stream" in queries[1]
     assert "gds.louvain.stream" in queries[2]
     assert "gds.nodeSimilarity.stream" in queries[3]
-    assert "gds.beta.temporalClustering.stream" in queries[4]
-    assert "gds.beta.timeWeightedPageRank.stream" in queries[5]
+    assert "gds.beta.temporalClustering.stream" in queries[-2]
+    assert "gds.beta.timeWeightedPageRank.stream" in queries[-1]
+    assert len(queries) >= 7
