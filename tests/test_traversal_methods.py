@@ -32,3 +32,11 @@ def test_extract_subgraph():
     assert len(sub["edges"]) == 2
     recent = g.extract_subgraph("a", depth=2, since_timestamp=3)
     assert set(recent["nodes"].keys()) == {"c", "d"}
+
+
+def test_constrained_path():
+    g = build_graph()
+    assert g.constrained_path("a", "c", max_depth=2) == ["a", "b", "c"]
+    assert g.constrained_path("a", "c", max_depth=1) == []
+    assert g.constrained_path("a", "c", edge_label="X") == []
+    assert g.constrained_path("a", "c", since_timestamp=3) == []
