@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from neo4j import GraphDatabase, Driver
 
@@ -14,8 +14,15 @@ from .processing import ProcessingError
 class Neo4jGraph(IGraphAdapter):
     """Graph adapter using the Neo4j Bolt driver."""
 
-    def __init__(self, uri: str, user: str, password: str, driver: Optional[Driver] = None, *, use_gds: bool = False) -> None:
-
+    def __init__(
+        self,
+        uri: str,
+        user: str,
+        password: str,
+        driver: Optional[Driver] = None,
+        *,
+        use_gds: bool = False,
+    ) -> None:
         self._driver = driver or GraphDatabase.driver(uri, auth=(user, password))
         self._use_gds = use_gds
 
@@ -173,7 +180,9 @@ class Neo4jGraph(IGraphAdapter):
             )
             if result.single()["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
-                raise ProcessingError(f"Edge {edge_tuple} does not exist and cannot be redacted.")
+                raise ProcessingError(
+                    f"Edge {edge_tuple} does not exist and cannot be redacted."
+                )
 
     # ---- Graph Data Science helpers --------------------------------------------
     def _ensure_gds_enabled(self) -> None:
@@ -219,9 +228,33 @@ class Neo4jGraph(IGraphAdapter):
                 "YIELD node1, node2, similarity "
                 "RETURN gds.util.asNode(node1).id AS source, gds.util.asNode(node2).id AS target, similarity"
             )
-            return [
-                (rec["source"], rec["target"], rec["similarity"])
-                for rec in result
-            ]
+            return [(rec["source"], rec["target"], rec["similarity"]) for rec in result]
 
-
+    # ---- Constrained pathfinding -----------------------------------------
+    def constrained_path(
+        self,
+        source_id: str,
+        target_id: str,
+        max_depth: int | None = None,
+        edge_label: str | None = None,
+        since_timestamp: int | None = None,
+    ) -> List[str]:
+        depth_range = "*"
+        if max_depth is not None:
+            depth_range = f"*1..{max_depth}"
+        rel = f":`{edge_label}`" if edge_label else ""
+        query = (
+            f"MATCH p=(s {{id: $src}})-[{rel}{depth_range}]->(t {{id: $tgt}}) "
+            "WHERE all(n IN nodes(p) WHERE coalesce(n.redacted,false) = false)"
+        )
+        params = {"src": source_id, "tgt": target_id}
+        if since_timestamp is not None:
+            query += " AND all(n IN nodes(p) WHERE n.timestamp >= $ts)"
+            params["ts"] = since_timestamp
+        query += (
+            " RETURN [n IN nodes(p) | n.id] AS path ORDER BY size(nodes(p)) LIMIT 1"
+        )
+        with self._driver.session() as session:
+            result = session.run(query, params)
+            rec = result.single()
+            return rec["path"] if rec else []

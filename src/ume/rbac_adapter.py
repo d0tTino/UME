@@ -1,6 +1,6 @@
 """Role-based wrapper around IGraphAdapter."""
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from .graph_adapter import IGraphAdapter
 
@@ -102,4 +102,17 @@ class RoleBasedGraphAdapter(IGraphAdapter):
         self._require_analytics_role()
         return self._adapter.extract_subgraph(
             start_node_id, depth, edge_label, since_timestamp
+        )
+
+    def constrained_path(
+        self,
+        source_id: str,
+        target_id: str,
+        max_depth: int | None = None,
+        edge_label: str | None = None,
+        since_timestamp: int | None = None,
+    ) -> List[str]:
+        self._require_analytics_role()
+        return self._adapter.constrained_path(
+            source_id, target_id, max_depth, edge_label, since_timestamp
         )

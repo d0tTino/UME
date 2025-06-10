@@ -37,6 +37,30 @@ def test_shortest_path_allowed_for_analytics_agent():
     assert res.json() == {"path": ["a", "b"]}
 
 
+def test_path_and_subgraph_allowed_for_analytics_agent():
+    os.environ["UME_API_ROLE"] = "AnalyticsAgent"
+    configure_graph(build_graph())
+
+    client = TestClient(app)
+    payload = {"source": "a", "target": "b"}
+    res = client.post(
+        "/analytics/path",
+        json=payload,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"path": ["a", "b"]}
+
+    sub = {"start": "a", "depth": 1}
+    res = client.post(
+        "/analytics/subgraph",
+        json=sub,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 200
+    assert set(res.json()["nodes"].keys()) == {"a", "b"}
+
+
 def test_shortest_path_forbidden_for_other_roles():
     os.environ["UME_API_ROLE"] = "AutoDev"
     configure_graph(build_graph())
@@ -46,6 +70,21 @@ def test_shortest_path_forbidden_for_other_roles():
     res = client.post(
         "/analytics/shortest_path",
         json=payload,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 403
+
+    res = client.post(
+        "/analytics/path",
+        json=payload,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 403
+
+    sub = {"start": "a", "depth": 1}
+    res = client.post(
+        "/analytics/subgraph",
+        json=sub,
         headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
     )
     assert res.status_code == 403

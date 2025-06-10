@@ -15,6 +15,7 @@ from .plugins.alignment import PolicyViolationError
 from .audit import log_audit_entry, get_audit_entries
 from .analytics import shortest_path, find_communities, temporal_node_counts
 from . import query_helpers
+from . import graph_queries
 from .anonymizer import anonymize_email
 from .api import app as api_app
 from .processing import apply_event_to_graph, ProcessingError
@@ -58,6 +59,7 @@ __all__ = [
     "temporal_node_counts",
     "api_app",
     "query_helpers",
+    "graph_queries",
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",

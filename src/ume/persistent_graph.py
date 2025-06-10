@@ -271,3 +271,41 @@ class PersistentGraph(IGraphAdapter):
                     edges.append((node, tgt, lbl))
                     to_visit.append((tgt, d + 1))
         return {"nodes": nodes, "edges": edges}
+
+    def constrained_path(
+        self,
+        source_id: str,
+        target_id: str,
+        max_depth: int | None = None,
+        edge_label: str | None = None,
+        since_timestamp: int | None = None,
+    ) -> List[str]:
+        if not self.node_exists(source_id) or not self.node_exists(target_id):
+            return []
+        visited: dict[str, str | None] = {source_id: None}
+        queue: List[tuple[str, int]] = [(source_id, 0)]
+        while queue:
+            node, depth = queue.pop(0)
+            if node == target_id:
+                break
+            if max_depth is not None and depth >= max_depth:
+                continue
+            for neighbor in self.find_connected_nodes(node, edge_label):
+                if neighbor in visited:
+                    continue
+                if since_timestamp is not None:
+                    data = self.get_node(neighbor) or {}
+                    ts = data.get("timestamp")
+                    if ts is None or int(ts) < since_timestamp:
+                        continue
+                visited[neighbor] = node
+                queue.append((neighbor, depth + 1))
+        if target_id not in visited:
+            return []
+        path = [target_id]
+        while visited[path[-1]] is not None:
+            prev = visited[path[-1]]
+            assert prev is not None
+            path.append(prev)
+        path.reverse()
+        return path
