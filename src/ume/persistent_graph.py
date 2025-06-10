@@ -187,3 +187,87 @@ class PersistentGraph(IGraphAdapter):
             user_id,
             f"redact_edge {source_node_id} {target_node_id} {label}",
         )
+
+    # ---- Traversal and pathfinding ---------------------------------
+
+    def shortest_path(self, source_id: str, target_id: str) -> List[str]:
+        if not self.node_exists(source_id) or not self.node_exists(target_id):
+            return []
+        visited = {source_id: None}
+        queue: List[str] = [source_id]
+        while queue:
+            current = queue.pop(0)
+            if current == target_id:
+                break
+            for neighbor in self.find_connected_nodes(current):
+                if neighbor not in visited:
+                    visited[neighbor] = current
+                    queue.append(neighbor)
+        if target_id not in visited:
+            return []
+        path = [target_id]
+        while visited[path[-1]] is not None:
+            prev = visited[path[-1]]
+            assert prev is not None
+            path.append(prev)
+        path.reverse()
+        return path
+
+    def traverse(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+    ) -> List[str]:
+        if not self.node_exists(start_node_id):
+            raise ProcessingError(f"Node '{start_node_id}' not found.")
+        visited: set[str] = {start_node_id}
+        queue: List[tuple[str, int]] = [(start_node_id, 0)]
+        result: List[str] = []
+        while queue:
+            node, d = queue.pop(0)
+            if d >= depth:
+                continue
+            for neighbor in self.find_connected_nodes(node, edge_label):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    result.append(neighbor)
+                    queue.append((neighbor, d + 1))
+        return result
+
+    def extract_subgraph(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        nodes: Dict[str, Dict[str, Any]] = {}
+        edges: List[Tuple[str, str, str]] = []
+        all_edges = self.get_all_edges()
+        adj: Dict[str, List[Tuple[str, str]]] = {}
+        for src, tgt, lbl in all_edges:
+            adj.setdefault(src, []).append((tgt, lbl))
+
+        to_visit = [(start_node_id, 0)]
+        visited: set[str] = set()
+        while to_visit:
+            node, d = to_visit.pop(0)
+            if node in visited or d > depth:
+                continue
+            visited.add(node)
+            data = self.get_node(node) or {}
+            include = True
+            if since_timestamp is not None:
+                ts = data.get("timestamp")
+                if ts is None or int(ts) < since_timestamp:
+                    include = False
+            if include:
+                nodes[node] = data.copy()
+            if d == depth:
+                continue
+            for tgt, lbl in adj.get(node, []):
+                if edge_label is None or lbl == edge_label:
+                    edges.append((node, tgt, lbl))
+                    to_visit.append((tgt, d + 1))
+        return {"nodes": nodes, "edges": edges}

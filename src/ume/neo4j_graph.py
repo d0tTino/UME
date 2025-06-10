@@ -1,8 +1,9 @@
 # src/ume/neo4j_graph.py
 """Neo4j-backed implementation of :class:`~ume.graph_adapter.IGraphAdapter`."""
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from neo4j import GraphDatabase, Driver
 
@@ -13,7 +14,9 @@ from .processing import ProcessingError
 class Neo4jGraph(IGraphAdapter):
     """Graph adapter using the Neo4j Bolt driver."""
 
-    def __init__(self, uri: str, user: str, password: str, driver: Optional[Driver] = None) -> None:
+    def __init__(
+        self, uri: str, user: str, password: str, driver: Optional[Driver] = None
+    ) -> None:
         self._driver = driver or GraphDatabase.driver(uri, auth=(user, password))
 
     def close(self) -> None:
@@ -84,7 +87,9 @@ class Neo4jGraph(IGraphAdapter):
             )
             return [record["id"] for record in result]
 
-    def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> List[str]:
         if not self.node_exists(node_id):
             raise ProcessingError(f"Node '{node_id}' not found.")
         with self._driver.session() as session:
@@ -120,7 +125,9 @@ class Neo4jGraph(IGraphAdapter):
                 {"src": source_node_id, "tgt": target_node_id},
             )
             if result.single()["cnt"] > 0:
-                raise ProcessingError(f"Edge ({source_node_id}, {target_node_id}, {label}) already exists.")
+                raise ProcessingError(
+                    f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
+                )
             session.run(
                 f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{label}` {{redacted:false}}]->(t)",
                 {"src": source_node_id, "tgt": target_node_id},
@@ -145,7 +152,9 @@ class Neo4jGraph(IGraphAdapter):
             )
             if result.single()["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
-                raise ProcessingError(f"Edge {edge_tuple} does not exist and cannot be deleted.")
+                raise ProcessingError(
+                    f"Edge {edge_tuple} does not exist and cannot be deleted."
+                )
 
     def redact_node(self, node_id: str) -> None:
         with self._driver.session() as session:
@@ -164,4 +173,90 @@ class Neo4jGraph(IGraphAdapter):
             )
             if result.single()["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
-                raise ProcessingError(f"Edge {edge_tuple} does not exist and cannot be redacted.")
+                raise ProcessingError(
+                    f"Edge {edge_tuple} does not exist and cannot be redacted."
+                )
+
+    # ---- Traversal and pathfinding ---------------------------------
+
+    def shortest_path(self, source_id: str, target_id: str) -> List[str]:
+        if not self.node_exists(source_id) or not self.node_exists(target_id):
+            return []
+        visited = {source_id: None}
+        queue: List[str] = [source_id]
+        while queue:
+            current = queue.pop(0)
+            if current == target_id:
+                break
+            for neighbor in self.find_connected_nodes(current):
+                if neighbor not in visited:
+                    visited[neighbor] = current
+                    queue.append(neighbor)
+        if target_id not in visited:
+            return []
+        path = [target_id]
+        while visited[path[-1]] is not None:
+            prev = visited[path[-1]]
+            assert prev is not None
+            path.append(prev)
+        path.reverse()
+        return path
+
+    def traverse(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+    ) -> List[str]:
+        if not self.node_exists(start_node_id):
+            raise ProcessingError(f"Node '{start_node_id}' not found.")
+        visited: set[str] = {start_node_id}
+        queue: List[tuple[str, int]] = [(start_node_id, 0)]
+        result: List[str] = []
+        while queue:
+            node, d = queue.pop(0)
+            if d >= depth:
+                continue
+            for neighbor in self.find_connected_nodes(node, edge_label):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    result.append(neighbor)
+                    queue.append((neighbor, d + 1))
+        return result
+
+    def extract_subgraph(
+        self,
+        start_node_id: str,
+        depth: int,
+        edge_label: Optional[str] = None,
+        since_timestamp: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        nodes: Dict[str, Dict[str, Any]] = {}
+        edges: List[Tuple[str, str, str]] = []
+        all_edges = self.get_all_edges()
+        adj: Dict[str, List[Tuple[str, str]]] = {}
+        for src, tgt, lbl in all_edges:
+            adj.setdefault(src, []).append((tgt, lbl))
+
+        to_visit = [(start_node_id, 0)]
+        visited: set[str] = set()
+        while to_visit:
+            node, d = to_visit.pop(0)
+            if node in visited or d > depth:
+                continue
+            visited.add(node)
+            data = self.get_node(node) or {}
+            include = True
+            if since_timestamp is not None:
+                ts = data.get("timestamp")
+                if ts is None or int(ts) < since_timestamp:
+                    include = False
+            if include:
+                nodes[node] = data.copy()
+            if d == depth:
+                continue
+            for tgt, lbl in adj.get(node, []):
+                if edge_label is None or lbl == edge_label:
+                    edges.append((node, tgt, lbl))
+                    to_visit.append((tgt, d + 1))
+        return {"nodes": nodes, "edges": edges}
