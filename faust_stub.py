@@ -1,4 +1,9 @@
-"""Minimal Faust stub for tests."""
+"""Test-only stub mimicking a small slice of ``faust-streaming``.
+
+This module lives at the repository root to avoid clashing with the real
+``faust-streaming`` package. It is imported by tests only; see the README's
+"Test Compatibility Modules" section for more details.
+"""
 from __future__ import annotations
 from types import SimpleNamespace
 from collections import OrderedDict
