@@ -26,6 +26,7 @@ RAW_TOPIC = settings.KAFKA_RAW_EVENTS_TOPIC
 CLEAN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 QUARANTINE_TOPIC = settings.KAFKA_QUARANTINE_TOPIC
 GROUP_ID = settings.KAFKA_PRIVACY_AGENT_GROUP_ID
+FLUSH_INTERVAL = settings.KAFKA_PRODUCER_FLUSH_INTERVAL
 
 # Initialize Presidio engines
 _ANALYZER = AnalyzerEngine()
@@ -47,7 +48,9 @@ def ssl_config() -> Dict[str, str]:
     return {}
 
 
-def redact_event_payload(payload_dict: Dict[str, object]) -> Tuple[Dict[str, object], bool]:
+def redact_event_payload(
+    payload_dict: Dict[str, object],
+) -> Tuple[Dict[str, object], bool]:
     """Redact PII from a payload dict using Presidio.
 
     Returns a tuple of (redacted_payload, was_redacted).
@@ -84,6 +87,7 @@ def run_privacy_agent() -> None:
 
     logger.info("Privacy agent started, listening on %s", RAW_TOPIC)
 
+    pending = 0
     try:
         while True:
             msg = consumer.poll(timeout=1.0)
@@ -106,9 +110,8 @@ def run_privacy_agent() -> None:
             data["payload"] = redacted_payload
 
             try:
-                producer.produce(
-                    CLEAN_TOPIC, value=json.dumps(data).encode("utf-8")
-                )
+                producer.produce(CLEAN_TOPIC, value=json.dumps(data).encode("utf-8"))
+                pending += 1
             except KafkaException as exc:
                 logger.error("Failed to produce sanitized event: %s", exc)
 
@@ -116,17 +119,22 @@ def run_privacy_agent() -> None:
                 try:
                     producer.produce(
                         QUARANTINE_TOPIC,
-                        value=json.dumps({"original": original_payload}).encode("utf-8"),
+                        value=json.dumps({"original": original_payload}).encode(
+                            "utf-8"
+                        ),
                     )
+                    pending += 1
                 except KafkaException as exc:
                     logger.error("Failed to produce quarantine event: %s", exc)
                 user_id = settings.UME_AGENT_ID
                 log_audit_entry(user_id, f"payload_redacted {data.get('event_id')}")
-
-            producer.flush()
+            if pending >= FLUSH_INTERVAL:
+                producer.flush()
+                pending = 0
     except KeyboardInterrupt:
         logger.info("Privacy agent shutting down")
     finally:
+        producer.flush()
         consumer.close()
 
 
