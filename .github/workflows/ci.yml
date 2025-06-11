@@ -8,6 +8,9 @@ on:
 
 jobs:
   test-and-lint:
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     strategy:
       matrix:
