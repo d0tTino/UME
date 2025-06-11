@@ -74,16 +74,10 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: pre-commit run --all-files --color always
 
-      - name: Run unit tests (pytest)
-        if: steps.changes.outputs.run == 'true'
-        run: |
-          poetry run pytest --maxfail=1 --disable-warnings -q tests/
-
-      - name: Check coverage (pytest-cov)
+      - name: Run tests with coverage
         if: steps.changes.outputs.run == 'true'
         run: |
           poetry run pytest --cov=src/ume --cov-report=xml --cov-report=term-missing tests/
-          # Generates term-missing report for console and xml for potential external tools
 
       - name: Lint with Ruff
         if: steps.changes.outputs.run == 'true'
