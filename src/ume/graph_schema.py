@@ -9,7 +9,6 @@ import json
 import yaml  # type: ignore
 
 
-
 @dataclass
 class NodeType:
     """Representation of a node type within the graph schema."""
@@ -51,7 +50,9 @@ class GraphSchema:
             for label, info in data.get("edge_labels", {}).items()
         }
         version = str(data.get("version", "0.0.0"))
-        return GraphSchema(version=version, node_types=node_types, edge_labels=edge_labels)
+        return GraphSchema(
+            version=version, node_types=node_types, edge_labels=edge_labels
+        )
 
     @classmethod
     def load_default(cls) -> "GraphSchema":

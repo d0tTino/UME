@@ -11,10 +11,12 @@ from ume.graph_adapter import IGraphAdapter  # Import for isinstance check if ne
 
 # Fixture for a clean MockGraph instance
 
+
 @pytest.fixture
 def graph() -> PersistentGraph:
     """Provides a clean PersistentGraph (in-memory) instance for each test."""
     return PersistentGraph(":memory:")
+
 
 def test_mockgraph_is_igraph_adapter_instance(graph: MockGraph):
     """Test that MockGraph is an instance of IGraphAdapter."""
@@ -85,7 +87,6 @@ def test_update_node_non_existent_raises_error(graph: PersistentGraph):
     with pytest.raises(
         ProcessingError, match=f"Node '{node_id}' not found for update."
     ):
-
         graph.update_node(node_id, attributes)
 
 
@@ -147,7 +148,6 @@ def test_dump_structure(graph: PersistentGraph):
 
 
 def test_dump_empty_graph_structure(graph: MockGraph):
-
     """Test dump structure for an empty graph."""
     dump_data = graph.dump()
     assert "nodes" in dump_data
@@ -196,7 +196,6 @@ def test_add_edge_missing_source_node_raises_error(graph: MockGraph):
 
 
 def test_add_edge_missing_target_node_raises_error(graph: MockGraph):
-
     """Test ProcessingError when adding an edge with a non-existent target node."""
     graph.add_node("nodeS", {})  # Source node exists
     with pytest.raises(
@@ -207,7 +206,6 @@ def test_add_edge_missing_target_node_raises_error(graph: MockGraph):
 
 
 def test_add_edge_both_nodes_missing_raises_error(graph: MockGraph):
-
     """Test ProcessingError when adding an edge with both source and target nodes non-existent."""
     with pytest.raises(
         ProcessingError,
@@ -223,7 +221,6 @@ def test_get_all_edges_empty_graph(graph: PersistentGraph):
 
 
 def test_get_all_edges_no_edges_but_nodes_exist(graph: MockGraph):
-
     """Test get_all_edges on a graph with nodes but no edges."""
     graph.add_node("node1", {})
     graph.add_node("node2", {})
@@ -231,7 +228,6 @@ def test_get_all_edges_no_edges_but_nodes_exist(graph: MockGraph):
 
 
 def test_get_all_edges_populated(graph: MockGraph):
-
     """Test get_all_edges on a graph with multiple edges."""
     graph.add_node("n1", {})
     graph.add_node("n2", {})
@@ -257,7 +253,6 @@ def test_get_all_edges_populated(graph: MockGraph):
 
 
 def test_find_connected_nodes_non_existent_node_raises_error(graph: MockGraph):
-
     """
     Test find_connected_nodes for a non-existent node.
     Should raise ProcessingError.
@@ -296,7 +291,6 @@ def test_find_connected_nodes_with_edges(graph: MockGraph):
 
 
 def test_find_connected_nodes_no_matching_edges(graph: MockGraph):
-
     """Test find_connected_nodes when no outgoing edges match."""
     graph.add_node("n1", {})
     graph.add_node("n2", {})
@@ -326,7 +320,6 @@ def test_delete_edge_success(graph: PersistentGraph):
 
 
 def test_delete_multiple_edges(graph: MockGraph):
-
     """Test deleting one edge when multiple exist."""
     graph.add_node("s", {})
     graph.add_node("t1", {})
@@ -349,7 +342,6 @@ def test_delete_multiple_edges(graph: MockGraph):
 
 
 def test_delete_edge_non_existent_raises_error(graph: MockGraph):
-
     """Test that attempting to delete a non-existent edge raises ProcessingError."""
     graph.add_node("s1", {})
     graph.add_node("t1", {})
@@ -362,7 +354,6 @@ def test_delete_edge_non_existent_raises_error(graph: MockGraph):
 
 
 def test_delete_edge_non_existent_source_node_implicitly_fails(graph: MockGraph):
-
     """
     Test deleting an edge where source node doesn't exist.
     (PersistentGraph.delete_edge currently doesn't check node existence, only edge tuple).
@@ -376,7 +367,6 @@ def test_delete_edge_non_existent_source_node_implicitly_fails(graph: MockGraph)
 
 
 def test_delete_edge_non_existent_target_node_implicitly_fails(graph: MockGraph):
-
     """
     Test deleting an edge where target node doesn't exist.
     (Similar to above, fails due to edge tuple not found).

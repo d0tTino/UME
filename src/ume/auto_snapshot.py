@@ -10,7 +10,9 @@ from .snapshot import snapshot_graph_to_file, load_graph_into_existing
 logger = logging.getLogger(__name__)
 
 
-def enable_periodic_snapshot(graph: IGraphAdapter, path: Union[str, Path], interval_seconds: int = 3600) -> None:
+def enable_periodic_snapshot(
+    graph: IGraphAdapter, path: Union[str, Path], interval_seconds: int = 3600
+) -> None:
     """Enable periodic snapshotting and snapshot on shutdown."""
     snapshot_path = Path(path)
 
@@ -38,8 +40,6 @@ def enable_snapshot_autosave_and_restore(
         try:
             load_graph_into_existing(graph, snapshot_path)
         except Exception as e:  # pragma: no cover - logging only
-            logger.warning(
-                "Failed to restore snapshot from %s: %s", snapshot_path, e
-            )
+            logger.warning("Failed to restore snapshot from %s: %s", snapshot_path, e)
 
     enable_periodic_snapshot(graph, snapshot_path, interval_seconds)

@@ -12,6 +12,7 @@ from .graph_adapter import IGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .plugins.alignment import PolicyViolationError
 from .processing import apply_event_to_graph, ProcessingError
+from .audit import log_audit_entry, get_audit_entries
 from .snapshot import (
     snapshot_graph_to_file,
     load_graph_from_file,
@@ -48,5 +49,7 @@ __all__ = [
     "GraphSchemaManager",
     "DEFAULT_SCHEMA_MANAGER",
     "PolicyViolationError",
+    "log_audit_entry",
+    "get_audit_entries",
     "Settings",
 ]

@@ -7,15 +7,19 @@ class DummySession:
 
     def run(self, query, parameters=None):
         self.last = (query, parameters)
+
         class R:
             def __init__(self):
                 self._data = {"ok": True}
+
             def data(self):
                 return self._data
+
         return [R()]
 
     def __enter__(self):
         return self
+
     def __exit__(self, exc_type, exc, tb):
         pass
 
@@ -23,8 +27,10 @@ class DummySession:
 class DummyDriver:
     def __init__(self):
         self.session_obj = DummySession()
+
     def session(self):
         return self.session_obj
+
     def close(self):
         pass
 
