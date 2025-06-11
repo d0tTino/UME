@@ -51,5 +51,9 @@ __all__ = [
     "GraphSchemaManager",
     "DEFAULT_SCHEMA_MANAGER",
     "PolicyViolationError",
+    "log_audit_entry",
+    "get_audit_entries",
     "Settings",
+    "log_audit_entry",
+    "get_audit_entries",
 ]
