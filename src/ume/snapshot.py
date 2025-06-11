@@ -14,8 +14,9 @@ class SnapshotError(ValueError):
     pass
 
 
-def snapshot_graph_to_file(graph: IGraphAdapter, path: Union[str, pathlib.Path]) -> None:
-
+def snapshot_graph_to_file(
+    graph: IGraphAdapter, path: Union[str, pathlib.Path]
+) -> None:
     """
     Snapshots the given graph's current state to a JSON file.
 
@@ -136,7 +137,9 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
     return graph
 
 
-def load_graph_into_existing(graph: IGraphAdapter, path: Union[str, pathlib.Path]) -> None:
+def load_graph_into_existing(
+    graph: IGraphAdapter, path: Union[str, pathlib.Path]
+) -> None:
     """Load snapshot data from ``path`` into an existing graph adapter."""
     loaded = load_graph_from_file(path)
     graph.clear()

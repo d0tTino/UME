@@ -135,12 +135,12 @@ def test_cli_redact_node_and_edge():
     commands = [
         'new_node n1 "{}"',
         'new_node n2 "{}"',
-        'new_edge n1 n2 L',
-        'redact_node n1',
-        'redact_edge n1 n2 L',
-        'show_nodes',
-        'show_edges',
-        'exit',
+        "new_edge n1 n2 L",
+        "redact_node n1",
+        "redact_edge n1 n2 L",
+        "show_nodes",
+        "show_edges",
+        "exit",
     ]
     stdout, stderr, rc = run_cli_commands(commands)
     assert "Node 'n1' redacted." in stdout
