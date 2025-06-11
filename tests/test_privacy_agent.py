@@ -1,14 +1,16 @@
 import json
+import importlib
 
+import pytest
 from presidio_analyzer import RecognizerResult
 
-from ume import privacy_agent
+from ume import privacy_agent as privacy_agent_module
 
 
 @pytest.fixture
 def privacy_agent():
     """Return the privacy_agent module for tests."""
-    return importlib.import_module("ume.privacy_agent")
+    return importlib.reload(privacy_agent_module)
 
 class FakeAnalyzer:
     def __init__(self, results):
@@ -18,7 +20,7 @@ class FakeAnalyzer:
         return self._results
 
 
-def test_redact_event_payload_with_pii(monkeypatch):
+def test_redact_event_payload_with_pii(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     results = [
         RecognizerResult(entity_type="EMAIL_ADDRESS", start=11, end=27, score=1.0)
@@ -29,7 +31,7 @@ def test_redact_event_payload_with_pii(monkeypatch):
     assert redacted == {"email": "<EMAIL_ADDRESS>"}
 
 
-def test_redact_event_payload_without_pii(monkeypatch):
+def test_redact_event_payload_without_pii(privacy_agent, monkeypatch):
     payload = {"message": "hello"}
     monkeypatch.setattr(privacy_agent, "_ANALYZER", FakeAnalyzer([]))
     redacted, flag = privacy_agent.redact_event_payload(payload)
@@ -76,7 +78,7 @@ class FakeProducer:
         self.flush_calls += 1
 
 
-def test_privacy_agent_end_to_end(monkeypatch):
+def test_privacy_agent_end_to_end(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
         "event_type": "CREATE_NODE",
@@ -117,7 +119,7 @@ def test_privacy_agent_end_to_end(monkeypatch):
     assert producer.flush_calls == 1
 
 
-def test_privacy_agent_periodic_flush(monkeypatch):
+def test_privacy_agent_periodic_flush(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
         "event_type": "CREATE_NODE",
