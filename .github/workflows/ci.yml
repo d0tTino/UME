@@ -8,6 +8,9 @@ on:
 
 jobs:
   test-and-lint:
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -55,6 +58,11 @@ jobs:
           poetry install --no-interaction --no-ansi --with dev
           # --with dev ensures dev dependencies like pytest and ruff are installed
 
+      - name: Install type stubs for mypy
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          pip install types-PyYAML types-pytz types-requests types-ujson
+
       - name: Run unit tests (pytest)
         if: steps.changes.outputs.run == 'true'
         run: |
@@ -75,3 +83,8 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: |
           poetry run ruff format --check src tests
+
+      - name: Static type check with mypy
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          poetry run mypy

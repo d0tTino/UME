@@ -1,0 +1,7 @@
+merge_queue:
+  queues:
+    - name: default
+      merge_method: squash
+      required_checks:
+        - "CI / test-and-lint (3.11)"
+        - "CI / test-and-lint (3.12)"

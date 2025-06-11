@@ -19,9 +19,15 @@ def run(cmd: list[str]) -> list[str]:
 
 
 def docs_only(files: list[str]) -> bool:
-    """Return True if every file is a documentation file."""
+    """Return True if every file is Markdown, reStructuredText, plaintext, or
+    lives under ``docs/``.
+    """
 
-    doc_exts = (".md", ".rst", ".txt", ".yml", ".yaml")
+    doc_exts = (
+        ".md",
+        ".rst",
+        ".txt",
+    )
     for path in files:
         if path.startswith("docs/"):
             continue
@@ -32,25 +38,49 @@ def docs_only(files: list[str]) -> bool:
 
 
 def code_diff_present(diff_lines: list[str]) -> bool:
-    """Return True if any added/removed line contains real code."""
+    """Return True if any added/removed line contains real code.
 
+    The function walks through ``diff_lines`` and keeps track of whether the
+    current position is inside a triple-quoted block. All lines within such a
+    block are treated as documentation/comment changes.
+    """
+
+    in_triple = False
     for line in diff_lines:
         if line.startswith("+++ ") or line.startswith("--- "):
             continue
         if line.startswith("@@"):
+            in_triple = False
             continue
-        if line.startswith("+") or line.startswith("-"):
-            content = line[1:].strip()
-            if not content:
+
+        prefix = line[:1]
+        if prefix not in {"+", "-", " "}:
+            continue
+
+        content = line[1:]
+        stripped = content.strip()
+
+        quote_count = stripped.count('"""') + stripped.count("'''")
+        if quote_count:
+            if quote_count % 2 == 1:
+                in_triple = not in_triple
+            cleaned = stripped.replace('"""', "").replace("'''", "").strip()
+            if not cleaned or in_triple:
                 continue
-            if content.startswith("#"):
-                continue
-            if content.startswith("//"):
-                continue
-            stripped = content.lstrip()
-            if stripped.startswith('"""') or stripped.startswith("'''"):
-                continue
-            return True
+
+        if prefix == " ":
+            # Context line outside a quoted block
+            continue
+
+        if in_triple:
+            continue
+        if not stripped:
+            continue
+        if stripped.startswith("#") or stripped.startswith("//"):
+            continue
+
+        return True
+
     return False
 
 
@@ -61,7 +91,7 @@ def main() -> int:
     if docs_only(changed_files):
         return 1
 
-    diff_lines = run(["git", "diff", "-U0", base, "HEAD"])
+    diff_lines = run(["git", "diff", "-U1", base, "HEAD"])
     return 0 if code_diff_present(diff_lines) else 1
 
 

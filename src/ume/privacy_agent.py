@@ -60,7 +60,7 @@ def redact_event_payload(
     if not results:
         return payload_dict, False
 
-    anonymized = _ANONYMIZER.anonymize(text=text, analyzer_results=results)
+    anonymized = _ANONYMIZER.anonymize(text=text, analyzer_results=results)  # type: ignore[arg-type]
     try:
         new_payload = json.loads(anonymized.text)
     except json.JSONDecodeError:

@@ -35,6 +35,7 @@ If you find a bug or have an idea for a new feature, please check our issue trac
 
 - **Black** is used for code formatting. Run `black` on your changes before committing.
 - **Ruff** enforces linting rules and also checks formatting. The CI will fail if Ruff reports issues.
+- **Mypy** performs static type checking. The CI runs `poetry run mypy` and will fail on type errors.
 
 ### Branch Naming & Pre-commit Hooks
 
@@ -51,8 +52,12 @@ If you find a bug or have an idea for a new feature, please check our issue trac
 ### Pull Requests
 
 - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR.
-- All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, and formatting checks) before merging.
+- All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, formatting checks, and mypy) before merging.
 - The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.
+
+### Merge Queue
+
+Merging is handled automatically using GitHub's merge queue. After your pull request is approved and the required checks pass, it will enter the queue and merge once it reaches the front. This ensures every PR is tested with the latest `main` branch before being merged.
 
 ## Development Setup
 
