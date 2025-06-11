@@ -52,4 +52,6 @@ __all__ = [
     "log_audit_entry",
     "get_audit_entries",
     "Settings",
+    "log_audit_entry",
+    "get_audit_entries",
 ]
