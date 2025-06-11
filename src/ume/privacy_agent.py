@@ -26,7 +26,7 @@ RAW_TOPIC = settings.KAFKA_RAW_EVENTS_TOPIC
 CLEAN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 QUARANTINE_TOPIC = settings.KAFKA_QUARANTINE_TOPIC
 GROUP_ID = settings.KAFKA_PRIVACY_AGENT_GROUP_ID
-FLUSH_INTERVAL = settings.KAFKA_PRODUCER_FLUSH_INTERVAL
+BATCH_SIZE = settings.KAFKA_PRODUCER_BATCH_SIZE
 
 # Initialize Presidio engines
 _ANALYZER = AnalyzerEngine()
@@ -128,7 +128,7 @@ def run_privacy_agent() -> None:
                     logger.error("Failed to produce quarantine event: %s", exc)
                 user_id = settings.UME_AGENT_ID
                 log_audit_entry(user_id, f"payload_redacted {data.get('event_id')}")
-            if pending >= FLUSH_INTERVAL:
+            if pending >= BATCH_SIZE:
                 producer.flush()
                 pending = 0
     except KeyboardInterrupt:

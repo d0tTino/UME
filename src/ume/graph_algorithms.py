@@ -8,6 +8,21 @@ from .processing import ProcessingError
 class GraphAlgorithmsMixin:
     """Reusable traversal and path finding methods for graph adapters."""
 
+    # These methods are expected to be provided by the implementing graph adapter
+    def node_exists(self, node_id: str) -> bool:  # pragma: no cover - interface
+        raise NotImplementedError
+
+    def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> List[str]:  # pragma: no cover - interface
+        raise NotImplementedError
+
+    def get_all_edges(self) -> List[Tuple[str, str, str]]:  # pragma: no cover
+        raise NotImplementedError
+
+    def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:  # pragma: no cover
+        raise NotImplementedError
+
     def shortest_path(self, source_id: str, target_id: str) -> List[str]:
         if not self.node_exists(source_id) or not self.node_exists(target_id):
             return []

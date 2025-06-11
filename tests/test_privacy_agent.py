@@ -17,6 +17,7 @@ schemas_spec = importlib.util.spec_from_file_location(
     root_dir / "src/ume/schemas/__init__.py",
     submodule_search_locations=[str(root_dir / "src/ume/schemas")],
 )
+assert schemas_spec is not None
 schemas_mod = importlib.util.module_from_spec(schemas_spec)
 assert schemas_spec.loader is not None
 sys.modules["ume.schemas"] = schemas_mod
@@ -27,6 +28,7 @@ pa_spec = importlib.util.spec_from_file_location(
     root_dir / "src/ume/privacy_agent.py",
     submodule_search_locations=[str(root_dir / "src/ume")],
 )
+assert pa_spec is not None
 privacy_agent = importlib.util.module_from_spec(pa_spec)
 assert pa_spec.loader is not None
 sys.modules["ume.privacy_agent"] = privacy_agent
@@ -119,8 +121,8 @@ def test_privacy_agent_end_to_end(monkeypatch):
     monkeypatch.setattr(privacy_agent, "Consumer", lambda conf: consumer)
     monkeypatch.setattr(privacy_agent, "Producer", lambda conf: producer)
     monkeypatch.setattr(privacy_agent, "log_audit_entry", lambda *a, **k: None)
-    monkeypatch.setattr(privacy_agent.settings, "KAFKA_PRODUCER_FLUSH_INTERVAL", 10)
-    monkeypatch.setattr(privacy_agent, "FLUSH_INTERVAL", 10)
+    monkeypatch.setattr(privacy_agent.settings, "KAFKA_PRODUCER_BATCH_SIZE", 10)
+    monkeypatch.setattr(privacy_agent, "BATCH_SIZE", 10)
 
     privacy_agent.run_privacy_agent()
 
@@ -138,3 +140,32 @@ def test_privacy_agent_end_to_end(monkeypatch):
     assert json.loads(quarantine_msg.decode("utf-8")) == {"original": payload}
     # Flush should only be called once at shutdown
     assert producer.flush_calls == 1
+
+
+def test_privacy_agent_periodic_flush(monkeypatch):
+    payload = {"email": "user@example.com"}
+    event = {
+        "event_type": "CREATE_NODE",
+        "timestamp": 1,
+        "node_id": "n1",
+        "payload": payload,
+    }
+    msgs = [FakeMessage(json.dumps(event).encode("utf-8")) for _ in range(3)]
+
+    consumer = FakeConsumer(msgs)
+    producer = FakeProducer()
+    results = [
+        RecognizerResult(entity_type="EMAIL_ADDRESS", start=11, end=27, score=1.0)
+    ]
+
+    monkeypatch.setattr(privacy_agent, "_ANALYZER", FakeAnalyzer(results))
+    monkeypatch.setattr(privacy_agent, "Consumer", lambda conf: consumer)
+    monkeypatch.setattr(privacy_agent, "Producer", lambda conf: producer)
+    monkeypatch.setattr(privacy_agent, "log_audit_entry", lambda *a, **k: None)
+    monkeypatch.setattr(privacy_agent.settings, "KAFKA_PRODUCER_BATCH_SIZE", 3)
+    monkeypatch.setattr(privacy_agent, "BATCH_SIZE", 3)
+
+    privacy_agent.run_privacy_agent()
+
+    # Flush should be called once when batch size reached and once at shutdown
+    assert producer.flush_calls == 2
