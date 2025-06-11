@@ -5,8 +5,6 @@ from presidio_analyzer import RecognizerResult
 
 from ume import privacy_agent
 
-
-
 class FakeAnalyzer:
     def __init__(self, results):
         self._results = results

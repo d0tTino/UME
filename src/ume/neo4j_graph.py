@@ -37,7 +37,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 "MATCH (n {id: $node_id}) RETURN count(n) AS cnt",
                 {"node_id": node_id},
             )
-            if result.single()["cnt"] > 0:
+            rec = result.single()
+            assert rec is not None
+            if rec["cnt"] > 0:
                 raise ProcessingError(f"Node '{node_id}' already exists.")
             session.run(
                 "CREATE (n {id: $node_id}) SET n += $attrs",
@@ -50,7 +52,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 "MATCH (n {id: $node_id}) RETURN count(n) AS cnt",
                 {"node_id": node_id},
             )
-            if result.single()["cnt"] == 0:
+            rec = result.single()
+            assert rec is not None
+            if rec["cnt"] == 0:
                 raise ProcessingError(f"Node '{node_id}' not found for update.")
             session.run(
                 "MATCH (n {id: $node_id}) SET n += $attrs",
@@ -63,8 +67,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 "MATCH (n {id: $node_id}) WHERE coalesce(n.redacted, false) = false RETURN properties(n) AS props",
                 {"node_id": node_id},
             )
-            record = result.single()
-            return record["props"] if record else None
+            rec = result.single()
+            return rec["props"] if rec else None
 
     def node_exists(self, node_id: str) -> bool:
         with self._driver.session() as session:
@@ -72,7 +76,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 "MATCH (n {id: $node_id}) WHERE coalesce(n.redacted, false) = false RETURN count(n) AS cnt",
                 {"node_id": node_id},
             )
-            return result.single()["cnt"] > 0
+            rec = result.single()
+            assert rec is not None
+            return rec["cnt"] > 0
 
     def dump(self) -> Dict[str, Any]:
         nodes: Dict[str, Any] = {}
@@ -124,6 +130,7 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 {"src": source_node_id, "tgt": target_node_id},
             )
             rec = result.single()
+            assert rec is not None
             if rec["scnt"] == 0 or rec["tcnt"] == 0:
                 raise ProcessingError(
                     f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
@@ -132,7 +139,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 f"MATCH (s {{id: $src}})-[r:`{label}`]->(t {{id: $tgt}}) RETURN count(r) AS cnt",
                 {"src": source_node_id, "tgt": target_node_id},
             )
-            if result.single()["cnt"] > 0:
+            rec = result.single()
+            assert rec is not None
+            if rec["cnt"] > 0:
                 raise ProcessingError(
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
@@ -158,7 +167,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 f"MATCH (s {{id: $src}})-[r:`{label}`]->(t {{id: $tgt}}) DELETE r RETURN count(r) AS cnt",
                 {"src": source_node_id, "tgt": target_node_id},
             )
-            if result.single()["cnt"] == 0:
+            rec = result.single()
+            assert rec is not None
+            if rec["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
                 raise ProcessingError(
                     f"Edge {edge_tuple} does not exist and cannot be deleted."
@@ -170,7 +181,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 "MATCH (n {id: $node_id}) SET n.redacted = true RETURN count(n) AS cnt",
                 {"node_id": node_id},
             )
-            if result.single()["cnt"] == 0:
+            rec = result.single()
+            assert rec is not None
+            if rec["cnt"] == 0:
                 raise ProcessingError(f"Node '{node_id}' not found to redact.")
 
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
@@ -179,7 +192,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 f"MATCH (s {{id: $src}})-[r:`{label}`]->(t {{id: $tgt}}) SET r.redacted = true RETURN count(r) AS cnt",
                 {"src": source_node_id, "tgt": target_node_id},
             )
-            if result.single()["cnt"] == 0:
+            rec = result.single()
+            assert rec is not None
+            if rec["cnt"] == 0:
                 edge_tuple = (source_node_id, target_node_id, label)
                 raise ProcessingError(
                     f"Edge {edge_tuple} does not exist and cannot be redacted."
