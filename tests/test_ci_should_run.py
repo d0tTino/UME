@@ -3,6 +3,8 @@ import scripts.ci_should_run as csr
 
 def test_docs_only():
     assert csr.docs_only(["README.md", "docs/intro.rst"]) is True
+    assert csr.docs_only(["README.mdx"]) is True
+    assert csr.docs_only(["README.adoc"]) is True
     assert csr.docs_only(["README.md", "src/foo.py"]) is False
 
     assert csr.docs_only(["config.toml"]) is False

@@ -27,6 +27,8 @@ def docs_only(files: list[str]) -> bool:
         ".md",
         ".rst",
         ".txt",
+        ".mdx",
+        ".adoc",
     )
     for path in files:
         if path.startswith("docs/"):
