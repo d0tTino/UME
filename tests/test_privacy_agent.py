@@ -1,16 +1,9 @@
 import json
-import importlib
 
-import pytest
 from presidio_analyzer import RecognizerResult
 
 from ume import privacy_agent as privacy_agent_module
 
-
-@pytest.fixture
-def privacy_agent():
-    """Return the privacy_agent module for tests."""
-    return importlib.reload(privacy_agent_module)
 
 class FakeAnalyzer:
     def __init__(self, results):
