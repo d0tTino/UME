@@ -6,7 +6,7 @@ UME (Universal Memory Engine) is designed to provide a robust, evolving memory f
 The primary motivation behind UME is to equip AI agents with a form of persistent, long-term memory that can adapt over time. This capability is crucial for enabling more complex reasoning, facilitating nuanced inter-agent communication through shared contextual understanding, and ultimately, building more intelligent and autonomous systems. By structuring memory as an event-sourced knowledge graph, UME aims to offer a flexible and scalable solution for these challenges.
 
 ## Core Modules
-
+The engine is built from a few key components:
 - **Privacy Agent** (`src/ume/privacy_agent.py`)
   - Redacts personally identifiable information (PII) from incoming events using Presidio.
   - Forwards sanitized events to downstream Kafka topics.
@@ -18,6 +18,11 @@ The primary motivation behind UME is to equip AI agents with a form of persisten
   - Includes adapters for in-memory, SQLite, and Neo4j storage as well as RBAC wrappers.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
+
+### Event Flow
+```
+Producer --> ume-raw-events --> Privacy Agent --> ume-clean-events --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j)
+```
 
 ## Project Setup
 
