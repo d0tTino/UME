@@ -1,7 +1,7 @@
 # src/ume/processing.py
 from .event import Event, EventType
 from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
-from .listeners import get_registered_listeners
+from ._internal.listeners import get_registered_listeners
 from .plugins.alignment import get_plugins
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .graph_schema import load_default_schema
