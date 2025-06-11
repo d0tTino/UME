@@ -20,3 +20,17 @@ def test_code_diff_present():
 
     diff2 = ["+print('hi')"]
     assert csr.code_diff_present(diff2) is True
+
+
+def test_docstring_edits_do_not_trigger_ci():
+    diff = [
+        "@@ -1,6 +1,6 @@",
+        " def foo():",
+        '-    """Old summary.',
+        "-    Old details.",
+        '-    """',
+        '+    """Old summary.',
+        "+    New details.",
+        '+    """',
+    ]
+    assert csr.code_diff_present(diff) is False
