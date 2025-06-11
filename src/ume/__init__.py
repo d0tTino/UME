@@ -12,6 +12,7 @@ from .graph_adapter import IGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .plugins.alignment import PolicyViolationError
 from .processing import apply_event_to_graph, ProcessingError
+from .audit import log_audit_entry, get_audit_entries
 from .snapshot import (
     snapshot_graph_to_file,
     load_graph_from_file,
@@ -40,6 +41,8 @@ __all__ = [
     "load_graph_from_file",
     "load_graph_into_existing",
     "SnapshotError",
+    "log_audit_entry",
+    "get_audit_entries",
     "enable_snapshot_autosave_and_restore",
     "enable_periodic_snapshot",
     "validate_event_dict",

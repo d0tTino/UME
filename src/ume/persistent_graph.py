@@ -188,4 +188,3 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
             user_id,
             f"redact_edge {source_node_id} {target_node_id} {label}",
         )
-

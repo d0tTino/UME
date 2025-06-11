@@ -309,5 +309,6 @@ def test_parse_event_logs_error(caplog):
         with pytest.raises(EventError):
             parse_event({})
         assert any(
-            "Missing required event field: event_type" in rec.message for rec in caplog.records
+            "Missing required event field: event_type" in rec.message
+            for rec in caplog.records
         )

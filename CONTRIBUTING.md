@@ -54,6 +54,10 @@ If you find a bug or have an idea for a new feature, please check our issue trac
 - All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, and formatting checks) before merging.
 - The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.
 
+### Merge Queue
+
+Merging is handled automatically using GitHub's merge queue. After your pull request is approved and the required checks pass, it will enter the queue and merge once it reaches the front. This ensures every PR is tested with the latest `main` branch before being merged.
+
 ## Development Setup
 
 Please refer to the `README.md` for instructions on setting up your development environment.

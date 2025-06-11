@@ -257,4 +257,3 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
     def close(self) -> None:
         """Mock adapter does not hold resources."""
         pass
-

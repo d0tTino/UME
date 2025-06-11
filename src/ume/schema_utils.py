@@ -1,4 +1,5 @@
 """Utilities for validating UME events against JSON Schemas."""
+
 from __future__ import annotations
 
 import json
@@ -16,9 +17,11 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
     if event_type not in _SCHEMAS:
         filename = f"{event_type.lower()}.schema.json"
         try:
-            with resources.files("ume.schemas").joinpath(filename).open(
-                "r", encoding="utf-8"
-            ) as f:
+            with (
+                resources.files("ume.schemas")
+                .joinpath(filename)
+                .open("r", encoding="utf-8") as f
+            ):
                 _SCHEMAS[event_type] = json.load(f)
         except FileNotFoundError as exc:
             raise ValidationError(f"Unknown event_type: {event_type}") from exc
@@ -32,4 +35,3 @@ def validate_event_dict(event_data: Dict[str, Any]) -> None:
         raise ValidationError("event_type missing or not a string")
     schema = _load_schema(event_type)
     validate(instance=event_data, schema=schema)
-

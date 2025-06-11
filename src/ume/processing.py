@@ -8,13 +8,16 @@ from .graph_schema import load_default_schema
 
 DEFAULT_VERSION = load_default_schema().version
 
+
 class ProcessingError(ValueError):
     """Custom exception for event processing errors."""
 
     pass
 
 
-def apply_event_to_graph(event: Event, graph: IGraphAdapter, *, schema_version: str = DEFAULT_VERSION) -> None:
+def apply_event_to_graph(
+    event: Event, graph: IGraphAdapter, *, schema_version: str = DEFAULT_VERSION
+) -> None:
     """
     Applies an event to a graph, modifying the graph based on event type and payload.
 
