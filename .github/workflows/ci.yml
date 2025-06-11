@@ -16,6 +16,14 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4 # Updated to v4
 
+      - name: Fetch main
+        run: git fetch origin main --depth=1
+
+      - name: Detect code changes
+        id: changes
+        run: |
+          scripts/ci_should_run.py && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT"
+
       - name: Set up Python
         uses: actions/setup-python@v5 # Updated to v5
         with:
@@ -33,23 +41,28 @@ jobs:
           # --local flag makes this configuration specific to the current project
 
       - name: Install dependencies
+        if: steps.changes.outputs.run == 'true'
         run: |
           poetry install --no-interaction --no-ansi --with dev
           # --with dev ensures dev dependencies like pytest and ruff are installed
 
       - name: Run unit tests (pytest)
+        if: steps.changes.outputs.run == 'true'
         run: |
           poetry run pytest --maxfail=1 --disable-warnings -q tests/
 
       - name: Check coverage (pytest-cov)
+        if: steps.changes.outputs.run == 'true'
         run: |
           poetry run pytest --cov=src/ume --cov-report=xml --cov-report=term-missing tests/
           # Generates term-missing report for console and xml for potential external tools
 
       - name: Lint with Ruff
+        if: steps.changes.outputs.run == 'true'
         run: |
           poetry run ruff check src tests
 
       - name: Check formatting with Ruff
+        if: steps.changes.outputs.run == 'true'
         run: |
           poetry run ruff format --check src tests
