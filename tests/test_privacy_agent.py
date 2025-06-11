@@ -1,7 +1,8 @@
 import json
-import importlib
 
 from presidio_analyzer import RecognizerResult
+
+from ume import privacy_agent
 
 
 @pytest.fixture
