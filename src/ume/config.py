@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     KAFKA_NODE_TOPIC: str = "ume_nodes"
     KAFKA_GROUP_ID: str = "ume_client_group"
     KAFKA_PRIVACY_AGENT_GROUP_ID: str = "ume-privacy-agent-group"
-    # Flush interval for Kafka producer in privacy agent
-    KAFKA_PRODUCER_FLUSH_INTERVAL: int = 1
+    # Number of messages to batch before calling `Producer.flush()` in the privacy agent
+    KAFKA_PRODUCER_BATCH_SIZE: int = 10
 
     # API
     UME_API_TOKEN: str = "secret-token"
