@@ -1,7 +1,14 @@
 import json
 from presidio_analyzer import RecognizerResult
+import pytest
 
 from ume import privacy_agent as privacy_agent_module
+
+
+@pytest.fixture
+def privacy_agent():
+    """Provide the privacy_agent module as a fixture for tests."""
+    return privacy_agent_module
 
 
 class FakeAnalyzer:
