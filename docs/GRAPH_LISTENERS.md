@@ -4,7 +4,7 @@ UME exposes a simple listener interface that allows external components to react
 
 ## Implementing a Listener
 
-A listener class implements the `GraphListener` protocol from `ume.listeners`.  The protocol defines four callbacks:
+A listener class implements the `GraphListener` protocol from `ume._internal.listeners`.  The protocol defines four callbacks:
 
 - `on_node_created(node_id: str, attributes: dict)`
 - `on_node_updated(node_id: str, attributes: dict)`
@@ -15,7 +15,7 @@ Each callback corresponds to an event type processed by `apply_event_to_graph`.
 
 ```python
 from ume import Event, EventType, MockGraph, apply_event_to_graph
-from ume.listeners import register_listener, unregister_listener, GraphListener
+from ume._internal.listeners import register_listener, unregister_listener, GraphListener
 
 class MyListener:
     def on_node_created(self, node_id: str, attributes: dict) -> None:

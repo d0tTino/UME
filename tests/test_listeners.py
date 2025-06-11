@@ -3,7 +3,7 @@ import time
 import pytest
 
 from ume import Event, EventType, MockGraph, apply_event_to_graph
-from ume.listeners import register_listener, unregister_listener
+from ume._internal.listeners import register_listener, unregister_listener
 
 
 class RecordingListener:
