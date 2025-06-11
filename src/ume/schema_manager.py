@@ -19,7 +19,9 @@ class GraphSchemaManager:
         pkg = resources.files("ume.schemas")
         for path in pkg.iterdir():
             name = path.name
-            if name.startswith("graph_schema") and name.endswith((".yaml", ".yml", ".json")):
+            if name.startswith("graph_schema") and name.endswith(
+                (".yaml", ".yml", ".json")
+            ):
                 schema = GraphSchema.load(str(path))
                 self._schemas[schema.version] = schema
 

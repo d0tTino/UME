@@ -208,7 +208,6 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
             )
             return {rec["id"]: rec["score"] for rec in result}
 
-
     def community_detection(self) -> List[set[str]]:
         self._ensure_gds_enabled()
         with self._driver.session() as session:

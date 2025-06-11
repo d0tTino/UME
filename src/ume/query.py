@@ -1,4 +1,5 @@
 """Utilities for executing Cypher queries against a Neo4j database."""
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
@@ -22,7 +23,9 @@ class Neo4jQueryEngine:
         """Close the underlying driver connection."""
         self._driver.close()
 
-    def execute_cypher(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def execute_cypher(
+        self, query: str, parameters: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """Execute an arbitrary Cypher query.
 
         Parameters

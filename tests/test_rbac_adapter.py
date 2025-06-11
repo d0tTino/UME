@@ -22,4 +22,3 @@ def test_find_connected_nodes_requires_analytics_agent():
 
     analytics = RoleBasedGraphAdapter(graph, role="AnalyticsAgent")
     assert analytics.find_connected_nodes("n1") == []
-

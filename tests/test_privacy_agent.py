@@ -1,38 +1,8 @@
-import importlib.util
 import json
-from pathlib import Path
-import sys
-import types
 
 from presidio_analyzer import RecognizerResult
 
-root_dir = Path(__file__).resolve().parents[1]
-# Build a minimal 'ume' package so privacy_agent can be imported
-pkg = types.ModuleType("ume")
-pkg.__path__ = [str(root_dir / "src/ume")]
-sys.modules["ume"] = pkg
-
-schemas_spec = importlib.util.spec_from_file_location(
-    "ume.schemas",
-    root_dir / "src/ume/schemas/__init__.py",
-    submodule_search_locations=[str(root_dir / "src/ume/schemas")],
-)
-assert schemas_spec is not None
-schemas_mod = importlib.util.module_from_spec(schemas_spec)
-assert schemas_spec.loader is not None
-sys.modules["ume.schemas"] = schemas_mod
-schemas_spec.loader.exec_module(schemas_mod)
-
-pa_spec = importlib.util.spec_from_file_location(
-    "ume.privacy_agent",
-    root_dir / "src/ume/privacy_agent.py",
-    submodule_search_locations=[str(root_dir / "src/ume")],
-)
-assert pa_spec is not None
-privacy_agent = importlib.util.module_from_spec(pa_spec)
-assert pa_spec.loader is not None
-sys.modules["ume.privacy_agent"] = privacy_agent
-pa_spec.loader.exec_module(privacy_agent)
+from ume import privacy_agent
 
 
 class FakeAnalyzer:

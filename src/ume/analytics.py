@@ -40,7 +40,7 @@ def _pagerank_numpy(
     A = nx.to_numpy_array(g, nodelist=nodes, weight="weight", dtype=float)
     S = A.sum(axis=1)
     S[S != 0] = 1.0 / S[S != 0]
-    A = (S[:, None] * A)
+    A = S[:, None] * A
 
     x = np.repeat(1.0 / n, n)
     p = x.copy()
