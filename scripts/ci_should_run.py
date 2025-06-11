@@ -19,18 +19,14 @@ def run(cmd: list[str]) -> list[str]:
 
 
 def docs_only(files: list[str]) -> bool:
-    """Return True if every file is a documentation file."""
+    """Return True if every file is Markdown, reStructuredText, plaintext, or
+    lives under ``docs/``.
+    """
 
     doc_exts = (
         ".md",
         ".rst",
         ".txt",
-        ".yml",
-        ".yaml",
-        ".json",
-        ".toml",
-        ".ini",
-        ".cfg",
     )
     for path in files:
         if path.startswith("docs/"):
