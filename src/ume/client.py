@@ -58,7 +58,9 @@ class UMEClient:
         except ValidationError as e:
             logger.error("Event validation failed: %s", e.message)
             raise UMEClientError(f"Event validation failed: {e.message}") from e
-        except Exception as e:  # pragma: no cover - confluent_kafka may raise various errors
+        except (
+            Exception
+        ) as e:  # pragma: no cover - confluent_kafka may raise various errors
             logger.error("Failed to produce event: %s", e)
             raise UMEClientError(f"Failed to produce event: {e}") from e
 

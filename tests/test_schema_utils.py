@@ -11,11 +11,7 @@ def test_unknown_event_type_raises_validation_error():
     with pytest.raises(ValidationError):
         validate_event_dict(data)
 
+
 def test_validate_create_node_schema_success():
-    data = {
-        "event_type": "CREATE_NODE",
-        "timestamp": 1,
-        "node_id": "n1",
-        "payload": {}
-    }
+    data = {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
     validate_event_dict(data)

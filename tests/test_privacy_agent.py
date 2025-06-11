@@ -4,35 +4,41 @@ from pathlib import Path
 import sys
 import types
 
+import pytest
 from presidio_analyzer import RecognizerResult
 
 root_dir = Path(__file__).resolve().parents[1]
-# Build a minimal 'ume' package so privacy_agent can be imported
-pkg = types.ModuleType("ume")
-pkg.__path__ = [str(root_dir / "src/ume")]
-sys.modules["ume"] = pkg
 
-schemas_spec = importlib.util.spec_from_file_location(
-    "ume.schemas",
-    root_dir / "src/ume/schemas/__init__.py",
-    submodule_search_locations=[str(root_dir / "src/ume/schemas")],
-)
-assert schemas_spec is not None
-schemas_mod = importlib.util.module_from_spec(schemas_spec)
-assert schemas_spec.loader is not None
-sys.modules["ume.schemas"] = schemas_mod
-schemas_spec.loader.exec_module(schemas_mod)
 
-pa_spec = importlib.util.spec_from_file_location(
-    "ume.privacy_agent",
-    root_dir / "src/ume/privacy_agent.py",
-    submodule_search_locations=[str(root_dir / "src/ume")],
-)
-assert pa_spec is not None
-privacy_agent = importlib.util.module_from_spec(pa_spec)
-assert pa_spec.loader is not None
-sys.modules["ume.privacy_agent"] = privacy_agent
-pa_spec.loader.exec_module(privacy_agent)
+@pytest.fixture()
+def privacy_agent(monkeypatch):
+    """Provide the privacy_agent module with a minimal ``ume`` package."""
+
+    pkg = types.ModuleType("ume")
+    pkg.__path__ = [str(root_dir / "src/ume")]
+    monkeypatch.setitem(sys.modules, "ume", pkg)
+
+    schemas_spec = importlib.util.spec_from_file_location(
+        "ume.schemas",
+        root_dir / "src/ume/schemas/__init__.py",
+        submodule_search_locations=[str(root_dir / "src/ume/schemas")],
+    )
+    assert schemas_spec is not None and schemas_spec.loader is not None
+    schemas_mod = importlib.util.module_from_spec(schemas_spec)
+    monkeypatch.setitem(sys.modules, "ume.schemas", schemas_mod)
+    schemas_spec.loader.exec_module(schemas_mod)
+
+    pa_spec = importlib.util.spec_from_file_location(
+        "ume.privacy_agent",
+        root_dir / "src/ume/privacy_agent.py",
+        submodule_search_locations=[str(root_dir / "src/ume")],
+    )
+    assert pa_spec is not None and pa_spec.loader is not None
+    pa_mod = importlib.util.module_from_spec(pa_spec)
+    monkeypatch.setitem(sys.modules, "ume.privacy_agent", pa_mod)
+    pa_spec.loader.exec_module(pa_mod)
+
+    yield pa_mod
 
 
 class FakeAnalyzer:
@@ -43,7 +49,7 @@ class FakeAnalyzer:
         return self._results
 
 
-def test_redact_event_payload_with_pii(monkeypatch):
+def test_redact_event_payload_with_pii(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     results = [
         RecognizerResult(entity_type="EMAIL_ADDRESS", start=11, end=27, score=1.0)
@@ -54,7 +60,7 @@ def test_redact_event_payload_with_pii(monkeypatch):
     assert redacted == {"email": "<EMAIL_ADDRESS>"}
 
 
-def test_redact_event_payload_without_pii(monkeypatch):
+def test_redact_event_payload_without_pii(privacy_agent, monkeypatch):
     payload = {"message": "hello"}
     monkeypatch.setattr(privacy_agent, "_ANALYZER", FakeAnalyzer([]))
     redacted, flag = privacy_agent.redact_event_payload(payload)
@@ -101,7 +107,7 @@ class FakeProducer:
         self.flush_calls += 1
 
 
-def test_privacy_agent_end_to_end(monkeypatch):
+def test_privacy_agent_end_to_end(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
         "event_type": "CREATE_NODE",
@@ -142,7 +148,7 @@ def test_privacy_agent_end_to_end(monkeypatch):
     assert producer.flush_calls == 1
 
 
-def test_privacy_agent_periodic_flush(monkeypatch):
+def test_privacy_agent_periodic_flush(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
         "event_type": "CREATE_NODE",

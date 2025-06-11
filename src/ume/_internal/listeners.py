@@ -12,10 +12,14 @@ class GraphListener(Protocol):
     def on_node_updated(self, node_id: str, attributes: Dict[str, Any]) -> None:
         """Called after a node's attributes are updated."""
 
-    def on_edge_created(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def on_edge_created(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
         """Called after an edge is created."""
 
-    def on_edge_deleted(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def on_edge_deleted(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
         """Called after an edge is deleted."""
 
 
