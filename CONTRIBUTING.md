@@ -52,6 +52,7 @@ If you find a bug or have an idea for a new feature, please check our issue trac
 
 - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR.
 - All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, and formatting checks) before merging.
+- The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.
 
 ## Development Setup
 
