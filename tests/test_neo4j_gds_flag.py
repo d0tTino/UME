@@ -2,6 +2,7 @@ import pytest
 
 from ume.neo4j_graph import Neo4jGraph
 
+
 class DummyDriver:
     def session(self):
         class DummySession:
@@ -24,5 +25,3 @@ def test_gds_requires_flag():
     graph = Neo4jGraph("bolt://", "u", "p", driver=DummyDriver())
     with pytest.raises(NotImplementedError):
         graph.pagerank_centrality()
-
-
