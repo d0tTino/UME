@@ -15,7 +15,29 @@ import sys
 def run(cmd: list[str]) -> list[str]:
     """Run a command and return the output split into lines."""
 
-    return subprocess.check_output(cmd).decode().splitlines()
+    return subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().splitlines()
+
+
+def find_base_commit() -> str:
+    """Return the merge base with ``origin/main`` or a fallback commit.
+
+    This helper prevents failures when the remote ``origin`` or its ``main``
+    branch is not available by falling back to ``HEAD^`` or the repository's
+    first commit.
+    """
+
+    try:
+        return run(["git", "merge-base", "HEAD", "origin/main"])[0]
+    except subprocess.CalledProcessError:
+        pass
+
+    for ref in ["HEAD^", "HEAD~1"]:
+        try:
+            return run(["git", "rev-parse", ref])[0]
+        except subprocess.CalledProcessError:
+            continue
+
+    return run(["git", "rev-list", "--max-parents=0", "HEAD"])[0]
 
 
 def docs_only(files: list[str]) -> bool:
@@ -87,7 +109,7 @@ def code_diff_present(diff_lines: list[str]) -> bool:
 
 
 def main() -> int:
-    base = run(["git", "merge-base", "HEAD", "origin/main"])[0]
+    base = find_base_commit()
     changed_files = run(["git", "diff", "--name-only", base, "HEAD"])
 
     if docs_only(changed_files):
