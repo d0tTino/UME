@@ -1,5 +1,8 @@
 import pytest
 
+from typing import cast
+
+from neo4j import Driver
 from ume.neo4j_graph import Neo4jGraph
 from ume.processing import ProcessingError
 
@@ -51,7 +54,12 @@ def test_node_and_edge_crud():
         DummyResult({"cnt": 1}),  # delete edge
     ]
     driver = DummyDriver(results)
-    graph = Neo4jGraph("bolt://localhost:7687", "neo4j", "pass", driver=driver)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
 
     graph.add_node("n1", {})
     graph.add_node("n2", {})
@@ -63,7 +71,12 @@ def test_node_and_edge_crud():
 
 def test_add_node_duplicate_raises():
     driver = DummyDriver([DummyResult({"cnt": 1})])
-    graph = Neo4jGraph("bolt://localhost:7687", "neo4j", "pass", driver=driver)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
 
     with pytest.raises(ProcessingError):
         graph.add_node("dup", {})
@@ -76,7 +89,7 @@ def test_gds_methods_issue_queries() -> None:
         "bolt://localhost:7687",
         "neo4j",
         "pass",
-        driver=driver,
+        driver=cast(Driver, driver),
         use_gds=True,
     )
 
