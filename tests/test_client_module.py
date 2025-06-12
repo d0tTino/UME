@@ -3,6 +3,7 @@ import pytest
 from jsonschema import ValidationError
 
 from ume.client import UMEClient, UMEClientError
+from ume.config import Settings
 from ume.event import EventType
 from ume.event import Event
 
@@ -32,11 +33,11 @@ class DummyConsumer:
         pass
 
 
-class DummySettings:
-    KAFKA_RAW_EVENTS_TOPIC = "raw"
-    KAFKA_CLEAN_EVENTS_TOPIC = "clean"
-    KAFKA_BOOTSTRAP_SERVERS = "server"
-    KAFKA_GROUP_ID = "gid"
+class DummySettings(Settings):
+    KAFKA_RAW_EVENTS_TOPIC: str = "raw"
+    KAFKA_CLEAN_EVENTS_TOPIC: str = "clean"
+    KAFKA_BOOTSTRAP_SERVERS: str = "server"
+    KAFKA_GROUP_ID: str = "gid"
 
 
 def build_client(monkeypatch, consumer=None, producer=None):
