@@ -39,7 +39,7 @@ def test_audit_entry_on_policy_violation(tmp_path, monkeypatch):
     entries = get_audit_entries()
     assert len(entries) == start + 1
     assert entries[-1]["user_id"] == "tester"
-    assert "forbidden" in entries[-1]["reason"]
+    assert "forbidden" in str(entries[-1]["reason"])
 
 
 def test_audit_entry_on_redactions(tmp_path, monkeypatch):
@@ -70,8 +70,8 @@ def test_audit_entry_on_redactions(tmp_path, monkeypatch):
 
     entries = get_audit_entries()
     assert len(entries) == start + 2
-    assert entries[-2]["reason"].startswith("redact_node")
-    assert entries[-1]["reason"].startswith("redact_edge")
+    assert str(entries[-2]["reason"]).startswith("redact_node")
+    assert str(entries[-1]["reason"]).startswith("redact_edge")
     assert all(e["user_id"] == "redactor" for e in entries[-2:])
 
 
