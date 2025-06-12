@@ -187,6 +187,7 @@ If the repository does not have an `origin/main` branch, the helper falls back
 to comparing against the previous commit, so it will still return a meaningful
 result.
 
+
 ### Running Tests
 
 1.  **Run all tests:**
@@ -273,6 +274,7 @@ lock file if needed. After running it, you can verify the environment with:
 ```bash
 pre-commit run --all-files
 PYTHONPATH=src pytest
+
 ```
 
 ### 2. Start Redpanda (Kafka) via Docker
