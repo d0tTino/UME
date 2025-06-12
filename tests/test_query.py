@@ -1,4 +1,6 @@
 from ume.query import Neo4jQueryEngine
+from neo4j import Driver
+from typing import cast
 
 
 class DummySession:
@@ -36,7 +38,8 @@ class DummyDriver:
 
 
 def test_execute_cypher_returns_records():
-    engine = Neo4jQueryEngine(DummyDriver())
+    driver = DummyDriver()
+    engine = Neo4jQueryEngine(cast(Driver, driver))
     result = engine.execute_cypher("MATCH (n) RETURN n")
     assert result == [{"ok": True}]
-    assert engine._driver.session_obj.last == ("MATCH (n) RETURN n", {})
+    assert driver.session_obj.last == ("MATCH (n) RETURN n", {})
