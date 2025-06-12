@@ -264,6 +264,15 @@ run the helper script:
 ```bash
 ./codex_setup.sh
 ```
+This script installs Python 3.12 if missing, upgrades `pip` and `poetry`,
+installs development dependencies, and sets up the `pre-commit` hooks. It also
+downloads the optional `en_core_web_lg` spaCy model when available.
+
+After setup you can verify whether tests and linters need to run for your
+changes with:
+```bash
+python scripts/ci_should_run.py && echo "Run tests" || echo "Docs only, skipping"
+```
 
 ### 2. Start Redpanda (Kafka) via Docker
 ```bash
