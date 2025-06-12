@@ -1,4 +1,6 @@
 import json
+from typing import cast
+
 import pytest
 from jsonschema import ValidationError
 
@@ -45,7 +47,7 @@ def build_client(monkeypatch, consumer=None, producer=None):
     producer = producer or DummyProducer
     monkeypatch.setattr("ume.client.Consumer", consumer)
     monkeypatch.setattr("ume.client.Producer", producer)
-    return UMEClient(DummySettings())
+    return UMEClient(cast(Settings, DummySettings()))
 
 
 def test_produce_event(monkeypatch):
