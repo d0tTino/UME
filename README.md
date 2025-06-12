@@ -179,6 +179,14 @@ pre-commit run --all-files
 ```
 (Note: `poetry install` by default installs dev dependencies unless `--no-dev` is specified. However, explicitly mentioning `--with dev` can be clearer for users who might have installed with `--no-dev` previously).
 
+To determine if your changes require running tests and linters, execute:
+```bash
+python scripts/ci_should_run.py && echo "Run tests" || echo "Docs only, skipping"
+```
+If the repository does not have an `origin/main` branch, the helper falls back
+to comparing against the previous commit, so it will still return a meaningful
+result.
+
 ### Running Tests
 
 1.  **Run all tests:**
@@ -251,8 +259,20 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 ```bash
 git clone https://github.com/d0tTino/universal-memory-engine.git
 cd universal-memory-engine
-poetry install
+poetry install --with dev
 poetry run python -m spacy download en_core_web_lg
+```
+To automate the above steps (including installing development tools), you can
+run the helper script:
+```bash
+./codex_setup.sh
+```
+This script installs Python 3.12 if missing, installs all dependencies and
+development tools, automatically installs the pre-commit hooks, and fixes the
+lock file if needed. After running it, you can verify the environment with:
+```bash
+pre-commit run --all-files
+PYTHONPATH=src pytest
 ```
 
 ### 2. Start Redpanda (Kafka) via Docker
