@@ -11,6 +11,7 @@ def test_stream_routing():
     app = build_app("kafka://dummy")
     agent = next(iter(app.agents.values()))
 
+    assert agent.fun.__closure__ is not None
     edge_topic = agent.fun.__closure__[0].cell_contents
     node_topic = agent.fun.__closure__[1].cell_contents
 

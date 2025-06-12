@@ -80,7 +80,9 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
 
     # Ensure original graph is not affected by modifications to dumped_data (due to .copy())
     dumped_data["nodes"]["a"]["name"] = "Changed Name"
-    assert graph.get_node("a")["name"] == "Alice"
+    node_a = graph.get_node("a")
+    assert node_a is not None
+    assert node_a["name"] == "Alice"
     if dumped_data["edges"]:  # If there are edges
         dumped_data["edges"][0] = (
             "c",
