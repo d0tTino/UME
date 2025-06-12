@@ -179,6 +179,11 @@ pre-commit run --all-files
 ```
 (Note: `poetry install` by default installs dev dependencies unless `--no-dev` is specified. However, explicitly mentioning `--with dev` can be clearer for users who might have installed with `--no-dev` previously).
 
+To determine if your changes require running tests and linters, execute:
+```bash
+python scripts/ci_should_run.py && echo "Run tests" || echo "Docs only, skipping"
+```
+
 ### Running Tests
 
 1.  **Run all tests:**
@@ -253,6 +258,11 @@ git clone https://github.com/d0tTino/universal-memory-engine.git
 cd universal-memory-engine
 poetry install
 poetry run python -m spacy download en_core_web_lg
+```
+To automate the above steps (including installing development tools), you can
+run the helper script:
+```bash
+./codex_setup.sh
 ```
 
 ### 2. Start Redpanda (Kafka) via Docker
