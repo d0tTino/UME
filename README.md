@@ -172,6 +172,11 @@ Ensure you have installed the development dependencies:
 ```bash
 poetry install --with dev
 ```
+(This project uses `pre-commit` for linting and type checks. To run the same
+checks as CI, execute:)
+```bash
+pre-commit run --all-files
+```
 (Note: `poetry install` by default installs dev dependencies unless `--no-dev` is specified. However, explicitly mentioning `--with dev` can be clearer for users who might have installed with `--no-dev` previously).
 
 ### Running Tests

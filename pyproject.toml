@@ -28,6 +28,7 @@ mypy = "*"
 pytest = "*"
 pytest-cov = "*"
 httpx = "*"
+pre-commit = "*"
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"

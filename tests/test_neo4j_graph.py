@@ -69,8 +69,8 @@ def test_add_node_duplicate_raises():
         graph.add_node("dup", {})
 
 
-def test_gds_methods_issue_queries():
-    results = [[], [], [], [], [], [], []]
+def test_gds_methods_issue_queries() -> None:
+    results: list[list] = [[], [], [], [], [], [], []]
     driver = DummyDriver(results)
     graph = Neo4jGraph(
         "bolt://localhost:7687",
