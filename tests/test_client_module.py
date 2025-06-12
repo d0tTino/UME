@@ -35,11 +35,11 @@ class DummyConsumer:
         pass
 
 
-class DummySettings:
-    KAFKA_RAW_EVENTS_TOPIC = "raw"
-    KAFKA_CLEAN_EVENTS_TOPIC = "clean"
-    KAFKA_BOOTSTRAP_SERVERS = "server"
-    KAFKA_GROUP_ID = "gid"
+class DummySettings(Settings):
+    KAFKA_RAW_EVENTS_TOPIC: str = "raw"
+    KAFKA_CLEAN_EVENTS_TOPIC: str = "clean"
+    KAFKA_BOOTSTRAP_SERVERS: str = "server"
+    KAFKA_GROUP_ID: str = "gid"
 
 
 def build_client(monkeypatch, consumer=None, producer=None):
@@ -52,7 +52,15 @@ def build_client(monkeypatch, consumer=None, producer=None):
 
 def test_produce_event(monkeypatch):
     client = build_client(monkeypatch)
-    event = Event(event_type=EventType.CREATE_NODE.value, timestamp=1, payload={}, node_id="n1", target_node_id="", label="", source="s")
+    event = Event(
+        event_type=EventType.CREATE_NODE.value,
+        timestamp=1,
+        payload={},
+        node_id="n1",
+        target_node_id="",
+        label="",
+        source="s",
+    )
     client.produce_event(event)
     produced = client.producer.produced[0]
     assert produced[0] == "raw"
@@ -66,14 +74,24 @@ def test_produce_event_validation_error(monkeypatch):
 
     monkeypatch.setattr("ume.client.validate_event_dict", bad_validate)
     client = build_client(monkeypatch)
-    event = Event(event_type=EventType.CREATE_NODE.value, timestamp=1, payload={}, node_id="n1", target_node_id="", label="", source="s")
+    event = Event(
+        event_type=EventType.CREATE_NODE.value,
+        timestamp=1,
+        payload={},
+        node_id="n1",
+        target_node_id="",
+        label="",
+        source="s",
+    )
     with pytest.raises(UMEClientError):
         client.produce_event(event)
 
 
 def test_consume_events(monkeypatch):
     consumer = DummyConsumer({})
-    msg_data = json.dumps({"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}).encode()
+    msg_data = json.dumps(
+        {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
+    ).encode()
 
     class DummyMsg:
         def __init__(self, value):
@@ -91,6 +109,3 @@ def test_consume_events(monkeypatch):
     assert len(events) == 1
     assert events[0].node_id == "n1"
     assert events[0].event_type == "CREATE_NODE"
-
-
-
