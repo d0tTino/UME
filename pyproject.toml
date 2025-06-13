@@ -31,10 +31,14 @@ pytest = "*"
 pytest-cov = "*"
 httpx = "*"
 pre-commit = "*"
+poetry-plugin-export = "*"
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
+
+[tool.ruff]
+line-length = 88
 
 [build-system]
 requires = ["poetry-core"]
