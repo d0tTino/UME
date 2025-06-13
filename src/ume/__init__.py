@@ -23,6 +23,7 @@ from .schema_utils import validate_event_dict
 from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
+from .utils import ssl_config
 
 __all__ = [
     "Event",
@@ -52,4 +53,5 @@ __all__ = [
     "Settings",
     "log_audit_entry",
     "get_audit_entries",
+    "ssl_config",
 ]

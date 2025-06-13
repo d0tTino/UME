@@ -9,8 +9,8 @@ corresponding producer_demo.py script.
 
 import json
 import logging
-import os
 from ume.config import settings
+from ume.utils import ssl_config
 from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
 from ume import parse_event, EventError  # Import parse_event and EventError
 
@@ -23,21 +23,6 @@ logger = logging.getLogger("consumer_demo")
 BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
 TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 GROUP_ID = settings.KAFKA_GROUP_ID
-
-
-def ssl_config() -> dict:
-    """Return Kafka SSL configuration if cert env vars are set."""
-    ca = os.environ.get("KAFKA_CA_CERT")
-    cert = os.environ.get("KAFKA_CLIENT_CERT")
-    key = os.environ.get("KAFKA_CLIENT_KEY")
-    if ca and cert and key:
-        return {
-            "security.protocol": "SSL",
-            "ssl.ca.location": ca,
-            "ssl.certificate.location": cert,
-            "ssl.key.location": key,
-        }
-    return {}
 
 
 def main():

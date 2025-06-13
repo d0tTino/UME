@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Dict, Tuple
+from .utils import ssl_config
 
 from confluent_kafka import Consumer, Producer, KafkaException, KafkaError  # type: ignore
 from presidio_analyzer import AnalyzerEngine  # type: ignore
@@ -31,21 +31,6 @@ BATCH_SIZE = settings.KAFKA_PRODUCER_BATCH_SIZE
 # Initialize Presidio engines
 _ANALYZER = AnalyzerEngine()
 _ANONYMIZER = AnonymizerEngine()
-
-
-def ssl_config() -> Dict[str, str]:
-    """Return Kafka SSL configuration if cert env vars are set."""
-    ca = os.environ.get("KAFKA_CA_CERT")
-    cert = os.environ.get("KAFKA_CLIENT_CERT")
-    key = os.environ.get("KAFKA_CLIENT_KEY")
-    if ca and cert and key:
-        return {
-            "security.protocol": "SSL",
-            "ssl.ca.location": ca,
-            "ssl.certificate.location": cert,
-            "ssl.key.location": key,
-        }
-    return {}
 
 
 def redact_event_payload(
