@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .graph_adapter import IGraphAdapter
+from ..graph_adapter import IGraphAdapter
 
 
 def shortest_path(graph: IGraphAdapter, source: str, target: str) -> List[str]:
