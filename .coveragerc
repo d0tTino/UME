@@ -1,0 +1,6 @@
+[run]
+parallel = True
+concurrency = multiprocessing
+
+[html]
+directory = coverage_html
