@@ -35,6 +35,13 @@ This section outlines the necessary tools for developing and running the Univers
 *   **Poetry:** For Python dependency management. Installation instructions can be found at [https://python-poetry.org/docs/#installation](https://python-poetry.org/docs/#installation).
 *   **Docker:** Docker Desktop (for Windows/macOS) or Docker Engine + Docker Compose (for Linux) is required to run backend services like Redpanda. Download from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/).
 
+After installing these tools and cloning the repository, install all Python
+dependencies (including development requirements) with:
+
+```bash
+poetry install --with dev
+```
+
 ## Architecture
 
 This section provides a high-level overview of the Universal Memory Engine (UME) demo setup.
