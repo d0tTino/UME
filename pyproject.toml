@@ -13,7 +13,7 @@ fastavro = ">=1.9"
 pyyaml = "*" # Using "*" for PyYAML as it's a common practice, but can be pinned down if needed.
 neo4j = "*"
 networkx = "*"
-fastapi = "*"
+fastapi = ">=0.110"
 jsonschema = "*"
 faust-streaming = "*"
 pydantic-settings = "^2.9.1"
