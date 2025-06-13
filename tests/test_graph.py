@@ -376,3 +376,17 @@ def test_delete_edge_non_existent_target_node_implicitly_fails(graph: MockGraph)
     expected = re.escape(f"Edge {edge_tuple} does not exist and cannot be deleted.")
     with pytest.raises(ProcessingError, match=expected):
         graph.delete_edge(edge_tuple[0], edge_tuple[1], edge_tuple[2])
+
+
+def test_edges_indices_created(graph: PersistentGraph):
+    """Ensure edges indices exist and queries function correctly."""
+    graph.add_node("s", {})
+    graph.add_node("t", {})
+    graph.add_edge("s", "t", "REL")
+
+    assert graph.find_connected_nodes("s") == ["t"]
+
+    cur = graph.conn.execute("PRAGMA index_list('edges')")
+    names = {row[1] for row in cur.fetchall()}
+    assert "idx_edges_source" in names
+    assert "idx_edges_target" in names
