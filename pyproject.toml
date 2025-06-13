@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ume"
-version = "0.4.0-dev"
+version = "0.1.0"
 description = ""
 authors = ["Ume Bot <ume-bot@example.com>"]
 readme = "README.md"
