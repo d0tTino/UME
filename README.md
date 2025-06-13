@@ -169,6 +169,9 @@ This project uses [pytest](https://docs.pytest.org/) for unit and integration te
 
 ### Prerequisites
 
+You must run the tests with **Python 3.12**. Lower versions such as 3.11
+will fail due to `pydantic_settings` and other dependencies.
+
 Ensure you have installed the development dependencies:
 ```bash
 poetry install --with dev
