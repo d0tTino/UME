@@ -34,6 +34,9 @@ pre-commit = "*"
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
 
+[tool.ruff]
+line-length = 88
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
