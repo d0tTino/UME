@@ -29,6 +29,7 @@ pytest = "*"
 pytest-cov = "*"
 httpx = "*"
 pre-commit = "*"
+poetry-plugin-export = "*"
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
