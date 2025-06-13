@@ -15,3 +15,7 @@ UME_API_TOKEN=secret-token
 # Optional role for the CLI (leave unset for full permissions)
 UME_ROLE=view-only
 ```
+
+If your system Python is older than 3.12, consider using
+[pyenv](https://github.com/pyenv/pyenv) or running in a container image that
+provides Python 3.12 to ensure compatibility.
