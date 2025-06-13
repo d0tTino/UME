@@ -35,8 +35,8 @@ def test_producer_ssl_config(monkeypatch):
     assert cfg["ssl.certificate.location"] == "cert"
     assert cfg["ssl.key.location"] == "key"
 
+
 def test_delivery_report():
     msg = SimpleNamespace(topic=lambda: "t", partition=lambda: 0, offset=lambda: 1)
     producer_demo.delivery_report(None, msg)
     producer_demo.delivery_report(Exception("err"), msg)
-

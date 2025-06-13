@@ -1,6 +1,7 @@
 import sys
 from unittest.mock import Mock
 from ume import graph_adapter as real_ga
+
 sys.modules.setdefault("ume._internal.graph_adapter", real_ga)  # noqa: E402
 
 from ume._internal import query_helpers as qh  # noqa: E402
@@ -23,4 +24,3 @@ def test_wrapper_methods_call_graph():
         edge_label="L",
         since_timestamp=4,
     )
-
