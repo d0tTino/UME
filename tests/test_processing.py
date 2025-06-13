@@ -278,7 +278,9 @@ def test_apply_create_edge_event_missing_target_node(graph: PersistentGraph):
         apply_event_to_graph(event, graph)
 
 
-def test_apply_create_edge_event_invalid_field_types_propagates_error(graph: PersistentGraph):
+def test_apply_create_edge_event_invalid_field_types_propagates_error(
+    graph: PersistentGraph,
+):
     """
     Test CREATE_EDGE when event fields (node_id, target_node_id, label) are not strings.
     This tests the defensive checks in apply_event_to_graph.
@@ -355,7 +357,9 @@ def test_apply_delete_edge_event_edge_not_exist(graph: PersistentGraph):
         apply_event_to_graph(event, graph)
 
 
-def test_apply_delete_edge_event_invalid_field_types_propagates_error(graph: PersistentGraph):
+def test_apply_delete_edge_event_invalid_field_types_propagates_error(
+    graph: PersistentGraph,
+):
     """
     Test DELETE_EDGE when event fields (node_id, target_node_id, label) are not strings.
     This tests the defensive checks in apply_event_to_graph.

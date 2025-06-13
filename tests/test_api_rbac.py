@@ -141,4 +141,3 @@ def test_redact_edge_forbidden_with_role_based_adapter():
         headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
     )
     assert res.status_code == 403
-

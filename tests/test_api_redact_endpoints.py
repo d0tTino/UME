@@ -5,6 +5,7 @@ from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
 
+
 @pytest.fixture
 def client_and_graph():
     g = MockGraph()

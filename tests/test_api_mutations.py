@@ -72,4 +72,3 @@ def test_delete_edge_endpoint(client_and_graph):
     )
     assert res.status_code == 200
     assert ("s2", "t2", "L2") not in g.get_all_edges()
-
