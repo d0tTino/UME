@@ -8,7 +8,7 @@ It's intended to be used with the corresponding consumer_demo.py script.
 
 import json
 import logging
-import os
+from ume.utils import ssl_config
 from ume.config import settings
 import time
 from confluent_kafka import Producer, KafkaException  # type: ignore
@@ -24,21 +24,6 @@ logger = logging.getLogger("producer_demo")
 # Set KAFKA_CA_CERT, KAFKA_CLIENT_CERT and KAFKA_CLIENT_KEY to enable TLS.
 BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
 TOPIC = settings.KAFKA_RAW_EVENTS_TOPIC
-
-
-def ssl_config() -> dict:
-    """Return Kafka SSL configuration if cert env vars are set."""
-    ca = os.environ.get("KAFKA_CA_CERT")
-    cert = os.environ.get("KAFKA_CLIENT_CERT")
-    key = os.environ.get("KAFKA_CLIENT_KEY")
-    if ca and cert and key:
-        return {
-            "security.protocol": "SSL",
-            "ssl.ca.location": ca,
-            "ssl.certificate.location": cert,
-            "ssl.key.location": key,
-        }
-    return {}
 
 
 def delivery_report(err, msg):
