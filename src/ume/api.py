@@ -95,6 +95,21 @@ class SubgraphRequest(BaseModel):
     since_timestamp: int | None = None
 
 
+class NodeCreateRequest(BaseModel):
+    id: str
+    attributes: Dict[str, Any] | None = None
+
+
+class NodeUpdateRequest(BaseModel):
+    attributes: Dict[str, Any]
+
+
+class EdgeCreateRequest(BaseModel):
+    source: str
+    target: str
+    label: str
+
+
 @app.post("/analytics/shortest_path")
 def api_shortest_path(
     req: ShortestPathRequest,
@@ -158,4 +173,57 @@ def api_redact_edge(
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     graph.redact_edge(req.source, req.target, req.label)
+    return {"status": "ok"}
+
+
+@app.post("/nodes")
+def api_create_node(
+    req: NodeCreateRequest,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    graph.add_node(req.id, req.attributes or {})
+    return {"status": "ok"}
+
+
+@app.patch("/nodes/{node_id}")
+def api_update_node(
+    node_id: str,
+    req: NodeUpdateRequest,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    graph.update_node(node_id, req.attributes)
+    return {"status": "ok"}
+
+
+@app.delete("/nodes/{node_id}")
+def api_delete_node(
+    node_id: str,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    graph.redact_node(node_id)
+    return {"status": "ok"}
+
+
+@app.post("/edges")
+def api_create_edge(
+    req: EdgeCreateRequest,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    graph.add_edge(req.source, req.target, req.label)
+    return {"status": "ok"}
+
+
+@app.delete("/edges/{source}/{target}/{label}")
+def api_delete_edge(
+    source: str,
+    target: str,
+    label: str,
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    graph.delete_edge(source, target, label)
     return {"status": "ok"}
