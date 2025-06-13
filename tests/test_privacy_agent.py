@@ -19,6 +19,11 @@ class FakeAnalyzer:
         return self._results
 
 
+class FakeAnonymizer:
+    def anonymize(self, text: str, analyzer_results):
+        return type("Result", (), {"text": text.replace("user@example.com", "<EMAIL_ADDRESS>")})()
+
+
 def test_redact_event_payload_with_pii(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     results = [
@@ -145,3 +150,53 @@ def test_privacy_agent_periodic_flush(privacy_agent, monkeypatch):
 
     # Flush should be called once when batch size reached and once at shutdown
     assert producer.flush_calls == 2
+
+
+def test_privacy_agent_audit_log_written(tmp_path, monkeypatch):
+    monkeypatch.setenv("UME_AUDIT_LOG_PATH", str(tmp_path / "audit.log"))
+    monkeypatch.setenv("UME_AGENT_ID", "tester")
+
+    import importlib
+    from ume import config, audit, privacy_agent
+
+    importlib.reload(config)
+    importlib.reload(audit)
+    importlib.reload(privacy_agent)
+
+    payload = {"email": "user@example.com"}
+    event = {
+        "event_type": "CREATE_NODE",
+        "timestamp": 1,
+        "node_id": "n1",
+        "payload": payload,
+    }
+    msg = FakeMessage(json.dumps(event).encode("utf-8"))
+
+    consumer = FakeConsumer([msg])
+    producer = FakeProducer()
+    results = [
+        RecognizerResult(entity_type="EMAIL_ADDRESS", start=11, end=27, score=1.0)
+    ]
+
+    monkeypatch.setattr(privacy_agent, "_ANALYZER", FakeAnalyzer(results))
+    monkeypatch.setattr(privacy_agent, "_ANONYMIZER", FakeAnonymizer())
+    monkeypatch.setattr(privacy_agent, "Consumer", lambda conf: consumer)
+    monkeypatch.setattr(privacy_agent, "Producer", lambda conf: producer)
+    monkeypatch.setattr(privacy_agent.settings, "KAFKA_PRODUCER_BATCH_SIZE", 1)
+    monkeypatch.setattr(privacy_agent, "BATCH_SIZE", 1)
+
+    privacy_agent.run_privacy_agent()
+
+    clean_topic = privacy_agent.CLEAN_TOPIC
+    quarantine_topic = privacy_agent.QUARANTINE_TOPIC
+
+    clean_msg = next(val for (topic, val) in producer.produced if topic == clean_topic)
+    quarantine_msg = next(val for (topic, val) in producer.produced if topic == quarantine_topic)
+
+    assert json.loads(clean_msg.decode("utf-8"))["payload"] == {"email": "<EMAIL_ADDRESS>"}
+    assert json.loads(quarantine_msg.decode("utf-8")) == {"original": payload}
+
+    entries = audit.get_audit_entries()
+    assert entries
+    assert entries[-1]["user_id"] == "tester"
+    assert "payload_redacted" in str(entries[-1]["reason"])
