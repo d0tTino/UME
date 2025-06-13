@@ -278,10 +278,10 @@ PYTHONPATH=src pytest
 ```
 
 ### 2. Start Redpanda (Kafka) via Docker
+The `docker/docker-compose.yml` file spins up the broker. From the repository
+root you can start it with:
 ```bash
-# In the repo root, there is a docker-compose.yml that brings up Redpanda
-# (Correction: The docker-compose.yml is in the 'docker/' subdirectory)
-docker compose -f docker/docker-compose.yml up -d
+cd docker && docker compose up -d
 ```
 If you want to enable TLS for the broker and API, generate certificates first:
 ```bash
