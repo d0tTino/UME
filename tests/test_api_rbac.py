@@ -2,7 +2,7 @@ import os
 from fastapi.testclient import TestClient
 
 from ume.api import app, configure_graph
-from ume import MockGraph
+from ume import MockGraph, RoleBasedGraphAdapter
 from ume.config import settings
 
 
@@ -88,3 +88,57 @@ def test_shortest_path_forbidden_for_other_roles():
         headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
     )
     assert res.status_code == 403
+
+
+def test_path_forbidden_with_role_based_adapter():
+    graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
+    configure_graph(graph)
+
+    client = TestClient(app)
+    payload = {"source": "a", "target": "b"}
+    res = client.post(
+        "/analytics/path",
+        json=payload,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 403
+
+
+def test_subgraph_forbidden_with_role_based_adapter():
+    graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
+    configure_graph(graph)
+
+    client = TestClient(app)
+    sub = {"start": "a", "depth": 1}
+    res = client.post(
+        "/analytics/subgraph",
+        json=sub,
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 403
+
+
+def test_redact_node_forbidden_with_role_based_adapter():
+    graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
+    configure_graph(graph)
+
+    client = TestClient(app)
+    res = client.post(
+        "/redact/node/a",
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 403
+
+
+def test_redact_edge_forbidden_with_role_based_adapter():
+    graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
+    configure_graph(graph)
+
+    client = TestClient(app)
+    res = client.post(
+        "/redact/edge",
+        json={"source": "a", "target": "b", "label": "L"},
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 403
+
