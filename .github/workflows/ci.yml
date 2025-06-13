@@ -65,6 +65,16 @@ jobs:
           poetry install --no-interaction --no-ansi --with dev
           # --with dev ensures dev dependencies like pytest and ruff are installed
 
+      - name: Install poetry-plugin-export
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          poetry self add poetry-plugin-export
+
+      - name: Export requirements
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          poetry export -f requirements.txt --without-hashes --output requirements.txt
+
       - name: Install type stubs for mypy
         if: steps.changes.outputs.run == 'true'
         run: |
