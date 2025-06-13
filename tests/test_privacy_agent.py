@@ -21,7 +21,9 @@ class FakeAnalyzer:
 
 class FakeAnonymizer:
     def anonymize(self, text: str, analyzer_results):
-        return type("Result", (), {"text": text.replace("user@example.com", "<EMAIL_ADDRESS>")})()
+        return type(
+            "Result", (), {"text": text.replace("user@example.com", "<EMAIL_ADDRESS>")}
+        )()
 
 
 def test_redact_event_payload_with_pii(privacy_agent, monkeypatch):
@@ -191,9 +193,13 @@ def test_privacy_agent_audit_log_written(tmp_path, monkeypatch):
     quarantine_topic = privacy_agent.QUARANTINE_TOPIC
 
     clean_msg = next(val for (topic, val) in producer.produced if topic == clean_topic)
-    quarantine_msg = next(val for (topic, val) in producer.produced if topic == quarantine_topic)
+    quarantine_msg = next(
+        val for (topic, val) in producer.produced if topic == quarantine_topic
+    )
 
-    assert json.loads(clean_msg.decode("utf-8"))["payload"] == {"email": "<EMAIL_ADDRESS>"}
+    assert json.loads(clean_msg.decode("utf-8"))["payload"] == {
+        "email": "<EMAIL_ADDRESS>"
+    }
     assert json.loads(quarantine_msg.decode("utf-8")) == {"original": payload}
 
     entries = audit.get_audit_entries()

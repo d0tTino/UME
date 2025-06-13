@@ -5,6 +5,7 @@ from typing import cast
 from neo4j import Driver
 from ume.neo4j_graph import Neo4jGraph
 
+
 class DummyDriver:
     def session(self):
         class DummySession:
