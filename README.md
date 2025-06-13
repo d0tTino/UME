@@ -30,9 +30,17 @@ This section outlines the necessary tools for developing and running the Univers
 
 ### Core Tools Required:
 
-*   **Python:** Version 3.12 or newer.
+*   **Python:** Version **3.12** is required. Lower versions (for example 3.11)
+    will fail due to `pydantic_settings` and other dependencies.
 *   **Poetry:** For Python dependency management. Installation instructions can be found at [https://python-poetry.org/docs/#installation](https://python-poetry.org/docs/#installation).
 *   **Docker:** Docker Desktop (for Windows/macOS) or Docker Engine + Docker Compose (for Linux) is required to run backend services like Redpanda. Download from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/).
+
+After installing these tools and cloning the repository, install all Python
+dependencies (including development requirements) with:
+
+```bash
+poetry install --with dev
+```
 
 ## Architecture
 
@@ -168,6 +176,9 @@ This project uses [pytest](https://docs.pytest.org/) for unit and integration te
 
 ### Prerequisites
 
+You must run the tests with **Python 3.12**. Lower versions such as 3.11
+will fail due to `pydantic_settings` and other dependencies.
+
 Ensure you have installed the development dependencies:
 ```bash
 poetry install --with dev
@@ -252,7 +263,8 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 ## Quickstart
 
 ### Prerequisites
-- Python 3.12+
+- Python **3.12** (required; lower versions such as 3.11 will fail due to
+  `pydantic_settings` and other dependencies)
 - Poetry (https://python-poetry.org)
 - Docker & Docker Compose
 

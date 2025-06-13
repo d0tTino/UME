@@ -13,7 +13,9 @@ fastavro = ">=1.9"
 pyyaml = "*" # Using "*" for PyYAML as it's a common practice, but can be pinned down if needed.
 neo4j = "*"
 networkx = "*"
-fastapi = ">=0.110"
+# FastAPI >=0.110 requires Pydantic v2 which is compatible with
+# pydantic-settings 2.x, so we pin within the current major release.
+fastapi = ">=0.110,<1"
 jsonschema = "*"
 faust-streaming = "*"
 pydantic-settings = "^2.9.1"
@@ -34,6 +36,9 @@ poetry-plugin-export = "*"
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
+
+[tool.ruff]
+line-length = 88
 
 [build-system]
 requires = ["poetry-core"]
