@@ -108,3 +108,11 @@ event = Event(
 
 apply_event_to_graph(event, graph, schema_version=schema.version)
 ```
+
+## SQLite indices
+
+The `PersistentGraph` backend uses SQLite for storing nodes and edges.
+During initialization, indices on the `edges` table are created to
+speed up lookups. An index `idx_edges_source` is always created on the
+`source` column and an additional `idx_edges_target` index is created on
+the `target` column.

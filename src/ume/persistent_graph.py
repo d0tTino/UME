@@ -25,6 +25,13 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
             self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS edges (source TEXT, target TEXT, label TEXT, redacted INTEGER DEFAULT 0, PRIMARY KEY (source, target, label))"
             )
+            # Indexes speed up queries for edges from a given source or target
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_edges_source ON edges (source)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_edges_target ON edges (target)"
+            )
 
     def close(self) -> None:
         self.conn.close()
