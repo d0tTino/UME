@@ -6,7 +6,7 @@ from .config import settings
 import os
 from typing import Any, Dict, List
 
-from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi import Depends, FastAPI, HTTPException, Header, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -22,6 +22,7 @@ app = FastAPI()
 # These can be configured by the embedding application or tests
 app.state.query_engine = None  # type: ignore[assignment]
 app.state.graph = None  # type: ignore[assignment]
+app.state.vector_index = {}  # type: ignore[assignment]
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
@@ -63,6 +64,13 @@ def get_graph() -> IGraphAdapter:
     if graph is None:
         raise HTTPException(status_code=500, detail="Graph not configured")
     return graph
+
+
+def get_vector_index() -> Dict[str, List[float]]:
+    index = app.state.vector_index
+    if index is None:
+        raise HTTPException(status_code=500, detail="Vector index not configured")
+    return index
 
 
 @app.get("/query")
@@ -227,3 +235,32 @@ def api_delete_edge(
 ) -> Dict[str, Any]:
     graph.delete_edge(source, target, label)
     return {"status": "ok"}
+
+
+class VectorAddRequest(BaseModel):
+    id: str
+    vector: List[float]
+
+
+@app.post("/vectors")
+def api_add_vector(
+    req: VectorAddRequest,
+    _: None = Depends(require_token),
+    index: Dict[str, List[float]] = Depends(get_vector_index),
+) -> Dict[str, Any]:
+    index[req.id] = req.vector
+    return {"status": "ok"}
+
+
+@app.get("/vectors/search")
+def api_search_vectors(
+    vector: List[float] = Query(...),
+    k: int = 5,
+    _: None = Depends(require_token),
+    index: Dict[str, List[float]] = Depends(get_vector_index),
+) -> Dict[str, Any]:
+    def _dist(v: List[float]) -> float:
+        return sum((a - b) ** 2 for a, b in zip(v, vector)) ** 0.5
+
+    neighbors = sorted(index.items(), key=lambda item: _dist(item[1]))[:k]
+    return {"ids": [nid for nid, _ in neighbors]}
