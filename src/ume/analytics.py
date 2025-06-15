@@ -10,6 +10,7 @@ import networkx as nx
 import numpy as np
 
 from .graph_adapter import IGraphAdapter
+from .graph_algorithms import shortest_path
 
 
 def _to_networkx(graph: IGraphAdapter) -> nx.DiGraph:
@@ -52,37 +53,6 @@ def _pagerank_numpy(
         if err < n * tol:
             return {nodes[i]: float(x[i]) for i in range(n)}
     raise nx.PowerIterationFailedConvergence(max_iter)
-
-
-def shortest_path(graph: IGraphAdapter, src: str, dst: str) -> List[str]:
-    """Return the shortest directed path from ``src`` to ``dst``.
-
-    This implementation relies on ``graph.find_connected_nodes`` so role-based
-    access checks are enforced by :class:`~ume.rbac_adapter.RoleBasedGraphAdapter`.
-    If no path exists an empty list is returned.
-    """
-    visited: Dict[str, str | None] = {src: None}
-    queue: deque[str] = deque([src])
-    while queue:
-        current = queue.popleft()
-        if current == dst:
-            break
-        for neighbor in graph.find_connected_nodes(current):
-            if neighbor not in visited:
-                visited[neighbor] = current
-                queue.append(neighbor)
-
-    if dst not in visited:
-        return []
-
-    path = [dst]
-    while visited[path[-1]] is not None:
-        prev = visited[path[-1]]
-        assert prev is not None
-        path.append(prev)
-    path.reverse()
-    return path
-
 
 def find_communities(graph: IGraphAdapter) -> List[Set[str]]:
     """Detect communities in the graph."""
