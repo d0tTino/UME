@@ -24,6 +24,7 @@ from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
+from .vector_store import VectorStore, VectorStoreListener
 
 __all__ = [
     "Event",
@@ -54,4 +55,6 @@ __all__ = [
     "log_audit_entry",
     "get_audit_entries",
     "ssl_config",
+    "VectorStore",
+    "VectorStoreListener",
 ]

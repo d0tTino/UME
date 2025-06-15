@@ -1,24 +1,28 @@
-import numpy as np
-import pytest
-
-faiss = pytest.importorskip("faiss")
-
-
-def _has_gpu_support() -> bool:
-    """Return True if FAISS was compiled with GPU support and a GPU is available."""
-    return hasattr(faiss, "StandardGpuResources") and getattr(faiss, "get_num_gpus", lambda: 0)() > 0
+import time
+from ume import Event, EventType, MockGraph, apply_event_to_graph
+from ume.vector_store import VectorStore, VectorStoreListener
+from ume._internal.listeners import register_listener, unregister_listener
 
 
-@pytest.mark.skipif(not _has_gpu_support(), reason="FAISS GPU libraries are unavailable")
-def test_add_and_query_gpu_index() -> None:
-    """Verify basic add/query operations on a small FAISS GPU index."""
-    dimension = 4
-    data = np.random.random((10, dimension)).astype("float32")
-    cpu_index = faiss.IndexFlatL2(dimension)
-    res = faiss.StandardGpuResources()
-    index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
+def test_vector_store_add_and_query() -> None:
+    store = VectorStore(dim=2)
+    store.add("a", [1.0, 0.0])
+    store.add("b", [0.0, 1.0])
+    res = store.query([1.0, 0.0], k=1)
+    assert res == ["a"]
 
-    index.add(data)
-    _, indices = index.search(data, 1)
 
-    assert np.all(indices.ravel() == np.arange(10))
+def test_vector_store_listener_on_create() -> None:
+    store = VectorStore(dim=2)
+    listener = VectorStoreListener(store)
+    register_listener(listener)
+    graph = MockGraph()
+    event = Event(
+        event_type=EventType.CREATE_NODE,
+        timestamp=int(time.time()),
+        payload={"node_id": "n1", "attributes": {"embedding": [1.0, 0.0]}},
+    )
+    apply_event_to_graph(event, graph)
+    unregister_listener(listener)
+
+    assert store.query([1.0, 0.0], k=1) == ["n1"]
