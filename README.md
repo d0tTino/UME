@@ -142,17 +142,19 @@ Used to remove a specific directed, labeled edge between two nodes.
 *   `label`: String, label of the edge.
 **Optional Fields:** `event_id`, `source`, `payload`.
 
-**Event Flow:**
+**Event Flow:** *(see the full diagram in [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md))*
 
 ```
 Producer --> ume-raw-events --> Privacy Agent --> ume-clean-events
-     --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j)
+     --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j) & Vector Store
 ```
 
 1. `producer_demo.py` publishes raw events to the `ume-raw-events` Kafka topic.
 2. The **Privacy Agent** consumes these events, redacts PII, and forwards sanitized messages to `ume-clean-events`.
 3. A graph consumer reads sanitized events and applies them via the configured **Graph Adapter**.
-4. The adapter persists nodes and edges to the chosen backend, such as SQLite or Neo4j.
+4. The adapter persists nodes and edges to the chosen backend, such as SQLite or Neo4j, and writes embeddings to a vector store.
+
+When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals.
 
 This pipeline demonstrates how UME transforms incoming events into a persistent knowledge graph.
 
