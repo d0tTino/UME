@@ -3,11 +3,16 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from ..graph_adapter import IGraphAdapter
+from ..graph_algorithms import (
+    shortest_path as _shortest_path,
+    traverse as _traverse,
+    extract_subgraph as _extract_subgraph,
+)
 
 
 def shortest_path(graph: IGraphAdapter, source: str, target: str) -> List[str]:
-    """Wrapper around :meth:`IGraphAdapter.shortest_path`."""
-    return graph.shortest_path(source, target)
+    """Return the shortest path between two nodes."""
+    return _shortest_path(graph, source, target)
 
 
 def traverse(
@@ -16,8 +21,8 @@ def traverse(
     depth: int,
     edge_label: Optional[str] = None,
 ) -> List[str]:
-    """Wrapper around :meth:`IGraphAdapter.traverse`."""
-    return graph.traverse(start_node_id, depth, edge_label)
+    """Traverse outward from ``start_node_id`` using the shared algorithm."""
+    return _traverse(graph, start_node_id, depth, edge_label)
 
 
 def extract_subgraph(
@@ -27,8 +32,8 @@ def extract_subgraph(
     edge_label: Optional[str] = None,
     since_timestamp: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Wrapper around :meth:`IGraphAdapter.extract_subgraph`."""
-    return graph.extract_subgraph(start_node_id, depth, edge_label, since_timestamp)
+    """Extract a subgraph using the shared algorithm."""
+    return _extract_subgraph(graph, start_node_id, depth, edge_label, since_timestamp)
 
 
 def constrained_path(
