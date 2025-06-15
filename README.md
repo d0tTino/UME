@@ -674,6 +674,24 @@ score = graph_similarity(g1, g2)
 print(score)
 ```
 
+## Vector Store
+
+UME can optionally maintain a FAISS index of node embeddings. When a
+`CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event contains an `embedding` field
+in its attributes, the vector is added to the index via
+`VectorStoreListener`.
+
+Set the following environment variables to configure the store:
+
+- `UME_VECTOR_DIM` – dimension of the embedding vectors (default `1536`).
+- `UME_VECTOR_INDEX` – path of the FAISS index file.
+
+Install the optional dependencies with:
+
+```bash
+poetry install --with vector
+```
+
 ## Where to Get Help
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:
