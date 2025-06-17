@@ -4,6 +4,8 @@ from typing import List, Dict, Any
 import os
 import json
 
+import time
+
 from .config import settings
 
 import numpy as np
@@ -88,13 +90,22 @@ class VectorStore:
             self.save(self.path)
 
     def query(self, vector: List[float], k: int = 5) -> List[str]:
-        if not self.idx_to_id:
-            return []
-        arr = np.asarray(vector, dtype="float32").reshape(1, -1)
-        if arr.shape[1] != self.dim:
-            raise ValueError(f"Expected vector of dimension {self.dim}, got {arr.shape[1]}")
-        _, indices = self.index.search(arr, min(k, len(self.idx_to_id)))
-        return [self.idx_to_id[i] for i in indices[0] if i != -1]
+        from .api import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
+
+        start = time.perf_counter()
+        try:
+            if not self.idx_to_id:
+                return []
+            arr = np.asarray(vector, dtype="float32").reshape(1, -1)
+            if arr.shape[1] != self.dim:
+                raise ValueError(
+                    f"Expected vector of dimension {self.dim}, got {arr.shape[1]}"
+                )
+            _, indices = self.index.search(arr, min(k, len(self.idx_to_id)))
+            return [self.idx_to_id[i] for i in indices[0] if i != -1]
+        finally:
+            VECTOR_QUERY_LATENCY.observe(time.perf_counter() - start)
+            VECTOR_INDEX_SIZE.set(len(self.idx_to_id))
 
     def save(self, path: str) -> None:
         """Persist the FAISS index and id mapping to ``path``."""
