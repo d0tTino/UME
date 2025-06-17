@@ -99,6 +99,34 @@ class VectorStore:
         _, indices = self.index.search(arr, min(k, len(self.idx_to_id)))
         return [self.idx_to_id[i] for i in indices[0] if i != -1]
 
+    def save(self, path: str) -> None:
+        """Persist the FAISS index and id mapping to ``path``."""
+        index = self.index
+        # ``write_index`` only operates on CPU indexes.
+        if self.gpu_resources is not None:
+            index = faiss.index_gpu_to_cpu(index)
+        faiss.write_index(index, path)
+        with open(f"{path}.json", "w", encoding="utf-8") as f:
+            import json
+
+            json.dump(self.idx_to_id, f)
+
+    @classmethod
+    def load(cls, path: str, *, use_gpu: bool | None = None) -> "VectorStore":
+        """Load a previously saved index from ``path``."""
+        index = faiss.read_index(path)
+        dim = index.d
+        store = cls(dim=dim, use_gpu=use_gpu)
+        if store.gpu_resources is not None:
+            index = faiss.index_cpu_to_gpu(store.gpu_resources, 0, index)
+        store.index = index
+        with open(f"{path}.json", "r", encoding="utf-8") as f:
+            import json
+
+            store.idx_to_id = json.load(f)
+        store.id_to_idx = {item_id: i for i, item_id in enumerate(store.idx_to_id)}
+        return store
+
 
 class VectorStoreListener(GraphListener):
     """GraphListener that indexes embeddings from node attributes."""
