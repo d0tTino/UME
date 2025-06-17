@@ -53,3 +53,15 @@ Add a vector to the in-memory index.
 ### GET `/vectors/search`
 Search for nearest vectors.
 - **Query parameters**: repeated `vector` values forming the query vector and optional `k` (defaults to 5).
+
+## API Documentation
+
+To explore the API interactively, run the FastAPI server and open the Swagger UI:
+
+```bash
+uvicorn ume.api:app
+```
+
+Then visit [http://localhost:8000/docs](http://localhost:8000/docs) in your browser.
+The raw OpenAPI schema is available at
+[http://localhost:8000/openapi.json](http://localhost:8000/openapi.json).

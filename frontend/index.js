@@ -3,6 +3,9 @@ const { useState, useRef, useEffect } = React;
 function App() {
   const [token, setToken] = useState('');
   const [vector, setVector] = useState('');
+  const [cypher, setCypher] = useState('');
+  const [queryResult, setQueryResult] = useState('');
+  const [searchResult, setSearchResult] = useState('');
   const containerRef = useRef(null);
   const networkRef = useRef(null);
 
@@ -48,8 +51,24 @@ function App() {
       headers: { Authorization: 'Bearer ' + token },
     })
       .then((res) => res.json())
-      .then((data) => alert('Results: ' + data.ids.join(', ')))
+      .then((data) =>
+        setSearchResult(
+          Array.isArray(data.ids)
+            ? data.ids.join(', ')
+            : JSON.stringify(data, null, 2)
+        )
+      )
       .catch((err) => console.error('Search failed', err));
+  }
+
+  function runQuery() {
+    if (!cypher) return;
+    fetch('/query?cypher=' + encodeURIComponent(cypher), {
+      headers: { Authorization: 'Bearer ' + token },
+    })
+      .then((res) => res.json())
+      .then((data) => setQueryResult(JSON.stringify(data, null, 2)))
+      .catch((err) => console.error('Query failed', err));
   }
 
   return React.createElement(
@@ -69,6 +88,17 @@ function App() {
         'Load Graph'
       ),
       React.createElement('input', {
+        placeholder: 'Cypher query',
+        value: cypher,
+        onChange: (e) => setCypher(e.target.value),
+        style: { marginLeft: '8px', width: '40%' },
+      }),
+      React.createElement(
+        'button',
+        { onClick: runQuery, style: { marginLeft: '4px' } },
+        'Run Query'
+      ),
+      React.createElement('input', {
         placeholder: 'Vector search',
         value: vector,
         onChange: (e) => setVector(e.target.value),
@@ -79,6 +109,16 @@ function App() {
         { onClick: searchVectors, style: { marginLeft: '4px' } },
         'Search'
       )
+    ),
+    React.createElement(
+      'pre',
+      { style: { margin: 0, padding: '8px' } },
+      queryResult
+    ),
+    React.createElement(
+      'pre',
+      { style: { margin: 0, padding: '8px' } },
+      searchResult
     ),
     React.createElement('div', { ref: containerRef, style: { flex: 1 } })
   );
