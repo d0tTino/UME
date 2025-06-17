@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .config import settings
 import os
+from .logging_utils import configure_logging
 from typing import Any, Dict, List
 
 from fastapi import Depends, FastAPI, HTTPException, Header, Query
@@ -14,6 +15,8 @@ from .analytics import shortest_path
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
+
+configure_logging()
 
 API_TOKEN = settings.UME_API_TOKEN
 

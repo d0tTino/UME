@@ -694,6 +694,13 @@ Install the optional dependencies with:
 poetry install --with vector
 ```
 
+## Logging
+
+UME uses ``structlog`` for structured application logs. By default logs are
+formatted for human readability. Set ``UME_LOG_JSON=1`` to output JSON lines and
+``UME_LOG_LEVEL=DEBUG`` for verbose logging. These environment variables apply
+to the CLI, API server and demo scripts.
+
 ## Where to Get Help
 
 If you have questions, encounter issues, or want to discuss ideas related to UME, please feel free to:

@@ -1,6 +1,7 @@
 """Demonstrates AutoDev -> UME -> Culture.ai event flow using :class:`UMEClient`."""
 
 import logging
+from ume.logging_utils import configure_logging
 import time
 
 from ume import Event, EventType
@@ -8,7 +9,7 @@ from ume.client import UMEClient
 from ume.config import Settings
 
 # Configure logging so we can observe the flow
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger("agent_integration")
 
 
@@ -44,4 +45,3 @@ if __name__ == "__main__":
 
     # Step 3: Forward those events to Culture.ai (simulated)
     forward_to_culture(consumed)
-

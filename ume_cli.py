@@ -9,6 +9,7 @@ import sys
 import time  # Added for timestamp in event creation
 import warnings
 from pathlib import Path
+from ume.logging_utils import configure_logging
 
 # Ensure local package import when run directly without installation
 _src_path = Path(__file__).resolve().parent / "src"
@@ -186,9 +187,7 @@ class UMEPrompt(Cmd):
                 return
             source_id, target_id, label = parts
             self.graph.redact_edge(source_id, target_id, label)
-            print(
-                f"Edge ({source_id})->({target_id}) [{label}] redacted."
-            )
+            print(f"Edge ({source_id})->({target_id}) [{label}] redacted.")
         except ProcessingError as e:
             print(f"Error: {e}")
         except Exception as e:
@@ -349,7 +348,9 @@ class UMEPrompt(Cmd):
         if callable(close_method):
             try:
                 close_method()
-            except Exception as e:  # pragma: no cover - cleanup failure should not crash CLI
+            except (
+                Exception
+            ) as e:  # pragma: no cover - cleanup failure should not crash CLI
                 logging.getLogger(__name__).error("Error closing graph: %s", e)
         print("Goodbye!")
         return True  # returning True exits the Cmd loop
@@ -389,6 +390,8 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    configure_logging()
 
     _setup_warnings(args.show_warnings, args.warnings_log)
 
