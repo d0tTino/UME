@@ -51,3 +51,16 @@ Start the stack with `docker-compose up`. Prometheus will scrape
 2. Add a Prometheus data source pointing to `http://prometheus:9090`.
 3. Create a dashboard and add graphs using the `ume_http_requests_total` and
    other metrics exposed by UME.
+
+## Example Grafana Panels
+
+Here are a few Prometheus queries you can use when building graphs:
+
+| Metric | Purpose | Example Query |
+| ------ | ------- | ------------- |
+| `ume_request_latency_seconds` | Average request latency | `rate(ume_request_latency_seconds_sum[5m]) / rate(ume_request_latency_seconds_count[5m])` |
+| `ume_vector_query_latency_seconds` | Latency of vector similarity search | `rate(ume_vector_query_latency_seconds_sum[5m]) / rate(ume_vector_query_latency_seconds_count[5m])` |
+| `ume_vector_index_size` | Number of vectors stored | `ume_vector_index_size` |
+
+You can combine these metrics in Grafana to visualize API performance and index
+growth over time.

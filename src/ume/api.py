@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse, Response
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
+    Gauge,
     Histogram,
     generate_latest,
 )
@@ -42,6 +43,16 @@ REQUEST_LATENCY = Histogram(
     "ume_request_latency_seconds",
     "Request latency in seconds",
     ["method", "path"],
+)
+
+# Metrics for vector search operations
+VECTOR_QUERY_LATENCY = Histogram(
+    "ume_vector_query_latency_seconds",
+    "VectorStore query latency in seconds",
+)
+VECTOR_INDEX_SIZE = Gauge(
+    "ume_vector_index_size",
+    "Number of vectors stored in the VectorStore",
 )
 
 
