@@ -9,6 +9,12 @@ import sys
 import time  # Added for timestamp in event creation
 import warnings
 from pathlib import Path
+
+# Ensure local package import when run directly without installation
+_src_path = Path(__file__).resolve().parent / "src"
+if _src_path.exists() and str(_src_path) not in sys.path:
+    sys.path.insert(0, str(_src_path))
+
 from ume.logging_utils import configure_logging
 
 # Ensure local package import when run directly without installation
