@@ -22,6 +22,7 @@ from .analytics import shortest_path
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
+from .vector_store import VectorStore, create_default_store
 
 configure_logging()
 
@@ -67,7 +68,7 @@ async def metrics_middleware(request: Request, call_next):
 # These can be configured by the embedding application or tests
 app.state.query_engine = None  # type: ignore[assignment]
 app.state.graph = None  # type: ignore[assignment]
-app.state.vector_index = {}  # type: ignore[assignment]
+app.state.vector_store = create_default_store()  # type: ignore[assignment]
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
@@ -76,6 +77,11 @@ def configure_graph(graph: IGraphAdapter) -> None:
     if role:
         graph = RoleBasedGraphAdapter(graph, role=role)
     app.state.graph = graph
+
+
+def configure_vector_store(store: VectorStore) -> None:
+    """Inject a :class:`VectorStore` instance into the application state."""
+    app.state.vector_store = store
 
 
 @app.exception_handler(AccessDeniedError)
@@ -111,11 +117,11 @@ def get_graph() -> IGraphAdapter:
     return graph
 
 
-def get_vector_index() -> Dict[str, List[float]]:
-    index = app.state.vector_index
-    if index is None:
-        raise HTTPException(status_code=500, detail="Vector index not configured")
-    return index
+def get_vector_store() -> VectorStore:
+    store = app.state.vector_store
+    if store is None:
+        raise HTTPException(status_code=500, detail="Vector store not configured")
+    return store
 
 
 @app.get("/query")
@@ -301,10 +307,10 @@ class VectorAddRequest(BaseModel):
 def api_add_vector(
     req: VectorAddRequest,
     _: None = Depends(require_token),
-    index: Dict[str, List[float]] = Depends(get_vector_index),
+    store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Store an embedding vector for later similarity search."""
-    index[req.id] = req.vector
+    store.add(req.id, req.vector)
     return {"status": "ok"}
 
 
@@ -313,14 +319,11 @@ def api_search_vectors(
     vector: List[float] = Query(...),
     k: int = 5,
     _: None = Depends(require_token),
-    index: Dict[str, List[float]] = Depends(get_vector_index),
+    store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Find the IDs of the ``k`` nearest vectors to ``vector``."""
-    def _dist(v: List[float]) -> float:
-        return sum((a - b) ** 2 for a, b in zip(v, vector)) ** 0.5
-
-    neighbors = sorted(index.items(), key=lambda item: _dist(item[1]))[:k]
-    return {"ids": [nid for nid, _ in neighbors]}
+    ids = store.query(vector, k=k)
+    return {"ids": ids}
 
 
 @app.get("/metrics")
