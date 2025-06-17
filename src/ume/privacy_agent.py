@@ -6,6 +6,7 @@ import json
 import logging
 from typing import Dict, Tuple
 from .utils import ssl_config
+from .logging_utils import configure_logging
 
 from confluent_kafka import Consumer, Producer, KafkaException, KafkaError  # type: ignore
 from presidio_analyzer import AnalyzerEngine  # type: ignore
@@ -17,7 +18,7 @@ from .schema_utils import validate_event_dict
 from .audit import log_audit_entry
 
 
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 

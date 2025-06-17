@@ -9,13 +9,13 @@ corresponding producer_demo.py script.
 
 import json
 import logging
+from ume.logging_utils import configure_logging
 from ume.config import settings
 from ume.utils import ssl_config
 from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
 from ume import parse_event, EventError  # Import parse_event and EventError
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger("consumer_demo")
 
 # Kafka broker and topic
