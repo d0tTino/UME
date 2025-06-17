@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import os
-from typing import List
-
-from sentence_transformers import SentenceTransformer
+from typing import List, TYPE_CHECKING
 
 from .config import settings
 
-_MODEL_CACHE: dict[str, SentenceTransformer] = {}
+if TYPE_CHECKING:  # pragma: no cover - type hints only
+    from sentence_transformers import SentenceTransformer
+
+_MODEL_CACHE: dict[str, "SentenceTransformer"] = {}
 
 
-def _get_model() -> SentenceTransformer:
+def _get_model() -> "SentenceTransformer":
+    from sentence_transformers import SentenceTransformer
+
     model_name = os.getenv("UME_EMBED_MODEL", settings.UME_EMBED_MODEL)
     model = _MODEL_CACHE.get(model_name)
     if model is None:
