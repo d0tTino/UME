@@ -722,6 +722,10 @@ Set the following environment variables to configure the store:
 operations (default `256`). Increase or decrease this to tune GPU memory usage
 when building the index.
 
+If the file specified by `UME_VECTOR_INDEX` exists, it is loaded automatically
+when the store is created. New vectors are written back to this file whenever
+they are added and when the store is closed.
+
 Install the optional dependencies with:
 
 ```bash

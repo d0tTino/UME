@@ -1,4 +1,5 @@
 import time
+import importlib
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
 from ume._internal.listeners import register_listener, unregister_listener
@@ -68,6 +69,7 @@ def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
     monkeypatch.setattr(faiss, "index_cpu_to_gpu", lambda res, _, idx: idx)
 
     import importlib
+
     import ume.config as cfg
     import ume.vector_store as vs
     importlib.reload(cfg)

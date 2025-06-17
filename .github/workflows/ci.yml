@@ -57,7 +57,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
-        run: poetry install --no-interaction --no-ansi --with dev
+        run: poetry install --no-interaction --no-ansi --with dev --with vector --with embedding
 
       - name: Run pre-commit
         if: steps.changes.outputs.run == 'true'
