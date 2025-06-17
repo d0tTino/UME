@@ -89,3 +89,9 @@ def test_malformed_authorization_header():
     )
     assert res.status_code == 401
     assert res.json()["detail"] == "Malformed Authorization header"
+
+
+def test_metrics_endpoint():
+    client = TestClient(app)
+    res = client.get("/metrics")
+    assert res.status_code == 200

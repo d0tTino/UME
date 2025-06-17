@@ -6,8 +6,15 @@ from .config import settings
 import os
 from typing import Any, Dict, List
 
-from fastapi import Depends, FastAPI, HTTPException, Header, Query
-from fastapi.responses import JSONResponse
+import time
+from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
+from fastapi.responses import JSONResponse, Response
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Histogram,
+    generate_latest,
+)
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -18,6 +25,37 @@ from .query import Neo4jQueryEngine
 API_TOKEN = settings.UME_API_TOKEN
 
 app = FastAPI()
+
+REQUEST_COUNT = Counter(
+    "ume_http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status"],
+)
+REQUEST_LATENCY = Histogram(
+    "ume_request_latency_seconds",
+    "Request latency in seconds",
+    ["method", "path"],
+)
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    method = request.method
+    path = request.url.path
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        REQUEST_LATENCY.labels(method=method, path=path).observe(
+            time.perf_counter() - start
+        )
+        REQUEST_COUNT.labels(method=method, path=path, status="500").inc()
+        raise
+    REQUEST_LATENCY.labels(method=method, path=path).observe(
+        time.perf_counter() - start
+    )
+    REQUEST_COUNT.labels(method=method, path=path, status=str(response.status_code)).inc()
+    return response
 
 # These can be configured by the embedding application or tests
 app.state.query_engine = None  # type: ignore[assignment]
@@ -264,3 +302,10 @@ def api_search_vectors(
 
     neighbors = sorted(index.items(), key=lambda item: _dist(item[1]))[:k]
     return {"ids": [nid for nid, _ in neighbors]}
+
+
+@app.get("/metrics")
+def metrics_endpoint() -> Response:
+    """Expose Prometheus metrics."""
+    data = generate_latest()
+    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
