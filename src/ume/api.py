@@ -17,7 +17,11 @@ from .query import Neo4jQueryEngine
 
 API_TOKEN = settings.UME_API_TOKEN
 
-app = FastAPI()
+app = FastAPI(
+    title="UME API",
+    version="0.1.0",
+    description="HTTP API for the Universal Memory Engine.",
+)
 
 # These can be configured by the embedding application or tests
 app.state.query_engine = None  # type: ignore[assignment]
@@ -124,6 +128,7 @@ def api_shortest_path(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Return the shortest path between two nodes."""
     path = shortest_path(graph, req.source, req.target)
     return {"path": path}
 
@@ -134,6 +139,7 @@ def api_constrained_path(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Find a path subject to optional depth or label constraints."""
     path = graph.constrained_path(
         req.source,
         req.target,
@@ -150,6 +156,7 @@ def api_subgraph(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Extract a subgraph starting from ``start`` to the given ``depth``."""
     return graph.extract_subgraph(
         req.start,
         req.depth,
@@ -164,6 +171,7 @@ def api_redact_node(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Redact (delete) a node by its ID."""
     graph.redact_node(node_id)
     return {"status": "ok"}
 
@@ -180,6 +188,7 @@ def api_redact_edge(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Redact an edge between two nodes."""
     graph.redact_edge(req.source, req.target, req.label)
     return {"status": "ok"}
 
@@ -190,6 +199,7 @@ def api_create_node(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Create a node with optional attributes."""
     graph.add_node(req.id, req.attributes or {})
     return {"status": "ok"}
 
@@ -201,6 +211,7 @@ def api_update_node(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Update attributes of an existing node."""
     graph.update_node(node_id, req.attributes)
     return {"status": "ok"}
 
@@ -211,6 +222,7 @@ def api_delete_node(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Remove a node from the graph."""
     graph.redact_node(node_id)
     return {"status": "ok"}
 
@@ -221,6 +233,7 @@ def api_create_edge(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Create an edge between two nodes."""
     graph.add_edge(req.source, req.target, req.label)
     return {"status": "ok"}
 
@@ -233,6 +246,7 @@ def api_delete_edge(
     _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
+    """Delete an edge identified by source, target and label."""
     graph.delete_edge(source, target, label)
     return {"status": "ok"}
 
@@ -248,6 +262,7 @@ def api_add_vector(
     _: None = Depends(require_token),
     index: Dict[str, List[float]] = Depends(get_vector_index),
 ) -> Dict[str, Any]:
+    """Store an embedding vector for later similarity search."""
     index[req.id] = req.vector
     return {"status": "ok"}
 
@@ -259,6 +274,7 @@ def api_search_vectors(
     _: None = Depends(require_token),
     index: Dict[str, List[float]] = Depends(get_vector_index),
 ) -> Dict[str, Any]:
+    """Find the IDs of the ``k`` nearest vectors to ``vector``."""
     def _dist(v: List[float]) -> float:
         return sum((a - b) ** 2 for a, b in zip(v, vector)) ** 0.5
 
