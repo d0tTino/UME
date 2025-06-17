@@ -1,24 +1,87 @@
-const { useEffect, useRef } = React;
+const { useState, useRef, useEffect } = React;
 
-function Graph() {
+function App() {
+  const [token, setToken] = useState('');
+  const [vector, setVector] = useState('');
   const containerRef = useRef(null);
-  useEffect(() => {
-    const nodes = new vis.DataSet([
-      { id: 1, label: 'Node 1' },
-      { id: 2, label: 'Node 2' },
-      { id: 3, label: 'Node 3' },
-    ]);
+  const networkRef = useRef(null);
 
-    const edges = new vis.DataSet([
-      { from: 1, to: 2 },
-      { from: 2, to: 3 },
-    ]);
+  function loadGraph() {
+    fetch('/analytics/subgraph', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+      },
+      body: JSON.stringify({ start: 'a', depth: 1 }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const nodes = new vis.DataSet(
+          Object.keys(data.nodes).map((id) => ({ id, label: id }))
+        );
+        const edges = new vis.DataSet(
+          data.edges.map((e) => ({ from: e.source, to: e.target }))
+        );
+        const graphData = { nodes, edges };
+        const options = { physics: { stabilization: true } };
+        if (networkRef.current) {
+          networkRef.current.setData(graphData);
+        } else {
+          networkRef.current = new vis.Network(
+            containerRef.current,
+            graphData,
+            options
+          );
+        }
+      })
+      .catch((err) => console.error('Failed to load graph', err));
+  }
 
-    const data = { nodes, edges };
-    const options = { physics: { stabilization: true } };
-    new vis.Network(containerRef.current, data, options);
-  }, []);
-  return React.createElement('div', { style: { height: '100%' }, ref: containerRef });
+  function searchVectors() {
+    if (!vector) return;
+    const params = vector
+      .split(',')
+      .map((v) => 'vector=' + encodeURIComponent(v.trim()))
+      .join('&');
+    fetch('/vectors/search?' + params, {
+      headers: { Authorization: 'Bearer ' + token },
+    })
+      .then((res) => res.json())
+      .then((data) => alert('Results: ' + data.ids.join(', ')))
+      .catch((err) => console.error('Search failed', err));
+  }
+
+  return React.createElement(
+    'div',
+    { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
+    React.createElement(
+      'div',
+      { style: { padding: '8px', background: '#eee' } },
+      React.createElement('input', {
+        placeholder: 'API Token',
+        value: token,
+        onChange: (e) => setToken(e.target.value),
+      }),
+      React.createElement(
+        'button',
+        { onClick: loadGraph, style: { marginLeft: '4px' } },
+        'Load Graph'
+      ),
+      React.createElement('input', {
+        placeholder: 'Vector search',
+        value: vector,
+        onChange: (e) => setVector(e.target.value),
+        style: { marginLeft: '8px' },
+      }),
+      React.createElement(
+        'button',
+        { onClick: searchVectors, style: { marginLeft: '4px' } },
+        'Search'
+      )
+    ),
+    React.createElement('div', { ref: containerRef, style: { flex: 1 } })
+  );
 }
 
-ReactDOM.render(React.createElement(Graph), document.getElementById('root'));
+ReactDOM.render(React.createElement(App), document.getElementById('root'));
