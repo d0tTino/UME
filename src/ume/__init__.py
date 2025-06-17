@@ -26,6 +26,12 @@ from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
 
+try:  # Optional dependency
+    from .embedding import generate_embedding
+except Exception:  # pragma: no cover - optional import
+    def generate_embedding(text: str) -> list[float]:
+        raise ImportError("sentence-transformers is required to generate embeddings")
+
 __all__ = [
     "Event",
     "EventType",
@@ -57,4 +63,5 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
+    "generate_embedding",
 ]
