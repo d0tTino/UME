@@ -28,6 +28,9 @@ class VectorStore:
         if use_gpu:
             try:
                 self.gpu_resources = faiss.StandardGpuResources()
+                self.gpu_resources.setTempMemory(
+                    settings.UME_VECTOR_GPU_MEM_MB * 1024 * 1024
+                )
                 self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
             except AttributeError:
                 # FAISS was compiled without GPU support
