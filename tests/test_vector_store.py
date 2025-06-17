@@ -49,3 +49,15 @@ def test_vector_store_env_gpu(monkeypatch) -> None:
 
     store = vs.VectorStore(dim=2)
     assert store.gpu_resources is not None
+
+
+def test_vector_store_persistence(tmp_path) -> None:
+    path = tmp_path / "index.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path))
+    store.add("a", [1.0, 0.0])
+    store.add("b", [0.0, 1.0])
+    store.close()
+
+    new_store = VectorStore(dim=2, use_gpu=False, path=str(path))
+    res = new_store.query([1.0, 0.0], k=2)
+    assert res[0] == "a"
