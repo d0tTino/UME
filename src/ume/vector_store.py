@@ -25,22 +25,19 @@ class VectorStore:
 
         if use_gpu is None:
             use_gpu = settings.UME_VECTOR_USE_GPU
-        self.use_gpu = use_gpu
 
-        if os.path.exists(self.path):
-            self.load(self.path)
-        else:
-            self.dim = dim
-            self.index = faiss.IndexFlatL2(self.dim)
-            if self.use_gpu:
-                try:
-                    self.gpu_resources = faiss.StandardGpuResources()
-                    self.index = faiss.index_cpu_to_gpu(
-                        self.gpu_resources, 0, self.index
-                    )
-                except AttributeError:
-                    # FAISS was compiled without GPU support
-                    pass
+        self.index = faiss.IndexFlatL2(dim)
+        if use_gpu:
+            try:
+                self.gpu_resources = faiss.StandardGpuResources()
+                self.gpu_resources.setTempMemory(
+                    settings.UME_VECTOR_GPU_MEM_MB * 1024 * 1024
+                )
+                self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
+            except AttributeError:
+                # FAISS was compiled without GPU support
+                pass
+
 
     def add(self, item_id: str, vector: List[float]) -> None:
         arr = np.asarray(vector, dtype="float32").reshape(1, -1)

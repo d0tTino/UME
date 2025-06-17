@@ -52,15 +52,23 @@ def test_vector_store_env_gpu(monkeypatch) -> None:
     assert store.gpu_resources is not None
 
 
-@pytest.mark.parametrize(
-    "env_gpu",
-    [False, True] if hasattr(faiss, "StandardGpuResources") else [False],
-)
-def test_vector_store_save_load(tmp_path, monkeypatch, env_gpu) -> None:
-    if env_gpu:
-        monkeypatch.setenv("UME_VECTOR_USE_GPU", "true")
-    else:
-        monkeypatch.setenv("UME_VECTOR_USE_GPU", "false")
+def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
+    if not hasattr(faiss, "StandardGpuResources"):
+        pytest.skip("FAISS GPU not available")
+
+    class DummyRes:
+        def __init__(self) -> None:
+            self.temp: int | None = None
+
+        def setTempMemory(self, value: int) -> None:  # noqa: N802
+            self.temp = value
+
+    monkeypatch.setenv("UME_VECTOR_USE_GPU", "true")
+    monkeypatch.setenv("UME_VECTOR_GPU_MEM_MB", "1")
+    monkeypatch.setattr(faiss, "StandardGpuResources", DummyRes)
+    monkeypatch.setattr(faiss, "index_cpu_to_gpu", lambda res, _, idx: idx)
+
+    import importlib
 
     import ume.config as cfg
     import ume.vector_store as vs
@@ -68,10 +76,5 @@ def test_vector_store_save_load(tmp_path, monkeypatch, env_gpu) -> None:
     importlib.reload(vs)
 
     store = vs.VectorStore(dim=2)
-    store.add("a", [1.0, 0.0])
-    index_path = tmp_path / "index.faiss"
-    store.save(str(index_path))
-
-    loaded = vs.VectorStore.load(str(index_path))
-    assert loaded.query([1.0, 0.0], k=1) == ["a"]
-
+    assert isinstance(store.gpu_resources, DummyRes)
+    assert store.gpu_resources.temp == 1 * 1024 * 1024

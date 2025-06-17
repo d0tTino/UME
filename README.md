@@ -718,6 +718,9 @@ Set the following environment variables to configure the store:
 - `UME_VECTOR_INDEX` – path of the FAISS index file.
 - `UME_VECTOR_USE_GPU` – set to `true` to build the index on a GPU (requires
   FAISS compiled with GPU support).
+- `UME_VECTOR_GPU_MEM_MB` – temporary memory (in MB) allocated for FAISS GPU
+operations (default `256`). Increase or decrease this to tune GPU memory usage
+when building the index.
 
 If the file specified by `UME_VECTOR_INDEX` exists, it is loaded automatically
 when the store is created. New vectors are written back to this file whenever
