@@ -276,6 +276,8 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 git clone https://github.com/d0tTino/universal-memory-engine.git
 cd universal-memory-engine
 poetry install --with dev
+# Include optional embedding + vector dependencies to run the full test suite
+poetry install --with embedding --with vector
 poetry run python -m spacy download en_core_web_lg
 ```
 To automate the above steps (including installing development tools), you can
@@ -340,6 +342,21 @@ This example shows how an AutoDev agent can send events to UME and forward them
 to Culture.ai:
 ```bash
 poetry run python examples/agent_integration.py
+```
+
+### 8. Start the API and Frontend Demo
+Launch the FastAPI server and interact with it using either the
+web interface or the small CLI demo in `frontend/app.py`:
+
+```bash
+uvicorn ume.api:app --reload
+# open frontend/index.html in your browser (e.g. with `python -m http.server`)
+poetry run python frontend/app.py --token secret-token query "MATCH (n) RETURN n"
+```
+You can also search the vector store with either UI:
+
+```bash
+poetry run python frontend/app.py --token secret-token search "1,0,0" --k 3
 ```
 
 ## Configuration Templates
