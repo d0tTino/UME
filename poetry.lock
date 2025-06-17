@@ -4540,10 +4540,10 @@ cffi = {version = ">=1.11", markers = "platform_python_implementation == \"PyPy\
 cffi = ["cffi (>=1.11)"]
 
 [extras]
+embedding = []
 vector = []
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "2955d3a266db4ad35491f76d05522c07e183c5878b059f5f7a1ae8b37b134a6b"
-
+content-hash = "20682b31a9e346212cbbc57f9dbf657eda52d68f39cebf6300c31904a626bcd1"
