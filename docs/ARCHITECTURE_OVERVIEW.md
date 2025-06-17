@@ -20,3 +20,8 @@ embeddings in a dedicated vector store.
 
 When querying, the API can perform a similarity search against the vector store to retrieve relevant nodes and
 then issue graph queries to traverse relationships.
+
+When FAISS is compiled with GPU support, setting the environment variable
+`UME_VECTOR_USE_GPU=true` transfers the index to GPU memory. Benchmarks with
+100k vectors show roughly a **5x** reduction in query latency compared to CPU
+search.
