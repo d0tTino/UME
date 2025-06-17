@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import List, Dict, Any
 
+from .config import settings
+
 import numpy as np
 import faiss
 
@@ -11,11 +13,20 @@ from ._internal.listeners import GraphListener
 class VectorStore:
     """Simple FAISS-based vector store."""
 
-    def __init__(self, dim: int) -> None:
+    def __init__(self, dim: int, *, use_gpu: bool = False) -> None:
         self.dim = dim
-        self.index = faiss.IndexFlatL2(dim)
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
+        self.gpu_resources = None
+
+        self.index = faiss.IndexFlatL2(dim)
+        if use_gpu:
+            try:
+                self.gpu_resources = faiss.StandardGpuResources()
+                self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
+            except AttributeError:
+                # FAISS was compiled without GPU support
+                pass
 
     def add(self, item_id: str, vector: List[float]) -> None:
         arr = np.asarray(vector, dtype="float32").reshape(1, -1)
@@ -56,3 +67,11 @@ class VectorStoreListener(GraphListener):
 
     def on_edge_deleted(self, source_node_id: str, target_node_id: str, label: str) -> None:
         pass
+
+
+def create_default_store() -> VectorStore:
+    """Instantiate a :class:`VectorStore` using ``ume.config.settings``."""
+    return VectorStore(
+        dim=settings.UME_VECTOR_DIM,
+        use_gpu=settings.UME_VECTOR_USE_GPU,
+    )

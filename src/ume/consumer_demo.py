@@ -9,13 +9,14 @@ corresponding producer_demo.py script.
 
 import json
 import logging
+from ume.logging_utils import configure_logging
 from ume.config import settings
 from ume.utils import ssl_config
 from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
 from ume import parse_event, EventError  # Import parse_event and EventError
+from ume.embedding import generate_embedding
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger("consumer_demo")
 
 # Kafka broker and topic
@@ -73,6 +74,11 @@ def main():
             data = msg.value().decode("utf-8")
             try:
                 event_data_dict = json.loads(data)
+                payload = event_data_dict.get("payload")
+                if isinstance(payload, dict):
+                    text_values = [v for v in payload.values() if isinstance(v, str)]
+                    if text_values:
+                        payload["embedding"] = generate_embedding(" ".join(text_values))
                 received_event = parse_event(event_data_dict)
                 logger.info(f"Received event object: {received_event}")
             except json.JSONDecodeError as e:

@@ -13,10 +13,12 @@ class Settings(BaseSettings):
     UME_AUDIT_LOG_PATH: str = "audit.log"
     UME_AUDIT_SIGNING_KEY: str = "default-key"
     UME_AGENT_ID: str = "SYSTEM"
+    UME_EMBED_MODEL: str = "all-MiniLM-L6-v2"
 
     # Vector store
     UME_VECTOR_DIM: int = 1536
     UME_VECTOR_INDEX: str = "vectors.faiss"
+    UME_VECTOR_USE_GPU: bool = False
 
     # Kafka/Redpanda
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"

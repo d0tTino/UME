@@ -169,6 +169,7 @@ For current plans and eventual detailed documentation on the UME graph model, pl
 
 *   [**Graph Model Documentation (docs/GRAPH_MODEL.md)**](docs/GRAPH_MODEL.md)
 *   [**Graph Listener Guide (docs/GRAPH_LISTENERS.md)**](docs/GRAPH_LISTENERS.md)
+*   [**API Reference (docs/API_REFERENCE.md)**](docs/API_REFERENCE.md)
 
 This documentation will be updated as the graph processing components of UME are developed.
 
@@ -676,6 +677,17 @@ score = graph_similarity(g1, g2)
 print(score)
 ```
 
+## Embedding Model
+
+Text attributes can be converted to vector embeddings using a Sentence
+Transformers model. Set `UME_EMBED_MODEL` to the desired Hugging Face
+model name (defaults to `all-MiniLM-L6-v2`). Install the optional
+dependencies with:
+
+```bash
+poetry install --with embedding
+```
+
 ## Vector Store
 
 UME can optionally maintain a FAISS index of node embeddings. When a
@@ -687,12 +699,21 @@ Set the following environment variables to configure the store:
 
 - `UME_VECTOR_DIM` – dimension of the embedding vectors (default `1536`).
 - `UME_VECTOR_INDEX` – path of the FAISS index file.
+- `UME_VECTOR_USE_GPU` – set to `true` to build the index on a GPU (requires
+  FAISS compiled with GPU support).
 
 Install the optional dependencies with:
 
 ```bash
 poetry install --with vector
 ```
+
+## Logging
+
+UME uses ``structlog`` for structured application logs. By default logs are
+formatted for human readability. Set ``UME_LOG_JSON=1`` to output JSON lines and
+``UME_LOG_LEVEL=DEBUG`` for verbose logging. These environment variables apply
+to the CLI, API server and demo scripts.
 
 ## Where to Get Help
 

@@ -10,14 +10,14 @@ import json
 import logging
 from ume.utils import ssl_config
 from ume.config import settings
+from ume.logging_utils import configure_logging
 import time
 from confluent_kafka import Producer, KafkaException  # type: ignore
 from ume import Event
 from ume.schema_utils import validate_event_dict
 from jsonschema import ValidationError
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+configure_logging()
 logger = logging.getLogger("producer_demo")
 
 # Kafka broker and topic
