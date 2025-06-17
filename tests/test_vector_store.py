@@ -1,4 +1,5 @@
 import time
+import importlib
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
 from ume._internal.listeners import register_listener, unregister_listener
@@ -49,3 +50,27 @@ def test_vector_store_env_gpu(monkeypatch) -> None:
 
     store = vs.VectorStore(dim=2)
     assert store.gpu_resources is not None
+
+
+@pytest.mark.parametrize(
+    "env_gpu",
+    [False, True] if hasattr(faiss, "StandardGpuResources") else [False],
+)
+def test_vector_store_save_load(tmp_path, monkeypatch, env_gpu) -> None:
+    if env_gpu:
+        monkeypatch.setenv("UME_VECTOR_USE_GPU", "true")
+    else:
+        monkeypatch.setenv("UME_VECTOR_USE_GPU", "false")
+
+    import ume.config as cfg
+    import ume.vector_store as vs
+    importlib.reload(cfg)
+    importlib.reload(vs)
+
+    store = vs.VectorStore(dim=2)
+    store.add("a", [1.0, 0.0])
+    index_path = tmp_path / "index.faiss"
+    store.save(str(index_path))
+
+    loaded = vs.VectorStore.load(str(index_path))
+    assert loaded.query([1.0, 0.0], k=1) == ["a"]
