@@ -34,3 +34,18 @@ def test_vector_store_gpu_init() -> None:
     if not hasattr(faiss, "StandardGpuResources"):
         pytest.skip("FAISS GPU not available")
     VectorStore(dim=2, use_gpu=True)
+
+
+def test_vector_store_env_gpu(monkeypatch) -> None:
+    if not hasattr(faiss, "StandardGpuResources"):
+        pytest.skip("FAISS GPU not available")
+
+    monkeypatch.setenv("UME_VECTOR_USE_GPU", "true")
+    import importlib
+    import ume.config as cfg
+    import ume.vector_store as vs
+    importlib.reload(cfg)
+    importlib.reload(vs)
+
+    store = vs.VectorStore(dim=2)
+    assert store.gpu_resources is not None

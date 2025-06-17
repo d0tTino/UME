@@ -7,7 +7,6 @@ from jsonschema import ValidationError
 from .config import Settings
 
 from .event import Event, parse_event
-from .embedding import generate_embedding
 from .schema_utils import validate_event_dict
 
 
@@ -80,6 +79,8 @@ class UMEClient:
             if isinstance(payload, dict):
                 text_values = [v for v in payload.values() if isinstance(v, str)]
                 if text_values:
+                    from .embedding import generate_embedding  # local import to avoid heavy dependency
+
                     payload["embedding"] = generate_embedding(" ".join(text_values))
             yield parse_event(data)
 
