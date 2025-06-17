@@ -13,11 +13,16 @@ from ._internal.listeners import GraphListener
 class VectorStore:
     """Simple FAISS-based vector store."""
 
-    def __init__(self, dim: int, *, use_gpu: bool = False) -> None:
+    def __init__(self, dim: int, *, use_gpu: bool | None = None) -> None:
         self.dim = dim
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
         self.gpu_resources = None
+
+        # Allow env var ``UME_VECTOR_USE_GPU`` to control GPU usage when
+        # ``use_gpu`` is not explicitly provided.
+        if use_gpu is None:
+            use_gpu = settings.UME_VECTOR_USE_GPU
 
         self.index = faiss.IndexFlatL2(dim)
         if use_gpu:

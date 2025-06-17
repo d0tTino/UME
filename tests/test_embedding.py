@@ -2,7 +2,6 @@ import importlib
 import sys
 import types
 
-from typing import List
 
 class DummyModel:
     def __init__(self, dim: int) -> None:
