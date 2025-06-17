@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     UME_AUDIT_LOG_PATH: str = "audit.log"
     UME_AUDIT_SIGNING_KEY: str = "default-key"
     UME_AGENT_ID: str = "SYSTEM"
+    UME_EMBED_MODEL: str = "all-MiniLM-L6-v2"
 
     # Vector store
     UME_VECTOR_DIM: int = 1536

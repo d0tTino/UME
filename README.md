@@ -676,6 +676,17 @@ score = graph_similarity(g1, g2)
 print(score)
 ```
 
+## Embedding Model
+
+Text attributes can be converted to vector embeddings using a Sentence
+Transformers model. Set `UME_EMBED_MODEL` to the desired Hugging Face
+model name (defaults to `all-MiniLM-L6-v2`). Install the optional
+dependencies with:
+
+```bash
+poetry install --with embedding
+```
+
 ## Vector Store
 
 UME can optionally maintain a FAISS index of node embeddings. When a
