@@ -2,10 +2,12 @@ import time
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
 from ume._internal.listeners import register_listener, unregister_listener
+import faiss
+import pytest
 
 
-def test_vector_store_add_and_query() -> None:
-    store = VectorStore(dim=2)
+def test_vector_store_add_and_query_cpu() -> None:
+    store = VectorStore(dim=2, use_gpu=False)
     store.add("a", [1.0, 0.0])
     store.add("b", [0.0, 1.0])
     res = store.query([1.0, 0.0], k=1)
@@ -13,7 +15,7 @@ def test_vector_store_add_and_query() -> None:
 
 
 def test_vector_store_listener_on_create() -> None:
-    store = VectorStore(dim=2)
+    store = VectorStore(dim=2, use_gpu=False)
     listener = VectorStoreListener(store)
     register_listener(listener)
     graph = MockGraph()
@@ -26,3 +28,9 @@ def test_vector_store_listener_on_create() -> None:
     unregister_listener(listener)
 
     assert store.query([1.0, 0.0], k=1) == ["n1"]
+
+
+def test_vector_store_gpu_init() -> None:
+    if not hasattr(faiss, "StandardGpuResources"):
+        pytest.skip("FAISS GPU not available")
+    VectorStore(dim=2, use_gpu=True)

@@ -687,6 +687,8 @@ Set the following environment variables to configure the store:
 
 - `UME_VECTOR_DIM` – dimension of the embedding vectors (default `1536`).
 - `UME_VECTOR_INDEX` – path of the FAISS index file.
+- `UME_VECTOR_USE_GPU` – set to `true` to build the index on a GPU (requires
+  FAISS compiled with GPU support).
 
 Install the optional dependencies with:
 
