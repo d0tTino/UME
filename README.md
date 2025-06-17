@@ -719,6 +719,10 @@ Set the following environment variables to configure the store:
 - `UME_VECTOR_USE_GPU` – set to `true` to build the index on a GPU (requires
   FAISS compiled with GPU support).
 
+If the file specified by `UME_VECTOR_INDEX` exists, it is loaded automatically
+when the store is created. New vectors are written back to this file whenever
+they are added and when the store is closed.
+
 Install the optional dependencies with:
 
 ```bash

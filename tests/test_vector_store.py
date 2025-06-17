@@ -74,3 +74,4 @@ def test_vector_store_save_load(tmp_path, monkeypatch, env_gpu) -> None:
 
     loaded = vs.VectorStore.load(str(index_path))
     assert loaded.query([1.0, 0.0], k=1) == ["a"]
+

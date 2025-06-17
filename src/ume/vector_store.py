@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import List, Dict, Any
+import os
+import json
 
 from .config import settings
 
@@ -11,27 +13,34 @@ from ._internal.listeners import GraphListener
 
 
 class VectorStore:
-    """Simple FAISS-based vector store."""
+    """Simple FAISS-based vector store with optional persistence."""
 
-    def __init__(self, dim: int, *, use_gpu: bool | None = None) -> None:
-        self.dim = dim
+    def __init__(
+        self, dim: int, *, use_gpu: bool | None = None, path: str | None = None
+    ) -> None:
+        self.path = path or settings.UME_VECTOR_INDEX
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
         self.gpu_resources = None
 
-        # Allow env var ``UME_VECTOR_USE_GPU`` to control GPU usage when
-        # ``use_gpu`` is not explicitly provided.
         if use_gpu is None:
             use_gpu = settings.UME_VECTOR_USE_GPU
+        self.use_gpu = use_gpu
 
-        self.index = faiss.IndexFlatL2(dim)
-        if use_gpu:
-            try:
-                self.gpu_resources = faiss.StandardGpuResources()
-                self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
-            except AttributeError:
-                # FAISS was compiled without GPU support
-                pass
+        if os.path.exists(self.path):
+            self.load(self.path)
+        else:
+            self.dim = dim
+            self.index = faiss.IndexFlatL2(self.dim)
+            if self.use_gpu:
+                try:
+                    self.gpu_resources = faiss.StandardGpuResources()
+                    self.index = faiss.index_cpu_to_gpu(
+                        self.gpu_resources, 0, self.index
+                    )
+                except AttributeError:
+                    # FAISS was compiled without GPU support
+                    pass
 
     def add(self, item_id: str, vector: List[float]) -> None:
         arr = np.asarray(vector, dtype="float32").reshape(1, -1)
@@ -40,6 +49,46 @@ class VectorStore:
         self.index.add(arr)
         self.id_to_idx[item_id] = len(self.idx_to_id)
         self.idx_to_id.append(item_id)
+        if self.path:
+            self.save(self.path)
+
+    def save(self, path: str | None = None) -> None:
+        """Persist the FAISS index and metadata to ``path``."""
+        path = path or self.path
+        if path is None:
+            return
+        if self.use_gpu and self.gpu_resources is not None:
+            cpu_index = faiss.index_gpu_to_cpu(self.index)
+        else:
+            cpu_index = self.index
+        faiss.write_index(cpu_index, path)
+        with open(path + ".json", "w", encoding="utf-8") as f:
+            json.dump(self.idx_to_id, f)
+
+    def load(self, path: str | None = None) -> None:
+        """Load a FAISS index and metadata from ``path``."""
+        path = path or self.path
+        if path is None:
+            return
+        self.index = faiss.read_index(path)
+        try:
+            with open(path + ".json", "r", encoding="utf-8") as f:
+                self.idx_to_id = json.load(f)
+        except FileNotFoundError:
+            self.idx_to_id = []
+        self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
+        self.dim = self.index.d
+        if self.use_gpu:
+            try:
+                self.gpu_resources = faiss.StandardGpuResources()
+                self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
+            except AttributeError:
+                pass
+
+    def close(self) -> None:
+        """Save index data to disk."""
+        if self.path:
+            self.save(self.path)
 
     def query(self, vector: List[float], k: int = 5) -> List[str]:
         if not self.idx_to_id:
@@ -107,4 +156,5 @@ def create_default_store() -> VectorStore:
     return VectorStore(
         dim=settings.UME_VECTOR_DIM,
         use_gpu=settings.UME_VECTOR_USE_GPU,
+        path=settings.UME_VECTOR_INDEX,
     )

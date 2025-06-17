@@ -1,14 +1,12 @@
 from fastapi.testclient import TestClient
 
-from ume.api import app
+from ume.api import app, configure_vector_store
 from ume.config import settings
-
-
-def setup_module(_):
-    app.state.vector_index = {}
+from ume.vector_store import VectorStore
 
 
 def test_add_vector_authorized():
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     res = client.post(
         "/vectors",
@@ -16,18 +14,23 @@ def test_add_vector_authorized():
         headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
     )
     assert res.status_code == 200
-    assert app.state.vector_index["v1"] == [0.0, 1.0]
+    assert app.state.vector_store.query([0.0, 1.0], k=1) == ["v1"]
 
 
 def test_add_vector_unauthorized():
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     res = client.post("/vectors", json={"id": "v2", "vector": [1.0]})
     assert res.status_code == 401
 
 
 def test_search_vectors():
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
-    app.state.vector_index = {"a": [0, 0], "b": [1, 0], "c": [2, 0]}
+    store = app.state.vector_store
+    store.add("a", [0, 0])
+    store.add("b", [1, 0])
+    store.add("c", [2, 0])
     res = client.get(
         "/vectors/search",
         params=[("vector", 1.1), ("vector", 0), ("k", 2)],
