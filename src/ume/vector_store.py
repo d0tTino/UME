@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 import json
 
 import time
@@ -11,13 +11,21 @@ import numpy as np
 import faiss
 
 from ._internal.listeners import GraphListener
+from .metrics import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
+from prometheus_client import Gauge, Histogram
 
 
 class VectorStore:
     """Simple FAISS-based vector store with optional persistence."""
 
     def __init__(
-        self, dim: int, *, use_gpu: bool | None = None, path: str | None = None
+        self,
+        dim: int,
+        *,
+        use_gpu: bool | None = None,
+        path: str | None = None,
+        query_latency_metric: Histogram | None = VECTOR_QUERY_LATENCY,
+        index_size_metric: Gauge | None = VECTOR_INDEX_SIZE,
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
         self.id_to_idx: Dict[str, int] = {}
@@ -25,6 +33,9 @@ class VectorStore:
         self.gpu_resources = None
         self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
         self.dim = dim
+
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
 
         self.index = faiss.IndexFlatL2(dim)
         if self.use_gpu:
@@ -37,6 +48,18 @@ class VectorStore:
             except AttributeError:
                 # FAISS was compiled without GPU support
                 pass
+
+    def set_metrics(
+        self,
+        *,
+        query_latency_metric: Histogram | None = None,
+        index_size_metric: Gauge | None = None,
+    ) -> None:
+        """Configure Prometheus metrics."""
+        if query_latency_metric is not None:
+            self.query_latency_metric = query_latency_metric
+        if index_size_metric is not None:
+            self.index_size_metric = index_size_metric
 
 
     def add(self, item_id: str, vector: List[float]) -> None:
@@ -88,8 +111,6 @@ class VectorStore:
             self.save(self.path)
 
     def query(self, vector: List[float], k: int = 5) -> List[str]:
-        from .api import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
-
         start = time.perf_counter()
         try:
             if not self.idx_to_id:
@@ -102,8 +123,10 @@ class VectorStore:
             _, indices = self.index.search(arr, min(k, len(self.idx_to_id)))
             return [self.idx_to_id[i] for i in indices[0] if i != -1]
         finally:
-            VECTOR_QUERY_LATENCY.observe(time.perf_counter() - start)
-            VECTOR_INDEX_SIZE.set(len(self.idx_to_id))
+            if self.query_latency_metric is not None:
+                self.query_latency_metric.observe(time.perf_counter() - start)
+            if self.index_size_metric is not None:
+                self.index_size_metric.set(len(self.idx_to_id))
 
 
 
@@ -136,4 +159,6 @@ def create_default_store() -> VectorStore:
         dim=settings.UME_VECTOR_DIM,
         use_gpu=settings.UME_VECTOR_USE_GPU,
         path=settings.UME_VECTOR_INDEX,
+        query_latency_metric=VECTOR_QUERY_LATENCY,
+        index_size_metric=VECTOR_INDEX_SIZE,
     )
