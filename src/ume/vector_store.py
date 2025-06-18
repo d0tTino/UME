@@ -26,7 +26,6 @@ class VectorStore:
         use_gpu: bool | None = None,
         path: str | None = None,
         flush_interval: float | None = None,
-        gpu_mem_mb: int | None = None,
 
         query_latency_metric: Histogram | None = None,
         index_size_metric: Gauge | None = None,
@@ -48,6 +47,9 @@ class VectorStore:
         self._flush_interval = flush_interval
         self._flush_thread: threading.Thread | None = None
         self._flush_stop = threading.Event()
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
+
         self.query_latency_metric = query_latency_metric
         self.index_size_metric = index_size_metric
 
