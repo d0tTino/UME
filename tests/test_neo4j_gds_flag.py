@@ -1,8 +1,14 @@
 import pytest
+
+try:  # pragma: no cover - optional dependency
+    from neo4j import Driver
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    pytest.skip(
+        "neo4j not installed; install with the 'neo4j' extra to run these tests",
+        allow_module_level=True,
+    )
+
 from typing import cast
-
-
-from neo4j import Driver
 from ume.neo4j_graph import Neo4jGraph
 
 

@@ -2,8 +2,12 @@ import time
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
 from ume._internal.listeners import register_listener, unregister_listener
-import faiss
 import pytest
+
+faiss = pytest.importorskip(
+    "faiss",
+    reason="faiss not installed; install with the 'vector' extra to run these tests",
+)
 
 
 def test_vector_store_add_and_query_cpu() -> None:

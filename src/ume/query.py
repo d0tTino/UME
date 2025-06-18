@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from neo4j import GraphDatabase, Driver
+try:  # pragma: no cover - optional dependency
+    from neo4j import GraphDatabase, Driver
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    GraphDatabase = None  # type: ignore
+    Driver = object  # type: ignore
 
 
 class Neo4jQueryEngine:
@@ -16,6 +20,10 @@ class Neo4jQueryEngine:
     @classmethod
     def from_credentials(cls, uri: str, user: str, password: str) -> "Neo4jQueryEngine":
         """Instantiate the engine from connection credentials."""
+        if GraphDatabase is None:
+            raise ModuleNotFoundError(
+                "neo4j is required for Neo4jQueryEngine. Install with the 'neo4j' extra"
+            )
         driver = GraphDatabase.driver(uri, auth=(user, password))
         return cls(driver)
 

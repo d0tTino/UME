@@ -3,6 +3,11 @@ from fastapi.testclient import TestClient
 from ume.api import app, configure_vector_store
 from ume.config import settings
 from ume.vector_store import VectorStore
+import pytest
+
+pytest.importorskip(
+    "faiss", reason="faiss not installed; install with the 'vector' extra"
+)
 
 
 def test_add_vector_authorized():

@@ -5,7 +5,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from neo4j import GraphDatabase, Driver
+try:  # pragma: no cover - optional dependency
+    from neo4j import GraphDatabase, Driver
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    GraphDatabase = None  # type: ignore
+    Driver = object  # type: ignore
 
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
@@ -24,6 +28,10 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
         *,
         use_gds: bool = False,
     ) -> None:
+        if GraphDatabase is None:
+            raise ModuleNotFoundError(
+                "neo4j is required for Neo4jGraph. Install with the 'neo4j' extra"
+            )
         self._driver = driver or GraphDatabase.driver(uri, auth=(user, password))
         self._use_gds = use_gds
 

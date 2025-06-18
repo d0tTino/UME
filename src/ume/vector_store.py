@@ -8,7 +8,11 @@ import time
 from .config import settings
 
 import numpy as np
-import faiss
+
+try:  # pragma: no cover - optional dependency
+    import faiss
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    faiss = None
 
 from ._internal.listeners import GraphListener
 
@@ -26,6 +30,11 @@ class VectorStore:
         self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
         self.dim = dim
 
+        if faiss is None:
+            raise ModuleNotFoundError(
+                "faiss is required for VectorStore. Install with the 'vector' extra"
+            )
+
         self.index = faiss.IndexFlatL2(dim)
         if self.use_gpu:
             try:
@@ -33,7 +42,9 @@ class VectorStore:
                 self.gpu_resources.setTempMemory(
                     settings.UME_VECTOR_GPU_MEM_MB * 1024 * 1024
                 )
-                self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
+                self.index = faiss.index_cpu_to_gpu(
+                    self.gpu_resources, 0, self.index
+                )
             except AttributeError:
                 # FAISS was compiled without GPU support
                 pass
@@ -67,6 +78,11 @@ class VectorStore:
         path = path or self.path
         if path is None:
             return
+        if faiss is None:
+            raise ModuleNotFoundError(
+                "faiss is required for VectorStore. Install with the 'vector' extra"
+            )
+
         self.index = faiss.read_index(path)
         try:
             with open(path + ".json", "r", encoding="utf-8") as f:

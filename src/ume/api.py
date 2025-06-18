@@ -16,6 +16,7 @@ from prometheus_client import (
     Gauge,
     Histogram,
     generate_latest,
+    REGISTRY,
 )
 from pydantic import BaseModel
 
@@ -24,6 +25,11 @@ from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
 from .vector_store import VectorStore, create_default_store
+
+
+def _existing_metric(name: str):
+    """Return a previously registered metric by name if present."""
+    return REGISTRY._names_to_collectors.get(name)
 
 configure_logging()
 
@@ -35,23 +41,25 @@ app = FastAPI(
     description="HTTP API for the Universal Memory Engine.",
 )
 
-REQUEST_COUNT = Counter(
+REQUEST_COUNT = _existing_metric("ume_http_requests_total") or Counter(
     "ume_http_requests_total",
     "Total HTTP requests",
     ["method", "path", "status"],
 )
-REQUEST_LATENCY = Histogram(
+REQUEST_LATENCY = _existing_metric("ume_request_latency_seconds") or Histogram(
     "ume_request_latency_seconds",
     "Request latency in seconds",
     ["method", "path"],
 )
 
 # Metrics for vector search operations
-VECTOR_QUERY_LATENCY = Histogram(
+VECTOR_QUERY_LATENCY = _existing_metric(
+    "ume_vector_query_latency_seconds"
+) or Histogram(
     "ume_vector_query_latency_seconds",
     "VectorStore query latency in seconds",
 )
-VECTOR_INDEX_SIZE = Gauge(
+VECTOR_INDEX_SIZE = _existing_metric("ume_vector_index_size") or Gauge(
     "ume_vector_index_size",
     "Number of vectors stored in the VectorStore",
 )
@@ -79,7 +87,10 @@ async def metrics_middleware(request: Request, call_next):
 # These can be configured by the embedding application or tests
 app.state.query_engine = None  # type: ignore[assignment]
 app.state.graph = None  # type: ignore[assignment]
-app.state.vector_store = create_default_store()  # type: ignore[assignment]
+try:
+    app.state.vector_store = create_default_store()  # type: ignore[assignment]
+except ModuleNotFoundError:
+    app.state.vector_store = None
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
