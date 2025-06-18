@@ -73,6 +73,10 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: poetry install --no-interaction --no-ansi --with dev --extras vector --extras embedding
 
+      - name: Run pre-commit
+        if: steps.changes.outputs.run == 'true'
+        run: poetry run pre-commit run --show-diff-on-failure --color always
+
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
         run: poetry run ruff check . --config pyproject.toml
@@ -128,6 +132,10 @@ jobs:
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
         run: poetry install --no-interaction --no-ansi --with dev --extras vector --extras embedding
+
+      - name: Run pre-commit
+        if: steps.changes.outputs.run == 'true'
+        run: poetry run pre-commit run --show-diff-on-failure --color always
 
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
