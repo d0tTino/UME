@@ -40,6 +40,8 @@ class Settings(BaseSettings):
 
     # API
     UME_API_TOKEN: str = "secret-token"
+    UME_LOG_LEVEL: str = "INFO"
+    UME_LOG_JSON: bool = False
 
     # Logging
     UME_LOG_LEVEL: str = "INFO"

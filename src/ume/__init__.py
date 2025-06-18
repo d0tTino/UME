@@ -24,11 +24,9 @@ from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
-try:  # Optional dependency
-    from .vector_store import VectorStore, VectorStoreListener
-except Exception:  # pragma: no cover - optional import
-    VectorStore = None  # type: ignore[assignment]
-    VectorStoreListener = None  # type: ignore[assignment]
+from .vector_store import VectorStore, VectorStoreListener
+from .factories import create_graph_adapter, create_vector_store
+
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
 
@@ -71,6 +69,8 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
+    "create_graph_adapter",
+    "create_vector_store",
     "LLMFerry",
 
     "generate_embedding",
