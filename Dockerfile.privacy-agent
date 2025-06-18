@@ -6,4 +6,4 @@ RUN poetry install --no-root --no-dev
 RUN poetry run python -m spacy download en_core_web_lg
 COPY src/ /app/src
 ENV PYTHONPATH=/app
-CMD ["poetry", "run", "python", "src/ume/privacy_agent.py"]
+CMD ["poetry", "run", "python", "src/ume/pipeline/privacy_agent.py"]

@@ -23,8 +23,8 @@ then issue graph queries to traverse relationships.
 
 When FAISS is compiled with GPU support, setting the environment variable
 `UME_VECTOR_USE_GPU=true` transfers the index to GPU memory. Benchmarks with
-100k vectors show roughly a **5x** reduction in query latency compared to CPU
-search.
+100k vectors on an RTX 4080 show roughly a **5x** reduction in query latency
+compared to CPU search (see [Vector Store Benchmark](VECTOR_BENCHMARKS.md)).
 
 ## Component Interactions
 

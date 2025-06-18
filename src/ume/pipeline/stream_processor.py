@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import faust_stub as faust
 import json
-from typing import Dict
+from typing import Any, Dict
 
 from ume import EventType, parse_event, EventError
 from ..config import settings
@@ -30,7 +30,7 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS) -> faust.App:
     node_topic = app.topic(NODE_TOPIC, value_type=bytes)
 
     @app.agent(source_topic)
-    async def _process(stream):
+    async def _process(stream: Any) -> None:
         async for raw in stream:
             try:
                 data = json.loads(raw.decode("utf-8"))

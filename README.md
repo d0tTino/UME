@@ -7,7 +7,7 @@ The primary motivation behind UME is to equip AI agents with a form of persisten
 
 ## Core Modules
 The engine is built from a few key components:
-- **Privacy Agent** (`src/ume/privacy_agent.py`)
+- **Privacy Agent** (`src/ume/pipeline/privacy_agent.py`)
   - Redacts personally identifiable information (PII) from incoming events using Presidio.
   - Forwards sanitized events to downstream Kafka topics.
 - **FastAPI API** (`src/ume/api.py`)
@@ -761,6 +761,8 @@ Set the following environment variables to configure the store:
 - `UME_VECTOR_GPU_MEM_MB` – temporary memory (in MB) allocated for FAISS GPU
 operations (default `256`). Increase or decrease this to tune GPU memory usage
 when building the index.
+  The same value can be passed to `VectorStore(gpu_mem_mb=...)` when
+  constructing a store programmatically.
 
 If the file specified by `UME_VECTOR_INDEX` exists, it is loaded automatically
 when the store is created. New vectors are written back to this file whenever
@@ -771,6 +773,8 @@ Install the optional dependencies with:
 ```bash
 poetry install --with vector
 ```
+
+See [Vector Store Benchmark](docs/VECTOR_BENCHMARKS.md) for sample GPU results.
 
 ## Logging
 
