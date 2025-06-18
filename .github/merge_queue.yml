@@ -5,3 +5,4 @@ merge_queue:
       required_checks:
         - "CI / test-and-lint (3.11)"
         - "CI / test-and-lint (3.12)"
+        - "CI / coverage"
