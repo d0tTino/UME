@@ -377,7 +377,8 @@ See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for a sample `.env` file.
 Sample configuration files for common environments are provided in
 [`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md). These templates
 demonstrate how to select different storage backends or event stores for
-development, staging, and production setups.
+development, staging, and production setups. The same document also lists
+every environment variable understood by UME along with its default value.
 
 ### Runtime Settings
 
