@@ -10,8 +10,11 @@ on:
       - 'src/**'
       - 'tests/**'
       - '**/*.py'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'scripts/**'
     paths-ignore:
-      - '**.md'
+      - '**/*.md'
       - 'docs/**'
 
   pull_request:
@@ -20,8 +23,11 @@ on:
       - 'src/**'
       - 'tests/**'
       - '**/*.py'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'scripts/**'
     paths-ignore:
-      - '**.md'
+      - '**/*.md'
       - 'docs/**'
 
 concurrency:
