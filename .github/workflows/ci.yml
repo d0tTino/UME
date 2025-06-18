@@ -12,11 +12,12 @@ on:
       - '**.md'
       - 'docs/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-and-lint:
-    concurrency:
-      group: ci-${{ github.ref }}
-      cancel-in-progress: true
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -72,9 +73,6 @@ jobs:
         run: poetry run pytest
 
   coverage:
-    concurrency:
-      group: coverage-${{ github.ref }}
-      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
