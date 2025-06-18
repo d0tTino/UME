@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 import json
 
 import time
+import threading
 
 from .config import settings
 
@@ -24,8 +25,8 @@ class VectorStore:
         *,
         use_gpu: bool | None = None,
         path: str | None = None,
-        query_latency_metric: Histogram | None = VECTOR_QUERY_LATENCY,
-        index_size_metric: Gauge | None = VECTOR_INDEX_SIZE,
+        flush_interval: float | None = None,
+
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
         self.id_to_idx: Dict[str, int] = {}
@@ -34,8 +35,10 @@ class VectorStore:
         self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
         self.dim = dim
 
-        self.query_latency_metric = query_latency_metric
-        self.index_size_metric = index_size_metric
+        self._flush_interval = flush_interval
+        self._flush_thread: threading.Thread | None = None
+        self._flush_stop = threading.Event()
+
 
         self.index = faiss.IndexFlatL2(dim)
         if self.use_gpu:
@@ -49,27 +52,40 @@ class VectorStore:
                 # FAISS was compiled without GPU support
                 pass
 
-    def set_metrics(
-        self,
-        *,
-        query_latency_metric: Histogram | None = None,
-        index_size_metric: Gauge | None = None,
-    ) -> None:
-        """Configure Prometheus metrics."""
-        if query_latency_metric is not None:
-            self.query_latency_metric = query_latency_metric
-        if index_size_metric is not None:
-            self.index_size_metric = index_size_metric
+        if flush_interval is not None:
+            self.start_background_flush(flush_interval)
+
+    def start_background_flush(self, interval: float) -> None:
+        """Periodically persist the index to disk in a background thread."""
+        if self._flush_thread and self._flush_thread.is_alive():
+            return
+
+        def _loop() -> None:
+            while not self._flush_stop.wait(interval):
+                self.save()
+
+        self._flush_stop.clear()
+        self._flush_thread = threading.Thread(target=_loop, daemon=True)
+        self._flush_thread.start()
 
 
-    def add(self, item_id: str, vector: List[float]) -> None:
+    def stop_background_flush(self) -> None:
+        """Stop the background flush thread if running."""
+        if self._flush_thread:
+            self._flush_stop.set()
+            self._flush_thread.join()
+            self._flush_thread = None
+
+    def add(self, item_id: str, vector: List[float], *, persist: bool = False) -> None:
         arr = np.asarray(vector, dtype="float32").reshape(1, -1)
         if arr.shape[1] != self.dim:
-            raise ValueError(f"Expected vector of dimension {self.dim}, got {arr.shape[1]}")
+            raise ValueError(
+                f"Expected vector of dimension {self.dim}, got {arr.shape[1]}"
+            )
         self.index.add(arr)
         self.id_to_idx[item_id] = len(self.idx_to_id)
         self.idx_to_id.append(item_id)
-        if self.path:
+        if persist and self.path:
             self.save(self.path)
 
     def save(self, path: str | None = None) -> None:
@@ -106,7 +122,8 @@ class VectorStore:
                 pass
 
     def close(self) -> None:
-        """Save index data to disk."""
+        """Stop background flush and persist index to disk."""
+        self.stop_background_flush()
         if self.path:
             self.save(self.path)
 
@@ -129,7 +146,6 @@ class VectorStore:
                 self.index_size_metric.set(len(self.idx_to_id))
 
 
-
 class VectorStoreListener(GraphListener):
     """GraphListener that indexes embeddings from node attributes."""
 
@@ -146,10 +162,14 @@ class VectorStoreListener(GraphListener):
         if isinstance(emb, list):
             self.store.add(node_id, emb)
 
-    def on_edge_created(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def on_edge_created(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
         pass
 
-    def on_edge_deleted(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def on_edge_deleted(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
         pass
 
 
