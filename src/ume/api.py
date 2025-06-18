@@ -5,7 +5,7 @@ from __future__ import annotations
 from .config import settings
 import os
 from .logging_utils import configure_logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable, Awaitable, cast
 
 import time
 from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
@@ -58,7 +58,9 @@ VECTOR_INDEX_SIZE = Gauge(
 
 
 @app.middleware("http")
-async def metrics_middleware(request: Request, call_next):
+async def metrics_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     method = request.method
     path = request.url.path
     start = time.perf_counter()
@@ -77,9 +79,9 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 # These can be configured by the embedding application or tests
-app.state.query_engine = None  # type: ignore[assignment]
-app.state.graph = None  # type: ignore[assignment]
-app.state.vector_store = create_default_store()  # type: ignore[assignment]
+app.state.query_engine = cast(Any, None)
+app.state.graph = cast(Any, None)
+app.state.vector_store = cast(Any, create_default_store())
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
@@ -96,7 +98,9 @@ def configure_vector_store(store: VectorStore) -> None:
 
 
 @app.exception_handler(AccessDeniedError)
-async def access_denied_handler(request, exc: AccessDeniedError) -> JSONResponse:
+async def access_denied_handler(
+    request: Request, exc: AccessDeniedError
+) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 

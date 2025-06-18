@@ -7,9 +7,9 @@ import logging
 from typing import List, Dict
 
 try:
-    import boto3  # type: ignore
+    import boto3
 except Exception:  # pragma: no cover - boto3 optional
-    boto3 = None  # type: ignore
+    boto3 = None
 
 logger = logging.getLogger(__name__)
 

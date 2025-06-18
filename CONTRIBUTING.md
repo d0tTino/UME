@@ -63,6 +63,24 @@ Merging is handled automatically using GitHub's merge queue. After your pull req
 
 Please refer to the `README.md` for instructions on setting up your development environment.
 
+## Development Workflow
+
+1. Install dependencies, including dev tools, using Poetry:
+   ```bash
+   poetry install --with dev
+   ```
+2. Install pre-commit hooks:
+   ```bash
+   pre-commit install
+   ```
+3. Create a feature branch and implement your changes.
+4. Before committing, run the checks locally:
+   ```bash
+   pre-commit run --all-files
+   pytest
+   ```
+5. Push your branch and open a pull request.
+
 ## Questions?
 
 If you have any questions, feel free to ask by opening an issue.
