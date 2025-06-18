@@ -10,13 +10,9 @@ from typing import Any, Dict, List, Callable, Awaitable, cast
 import time
 from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.responses import JSONResponse, Response
-from prometheus_client import (
-    CONTENT_TYPE_LATEST,
-    Counter,
-    Gauge,
-    Histogram,
-    generate_latest,
-)
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -35,26 +31,6 @@ app = FastAPI(
     description="HTTP API for the Universal Memory Engine.",
 )
 
-REQUEST_COUNT = Counter(
-    "ume_http_requests_total",
-    "Total HTTP requests",
-    ["method", "path", "status"],
-)
-REQUEST_LATENCY = Histogram(
-    "ume_request_latency_seconds",
-    "Request latency in seconds",
-    ["method", "path"],
-)
-
-# Metrics for vector search operations
-VECTOR_QUERY_LATENCY = Histogram(
-    "ume_vector_query_latency_seconds",
-    "VectorStore query latency in seconds",
-)
-VECTOR_INDEX_SIZE = Gauge(
-    "ume_vector_index_size",
-    "Number of vectors stored in the VectorStore",
-)
 
 
 @app.middleware("http")

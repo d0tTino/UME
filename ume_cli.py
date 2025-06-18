@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-import os
 import shlex
 import sys
 import time  # Added for timestamp in event creation
@@ -46,9 +45,9 @@ class UMEPrompt(Cmd):
 
     def __init__(self):
         super().__init__()
-        db_path = os.environ.get("UME_CLI_DB", settings.UME_DB_PATH)
+        db_path = settings.UME_CLI_DB
         base_graph = PersistentGraph(db_path)
-        role = os.environ.get("UME_ROLE")
+        role = settings.UME_ROLE
         if role:
             print(f"INFO: UME-CLI running with role: '{role}'")
             graph: IGraphAdapter = RoleBasedGraphAdapter(base_graph, role)

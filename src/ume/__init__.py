@@ -25,12 +25,14 @@ from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
+from .dag_executor import Task, DAGExecutor
 
 try:  # Optional dependency
     from .embedding import generate_embedding
 except Exception:  # pragma: no cover - optional import
     def generate_embedding(text: str) -> list[float]:
         raise ImportError("sentence-transformers is required to generate embeddings")
+
 
 __all__ = [
     "Event",
@@ -63,5 +65,11 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
+    "REQUEST_COUNT",
+    "REQUEST_LATENCY",
+    "VECTOR_QUERY_LATENCY",
+    "VECTOR_INDEX_SIZE",
     "generate_embedding",
+    "Task",
+    "DAGExecutor",
 ]

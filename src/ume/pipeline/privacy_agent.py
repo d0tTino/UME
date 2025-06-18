@@ -1,23 +1,21 @@
-"""Backward compatibility wrapper for :mod:`ume.pipeline.privacy_agent`."""
-import importlib
-import sys
+"""Privacy agent for redacting PII from incoming events."""
 
 from __future__ import annotations
 
 import json
 import logging
 from typing import Dict, Tuple
-from .utils import ssl_config
-from .logging_utils import configure_logging
+from ..utils import ssl_config
+from ..logging_utils import configure_logging
 
-from confluent_kafka import Consumer, Producer, KafkaException, KafkaError
-from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine
+from confluent_kafka import Consumer, Producer, KafkaException, KafkaError  # type: ignore
+from presidio_analyzer import AnalyzerEngine  # type: ignore
+from presidio_anonymizer import AnonymizerEngine  # type: ignore
 from jsonschema import ValidationError
 
-from .config import settings
-from .schema_utils import validate_event_dict
-from .audit import log_audit_entry
+from ..config import settings
+from ..schema_utils import validate_event_dict
+from ..audit import log_audit_entry
 
 
 configure_logging()
@@ -48,7 +46,7 @@ def redact_event_payload(
     if not results:
         return payload_dict, False
 
-    anonymized = _ANONYMIZER.anonymize(text=text, analyzer_results=results)
+    anonymized = _ANONYMIZER.anonymize(text=text, analyzer_results=results)  # type: ignore[arg-type]
     try:
         new_payload = json.loads(anonymized.text)
     except json.JSONDecodeError:
