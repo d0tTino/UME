@@ -1,7 +1,7 @@
 import logging
-import os
-
 import structlog
+
+from .config import settings
 
 
 def configure_logging(
@@ -19,13 +19,12 @@ def configure_logging(
         environment variable (``"1"``, ``"true"``).
     """
     if level is None:
-        level = os.getenv("UME_LOG_LEVEL", "INFO")
+        level = settings.UME_LOG_LEVEL
     if isinstance(level, str):
         level = getattr(logging, level.upper(), logging.INFO)
 
     if json_logs is None:
-        json_env = os.getenv("UME_LOG_JSON", "0").lower()
-        json_logs = json_env in {"1", "true", "yes"}
+        json_logs = settings.UME_LOG_JSON
 
     processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
