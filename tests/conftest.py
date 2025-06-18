@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 try:
-    from ume import privacy_agent as privacy_agent_module
+    from ume.pipeline import privacy_agent as privacy_agent_module
 except Exception:  # pragma: no cover - optional deps may be missing
     privacy_agent_module = None  # type: ignore[assignment]
 

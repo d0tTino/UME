@@ -12,7 +12,7 @@ from ume.utils import ssl_config
 from ume.config import settings
 from ume.logging_utils import configure_logging
 import time
-from confluent_kafka import Producer, KafkaException  # type: ignore
+from confluent_kafka import Producer, KafkaException, Message
 from ume import Event
 from ume.schema_utils import validate_event_dict
 from jsonschema import ValidationError
@@ -26,7 +26,7 @@ BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
 TOPIC = settings.KAFKA_RAW_EVENTS_TOPIC
 
 
-def delivery_report(err, msg):
+def delivery_report(err: KafkaException | None, msg: Message) -> None:
     """Called once for each message produced to indicate delivery result."""
     if err is not None:
         logger.error(f"Message delivery failed: {err}")
@@ -36,7 +36,7 @@ def delivery_report(err, msg):
         )
 
 
-def main():
+def main() -> None:
     """Creates a Kafka producer, constructs a sample event, and sends it.
 
     The producer is configured to connect to the BOOTSTRAP_SERVERS.

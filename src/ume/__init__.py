@@ -27,11 +27,13 @@ from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
 from .llm_ferry import LLMFerry
 
+
 try:  # Optional dependency
     from .embedding import generate_embedding
 except Exception:  # pragma: no cover - optional import
     def generate_embedding(text: str) -> list[float]:
         raise ImportError("sentence-transformers is required to generate embeddings")
+
 
 __all__ = [
     "Event",
@@ -65,5 +67,8 @@ __all__ = [
     "VectorStore",
     "VectorStoreListener",
     "LLMFerry",
+
     "generate_embedding",
+    "Task",
+    "DAGExecutor",
 ]

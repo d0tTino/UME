@@ -50,3 +50,39 @@ faust:
   edge_topic: "ume_edges"
   node_topic: "ume_nodes"
 ```
+
+## Environment Variables
+
+UME can also be configured via environment variables or a `.env` file. The table
+below lists all available variables and their default values.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `UME_DB_PATH` | `ume_graph.db` | SQLite database used by `PersistentGraph`. |
+| `UME_SNAPSHOT_PATH` | `ume_snapshot.json` | Path to graph snapshot file. |
+| `UME_AUDIT_LOG_PATH` | `audit.log` | Location of the audit log. |
+| `UME_AUDIT_SIGNING_KEY` | `default-key` | Key used to sign audit entries. |
+| `UME_AGENT_ID` | `SYSTEM` | Identifier recorded in audit logs. |
+| `UME_EMBED_MODEL` | `all-MiniLM-L6-v2` | SentenceTransformer model name. |
+| `UME_CLI_DB` | `ume_graph.db` | Database path used by the CLI. |
+| `UME_ROLE` | *(unset)* | Optional role for the CLI. |
+| `UME_API_ROLE` | *(unset)* | Optional role applied by the API server. |
+| `UME_VECTOR_DIM` | `1536` | Dimension of embedding vectors. |
+| `UME_VECTOR_INDEX` | `vectors.faiss` | FAISS index file path. |
+| `UME_VECTOR_USE_GPU` | `False` | Whether to build the index on a GPU. |
+| `UME_VECTOR_GPU_MEM_MB` | `256` | GPU memory used when building the index. |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Comma separated list of Kafka brokers. |
+| `KAFKA_RAW_EVENTS_TOPIC` | `ume-raw-events` | Topic for raw events. |
+| `KAFKA_CLEAN_EVENTS_TOPIC` | `ume-clean-events` | Topic for sanitized events. |
+| `KAFKA_QUARANTINE_TOPIC` | `ume-quarantine-events` | Topic for rejected events. |
+| `KAFKA_EDGE_TOPIC` | `ume_edges` | Topic for processed edges. |
+| `KAFKA_NODE_TOPIC` | `ume_nodes` | Topic for processed nodes. |
+| `KAFKA_GROUP_ID` | `ume_client_group` | Consumer group for demos and stream processors. |
+| `KAFKA_PRIVACY_AGENT_GROUP_ID` | `ume-privacy-agent-group` | Consumer group for the privacy agent. |
+| `KAFKA_PRODUCER_BATCH_SIZE` | `10` | Number of messages before producer flush. |
+| `UME_API_TOKEN` | `secret-token` | Token required by the API server. |
+| `UME_LOG_LEVEL` | `INFO` | Logging level used by `configure_logging`. |
+| `UME_LOG_JSON` | `False` | Output logs as JSON lines when set to `True`. |
+| `KAFKA_CA_CERT` | *(unset)* | CA certificate for Kafka TLS. |
+| `KAFKA_CLIENT_CERT` | *(unset)* | Client certificate for Kafka TLS. |
+| `KAFKA_CLIENT_KEY` | *(unset)* | Client key for Kafka TLS. |

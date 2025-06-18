@@ -5,18 +5,14 @@ from __future__ import annotations
 from .config import settings
 import os
 from .logging_utils import configure_logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable, Awaitable, cast
 
 import time
 from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.responses import JSONResponse, Response
-from prometheus_client import (
-    CONTENT_TYPE_LATEST,
-    Counter,
-    Gauge,
-    Histogram,
-    generate_latest,
-)
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -35,30 +31,12 @@ app = FastAPI(
     description="HTTP API for the Universal Memory Engine.",
 )
 
-REQUEST_COUNT = Counter(
-    "ume_http_requests_total",
-    "Total HTTP requests",
-    ["method", "path", "status"],
-)
-REQUEST_LATENCY = Histogram(
-    "ume_request_latency_seconds",
-    "Request latency in seconds",
-    ["method", "path"],
-)
-
-# Metrics for vector search operations
-VECTOR_QUERY_LATENCY = Histogram(
-    "ume_vector_query_latency_seconds",
-    "VectorStore query latency in seconds",
-)
-VECTOR_INDEX_SIZE = Gauge(
-    "ume_vector_index_size",
-    "Number of vectors stored in the VectorStore",
-)
 
 
 @app.middleware("http")
-async def metrics_middleware(request: Request, call_next):
+async def metrics_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     method = request.method
     path = request.url.path
     start = time.perf_counter()
@@ -77,9 +55,9 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 # These can be configured by the embedding application or tests
-app.state.query_engine = None  # type: ignore[assignment]
-app.state.graph = None  # type: ignore[assignment]
-app.state.vector_store = create_default_store()  # type: ignore[assignment]
+app.state.query_engine = cast(Any, None)
+app.state.graph = cast(Any, None)
+app.state.vector_store = cast(Any, create_default_store())
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
@@ -96,7 +74,9 @@ def configure_vector_store(store: VectorStore) -> None:
 
 
 @app.exception_handler(AccessDeniedError)
-async def access_denied_handler(request, exc: AccessDeniedError) -> JSONResponse:
+async def access_denied_handler(
+    request: Request, exc: AccessDeniedError
+) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 

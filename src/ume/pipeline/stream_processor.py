@@ -1,15 +1,13 @@
-"""Backward compatibility wrapper for :mod:`ume.pipeline.stream_processor`."""
-import importlib
-import sys
+"""Faust-based stream processor for UME events."""
 
 from __future__ import annotations
 
 import faust_stub as faust
 import json
-from typing import Dict, Any
+from typing import Dict
 
 from ume import EventType, parse_event, EventError
-from .config import settings
+from ..config import settings
 
 IN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 EDGE_TOPIC = settings.KAFKA_EDGE_TOPIC
@@ -32,7 +30,7 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS) -> faust.App:
     node_topic = app.topic(NODE_TOPIC, value_type=bytes)
 
     @app.agent(source_topic)
-    async def _process(stream: Any) -> None:
+    async def _process(stream):
         async for raw in stream:
             try:
                 data = json.loads(raw.decode("utf-8"))
@@ -58,4 +56,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

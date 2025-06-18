@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     UME_AUDIT_SIGNING_KEY: str = "default-key"
     UME_AGENT_ID: str = "SYSTEM"
     UME_EMBED_MODEL: str = "all-MiniLM-L6-v2"
+    UME_CLI_DB: str = "ume_graph.db"
+    UME_ROLE: str | None = None
+    UME_API_ROLE: str | None = None
 
     # Vector store
     UME_VECTOR_DIM: int = 1536

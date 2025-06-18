@@ -32,7 +32,7 @@ class App:
     def topic(self, name: str, value_type: Any = None) -> Topic:
         return Topic(name, value_type=value_type)
 
-    def agent(self, channel: Topic):
+    def agent(self, channel: Topic) -> Callable[[Callable[[Any], Any]], Callable[[Any], Any]]:
         def decorator(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
             self.agents[func.__name__] = Agent(func, channel)
             return func

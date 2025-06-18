@@ -12,7 +12,7 @@ import logging
 from ume.logging_utils import configure_logging
 from ume.config import settings
 from ume.utils import ssl_config
-from confluent_kafka import Consumer, KafkaException, KafkaError  # type: ignore
+from confluent_kafka import Consumer, KafkaException, KafkaError
 from ume import parse_event, EventError  # Import parse_event and EventError
 from ume.embedding import generate_embedding
 
@@ -26,7 +26,7 @@ TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 GROUP_ID = settings.KAFKA_GROUP_ID
 
 
-def main():
+def main() -> None:
     """Creates a Kafka consumer, subscribes to a topic, and processes messages.
 
     The consumer is configured with BOOTSTRAP_SERVERS, GROUP_ID, and
