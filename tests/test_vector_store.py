@@ -44,6 +44,7 @@ def test_vector_store_env_gpu(monkeypatch) -> None:
     import importlib
     import ume.config as cfg
     import ume.vector_store as vs
+
     importlib.reload(cfg)
     importlib.reload(vs)
 
@@ -71,6 +72,7 @@ def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
 
     import ume.config as cfg
     import ume.vector_store as vs
+
     importlib.reload(cfg)
     importlib.reload(vs)
 

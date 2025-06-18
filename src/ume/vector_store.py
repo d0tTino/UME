@@ -29,9 +29,7 @@ class VectorStore:
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
         self.gpu_resources = None
-        self.use_gpu = (
-            use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
-        )
+        self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
         self.dim = dim
 
         self._flush_interval = flush_interval
@@ -73,11 +71,12 @@ class VectorStore:
             self._flush_thread.join()
             self._flush_thread = None
 
-
     def add(self, item_id: str, vector: List[float], *, persist: bool = False) -> None:
         arr = np.asarray(vector, dtype="float32").reshape(1, -1)
         if arr.shape[1] != self.dim:
-            raise ValueError(f"Expected vector of dimension {self.dim}, got {arr.shape[1]}")
+            raise ValueError(
+                f"Expected vector of dimension {self.dim}, got {arr.shape[1]}"
+            )
         self.index.add(arr)
         self.id_to_idx[item_id] = len(self.idx_to_id)
         self.idx_to_id.append(item_id)
@@ -142,7 +141,6 @@ class VectorStore:
             VECTOR_INDEX_SIZE.set(len(self.idx_to_id))
 
 
-
 class VectorStoreListener(GraphListener):
     """GraphListener that indexes embeddings from node attributes."""
 
@@ -159,10 +157,14 @@ class VectorStoreListener(GraphListener):
         if isinstance(emb, list):
             self.store.add(node_id, emb)
 
-    def on_edge_created(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def on_edge_created(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
         pass
 
-    def on_edge_deleted(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def on_edge_deleted(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
         pass
 
 
