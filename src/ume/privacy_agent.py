@@ -1,12 +1,10 @@
 """Backward compatibility wrapper for :mod:`ume.pipeline.privacy_agent`."""
-import importlib
-import sys
 
 from __future__ import annotations
 
 import json
 import logging
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple, List, cast
 from .utils import ssl_config
 from .logging_utils import configure_logging
 
@@ -48,7 +46,9 @@ def redact_event_payload(
     if not results:
         return payload_dict, False
 
-    anonymized = _ANONYMIZER.anonymize(text=text, analyzer_results=results)
+    anonymized = _ANONYMIZER.anonymize(
+        text=text, analyzer_results=cast(List[Any], results)
+    )
     try:
         new_payload = json.loads(anonymized.text)
     except json.JSONDecodeError:

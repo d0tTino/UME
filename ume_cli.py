@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import shlex
+import os
 import sys
 import time  # Added for timestamp in event creation
 import warnings
@@ -33,6 +34,7 @@ from ume import (  # noqa: E402
     log_audit_entry,
     get_audit_entries,
 )
+from ume.benchmarks import benchmark_vector_store
 
 # It's good practice to handle potential import errors if ume is not installed,
 # though for poetry run python ume_cli.py this should be fine.
@@ -45,7 +47,7 @@ class UMEPrompt(Cmd):
 
     def __init__(self):
         super().__init__()
-        db_path = settings.UME_CLI_DB
+        db_path = os.getenv("UME_CLI_DB", ":memory:")
         base_graph = PersistentGraph(db_path)
         role = settings.UME_ROLE
         if role:
@@ -323,6 +325,28 @@ class UMEPrompt(Cmd):
         except Exception as e:
             print(f"An unexpected error occurred during load: {e}")
             self._log_audit(str(e))
+
+    def do_benchmark_vectors(self, arg):
+        """benchmark_vectors [--gpu] [--num-vectors N] [--num-queries Q]
+        Run a synthetic benchmark of the vector store."""
+        parser = argparse.ArgumentParser(prog="benchmark_vectors")
+        parser.add_argument("--gpu", action="store_true")
+        parser.add_argument("--num-vectors", type=int, default=1000)
+        parser.add_argument("--num-queries", type=int, default=100)
+        try:
+            opts = parser.parse_args(shlex.split(arg))
+        except SystemExit:
+            return
+        result = benchmark_vector_store(
+            opts.gpu,
+            dim=settings.UME_VECTOR_DIM,
+            num_vectors=opts.num_vectors,
+            num_queries=opts.num_queries,
+        )
+        print(
+            f"Index build time: {result['build_time']:.2f}s, "
+            f"Avg query latency: {result['avg_query_latency']*1000:.3f}ms"
+        )
 
     # ----- Utility commands -----
     def do_clear(self, arg):
