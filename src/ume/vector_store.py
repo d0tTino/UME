@@ -26,6 +26,8 @@ class VectorStore:
         use_gpu: bool | None = None,
         path: str | None = None,
         flush_interval: float | None = None,
+        query_latency_metric: Histogram | None = VECTOR_QUERY_LATENCY,
+        index_size_metric: Gauge | None = VECTOR_INDEX_SIZE,
 
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
@@ -36,6 +38,8 @@ class VectorStore:
         self.dim = dim
 
         self._flush_interval = flush_interval
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
         self._flush_thread: threading.Thread | None = None
         self._flush_stop = threading.Event()
 
@@ -173,7 +177,7 @@ class VectorStoreListener(GraphListener):
         pass
 
 
-def create_default_store() -> VectorStore:
+def create_vector_store() -> VectorStore:
     """Instantiate a :class:`VectorStore` using ``ume.config.settings``."""
     return VectorStore(
         dim=settings.UME_VECTOR_DIM,
@@ -182,3 +186,10 @@ def create_default_store() -> VectorStore:
         query_latency_metric=VECTOR_QUERY_LATENCY,
         index_size_metric=VECTOR_INDEX_SIZE,
     )
+
+
+# Backwards compatibility --------------------------------------------------
+
+# ``create_default_store`` previously provided this functionality. Keep an
+# alias so older imports continue to work without modification.
+create_default_store = create_vector_store

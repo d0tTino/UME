@@ -20,7 +20,8 @@ from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
-from .vector_store import VectorStore, create_default_store
+from .factories import create_graph_adapter, create_vector_store
+from .vector_store import VectorStore
 
 configure_logging()
 
@@ -57,8 +58,8 @@ async def metrics_middleware(
 
 # These can be configured by the embedding application or tests
 app.state.query_engine = cast(Any, None)
-app.state.graph = cast(Any, None)
-app.state.vector_store = cast(Any, create_default_store())
+app.state.graph = cast(Any, create_graph_adapter())
+app.state.vector_store = cast(Any, create_vector_store())
 
 
 def configure_graph(graph: IGraphAdapter) -> None:

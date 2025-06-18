@@ -1,7 +1,4 @@
 """Backward compatibility wrapper for :mod:`ume.pipeline.privacy_agent`."""
-import importlib
-import sys
-
 from __future__ import annotations
 
 import json

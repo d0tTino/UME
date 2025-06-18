@@ -25,6 +25,7 @@ from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
+from .factories import create_graph_adapter, create_vector_store
 from .llm_ferry import LLMFerry
 
 
@@ -66,6 +67,8 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
+    "create_graph_adapter",
+    "create_vector_store",
     "LLMFerry",
 
     "generate_embedding",
