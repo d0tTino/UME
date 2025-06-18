@@ -37,6 +37,7 @@ pytest-cov = "*"
 httpx = "*"
 pre-commit = "*"
 poetry-plugin-export = "^1.9.0"
+testcontainers = "*"
 
 [tool.poetry.extras]
 vector = ["faiss-gpu"]
