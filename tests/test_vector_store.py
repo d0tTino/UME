@@ -1,9 +1,20 @@
 import time
-from ume import Event, EventType, MockGraph, apply_event_to_graph
-from ume.vector_store import VectorStore, VectorStoreListener
-from ume._internal.listeners import register_listener, unregister_listener
-import faiss
+from pathlib import Path
 import pytest
+from pathlib import Path
+from prometheus_client import Gauge, Histogram
+
+from ume import (
+    Event,
+    EventType,
+    MockGraph,
+    apply_event_to_graph,
+    VectorStore,
+    VectorStoreListener,
+)
+from ume._internal.listeners import register_listener, unregister_listener
+
+faiss = pytest.importorskip("faiss")
 
 
 def test_vector_store_add_and_query_cpu() -> None:
@@ -36,7 +47,7 @@ def test_vector_store_gpu_init() -> None:
     VectorStore(dim=2, use_gpu=True)
 
 
-def test_vector_store_env_gpu(monkeypatch) -> None:
+def test_vector_store_env_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     if not hasattr(faiss, "StandardGpuResources"):
         pytest.skip("FAISS GPU not available")
 
@@ -52,7 +63,7 @@ def test_vector_store_env_gpu(monkeypatch) -> None:
     assert store.gpu_resources is not None
 
 
-def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
+def test_vector_store_gpu_mem_setting(monkeypatch: pytest.MonkeyPatch) -> None:
     if not hasattr(faiss, "StandardGpuResources"):
         pytest.skip("FAISS GPU not available")
 
@@ -80,8 +91,32 @@ def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
     assert isinstance(store.gpu_resources, DummyRes)
     assert store.gpu_resources.temp == 1 * 1024 * 1024
 
+def test_vector_store_gpu_mem_override(monkeypatch) -> None:
+    if not hasattr(faiss, "StandardGpuResources"):
+        pytest.skip("FAISS GPU not available")
 
-def test_vector_store_save_and_load(tmp_path) -> None:
+    class DummyRes:
+        def __init__(self) -> None:
+            self.temp: int | None = None
+
+        def setTempMemory(self, value: int) -> None:  # noqa: N802
+            self.temp = value
+
+    monkeypatch.setattr(faiss, "StandardGpuResources", DummyRes)
+    monkeypatch.setattr(faiss, "index_cpu_to_gpu", lambda res, _, idx: idx)
+    store = VectorStore(dim=2, use_gpu=True, gpu_mem_mb=2)
+    assert isinstance(store.gpu_resources, DummyRes)
+    assert store.gpu_resources.temp == 2 * 1024 * 1024
+
+
+def test_vector_store_device_stats_cpu() -> None:
+    store = VectorStore(dim=2, use_gpu=False)
+    stats = store.device_stats()
+    assert "num_gpus" in stats
+
+
+def test_vector_store_save_and_load(tmp_path: Path) -> None:
+
     path = tmp_path / "index.faiss"
     store = VectorStore(dim=2, use_gpu=False, path=str(path))
     store.add("x", [1.0, 0.0])
@@ -93,7 +128,7 @@ def test_vector_store_save_and_load(tmp_path) -> None:
     assert new_store.query([1.0, 0.0], k=1) == ["x"]
 
 
-def test_vector_store_add_persist(tmp_path) -> None:
+def test_vector_store_add_persist(tmp_path: Path) -> None:
     path = tmp_path / "persist.faiss"
     store = VectorStore(dim=2, use_gpu=False, path=str(path))
     store.add("y", [1.0, 0.0], persist=True)
@@ -104,7 +139,7 @@ def test_vector_store_add_persist(tmp_path) -> None:
     assert new_store.query([1.0, 0.0], k=1) == ["y"]
 
 
-def test_vector_store_background_flush(tmp_path) -> None:
+def test_vector_store_background_flush(tmp_path: Path) -> None:
     path = tmp_path / "bg.faiss"
     store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
     store.add("z", [0.0, 1.0])
@@ -115,3 +150,16 @@ def test_vector_store_background_flush(tmp_path) -> None:
     new_store.load(str(path))
 
     assert new_store.query([0.0, 1.0], k=1) == ["z"]
+
+
+def test_vector_store_metrics_init() -> None:
+    lat = Histogram("test_query_latency", "desc")
+    size = Gauge("test_index_size", "desc")
+    store = VectorStore(
+        dim=2,
+        use_gpu=False,
+        query_latency_metric=lat,
+        index_size_metric=size,
+    )
+    assert store.query_latency_metric is lat
+    assert store.index_size_metric is size

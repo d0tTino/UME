@@ -1,4 +1,5 @@
 """Backward compatibility wrapper for :mod:`ume.pipeline.stream_processor`."""
+
 from __future__ import annotations
 
 import faust_stub as faust

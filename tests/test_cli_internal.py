@@ -1,7 +1,17 @@
-from ume_cli import UMEPrompt, _setup_warnings
+import os
+from pathlib import Path
 
 
-def test_umeprompt_commands(tmp_path):
+
+def test_umeprompt_commands(tmp_path: Path) -> None:
+    os.environ["UME_CLI_DB"] = ":memory:"
+    import importlib
+    import ume_cli as cli
+    import ume.config as cfg
+    importlib.reload(cfg)
+    importlib.reload(cli)
+    UMEPrompt = cli.UMEPrompt
+    _setup_warnings = cli._setup_warnings
     prompt = UMEPrompt()
     prompt.do_new_node('n1 "{}"')
     prompt.do_new_node('n2 "{}"')

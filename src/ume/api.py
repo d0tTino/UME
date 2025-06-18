@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from .config import settings
 import os
-from .logging_utils import configure_logging
+import logging
+import time
 from typing import Any, Dict, List, Callable, Awaitable, cast
 
-import time
+from .config import settings
+from .logging_utils import configure_logging
 from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -20,7 +21,10 @@ from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
-from .vector_store import VectorStore, create_default_store
+from . import VectorStore, create_default_store
+
+logger = logging.getLogger(__name__)
+
 
 configure_logging()
 
@@ -58,7 +62,12 @@ async def metrics_middleware(
 # These can be configured by the embedding application or tests
 app.state.query_engine = cast(Any, None)
 app.state.graph = cast(Any, None)
-app.state.vector_store = cast(Any, create_default_store())
+try:
+    app.state.vector_store = cast(Any, create_default_store())
+except ImportError:  # pragma: no cover - optional dependency
+    logger.warning("Vector store dependencies missing; continuing without one")
+    app.state.vector_store = None
+
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
@@ -318,11 +327,64 @@ def api_search_vectors(
     return {"ids": ids}
 
 
+@app.get("/vectors/benchmark")
+def api_benchmark_vectors(
+    use_gpu: bool = Query(False),
+    num_vectors: int = 1000,
+    num_queries: int = 100,
+    _: None = Depends(require_token),
+    store: VectorStore = Depends(get_vector_store),
+) -> Dict[str, Any]:
+    """Run a synthetic benchmark against the vector store."""
+    from .benchmarks import benchmark_vector_store
+
+    return benchmark_vector_store(
+        use_gpu,
+        dim=store.dim,
+        num_vectors=num_vectors,
+        num_queries=num_queries,
+    )
+
+
 @app.get("/metrics")
 def metrics_endpoint() -> Response:
     """Expose Prometheus metrics."""
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/metrics/summary")
+def metrics_summary(
+    _: None = Depends(require_token),
+    store: VectorStore = Depends(get_vector_store),
+) -> Dict[str, Any]:
+    """Return a summary of core Prometheus metrics."""
+    total_requests = 0.0
+    by_status: Dict[str, float] = {}
+    for metric in REQUEST_COUNT.collect():
+        for s in metric.samples:
+            if s.name.endswith("_total"):
+                status = s.labels.get("status", "unknown")
+                total_requests += s.value
+                by_status[status] = by_status.get(status, 0) + s.value
+
+    latency_sum = 0.0
+    latency_count = 0.0
+    for metric in REQUEST_LATENCY.collect():
+        for s in metric.samples:
+            if s.name.endswith("_sum"):
+                latency_sum += s.value
+            elif s.name.endswith("_count"):
+                latency_count += s.value
+    avg_latency = latency_sum / latency_count if latency_count else 0.0
+
+    index_size = len(getattr(store, "idx_to_id", []))
+    return {
+        "total_requests": int(total_requests),
+        "request_count_by_status": {k: int(v) for k, v in by_status.items()},
+        "average_request_latency": avg_latency,
+        "vector_index_size": index_size,
+    }
 
 
 @app.get("/dashboard/stats")

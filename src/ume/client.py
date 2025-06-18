@@ -80,9 +80,14 @@ class UMEClient:
             if isinstance(payload, dict):
                 text_values = [v for v in payload.values() if isinstance(v, str)]
                 if text_values:
-                    from .embedding import generate_embedding  # local import to avoid heavy dependency
-
-                    payload["embedding"] = generate_embedding(" ".join(text_values))
+                    try:
+                        from .embedding import generate_embedding  # local import to avoid heavy dependency
+                    except ImportError:
+                        logger.warning(
+                            "Embedding dependencies missing; skipping embedding generation"
+                        )
+                    else:
+                        payload["embedding"] = generate_embedding(" ".join(text_values))
             yield parse_event(data)
 
     def close(self) -> None:

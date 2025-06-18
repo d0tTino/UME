@@ -17,7 +17,11 @@ def enable_periodic_snapshot(
     snapshot_path = Path(path)
 
     def _snapshot() -> None:
-        snapshot_graph_to_file(graph, snapshot_path)
+        try:
+            snapshot_graph_to_file(graph, snapshot_path)
+        except Exception:  # pragma: no cover - don't raise during shutdown
+
+            pass
 
     def _run() -> None:
         while True:
