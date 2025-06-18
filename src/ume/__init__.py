@@ -38,6 +38,7 @@ except Exception:  # pragma: no cover - optional import
     def generate_embedding(text: str) -> list[float]:
         raise ImportError("sentence-transformers is required to generate embeddings")
 
+
 __all__ = [
     "Event",
     "EventType",

@@ -2,7 +2,7 @@ import json
 from presidio_analyzer import RecognizerResult
 import pytest
 
-from ume import privacy_agent as privacy_agent_module
+from ume.pipeline import privacy_agent as privacy_agent_module
 
 
 @pytest.fixture
