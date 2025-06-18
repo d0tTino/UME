@@ -75,67 +75,17 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: poetry run pytest
 
-  coverage:
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fetch main
-        run: git fetch origin main --depth=1
-
-      - name: Detect code changes
-        id: changes
-        run: |
-          scripts/ci_should_run.py && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Poetry
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install poetry
-
-      - name: Configure Poetry
-        run: poetry config virtualenvs.create false --local
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pypoetry
-            ~/.cache/pip
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: ${{ runner.os }}-poetry-
-
-      - name: Install dependencies
-        if: steps.changes.outputs.run == 'true'
-        run: poetry install --no-interaction --no-ansi --with dev --with vector --with embedding
-
-      - name: Run Ruff
-        if: steps.changes.outputs.run == 'true'
-        run: poetry run ruff check . --config pyproject.toml
-
-      - name: Run mypy
-        if: steps.changes.outputs.run == 'true'
-        run: poetry run mypy --config-file mypy.ini
-
       - name: Run tests with coverage
-        if: steps.changes.outputs.run == 'true'
+        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         run: |
           poetry run pytest --cov=src/ume --cov=ume_cli.py --cov-report=xml --cov-report=html
 
       - name: Upload coverage report
-        if: steps.changes.outputs.run == 'true'
+        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: |
             coverage.xml
             coverage_html
+
