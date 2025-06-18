@@ -1,4 +1,4 @@
-const { useState, useRef, useEffect } = React;
+const { useState, useRef } = React;
 
 function App() {
   const [token, setToken] = useState('');
@@ -6,6 +6,8 @@ function App() {
   const [cypher, setCypher] = useState('');
   const [queryResult, setQueryResult] = useState('');
   const [searchResult, setSearchResult] = useState('');
+  const [stats, setStats] = useState(null);
+  const [events, setEvents] = useState([]);
   const containerRef = useRef(null);
   const networkRef = useRef(null);
 
@@ -71,6 +73,24 @@ function App() {
       .catch((err) => console.error('Query failed', err));
   }
 
+  function loadStats() {
+    fetch('/dashboard/stats', {
+      headers: { Authorization: 'Bearer ' + token },
+    })
+      .then((res) => res.json())
+      .then((data) => setStats(data))
+      .catch((err) => console.error('Failed to load stats', err));
+  }
+
+  function loadEvents() {
+    fetch('/dashboard/recent_events', {
+      headers: { Authorization: 'Bearer ' + token },
+    })
+      .then((res) => res.json())
+      .then((data) => setEvents(data))
+      .catch((err) => console.error('Failed to load events', err));
+  }
+
   return React.createElement(
     'div',
     { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
@@ -108,6 +128,16 @@ function App() {
         'button',
         { onClick: searchVectors, style: { marginLeft: '4px' } },
         'Search'
+      ),
+      React.createElement(
+        'button',
+        { onClick: loadStats, style: { marginLeft: '4px' } },
+        'Load Stats'
+      ),
+      React.createElement(
+        'button',
+        { onClick: loadEvents, style: { marginLeft: '4px' } },
+        'Recent Events'
       )
     ),
     React.createElement(
@@ -120,6 +150,18 @@ function App() {
       { style: { margin: 0, padding: '8px' } },
       searchResult
     ),
+    stats &&
+      React.createElement(
+        'pre',
+        { style: { margin: 0, padding: '8px' } },
+        JSON.stringify(stats, null, 2)
+      ),
+    events.length > 0 &&
+      React.createElement(
+        'pre',
+        { style: { margin: 0, padding: '8px' } },
+        JSON.stringify(events, null, 2)
+      ),
     React.createElement('div', { ref: containerRef, style: { flex: 1 } })
   );
 }
