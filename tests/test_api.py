@@ -1,12 +1,13 @@
 from fastapi.testclient import TestClient
 import pytest
 
-from ume.api import app, configure_graph
+from ume.api import app, configure_graph, configure_vector_store
+from ume.vector_store import VectorStore
 from ume import MockGraph
 from ume.config import settings
 
 
-def setup_module(_):
+def setup_module(_: object) -> None:
     # configure app state for tests
     app.state.query_engine = type(
         "QE", (), {"execute_cypher": lambda self, q: [{"q": q}]}
@@ -18,7 +19,7 @@ def setup_module(_):
     configure_graph(g)
 
 
-def test_run_query_authorized():
+def test_run_query_authorized() -> None:
     client = TestClient(app)
     res = client.get(
         "/query",
@@ -29,13 +30,13 @@ def test_run_query_authorized():
     assert res.json() == [{"q": "MATCH (n) RETURN n"}]
 
 
-def test_run_query_unauthorized():
+def test_run_query_unauthorized() -> None:
     client = TestClient(app)
     res = client.get("/query", params={"cypher": "MATCH (n)"})
     assert res.status_code == 401
 
 
-def test_shortest_path_endpoint():
+def test_shortest_path_endpoint() -> None:
     client = TestClient(app)
     payload = {"source": "a", "target": "b"}
     res = client.post(
@@ -47,7 +48,7 @@ def test_shortest_path_endpoint():
     assert res.json() == {"path": ["a", "b"]}
 
 
-def test_constrained_path_endpoint():
+def test_constrained_path_endpoint() -> None:
     client = TestClient(app)
     payload = {"source": "a", "target": "b", "max_depth": 1}
     res = client.post(
@@ -59,7 +60,7 @@ def test_constrained_path_endpoint():
     assert res.json() == {"path": ["a", "b"]}
 
 
-def test_subgraph_endpoint():
+def test_subgraph_endpoint() -> None:
     client = TestClient(app)
     payload = {"start": "a", "depth": 1}
     res = client.post(
@@ -71,7 +72,7 @@ def test_subgraph_endpoint():
     assert set(res.json()["nodes"].keys()) == {"a", "b"}
 
 
-def test_token_header_whitespace_and_case():
+def test_token_header_whitespace_and_case() -> None:
     client = TestClient(app)
     res = client.get(
         "/query",
@@ -81,7 +82,7 @@ def test_token_header_whitespace_and_case():
     assert res.status_code == 200
 
 
-def test_malformed_authorization_header():
+def test_malformed_authorization_header() -> None:
     client = TestClient(app)
     res = client.get(
         "/query",
@@ -92,10 +93,28 @@ def test_malformed_authorization_header():
     assert res.json()["detail"] == "Malformed Authorization header"
 
 
-def test_metrics_endpoint():
+def test_metrics_endpoint() -> None:
     client = TestClient(app)
     res = client.get("/metrics")
     assert res.status_code == 200
+
+
+def test_metrics_summary() -> None:
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    client = TestClient(app)
+    client.get(
+        "/query",
+        params={"cypher": "MATCH (n) RETURN n"},
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    res = client.get(
+        "/metrics/summary",
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "vector_index_size" in data
+    assert "average_request_latency" in data
 
 
 @pytest.mark.parametrize(
@@ -119,7 +138,9 @@ def test_metrics_endpoint():
         ),
     ],
 )
-def test_endpoints_require_authentication(method, path, body, params):
+def test_endpoints_require_authentication(
+    method: str, path: str, body: dict | None, params: list | None
+) -> None:
     client = TestClient(app)
     request = getattr(client, method)
     if method == "get":

@@ -43,7 +43,9 @@ else:  # pragma: no cover - optional dependency
         def create_default_store(*_: Any, **__: Any) -> None:
             raise ImportError("faiss is required for create_default_store")
 
+
 from .llm_ferry import LLMFerry
+from .dag_executor import DAGExecutor, Task
 
 
 try:  # Optional dependency
@@ -85,6 +87,7 @@ __all__ = [
     "VectorStore",
     "VectorStoreListener",
     "create_default_store",
+
     "LLMFerry",
 
     "generate_embedding",

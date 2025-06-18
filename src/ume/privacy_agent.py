@@ -124,4 +124,5 @@ def run_privacy_agent() -> None:
 
 
 if __name__ == "__main__":
+
     run_privacy_agent()

@@ -41,3 +41,15 @@ def test_search_vectors() -> None:
     )
     assert res.status_code == 200
     assert res.json()["ids"] == ["b", "c"]
+
+
+def test_benchmark_endpoint():
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    client = TestClient(app)
+    res = client.get(
+        "/vectors/benchmark",
+        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "build_time" in data and "avg_query_latency" in data

@@ -7,7 +7,7 @@ The primary motivation behind UME is to equip AI agents with a form of persisten
 
 ## Core Modules
 The engine is built from a few key components:
-- **Privacy Agent** (`src/ume/privacy_agent.py`)
+- **Privacy Agent** (`src/ume/pipeline/privacy_agent.py`)
   - Redacts personally identifiable information (PII) from incoming events using Presidio.
   - Forwards sanitized events to downstream Kafka topics.
 - **FastAPI API** (`src/ume/api.py`)
@@ -16,6 +16,9 @@ The engine is built from a few key components:
 - **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
   - Define a common interface for manipulating different graph backends.
   - Includes adapters for in-memory, SQLite, and Neo4j storage as well as RBAC wrappers.
+- **Vector Store** (`src/ume/vector_store.py`)
+  - Maintains a FAISS index of node embeddings for similarity search.
+  - Use `create_default_store()` to instantiate one from environment settings.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
 
@@ -402,14 +405,16 @@ regions. Several strategies are summarized in
 This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
 
 1.  **Obtain a Graph Adapter Instance:**
-    The library provides multiple adapters. The default is `PersistentGraph`, which uses SQLite, but you can also connect to Neo4j using `Neo4jGraph`:
+    Factory helpers simplify adapter creation. Use `create_graph_adapter()` to
+    build the default adapter from environment settings. You can still
+    instantiate specific adapters directly if needed:
     ```python
-    from ume import PersistentGraph, Neo4jGraph, IGraphAdapter
+    from ume import create_graph_adapter, PersistentGraph, Neo4jGraph, IGraphAdapter
 
-    # SQLite-backed graph
-    graph_adapter: IGraphAdapter = PersistentGraph("memory.db")
+    # Default SQLite-backed adapter
+    graph_adapter: IGraphAdapter = create_graph_adapter()
 
-    # Or connect to Neo4j
+    # Or connect to Neo4j explicitly
     neo4j_graph = Neo4jGraph("bolt://localhost:7687", "neo4j", "password")
     ```
 
@@ -551,6 +556,28 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Node 'node_A' from loaded graph: {loaded_graph_adapter.get_node('node_A')}")
     ```
 This provides a basic flow for event handling and graph interaction within UME.
+
+### Swapping Backends
+UME exposes small factory helpers that make it easy to change the storage
+implementation without modifying other code.  To switch the graph adapter or
+vector store used by the API, call the configuration functions:
+
+```python
+from ume import PersistentGraph, Neo4jGraph
+from ume.api import configure_graph, configure_vector_store
+from ume.vector_store import create_default_store
+
+# SQLite graph
+configure_graph(PersistentGraph("my.db"))
+configure_vector_store(create_default_store())
+
+# Later swap to Neo4j
+configure_graph(Neo4jGraph("bolt://localhost:7687", "neo4j", "password"))
+```
+
+These helpers allow embedding applications to experiment with different
+backends—such as Neo4j for production and the lightweight SQLite adapter for
+local testing—without rewriting initialization code.
 
 ## How to Use UMEClient
 
@@ -722,9 +749,10 @@ poetry install --with embedding
 
 ## Vector Store
 
-UME can optionally maintain a FAISS index of node embeddings. When a
-`CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event contains an `embedding` field
-in its attributes, the vector is added to the index via
+UME can optionally maintain a FAISS index of node embeddings. Use
+`create_vector_store()` to obtain a store configured from environment
+variables. When a `CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event contains an
+`embedding` field in its attributes, the vector is added to the index via
 `VectorStoreListener`.
 
 Set the following environment variables to configure the store:
@@ -736,6 +764,8 @@ Set the following environment variables to configure the store:
 - `UME_VECTOR_GPU_MEM_MB` – temporary memory (in MB) allocated for FAISS GPU
 operations (default `256`). Increase or decrease this to tune GPU memory usage
 when building the index.
+  The same value can be passed to `VectorStore(gpu_mem_mb=...)` when
+  constructing a store programmatically.
 
 If the file specified by `UME_VECTOR_INDEX` exists, it is loaded automatically
 when the store is created. New vectors are written back to this file whenever
@@ -746,6 +776,8 @@ Install the optional dependencies with:
 ```bash
 poetry install --with vector
 ```
+
+See [Vector Store Benchmark](docs/VECTOR_BENCHMARKS.md) for sample GPU results.
 
 ## Logging
 
