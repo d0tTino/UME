@@ -91,9 +91,6 @@ jobs:
         run: poetry run pytest
 
   coverage:
-    concurrency:
-      group: coverage-${{ github.ref }}
-      cancel-in-progress: true
     runs-on: ["self-hosted", "linux"]
     strategy:
       matrix:
