@@ -1,6 +1,4 @@
 """Backward compatibility wrapper for :mod:`ume.pipeline.stream_processor`."""
-import importlib
-import sys
 
 from __future__ import annotations
 

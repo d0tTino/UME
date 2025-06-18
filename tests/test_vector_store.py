@@ -81,6 +81,30 @@ def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
     assert store.gpu_resources.temp == 1 * 1024 * 1024
 
 
+def test_vector_store_gpu_mem_override(monkeypatch) -> None:
+    if not hasattr(faiss, "StandardGpuResources"):
+        pytest.skip("FAISS GPU not available")
+
+    class DummyRes:
+        def __init__(self) -> None:
+            self.temp: int | None = None
+
+        def setTempMemory(self, value: int) -> None:  # noqa: N802
+            self.temp = value
+
+    monkeypatch.setattr(faiss, "StandardGpuResources", DummyRes)
+    monkeypatch.setattr(faiss, "index_cpu_to_gpu", lambda res, _, idx: idx)
+    store = VectorStore(dim=2, use_gpu=True, gpu_mem_mb=2)
+    assert isinstance(store.gpu_resources, DummyRes)
+    assert store.gpu_resources.temp == 2 * 1024 * 1024
+
+
+def test_vector_store_device_stats_cpu() -> None:
+    store = VectorStore(dim=2, use_gpu=False)
+    stats = store.device_stats()
+    assert "num_gpus" in stats
+
+
 def test_vector_store_save_and_load(tmp_path) -> None:
     path = tmp_path / "index.faiss"
     store = VectorStore(dim=2, use_gpu=False, path=str(path))
