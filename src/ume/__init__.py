@@ -25,6 +25,7 @@ from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
+from .llm_ferry import LLMFerry
 
 try:  # Optional dependency
     from .embedding import generate_embedding
@@ -63,5 +64,6 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
+    "LLMFerry",
     "generate_embedding",
 ]

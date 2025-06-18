@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # API
     UME_API_TOKEN: str = "secret-token"
 
+    # LLM Ferry
+    LLM_FERRY_API_URL: str = "https://example.com/api"
+    LLM_FERRY_API_KEY: str = ""
+
 
 # Create a single, importable instance
 settings = Settings()
