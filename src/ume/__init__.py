@@ -25,6 +25,7 @@ from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
+from .dag_executor import Task, DAGExecutor
 
 try:  # Optional dependency
     from .embedding import generate_embedding
@@ -64,4 +65,6 @@ __all__ = [
     "VectorStore",
     "VectorStoreListener",
     "generate_embedding",
+    "Task",
+    "DAGExecutor",
 ]
