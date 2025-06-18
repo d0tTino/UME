@@ -3,6 +3,7 @@ import subprocess
 import sys
 import os
 import shlex
+from pathlib import Path
 import pytest  # For tmp_path if needed later, and general test structure
 
 # Determine the absolute path to ume_cli.py
@@ -31,6 +32,7 @@ def run_cli_commands(
     """
     env = os.environ.copy()
     env["UME_DB_PATH"] = ":memory:"
+    env["UME_CLI_DB"] = ":memory:"
     process = subprocess.Popen(
         [sys.executable, CLI_SCRIPT_PATH] + (cli_args or []),
         stdin=subprocess.PIPE,
@@ -60,7 +62,7 @@ def run_cli_commands(
     return stdout, stderr, rc
 
 
-def test_cli_start_and_exit_eof():
+def test_cli_start_and_exit_eof() -> None:
     """Test starting the CLI and exiting immediately with EOF (Ctrl+D)."""
     # Sending an empty list of commands and relying on EOF from closing stdin.
     # However, communicate('') might not send EOF correctly always.
@@ -73,7 +75,7 @@ def test_cli_start_and_exit_eof():
     assert rc == 0
 
 
-def test_cli_help_command():
+def test_cli_help_command() -> None:
     """Test the 'help' command."""
     stdout, stderr, rc = run_cli_commands(["help", "exit"])
     assert "Documented commands (type help <topic>):" in stdout
@@ -82,7 +84,7 @@ def test_cli_help_command():
     assert rc == 0
 
 
-def test_cli_show_nodes_empty_and_exit():
+def test_cli_show_nodes_empty_and_exit() -> None:
     """Test 'show_nodes' on an empty graph and then exit."""
     stdout, stderr, rc = run_cli_commands(["show_nodes", "exit"])
     assert "Welcome to UME CLI." in stdout
@@ -93,7 +95,7 @@ def test_cli_show_nodes_empty_and_exit():
     assert rc == 0
 
 
-def test_cli_create_node_then_show_nodes():
+def test_cli_create_node_then_show_nodes() -> None:
     """Test creating a node and then listing nodes."""
     commands = [
         'new_node test1 \'{"name":"Node One", "value":42}\'',  # Ensure JSON is single-quoted for shlex
@@ -109,9 +111,7 @@ def test_cli_create_node_then_show_nodes():
     assert rc == 0
 
 
-def test_cli_create_and_show_edge(
-    tmp_path,
-):  # tmp_path not used here, but good to have for snapshot tests
+def test_cli_create_and_show_edge(tmp_path: Path) -> None:  # tmp_path not used here, but good to have for snapshot tests
     """Test creating nodes, an edge, and then showing edges."""
     commands = [
         'new_node source_n \'{"type":"UserMemory"}\'',
@@ -131,7 +131,7 @@ def test_cli_create_and_show_edge(
     assert rc == 0
 
 
-def test_cli_redact_node_and_edge():
+def test_cli_redact_node_and_edge() -> None:
     commands = [
         'new_node n1 "{}"',
         'new_node n2 "{}"',
@@ -154,7 +154,7 @@ def test_cli_redact_node_and_edge():
     assert rc == 0
 
 
-def test_cli_snapshot_save_and_load_and_verify(tmp_path):
+def test_cli_snapshot_save_and_load_and_verify(tmp_path: Path) -> None:
     """Test snapshot save, clear, load, and verify content."""
     snapshot_file = tmp_path / "cli_test_snapshot.json"
     commands_part1 = [
@@ -189,7 +189,7 @@ def test_cli_snapshot_save_and_load_and_verify(tmp_path):
     assert rc2 == 0
 
 
-def test_cli_unknown_command(tmp_path):  # tmp_path not used but is a standard fixture
+def test_cli_unknown_command(tmp_path: Path) -> None:  # tmp_path not used but is a standard fixture
     """Test that an unknown command is handled gracefully."""
     commands = ["unknown_command_test", "exit"]
     stdout, stderr, rc = run_cli_commands(commands)
@@ -198,7 +198,7 @@ def test_cli_unknown_command(tmp_path):  # tmp_path not used but is a standard f
     assert rc == 0
 
 
-def test_cli_snapshot_load_invalid_snapshot(tmp_path):
+def test_cli_snapshot_load_invalid_snapshot(tmp_path: Path) -> None:
     """Loading a malformed snapshot should print a user-friendly error."""
     bad_snapshot = tmp_path / "bad_snapshot.json"
     # Write an invalid snapshot (nodes should be a dict)
@@ -212,7 +212,7 @@ def test_cli_snapshot_load_invalid_snapshot(tmp_path):
     assert rc == 0
 
 
-def test_cli_runs_with_show_warnings_flag():
+def test_cli_runs_with_show_warnings_flag() -> None:
     """Ensure CLI starts and exits cleanly with the --show-warnings flag."""
     stdout, stderr, rc = run_cli_commands(["exit"], cli_args=["--show-warnings"])
     assert "Welcome to UME CLI." in stdout
@@ -221,7 +221,7 @@ def test_cli_runs_with_show_warnings_flag():
     assert rc == 0
 
 
-def test_cli_creates_warnings_log_file(tmp_path):
+def test_cli_creates_warnings_log_file(tmp_path: Path) -> None:
     """Running with --warnings-log should create the log file."""
     log_file = tmp_path / "warnings.log"
     stdout, stderr, rc = run_cli_commands(

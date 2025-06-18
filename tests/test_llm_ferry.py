@@ -2,8 +2,10 @@ from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.llm_ferry import LLMFerry
 from ume._internal.listeners import register_listener, unregister_listener
 import httpx
-import respx
+import pytest
 import json
+
+respx = pytest.importorskip("respx")
 
 
 def test_llm_ferry_on_create() -> None:

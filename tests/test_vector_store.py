@@ -1,11 +1,20 @@
 import time
-from ume import Event, EventType, MockGraph, apply_event_to_graph
-from ume.vector_store import VectorStore, VectorStoreListener
-from ume._internal.listeners import register_listener, unregister_listener
-import faiss
+from pathlib import Path
 import pytest
 from pathlib import Path
 from prometheus_client import Gauge, Histogram
+
+from ume import (
+    Event,
+    EventType,
+    MockGraph,
+    apply_event_to_graph,
+    VectorStore,
+    VectorStoreListener,
+)
+from ume._internal.listeners import register_listener, unregister_listener
+
+faiss = pytest.importorskip("faiss")
 
 
 def test_vector_store_add_and_query_cpu() -> None:
@@ -106,7 +115,7 @@ def test_vector_store_device_stats_cpu() -> None:
     assert "num_gpus" in stats
 
 
-def test_vector_store_save_and_load(tmp_path) -> None:
+def test_vector_store_save_and_load(tmp_path: Path) -> None:
 
     path = tmp_path / "index.faiss"
     store = VectorStore(dim=2, use_gpu=False, path=str(path))

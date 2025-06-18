@@ -26,12 +26,8 @@ class VectorStore:
         use_gpu: bool | None = None,
         path: str | None = None,
         flush_interval: float | None = None,
-        query_latency_metric: Histogram | None = None,
-        index_size_metric: Gauge | None = None,
-
-
-        query_latency_metric: Histogram | None = None,
-        index_size_metric: Gauge | None = None,
+        query_latency_metric: Histogram | None = VECTOR_QUERY_LATENCY,
+        index_size_metric: Gauge | None = VECTOR_INDEX_SIZE,
 
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
