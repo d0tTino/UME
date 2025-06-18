@@ -26,6 +26,7 @@ class VectorStore:
         use_gpu: bool | None = None,
         path: str | None = None,
         flush_interval: float | None = None,
+
         query_latency_metric: Histogram | None = None,
         index_size_metric: Gauge | None = None,
 
@@ -35,11 +36,19 @@ class VectorStore:
         self.idx_to_id: List[str] = []
         self.gpu_resources = None
         self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
+        self.gpu_mem_mb = gpu_mem_mb if gpu_mem_mb is not None else settings.UME_VECTOR_GPU_MEM_MB
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
         self.dim = dim
+
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
 
         self._flush_interval = flush_interval
         self._flush_thread: threading.Thread | None = None
         self._flush_stop = threading.Event()
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
 
         self.query_latency_metric = query_latency_metric
         self.index_size_metric = index_size_metric
@@ -49,9 +58,7 @@ class VectorStore:
         if self.use_gpu:
             try:
                 self.gpu_resources = faiss.StandardGpuResources()
-                self.gpu_resources.setTempMemory(
-                    settings.UME_VECTOR_GPU_MEM_MB * 1024 * 1024
-                )
+                self.gpu_resources.setTempMemory(self.gpu_mem_mb * 1024 * 1024)
                 self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
             except AttributeError:
                 # FAISS was compiled without GPU support
@@ -122,6 +129,7 @@ class VectorStore:
         if self.use_gpu:
             try:
                 self.gpu_resources = faiss.StandardGpuResources()
+                self.gpu_resources.setTempMemory(self.gpu_mem_mb * 1024 * 1024)
                 self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
             except AttributeError:
                 pass
@@ -149,6 +157,20 @@ class VectorStore:
                 self.query_latency_metric.observe(time.perf_counter() - start)
             if self.index_size_metric is not None:
                 self.index_size_metric.set(len(self.idx_to_id))
+
+    def device_stats(self) -> Dict[str, int | float]:
+        """Return basic GPU device statistics."""
+        stats = {}
+        if hasattr(faiss, "get_num_gpus"):
+            stats["num_gpus"] = faiss.get_num_gpus()
+        if self.gpu_resources is not None and hasattr(self.gpu_resources, "getMemoryInfo"):
+            try:
+                free, total = self.gpu_resources.getMemoryInfo(0)
+                stats["free_mem"] = free
+                stats["total_mem"] = total
+            except Exception:
+                pass
+        return stats
 
 
 class VectorStoreListener(GraphListener):
@@ -184,6 +206,7 @@ def create_default_store() -> VectorStore:
         dim=settings.UME_VECTOR_DIM,
         use_gpu=settings.UME_VECTOR_USE_GPU,
         path=settings.UME_VECTOR_INDEX,
+        gpu_mem_mb=settings.UME_VECTOR_GPU_MEM_MB,
         query_latency_metric=VECTOR_QUERY_LATENCY,
         index_size_metric=VECTOR_INDEX_SIZE,
     )

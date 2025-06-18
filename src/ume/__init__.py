@@ -26,6 +26,7 @@ from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
 from .llm_ferry import LLMFerry
+from .dag_executor import DAGExecutor, Task
 
 
 try:  # Optional dependency

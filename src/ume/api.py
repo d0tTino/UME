@@ -318,6 +318,25 @@ def api_search_vectors(
     return {"ids": ids}
 
 
+@app.get("/vectors/benchmark")
+def api_benchmark_vectors(
+    use_gpu: bool = Query(False),
+    num_vectors: int = 1000,
+    num_queries: int = 100,
+    _: None = Depends(require_token),
+    store: VectorStore = Depends(get_vector_store),
+) -> Dict[str, Any]:
+    """Run a synthetic benchmark against the vector store."""
+    from .benchmarks import benchmark_vector_store
+
+    return benchmark_vector_store(
+        use_gpu,
+        dim=store.dim,
+        num_vectors=num_vectors,
+        num_queries=num_queries,
+    )
+
+
 @app.get("/metrics")
 def metrics_endpoint() -> Response:
     """Expose Prometheus metrics."""

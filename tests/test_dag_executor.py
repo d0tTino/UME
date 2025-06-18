@@ -1,28 +1,22 @@
-import importlib.util
 import sys
+import types
 import time
 
-DAG_SPEC = importlib.util.spec_from_file_location(
-    "ume.dag_executor", "src/ume/dag_executor.py"
-)
-assert DAG_SPEC is not None and DAG_SPEC.loader is not None
-dag_executor = importlib.util.module_from_spec(DAG_SPEC)
-sys.modules["ume.dag_executor"] = dag_executor
-DAG_SPEC.loader.exec_module(dag_executor)
-DAGExecutor = dag_executor.DAGExecutor
-Task = dag_executor.Task
+sys.modules.setdefault("faiss", types.ModuleType("faiss"))
+
+from ume import DAGExecutor, Task  # noqa: E402
 
 
-def test_dag_execution_order():
+def test_dag_execution_order() -> None:
     order: list[str] = []
 
-    def a():
+    def a() -> None:
         order.append("a")
 
-    def b():
+    def b() -> None:
         order.append("b")
 
-    def c():
+    def c() -> None:
         order.append("c")
 
     exec = DAGExecutor()
@@ -33,12 +27,12 @@ def test_dag_execution_order():
     assert order == ["a", "b", "c"]
 
 
-def test_resource_scheduling_sequential_gpu():
+def test_resource_scheduling_sequential_gpu() -> None:
     exec = DAGExecutor(resources={"cpu": 1, "gpu": 1})
     events: list[tuple[str, float]] = []
 
-    def make(name: str, delay: float, resource: str):
-        def _f():
+    def make(name: str, delay: float, resource: str) -> Task:
+        def _f() -> None:
             events.append((name + "_start", time.perf_counter()))
             time.sleep(delay)
             events.append((name + "_end", time.perf_counter()))
@@ -52,3 +46,10 @@ def test_resource_scheduling_sequential_gpu():
     assert len(starts) == 2
     diff = starts[1][1] - starts[0][1]
     assert diff >= 0.09
+
+
+def test_public_imports() -> None:
+    from ume import DAGExecutor as PublicDAGExecutor, Task as PublicTask
+
+    assert PublicDAGExecutor is DAGExecutor
+    assert PublicTask is Task
