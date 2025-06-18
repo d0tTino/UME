@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     UME_LOG_LEVEL: str = "INFO"
     UME_LOG_JSON: bool = False
 
+    # Logging
+    UME_LOG_LEVEL: str = "INFO"
+    UME_LOG_JSON: bool = False
+
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""

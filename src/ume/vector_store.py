@@ -26,8 +26,6 @@ class VectorStore:
         use_gpu: bool | None = None,
         path: str | None = None,
         flush_interval: float | None = None,
-        query_latency_metric: Histogram | None = VECTOR_QUERY_LATENCY,
-        index_size_metric: Gauge | None = VECTOR_INDEX_SIZE,
 
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
@@ -39,6 +37,8 @@ class VectorStore:
         self.query_latency_metric = query_latency_metric
         self.index_size_metric = index_size_metric
         self.dim = dim
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
 
         self.query_latency_metric = query_latency_metric
         self.index_size_metric = index_size_metric

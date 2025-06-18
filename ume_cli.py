@@ -57,17 +57,6 @@ class UMEPrompt(Cmd):
     def __init__(self):
         super().__init__()
 
-        db_path = os.environ.get("UME_DB_PATH", settings.UME_CLI_DB)
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            if db_path != ":memory:" and os.path.exists(db_path):
-                os.remove(db_path)
-            if os.path.exists(settings.UME_SNAPSHOT_PATH):
-                os.remove(settings.UME_SNAPSHOT_PATH)
-        self.graph = create_graph_adapter(db_path=db_path, role=settings.UME_ROLE)
-        base_graph = self.graph
-        if isinstance(self.graph, RoleBasedGraphAdapter):
-            base_graph = self.graph._adapter
-
         if db_path != ":memory:":
             enable_snapshot_autosave_and_restore(
                 base_graph, settings.UME_SNAPSHOT_PATH, 24 * 3600

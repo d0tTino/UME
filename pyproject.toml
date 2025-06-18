@@ -38,6 +38,7 @@ httpx = "*"
 pre-commit = "*"
 poetry-plugin-export = "^1.9.0"
 testcontainers = "*"
+respx = "^0.22.0"
 
 [tool.poetry.extras]
 vector = ["faiss-gpu"]
