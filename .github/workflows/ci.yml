@@ -87,7 +87,11 @@ jobs:
         run: poetry run pytest
 
   coverage:
-    runs-on: ubuntu-latest
+    concurrency:
+      group: coverage-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ["self-hosted", "linux"]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
