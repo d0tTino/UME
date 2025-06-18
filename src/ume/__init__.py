@@ -24,7 +24,11 @@ from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
-from .vector_store import VectorStore, VectorStoreListener
+try:  # Optional dependency
+    from .vector_store import VectorStore, VectorStoreListener
+except Exception:  # pragma: no cover - optional import
+    VectorStore = None  # type: ignore[assignment]
+    VectorStoreListener = None  # type: ignore[assignment]
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
 
