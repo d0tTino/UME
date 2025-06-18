@@ -15,7 +15,7 @@ on:
 jobs:
   test-and-lint:
     concurrency:
-      group: ci-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     strategy:
@@ -73,7 +73,7 @@ jobs:
 
   coverage:
     concurrency:
-      group: coverage-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
