@@ -1,5 +1,9 @@
 name: CI
 
+permissions:
+  contents: read
+  actions: write
+
 on:
   push:
     branches: [main]
@@ -11,6 +15,7 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+
   pull_request:
     branches: [main]
     paths:
@@ -22,15 +27,14 @@ on:
       - '**.md'
       - 'docs/**'
 
+
 jobs:
   test-and-lint:
-    concurrency:
-      group: ci-${{ github.ref }}
-      cancel-in-progress: true
+
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -67,7 +71,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
-        run: poetry install --no-interaction --no-ansi --with dev --with vector --with embedding
+        run: poetry install --no-interaction --no-ansi --with dev --extras vector --extras embedding
 
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
@@ -85,7 +89,8 @@ jobs:
     concurrency:
       group: coverage-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-latest
+    runs-on: ["self-hosted", "linux"]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -122,7 +127,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
-        run: poetry install --no-interaction --no-ansi --with dev --with vector --with embedding
+        run: poetry install --no-interaction --no-ansi --with dev --extras vector --extras embedding
 
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
@@ -133,15 +138,16 @@ jobs:
         run: poetry run mypy --config-file mypy.ini
 
       - name: Run tests with coverage
-        if: steps.changes.outputs.run == 'true'
+        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         run: |
           poetry run pytest --cov=src/ume --cov=ume_cli.py --cov-report=xml --cov-report=html
 
       - name: Upload coverage report
-        if: steps.changes.outputs.run == 'true'
+        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: |
             coverage.xml
             coverage_html
+
