@@ -12,6 +12,10 @@ on:
       - '**.md'
       - 'docs/**'
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   test-and-lint:
     concurrency:
