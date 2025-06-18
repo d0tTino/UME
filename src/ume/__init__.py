@@ -25,12 +25,7 @@ from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
-from .metrics import (
-    REQUEST_COUNT,
-    REQUEST_LATENCY,
-    VECTOR_INDEX_SIZE,
-    VECTOR_QUERY_LATENCY,
-)
+from .dag_executor import Task, DAGExecutor
 
 try:  # Optional dependency
     from .embedding import generate_embedding
@@ -75,4 +70,6 @@ __all__ = [
     "VECTOR_QUERY_LATENCY",
     "VECTOR_INDEX_SIZE",
     "generate_embedding",
+    "Task",
+    "DAGExecutor",
 ]
