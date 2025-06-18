@@ -37,6 +37,9 @@ class VectorStore:
         self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
         self.dim = dim
 
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
+
         self._flush_interval = flush_interval
         self._flush_thread: threading.Thread | None = None
         self._flush_stop = threading.Event()
