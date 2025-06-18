@@ -20,7 +20,10 @@ class DAGExecutor:
 
     def __init__(self, resources: Optional[Dict[str, int]] = None) -> None:
         self.tasks: Dict[str, Task] = {}
-        self.resources = resources or {"cpu": 1, "gpu": 0}
+        self.resources = resources or {"cpu": 1, "gpu": 1}
+        for name, count in self.resources.items():
+            if count <= 0:
+                raise ValueError(f"Resource count for {name} must be positive")
         self.locks: Dict[str, threading.Semaphore] = {
             name: threading.Semaphore(count) for name, count in self.resources.items()
         }
