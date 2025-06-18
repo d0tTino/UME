@@ -8,9 +8,9 @@ from typing import Dict, Tuple
 from ..utils import ssl_config
 from ..logging_utils import configure_logging
 
-from confluent_kafka import Consumer, Producer, KafkaException, KafkaError  # type: ignore
-from presidio_analyzer import AnalyzerEngine  # type: ignore
-from presidio_anonymizer import AnonymizerEngine  # type: ignore
+from confluent_kafka import Consumer, Producer, KafkaException, KafkaError
+from presidio_analyzer import AnalyzerEngine
+from presidio_anonymizer import AnonymizerEngine
 from jsonschema import ValidationError
 
 from ..config import settings
