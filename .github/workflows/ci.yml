@@ -3,14 +3,22 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '*.py'
+      - '.github/workflows/**'
+      - 'frontend/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '*.py'
+      - '.github/workflows/**'
+      - 'frontend/**'
 
 jobs:
   test-and-lint:
