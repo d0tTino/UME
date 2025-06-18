@@ -39,14 +39,9 @@ class Settings(BaseSettings):
     # API
     UME_API_TOKEN: str = "secret-token"
 
-    # Logging
-    UME_LOG_LEVEL: str = "INFO"
-    UME_LOG_JSON: bool = False
-
-    # Optional Kafka TLS certificates
-    KAFKA_CA_CERT: str | None = None
-    KAFKA_CLIENT_CERT: str | None = None
-    KAFKA_CLIENT_KEY: str | None = None
+    # LLM Ferry
+    LLM_FERRY_API_URL: str = "https://example.com/api"
+    LLM_FERRY_API_KEY: str = ""
 
 
 # Create a single, importable instance

@@ -25,7 +25,8 @@ from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
-from .dag_executor import Task, DAGExecutor
+from .llm_ferry import LLMFerry
+
 
 try:  # Optional dependency
     from .embedding import generate_embedding
@@ -65,10 +66,8 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
-    "REQUEST_COUNT",
-    "REQUEST_LATENCY",
-    "VECTOR_QUERY_LATENCY",
-    "VECTOR_INDEX_SIZE",
+    "LLMFerry",
+
     "generate_embedding",
     "Task",
     "DAGExecutor",
