@@ -25,6 +25,12 @@ from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
 from .vector_store import VectorStore, VectorStoreListener
+from .metrics import (
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
+    VECTOR_INDEX_SIZE,
+    VECTOR_QUERY_LATENCY,
+)
 
 try:  # Optional dependency
     from .embedding import generate_embedding
@@ -63,5 +69,9 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
+    "REQUEST_COUNT",
+    "REQUEST_LATENCY",
+    "VECTOR_QUERY_LATENCY",
+    "VECTOR_INDEX_SIZE",
     "generate_embedding",
 ]

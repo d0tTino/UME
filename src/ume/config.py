@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     UME_AUDIT_SIGNING_KEY: str = "default-key"
     UME_AGENT_ID: str = "SYSTEM"
     UME_EMBED_MODEL: str = "all-MiniLM-L6-v2"
+    UME_CLI_DB: str = "ume_graph.db"
+    UME_ROLE: str | None = None
+    UME_API_ROLE: str | None = None
 
     # Vector store
     UME_VECTOR_DIM: int = 1536
@@ -35,6 +38,15 @@ class Settings(BaseSettings):
 
     # API
     UME_API_TOKEN: str = "secret-token"
+
+    # Logging
+    UME_LOG_LEVEL: str = "INFO"
+    UME_LOG_JSON: bool = False
+
+    # Optional Kafka TLS certificates
+    KAFKA_CA_CERT: str | None = None
+    KAFKA_CLIENT_CERT: str | None = None
+    KAFKA_CLIENT_KEY: str | None = None
 
 
 # Create a single, importable instance

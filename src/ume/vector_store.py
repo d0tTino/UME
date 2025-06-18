@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 import json
 
 import time
@@ -12,6 +12,8 @@ import numpy as np
 import faiss
 
 from ._internal.listeners import GraphListener
+from .metrics import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
+from prometheus_client import Gauge, Histogram
 
 
 class VectorStore:
@@ -24,6 +26,7 @@ class VectorStore:
         use_gpu: bool | None = None,
         path: str | None = None,
         flush_interval: float | None = None,
+
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
         self.id_to_idx: Dict[str, int] = {}
@@ -35,6 +38,7 @@ class VectorStore:
         self._flush_interval = flush_interval
         self._flush_thread: threading.Thread | None = None
         self._flush_stop = threading.Event()
+
 
         self.index = faiss.IndexFlatL2(dim)
         if self.use_gpu:
@@ -63,6 +67,7 @@ class VectorStore:
         self._flush_stop.clear()
         self._flush_thread = threading.Thread(target=_loop, daemon=True)
         self._flush_thread.start()
+
 
     def stop_background_flush(self) -> None:
         """Stop the background flush thread if running."""
@@ -123,8 +128,6 @@ class VectorStore:
             self.save(self.path)
 
     def query(self, vector: List[float], k: int = 5) -> List[str]:
-        from .api import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
-
         start = time.perf_counter()
         try:
             if not self.idx_to_id:
@@ -137,8 +140,10 @@ class VectorStore:
             _, indices = self.index.search(arr, min(k, len(self.idx_to_id)))
             return [self.idx_to_id[i] for i in indices[0] if i != -1]
         finally:
-            VECTOR_QUERY_LATENCY.observe(time.perf_counter() - start)
-            VECTOR_INDEX_SIZE.set(len(self.idx_to_id))
+            if self.query_latency_metric is not None:
+                self.query_latency_metric.observe(time.perf_counter() - start)
+            if self.index_size_metric is not None:
+                self.index_size_metric.set(len(self.idx_to_id))
 
 
 class VectorStoreListener(GraphListener):
@@ -174,4 +179,6 @@ def create_default_store() -> VectorStore:
         dim=settings.UME_VECTOR_DIM,
         use_gpu=settings.UME_VECTOR_USE_GPU,
         path=settings.UME_VECTOR_INDEX,
+        query_latency_metric=VECTOR_QUERY_LATENCY,
+        index_size_metric=VECTOR_INDEX_SIZE,
     )
