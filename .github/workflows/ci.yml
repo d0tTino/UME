@@ -75,7 +75,7 @@ jobs:
     concurrency:
       group: coverage-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-latest
+    runs-on: ["self-hosted", "linux"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
