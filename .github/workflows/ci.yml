@@ -3,14 +3,16 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'ume_cli.py'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'ume_cli.py'
 
 jobs:
   test-and-lint:
