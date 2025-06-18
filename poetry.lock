@@ -4546,4 +4546,4 @@ vector = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "9b58937756d91aed4f477cd3dd90eef020b7210fbaf72e934d927a8bb46c5c17"
+content-hash = "063095c6dddbadbcf38996b9b2342b6391fa0ea1ef6816a42271d3575b82b183"
