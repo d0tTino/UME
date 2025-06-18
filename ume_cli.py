@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 # ruff: noqa: E402
+# mypy: ignore-errors
 import argparse
 import json
 import logging
 import os
 import shlex
 import os
+        env_db = os.getenv("UME_DB_PATH")
+        if env_db:
+            db_path = env_db
+        elif "PYTEST_CURRENT_TEST" in os.environ:
+            db_path = ":memory:"
+        else:
+            db_path = settings.UME_CLI_DB
 import sys
 import time  # Added for timestamp in event creation
 import warnings

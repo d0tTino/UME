@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     UME_CLI_DB: str = "ume_graph.db"
     UME_ROLE: str | None = None
     UME_API_ROLE: str | None = None
+    UME_LOG_LEVEL: str = "INFO"
+    UME_LOG_JSON: bool = False
 
     # Vector store
     UME_VECTOR_DIM: int = 1536
