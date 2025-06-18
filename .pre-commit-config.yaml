@@ -1,11 +1,11 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.2
+    rev: v0.12.0
     hooks:
       - id: ruff
         args: ["--config", "pyproject.toml"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.16.1
     hooks:
       - id: mypy
-        args: ["--python-version=3.12"]
+        args: ["--config-file", "mypy.ini"]

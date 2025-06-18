@@ -6,7 +6,7 @@ import json
 from importlib import resources
 from typing import Any, Dict
 
-from jsonschema import validate, ValidationError  # type: ignore
+from jsonschema import validate, ValidationError
 
 
 _SCHEMAS: Dict[str, Dict[str, Any]] = {}

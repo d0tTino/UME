@@ -16,7 +16,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
     It implements the IGraphAdapter interface, including basic edge support.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes an empty graph with no nodes or edges."""
         self._nodes: Dict[str, Dict[str, Any]] = {}
         # Track nodes/edges that have been redacted

@@ -1,8 +1,9 @@
 import json
 import logging
+from types import TracebackType
 from typing import Iterator
 
-from confluent_kafka import Consumer, Producer, KafkaError  # type: ignore
+from confluent_kafka import Consumer, Producer, KafkaError
 from jsonschema import ValidationError
 from .config import Settings
 
@@ -94,5 +95,10 @@ class UMEClient:
     def __enter__(self) -> "UMEClient":
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         self.close()

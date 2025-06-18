@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Callable, cast
 import importlib
 import pkgutil
 
@@ -48,7 +48,7 @@ def register_plugin(plugin: AlignmentPlugin) -> None:
             log_audit_entry(user_id, str(exc))
             raise
 
-    plugin.validate = wrapped_validate  # type: ignore[assignment]
+    setattr(plugin, "validate", cast(Callable[[Event], None], wrapped_validate))
     _plugins.append(plugin)
 
 
