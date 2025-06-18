@@ -359,12 +359,26 @@ You can also search the vector store with either UI:
 poetry run python frontend/app.py --token secret-token search "1,0,0" --k 3
 ```
 
+### API Authentication
+
+All HTTP endpoints exposed by the FastAPI service require a `Bearer` token,
+configured via the `UME_API_TOKEN` environment variable. Include it in the
+`Authorization` header of each request:
+
+```http
+Authorization: Bearer <token>
+```
+
+The only unauthenticated route is `/metrics`, which exposes Prometheus metrics.
+See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for a sample `.env` file.
+
 ## Configuration Templates
 
 Sample configuration files for common environments are provided in
 [`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md). These templates
 demonstrate how to select different storage backends or event stores for
-development, staging, and production setups.
+development, staging, and production setups. The same document also lists
+every environment variable understood by UME along with its default value.
 
 ### Runtime Settings
 

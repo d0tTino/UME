@@ -44,6 +44,7 @@ def test_vector_store_env_gpu(monkeypatch) -> None:
     import importlib
     import ume.config as cfg
     import ume.vector_store as vs
+
     importlib.reload(cfg)
     importlib.reload(vs)
 
@@ -71,6 +72,7 @@ def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
 
     import ume.config as cfg
     import ume.vector_store as vs
+
     importlib.reload(cfg)
     importlib.reload(vs)
 
@@ -89,3 +91,27 @@ def test_vector_store_save_and_load(tmp_path) -> None:
     new_store.load(str(path))
 
     assert new_store.query([1.0, 0.0], k=1) == ["x"]
+
+
+def test_vector_store_add_persist(tmp_path) -> None:
+    path = tmp_path / "persist.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path))
+    store.add("y", [1.0, 0.0], persist=True)
+
+    new_store = VectorStore(dim=2, use_gpu=False)
+    new_store.load(str(path))
+
+    assert new_store.query([1.0, 0.0], k=1) == ["y"]
+
+
+def test_vector_store_background_flush(tmp_path) -> None:
+    path = tmp_path / "bg.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
+    store.add("z", [0.0, 1.0])
+    time.sleep(0.2)
+    store.stop_background_flush()
+
+    new_store = VectorStore(dim=2, use_gpu=False)
+    new_store.load(str(path))
+
+    assert new_store.query([0.0, 1.0], k=1) == ["z"]
