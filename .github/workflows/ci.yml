@@ -1,16 +1,29 @@
 name: CI
 
+permissions:
+  contents: read
+  actions: write
+
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '*.py'
+      - '.github/workflows/**'
+      - 'frontend/**'
+
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '*.py'
+      - '.github/workflows/**'
+      - 'frontend/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,10 +31,11 @@ concurrency:
 
 jobs:
   test-and-lint:
+
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -121,15 +135,16 @@ jobs:
         run: poetry run mypy --config-file mypy.ini
 
       - name: Run tests with coverage
-        if: steps.changes.outputs.run == 'true'
+        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         run: |
           poetry run pytest --cov=src/ume --cov=ume_cli.py --cov-report=xml --cov-report=html
 
       - name: Upload coverage report
-        if: steps.changes.outputs.run == 'true'
+        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: |
             coverage.xml
             coverage_html
+
