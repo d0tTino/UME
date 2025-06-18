@@ -25,3 +25,52 @@ When FAISS is compiled with GPU support, setting the environment variable
 `UME_VECTOR_USE_GPU=true` transfers the index to GPU memory. Benchmarks with
 100k vectors show roughly a **5x** reduction in query latency compared to CPU
 search.
+
+## Component Interactions
+
+The API interfaces with the graph adapter layer and the vector store to answer
+queries. The diagram below highlights how these core modules connect.
+
+```mermaid
+graph TD
+    PrivacyAgent(Privacy Agent) --> Adapter(Graph Adapter)
+    Adapter --> GraphDB[(Graph Storage)]
+    Adapter --> VectorStore[(Vector Store)]
+    API(FastAPI Service) --> Adapter
+    API --> VectorStore
+```
+
+## Modules and Roadmap Pillars
+
+The [ROADMAP](../ROADMAP.md) defines "Exocortic Eudaemon" pillars guiding the
+project. This diagram links major modules to those pillars.
+
+```mermaid
+flowchart LR
+    subgraph Pillars
+        Memory
+        EthicalSafeguards[Ethical Safeguards]
+        ProductiveCollaboration[Productive Collaboration]
+        SelfImprovement[Self-Improvement]
+        OperationalResilience[Operational Resilience]
+    end
+    subgraph Modules
+        PrivacyAgentM[Privacy Agent]
+        GraphAdapters[Graph Adapters]
+        VectorStoreM[Vector Store]
+        APIService[API]
+    end
+    PrivacyAgentM --> EthicalSafeguards
+    GraphAdapters --> Memory
+    VectorStoreM --> Memory
+    APIService --> ProductiveCollaboration
+```
+
+* **Privacy Agent** – implements **Ethical Safeguards** by redacting sensitive
+  data before it is stored.
+* **Graph Adapters** and **Vector Store** – provide persistent **Memory** for
+  the knowledge graph and its embeddings.
+* **API** – enables **Productive Collaboration** by exposing graph and vector
+  search endpoints.
+* The **Self-Improvement** and **Operational Resilience** pillars are primarily
+  addressed by automation and infrastructure work described in the roadmap.

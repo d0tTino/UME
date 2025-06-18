@@ -45,6 +45,7 @@ poetry install --with dev
 ## Architecture
 
 This section provides a high-level overview of the Universal Memory Engine (UME) demo setup.
+For a diagram that shows how each module maps to the pillars in the roadmap, see [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md).
 
 The current system consists of the following main components:
 
