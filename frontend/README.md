@@ -30,3 +30,9 @@ the running UME API and visualizes it using `vis-network`.
    Enter the API token when prompted and click **Load Graph** to fetch the
    `/analytics/subgraph` endpoint. You can also input a comma-separated vector
    to query `/vectors/search` via the optional search box.
+
+4. **View Metrics**
+
+   Use **Load Stats** to display node and edge counts along with vector index
+   size. Click **Recent Events** to fetch the latest audit log entries, shown
+   with the most recent first.

@@ -20,6 +20,7 @@ from prometheus_client import (
 from pydantic import BaseModel
 
 from .analytics import shortest_path
+from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
@@ -342,3 +343,30 @@ def metrics_endpoint() -> Response:
     """Expose Prometheus metrics."""
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/dashboard/stats")
+def dashboard_stats(
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+    store: VectorStore = Depends(get_vector_store),
+) -> Dict[str, Any]:
+    """Return basic graph and vector index statistics for the dashboard."""
+    node_count = len(graph.get_all_node_ids())
+    edge_count = len(graph.get_all_edges())
+    index_size = len(getattr(store, "idx_to_id", []))
+    return {
+        "node_count": node_count,
+        "edge_count": edge_count,
+        "vector_index_size": index_size,
+    }
+
+
+@app.get("/dashboard/recent_events")
+def dashboard_recent_events(
+    limit: int = 10,
+    _: None = Depends(require_token),
+) -> List[Dict[str, Any]]:
+    """Return recent audit log entries for the dashboard, newest first."""
+    entries = get_audit_entries()
+    return list(reversed(entries[-limit:]))
