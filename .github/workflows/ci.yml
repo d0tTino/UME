@@ -72,7 +72,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
-        run: poetry install --no-interaction --no-ansi --with dev --with vector --with embedding
+        run: poetry install --no-interaction --no-ansi --with dev --extras vector --extras embedding
 
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
@@ -128,7 +128,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
-        run: poetry install --no-interaction --no-ansi --with dev --with vector --with embedding
+        run: poetry install --no-interaction --no-ansi --with dev --extras vector --extras embedding
 
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
