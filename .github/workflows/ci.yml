@@ -93,6 +93,9 @@ jobs:
       group: coverage-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ["self-hosted", "linux"]
+    strategy:
+      matrix:
+        python-version: ['3.12']
 
     steps:
       - name: Checkout code
@@ -109,7 +112,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install Poetry
         run: |
