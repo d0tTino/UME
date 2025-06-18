@@ -13,6 +13,8 @@ fastavro = ">=1.9"
 pyyaml = "*" # Using "*" for PyYAML as it's a common practice, but can be pinned down if needed.
 neo4j = "*"
 networkx = "*"
+# Required for analytics calculations in tests
+numpy = "*"
 # Structured logging
 structlog = "*"
 # FastAPI >=0.110 requires Pydantic v2 which is compatible with
