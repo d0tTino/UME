@@ -10,28 +10,23 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
-      - 'scripts/**'
+      - 'ume_cli.py'
       - '*.py'
-      - '.github/workflows/**'
-      - 'frontend/**'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
   pull_request:
     branches: [main]
     paths:
       - 'src/**'
       - 'tests/**'
-      - 'scripts/**'
+      - 'ume_cli.py'
       - '*.py'
-      - '.github/workflows/**'
-      - 'frontend/**'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  actions: write
 
 jobs:
   test-and-lint:
