@@ -1,19 +1,9 @@
 #!/usr/bin/env python3
 # ruff: noqa: E402
-# mypy: ignore-errors
 import argparse
 import json
 import logging
-import os
 import shlex
-import os
-        env_db = os.getenv("UME_DB_PATH")
-        if env_db:
-            db_path = env_db
-        elif "PYTEST_CURRENT_TEST" in os.environ:
-            db_path = ":memory:"
-        else:
-            db_path = settings.UME_CLI_DB
 import sys
 import time  # Added for timestamp in event creation
 import warnings
@@ -33,17 +23,17 @@ from ume import (  # noqa: E402
     apply_event_to_graph,
     load_graph_into_existing,
     snapshot_graph_to_file,
+    PersistentGraph,
+    RoleBasedGraphAdapter,
     enable_snapshot_autosave_and_restore,
     ProcessingError,
     EventError,
     SnapshotError,
+    IGraphAdapter,
     log_audit_entry,
     get_audit_entries,
 )
-
-from ume.factories import create_graph_adapter
-from ume.rbac_adapter import RoleBasedGraphAdapter
-
+from ume.benchmarks import benchmark_vector_store
 
 # It's good practice to handle potential import errors if ume is not installed,
 # though for poetry run python ume_cli.py this should be fine.
@@ -56,7 +46,16 @@ class UMEPrompt(Cmd):
 
     def __init__(self):
         super().__init__()
-
+        db_path = settings.UME_CLI_DB
+        base_graph = PersistentGraph(db_path)
+        role = settings.UME_ROLE
+        if role:
+            print(f"INFO: UME-CLI running with role: '{role}'")
+            graph: IGraphAdapter = RoleBasedGraphAdapter(base_graph, role)
+        else:
+            print("INFO: UME-CLI running without a specific role (full permissions).")
+            graph = base_graph
+        self.graph: IGraphAdapter = graph
         if db_path != ":memory:":
             enable_snapshot_autosave_and_restore(
                 base_graph, settings.UME_SNAPSHOT_PATH, 24 * 3600
