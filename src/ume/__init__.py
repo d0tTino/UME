@@ -24,7 +24,25 @@ from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
-from .vector_store import VectorStore, VectorStoreListener
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:  # pragma: no cover - used for type hints only
+    from .vector_store import VectorStore, VectorStoreListener, create_default_store
+else:  # pragma: no cover - optional dependency
+    try:
+        from .vector_store import VectorStore, VectorStoreListener, create_default_store
+    except Exception:
+        class VectorStore:
+            def __init__(self, *_: Any, **__: Any) -> None:
+                raise ImportError("faiss is required for VectorStore")
+
+        class VectorStoreListener:
+            def __init__(self, *_: Any, **__: Any) -> None:
+                raise ImportError("faiss is required for VectorStoreListener")
+
+        def create_default_store(*_: Any, **__: Any) -> None:
+            raise ImportError("faiss is required for create_default_store")
+
 from .llm_ferry import LLMFerry
 
 
@@ -66,6 +84,7 @@ __all__ = [
     "ssl_config",
     "VectorStore",
     "VectorStoreListener",
+    "create_default_store",
     "LLMFerry",
 
     "generate_embedding",

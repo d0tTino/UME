@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from .config import settings
 import os
-from .logging_utils import configure_logging
+import logging
+import time
 from typing import Any, Dict, List, Callable, Awaitable, cast
 
-import time
+from .config import settings
+from .logging_utils import configure_logging
 from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -20,7 +21,9 @@ from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
-from .vector_store import VectorStore, create_default_store
+from . import VectorStore, create_default_store
+
+logger = logging.getLogger(__name__)
 
 configure_logging()
 
@@ -58,7 +61,11 @@ async def metrics_middleware(
 # These can be configured by the embedding application or tests
 app.state.query_engine = cast(Any, None)
 app.state.graph = cast(Any, None)
-app.state.vector_store = cast(Any, create_default_store())
+try:
+    app.state.vector_store = cast(Any, create_default_store())
+except ImportError:  # pragma: no cover - optional dependency
+    logger.warning("Vector store dependencies missing; continuing without one")
+    app.state.vector_store = None
 
 
 def configure_graph(graph: IGraphAdapter) -> None:

@@ -1,11 +1,14 @@
 from fastapi.testclient import TestClient
+import pytest
 
+from ume import VectorStore
 from ume.api import app, configure_vector_store
 from ume.config import settings
-from ume.vector_store import VectorStore
+
+pytest.importorskip("faiss")
 
 
-def test_add_vector_authorized():
+def test_add_vector_authorized() -> None:
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     res = client.post(
@@ -17,14 +20,14 @@ def test_add_vector_authorized():
     assert app.state.vector_store.query([0.0, 1.0], k=1) == ["v1"]
 
 
-def test_add_vector_unauthorized():
+def test_add_vector_unauthorized() -> None:
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     res = client.post("/vectors", json={"id": "v2", "vector": [1.0]})
     assert res.status_code == 401
 
 
-def test_search_vectors():
+def test_search_vectors() -> None:
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     store = app.state.vector_store

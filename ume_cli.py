@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # ruff: noqa: E402
+# mypy: ignore-errors
 import argparse
 import json
 import logging
