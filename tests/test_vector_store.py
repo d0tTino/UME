@@ -1,5 +1,4 @@
 import time
-import importlib
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
 from ume._internal.listeners import register_listener, unregister_listener
@@ -78,3 +77,15 @@ def test_vector_store_gpu_mem_setting(monkeypatch) -> None:
     store = vs.VectorStore(dim=2)
     assert isinstance(store.gpu_resources, DummyRes)
     assert store.gpu_resources.temp == 1 * 1024 * 1024
+
+
+def test_vector_store_save_and_load(tmp_path) -> None:
+    path = tmp_path / "index.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path))
+    store.add("x", [1.0, 0.0])
+    store.save()
+
+    new_store = VectorStore(dim=2, use_gpu=False)
+    new_store.load(str(path))
+
+    assert new_store.query([1.0, 0.0], k=1) == ["x"]
