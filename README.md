@@ -7,7 +7,7 @@ The primary motivation behind UME is to equip AI agents with a form of persisten
 
 ## Core Modules
 The engine is built from a few key components:
-- **Privacy Agent** (`src/ume/privacy_agent.py`)
+- **Privacy Agent** (`src/ume/pipeline/privacy_agent.py`)
   - Redacts personally identifiable information (PII) from incoming events using Presidio.
   - Forwards sanitized events to downstream Kafka topics.
 - **FastAPI API** (`src/ume/api.py`)
