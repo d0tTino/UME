@@ -30,6 +30,7 @@ except Exception:  # pragma: no cover - optional import
     VectorStore = None  # type: ignore[assignment]
     VectorStoreListener = None  # type: ignore[assignment]
 from .llm_ferry import LLMFerry
+from .dag_executor import DAGExecutor, Task
 
 
 try:  # Optional dependency

@@ -231,3 +231,9 @@ def test_cli_creates_warnings_log_file(tmp_path):
     assert "Goodbye!" in stdout
     assert stderr == ""
     assert rc == 0
+
+
+def test_cli_benchmark_vectors():
+    stdout, stderr, rc = run_cli_commands(["benchmark_vectors --num-vectors 10 --num-queries 2", "exit"])
+    assert "Index build time" in stdout
+    assert rc == 0
