@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import List, Dict, Any
-import os
 import json
 
 import time
@@ -24,12 +23,11 @@ class VectorStore:
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
         self.gpu_resources = None
-
-        if use_gpu is None:
-            use_gpu = settings.UME_VECTOR_USE_GPU
+        self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
+        self.dim = dim
 
         self.index = faiss.IndexFlatL2(dim)
-        if use_gpu:
+        if self.use_gpu:
             try:
                 self.gpu_resources = faiss.StandardGpuResources()
                 self.gpu_resources.setTempMemory(
@@ -107,33 +105,6 @@ class VectorStore:
             VECTOR_QUERY_LATENCY.observe(time.perf_counter() - start)
             VECTOR_INDEX_SIZE.set(len(self.idx_to_id))
 
-    def save(self, path: str) -> None:
-        """Persist the FAISS index and id mapping to ``path``."""
-        index = self.index
-        # ``write_index`` only operates on CPU indexes.
-        if self.gpu_resources is not None:
-            index = faiss.index_gpu_to_cpu(index)
-        faiss.write_index(index, path)
-        with open(f"{path}.json", "w", encoding="utf-8") as f:
-            import json
-
-            json.dump(self.idx_to_id, f)
-
-    @classmethod
-    def load(cls, path: str, *, use_gpu: bool | None = None) -> "VectorStore":
-        """Load a previously saved index from ``path``."""
-        index = faiss.read_index(path)
-        dim = index.d
-        store = cls(dim=dim, use_gpu=use_gpu)
-        if store.gpu_resources is not None:
-            index = faiss.index_cpu_to_gpu(store.gpu_resources, 0, index)
-        store.index = index
-        with open(f"{path}.json", "r", encoding="utf-8") as f:
-            import json
-
-            store.idx_to_id = json.load(f)
-        store.id_to_idx = {item_id: i for i, item_id in enumerate(store.idx_to_id)}
-        return store
 
 
 class VectorStoreListener(GraphListener):
