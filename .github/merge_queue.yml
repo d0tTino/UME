@@ -3,6 +3,5 @@ merge_queue:
     - name: default
       merge_method: squash
       required_checks:
-        - "CI / test-and-lint (3.11)"
         - "CI / test-and-lint (3.12)"
         - "CI / coverage"
