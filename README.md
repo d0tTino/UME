@@ -249,6 +249,15 @@ in the repository root to avoid clashing with any installed packages and are
 only imported by the test suite. These stubs are not included when the library
 is packaged for distribution.
 
+## CI Workflow
+
+This project uses GitHub Actions to run linting, type checks, unit tests, and
+coverage reporting. The `coverage` job executes on a self-hosted runner as
+described in [docs/SELF_HOSTED_RUNNER.md](docs/SELF_HOSTED_RUNNER.md). It uses
+`concurrency` with `cancel-in-progress` to terminate earlier runs on the same
+branch. Steps are skipped when only documentation or comments change, so tests
+and linters run only for code modifications.
+
 ## Access Control
 
 UME enforces access restrictions for both Kafka topics and graph operations.
