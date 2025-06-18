@@ -69,6 +69,32 @@ def test_node_and_edge_crud():
     assert len(driver.session_obj.calls) == 8
 
 
+def test_add_edge_parameterized_label():
+    label = "WEIRD:`LABEL`"
+    results = [
+        DummyResult({"scnt": 1, "tcnt": 1}),  # check nodes exist
+        DummyResult({"cnt": 0}),  # check existing edge
+        DummyResult(None),  # create edge
+    ]
+    driver = DummyDriver(results)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
+
+    graph.add_edge("s1", "t1", label)
+
+    # Second call checks for existing edge using parameterized label
+    check_query, check_params = driver.session_obj.calls[1]
+    create_query, create_params = driver.session_obj.calls[2]
+    assert "$label" in check_query
+    assert "$label" in create_query
+    assert check_params["label"] == label
+    assert create_params["label"] == label
+
+
 def test_add_node_duplicate_raises():
     driver = DummyDriver([DummyResult({"cnt": 1})])
     graph = Neo4jGraph(

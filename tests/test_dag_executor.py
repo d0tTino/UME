@@ -1,6 +1,7 @@
 import sys
 import types
 import time
+import pytest
 
 sys.modules.setdefault("faiss", types.ModuleType("faiss"))
 
@@ -46,6 +47,11 @@ def test_resource_scheduling_sequential_gpu() -> None:
     assert len(starts) == 2
     diff = starts[1][1] - starts[0][1]
     assert diff >= 0.09
+
+
+def test_dag_executor_zero_resource_raises() -> None:
+    with pytest.raises(ValueError):
+        DAGExecutor(resources={"cpu": 1, "gpu": 0})
 
 
 def test_public_imports() -> None:

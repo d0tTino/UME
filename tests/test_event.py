@@ -281,6 +281,16 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
             },
             "Missing required field 'payload' for UPDATE_NODE_ATTRIBUTES event",
         ),
+        # event_id present but wrong type
+        (
+            {
+                "event_type": "test",
+                "timestamp": int(time.time()),
+                "payload": {},
+                "event_id": 123,
+            },
+            "Invalid type for 'event_id'",
+        ),
     ],
 )
 def test_parse_event_invalid_inputs(bad_input: dict, expected_message_part: str):

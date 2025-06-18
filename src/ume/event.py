@@ -99,6 +99,15 @@ def parse_event(data: Dict[str, Any]) -> Event:
         logger.error(msg)
         raise EventError(msg)
 
+    # Validate optional event_id type
+    event_id_val = data.get("event_id")
+    if event_id_val is not None and not isinstance(event_id_val, str):
+        msg = (
+            f"Invalid type for 'event_id': expected str, got {type(event_id_val).__name__}"
+        )
+        logger.error(msg)
+        raise EventError(msg)
+
     # Get potential values, to be validated by type-specific logic or used if optional
     node_id_val = data.get("node_id")
     target_node_id_val = data.get("target_node_id")
@@ -159,7 +168,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
             raise EventError(msg)
 
     return Event(
-        event_id=data.get("event_id", str(uuid.uuid4())),
+        event_id=event_id_val if event_id_val is not None else str(uuid.uuid4()),
         event_type=event_type,
         timestamp=timestamp,
         payload=payload_val,  # Use payload_val which is defaulted to {} or the actual value

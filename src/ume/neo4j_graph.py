@@ -109,10 +109,10 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
         with self._driver.session() as session:
             if edge_label:
                 query = (
-                    f"MATCH (n {{id: $node_id}})-[:`{edge_label}`]->(m) "
+                    "MATCH (n {id: $node_id})-[r:$label]->(m) "
                     "WHERE coalesce(m.redacted, false) = false RETURN m.id AS id"
                 )
-                result = session.run(query, {"node_id": node_id})
+                result = session.run(query, {"node_id": node_id, "label": edge_label})
             else:
                 query = (
                     "MATCH (n {id: $node_id})-[r]->(m) "
@@ -136,8 +136,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
                 )
             result = session.run(
-                f"MATCH (s {{id: $src}})-[r:`{label}`]->(t {{id: $tgt}}) RETURN count(r) AS cnt",
-                {"src": source_node_id, "tgt": target_node_id},
+                "MATCH (s {id: $src})-[r:$label]->(t {id: $tgt}) RETURN count(r) AS cnt",
+                {"src": source_node_id, "tgt": target_node_id, "label": label},
             )
             rec = result.single()
             assert rec is not None
@@ -146,8 +146,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
             session.run(
-                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{label}` {{redacted:false}}]->(t)",
-                {"src": source_node_id, "tgt": target_node_id},
+                "MATCH (s {id: $src}), (t {id: $tgt}) CREATE (s)-[:$label {redacted:false}]->(t)",
+                {"src": source_node_id, "tgt": target_node_id, "label": label},
             )
 
     def get_all_edges(self) -> List[tuple[str, str, str]]:
@@ -164,8 +164,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         with self._driver.session() as session:
             result = session.run(
-                f"MATCH (s {{id: $src}})-[r:`{label}`]->(t {{id: $tgt}}) DELETE r RETURN count(r) AS cnt",
-                {"src": source_node_id, "tgt": target_node_id},
+                "MATCH (s {id: $src})-[r:$label]->(t {id: $tgt}) DELETE r RETURN count(r) AS cnt",
+                {"src": source_node_id, "tgt": target_node_id, "label": label},
             )
             rec = result.single()
             assert rec is not None
@@ -189,8 +189,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         with self._driver.session() as session:
             result = session.run(
-                f"MATCH (s {{id: $src}})-[r:`{label}`]->(t {{id: $tgt}}) SET r.redacted = true RETURN count(r) AS cnt",
-                {"src": source_node_id, "tgt": target_node_id},
+                "MATCH (s {id: $src})-[r:$label]->(t {id: $tgt}) SET r.redacted = true RETURN count(r) AS cnt",
+                {"src": source_node_id, "tgt": target_node_id, "label": label},
             )
             rec = result.single()
             assert rec is not None
