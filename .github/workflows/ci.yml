@@ -10,8 +10,9 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'scripts/**'
       - 'ume_cli.py'
-      - '*.py'
+      - '**/*.py'
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -21,8 +22,9 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'scripts/**'
       - 'ume_cli.py'
-      - '*.py'
+      - '**/*.py'
     paths-ignore:
       - '**.md'
       - 'docs/**'
