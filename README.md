@@ -16,6 +16,9 @@ The engine is built from a few key components:
 - **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
   - Define a common interface for manipulating different graph backends.
   - Includes adapters for in-memory, SQLite, and Neo4j storage as well as RBAC wrappers.
+- **Vector Store** (`src/ume/vector_store.py`)
+  - Maintains a FAISS index of node embeddings for similarity search.
+  - Use `create_default_store()` to instantiate one from environment settings.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
 
@@ -551,6 +554,28 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Node 'node_A' from loaded graph: {loaded_graph_adapter.get_node('node_A')}")
     ```
 This provides a basic flow for event handling and graph interaction within UME.
+
+### Swapping Backends
+UME exposes small factory helpers that make it easy to change the storage
+implementation without modifying other code.  To switch the graph adapter or
+vector store used by the API, call the configuration functions:
+
+```python
+from ume import PersistentGraph, Neo4jGraph
+from ume.api import configure_graph, configure_vector_store
+from ume.vector_store import create_default_store
+
+# SQLite graph
+configure_graph(PersistentGraph("my.db"))
+configure_vector_store(create_default_store())
+
+# Later swap to Neo4j
+configure_graph(Neo4jGraph("bolt://localhost:7687", "neo4j", "password"))
+```
+
+These helpers allow embedding applications to experiment with different
+backends—such as Neo4j for production and the lightweight SQLite adapter for
+local testing—without rewriting initialization code.
 
 ## How to Use UMEClient
 
