@@ -59,6 +59,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           run: ${{ steps.changes.outputs.run }}
 
+      - name: Run pre-commit
+        if: steps.changes.outputs.run == 'true'
+        run: poetry run pre-commit run --show-diff-on-failure --color always
+
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
         run: poetry run ruff check . --config pyproject.toml
@@ -94,6 +98,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           run: ${{ steps.changes.outputs.run }}
+
+      - name: Run pre-commit
+        if: steps.changes.outputs.run == 'true'
+        run: poetry run pre-commit run --show-diff-on-failure --color always
 
       - name: Run Ruff
         if: steps.changes.outputs.run == 'true'
