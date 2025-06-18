@@ -38,6 +38,8 @@ class Settings(BaseSettings):
 
     # API
     UME_API_TOKEN: str = "secret-token"
+    UME_LOG_LEVEL: str = "INFO"
+    UME_LOG_JSON: bool = False
 
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"

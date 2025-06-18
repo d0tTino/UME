@@ -402,14 +402,16 @@ regions. Several strategies are summarized in
 This section outlines the basic programmatic steps to interact with the UME components using an event-driven approach. Assumes project setup is complete and services (like Redpanda, if using network-based events) are running.
 
 1.  **Obtain a Graph Adapter Instance:**
-    The library provides multiple adapters. The default is `PersistentGraph`, which uses SQLite, but you can also connect to Neo4j using `Neo4jGraph`:
+    Factory helpers simplify adapter creation. Use `create_graph_adapter()` to
+    build the default adapter from environment settings. You can still
+    instantiate specific adapters directly if needed:
     ```python
-    from ume import PersistentGraph, Neo4jGraph, IGraphAdapter
+    from ume import create_graph_adapter, PersistentGraph, Neo4jGraph, IGraphAdapter
 
-    # SQLite-backed graph
-    graph_adapter: IGraphAdapter = PersistentGraph("memory.db")
+    # Default SQLite-backed adapter
+    graph_adapter: IGraphAdapter = create_graph_adapter()
 
-    # Or connect to Neo4j
+    # Or connect to Neo4j explicitly
     neo4j_graph = Neo4jGraph("bolt://localhost:7687", "neo4j", "password")
     ```
 
@@ -722,9 +724,10 @@ poetry install --with embedding
 
 ## Vector Store
 
-UME can optionally maintain a FAISS index of node embeddings. When a
-`CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event contains an `embedding` field
-in its attributes, the vector is added to the index via
+UME can optionally maintain a FAISS index of node embeddings. Use
+`create_vector_store()` to obtain a store configured from environment
+variables. When a `CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event contains an
+`embedding` field in its attributes, the vector is added to the index via
 `VectorStoreListener`.
 
 Set the following environment variables to configure the store:
