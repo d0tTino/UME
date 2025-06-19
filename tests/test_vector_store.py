@@ -1,6 +1,7 @@
 import time
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
+from ume.api import configure_vector_store, app
 from ume._internal.listeners import register_listener, unregister_listener
 import faiss
 import pytest
@@ -138,3 +139,18 @@ def test_vector_store_metrics_init() -> None:
     )
     assert store.query_latency_metric is lat
     assert store.index_size_metric is size
+
+
+def test_configure_vector_store_replacement_closes_existing(tmp_path: Path) -> None:
+    path = tmp_path / "old.faiss"
+    store1 = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
+    configure_vector_store(store1)
+    # Allow background thread to start
+    time.sleep(0.2)
+
+    store2 = VectorStore(dim=2, use_gpu=False)
+    configure_vector_store(store2)
+
+    assert store1._flush_thread is None
+    assert app.state.vector_store is store2
+    store2.close()
