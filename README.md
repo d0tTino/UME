@@ -174,6 +174,13 @@ When contributing new features or fixing bugs, please include relevant tests:
 
 Strive for clear, concise tests that verify specific behaviors and edge cases.
 
+### Continuous Integration
+
+The GitHub Actions workflow (`.github/workflows/ci.yml`) runs automatically on
+every push to `main` and on pull requests targeting `main`. It installs
+dependencies, runs the tests with coverage, and checks the code formatting and
+linting.
+
 ## Quickstart
 
 ### Prerequisites
