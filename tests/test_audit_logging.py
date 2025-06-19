@@ -114,3 +114,26 @@ def test_s3_read_logs_error(monkeypatch, caplog):
     assert any(
         "Failed to read audit log from s3://bucket/key" in rec.message for rec in caplog.records
     )
+
+
+def test_parse_s3_valid() -> None:
+    from ume.audit import _parse_s3
+
+    bucket, key = _parse_s3("s3://my-bucket/path/to/key")
+    assert bucket == "my-bucket"
+    assert key == "path/to/key"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "bucket/key",  # missing scheme
+        "s3://bucket",  # missing key
+        "gs://bucket/key",  # wrong scheme
+    ],
+)
+def test_parse_s3_invalid(path: str) -> None:
+    from ume.audit import _parse_s3
+
+    with pytest.raises(ValueError):
+        _parse_s3(path)

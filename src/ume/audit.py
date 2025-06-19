@@ -20,7 +20,20 @@ SIGNING_KEY = settings.UME_AUDIT_SIGNING_KEY.encode()
 
 
 def _parse_s3(path: str) -> tuple[str, str]:
-    _, rest = path.split("://", 1)
+    """Return the bucket and key from an S3 path."""
+
+    prefix = "s3://"
+    if not path.startswith(prefix):
+        raise ValueError(
+            f"Invalid S3 path: '{path}'. Expected format 's3://bucket/key'."
+        )
+
+    rest = path[len(prefix) :]
+    if "/" not in rest:
+        raise ValueError(
+            f"Invalid S3 path: '{path}'. Expected format 's3://bucket/key'."
+        )
+
     bucket, key = rest.split("/", 1)
     return bucket, key
 
