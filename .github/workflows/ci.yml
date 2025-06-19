@@ -36,7 +36,9 @@ concurrency:
 
 jobs:
   test-and-lint:
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - linux
     outputs:
       run: ${{ steps.changes.outputs.run }}
     strategy:
