@@ -87,9 +87,16 @@ class VectorStore:
             raise ValueError(
                 f"Expected vector of dimension {self.dim}, got {arr.shape[1]}"
             )
-        self.index.add(arr)
-        self.id_to_idx[item_id] = len(self.idx_to_id)
-        self.idx_to_id.append(item_id)
+        if item_id in self.id_to_idx:
+            idx = self.id_to_idx[item_id]
+            if hasattr(self.index, "vectors"):
+                self.index.vectors[idx] = arr[0]
+            else:
+                raise ValueError(f"item_id {item_id} already exists")
+        else:
+            self.index.add(arr)
+            self.id_to_idx[item_id] = len(self.idx_to_id)
+            self.idx_to_id.append(item_id)
         if persist and self.path:
             self.save(self.path)
 
