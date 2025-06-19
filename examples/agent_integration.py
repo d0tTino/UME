@@ -25,7 +25,7 @@ def autodev_produce_event(client: UMEClient) -> None:
     client.produce_event(event)
 
 
-def forward_to_culture(events) -> None:
+def forward_to_culture(events: list[Event]) -> None:
     """Placeholder step forwarding events to Culture.ai."""
     for event in events:
         logger.info("Forwarding event %s to Culture.ai", event.event_id)

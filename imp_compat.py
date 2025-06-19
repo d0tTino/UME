@@ -21,7 +21,7 @@ def new_module(name: str) -> types.ModuleType:
     return types.ModuleType(name)
 
 
-def load_module(name: str):
+def load_module(name: str) -> types.ModuleType:
     spec = importlib.util.find_spec(name)
     if spec is None or spec.loader is None:
         raise ImportError(name)
