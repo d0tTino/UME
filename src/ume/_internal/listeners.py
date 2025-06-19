@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Protocol, Dict, Any, List
+from threading import Lock
+from typing import Any, Dict, List, Protocol
 
 
 class GraphListener(Protocol):
@@ -24,19 +25,23 @@ class GraphListener(Protocol):
 
 
 _registered_listeners: List[GraphListener] = []
+_listener_lock = Lock()
 
 
 def register_listener(listener: GraphListener) -> None:
     """Register a GraphListener to receive callbacks."""
-    _registered_listeners.append(listener)
+    with _listener_lock:
+        _registered_listeners.append(listener)
 
 
 def unregister_listener(listener: GraphListener) -> None:
     """Unregister a previously registered GraphListener."""
-    if listener in _registered_listeners:
-        _registered_listeners.remove(listener)
+    with _listener_lock:
+        if listener in _registered_listeners:
+            _registered_listeners.remove(listener)
 
 
 def get_registered_listeners() -> List[GraphListener]:
     """Return a copy of currently registered listeners."""
-    return list(_registered_listeners)
+    with _listener_lock:
+        return list(_registered_listeners)
