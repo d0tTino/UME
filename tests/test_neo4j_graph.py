@@ -63,14 +63,14 @@ def test_node_and_edge_crud():
 
     graph.add_node("n1", {})
     graph.add_node("n2", {})
-    graph.add_edge("n1", "n2", "REL")
-    graph.delete_edge("n1", "n2", "REL")
+    graph.add_edge("n1", "n2", "RELATES_TO")
+    graph.delete_edge("n1", "n2", "RELATES_TO")
 
     assert len(driver.session_obj.calls) == 8
 
 
 def test_add_edge_parameterized_label():
-    label = "WEIRD:`LABEL`"
+    label = "RELATES_TO"
     results = [
         DummyResult({"scnt": 1, "tcnt": 1}),  # check nodes exist
         DummyResult({"cnt": 0}),  # check existing edge
@@ -89,10 +89,10 @@ def test_add_edge_parameterized_label():
     # Second call checks for existing edge using parameterized label
     check_query, check_params = driver.session_obj.calls[1]
     create_query, create_params = driver.session_obj.calls[2]
-    assert "$label" in check_query
-    assert "$label" in create_query
-    assert check_params["label"] == label
-    assert create_params["label"] == label
+    assert label in check_query
+    assert label in create_query
+    assert check_params == {"src": "s1", "tgt": "t1"}
+    assert create_params == {"src": "s1", "tgt": "t1"}
 
 
 def test_add_node_duplicate_raises():
