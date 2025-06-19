@@ -82,7 +82,15 @@ def configure_graph(graph: IGraphAdapter) -> None:
 
 
 def configure_vector_store(store: VectorStore) -> None:
-    """Inject a :class:`VectorStore` instance into the application state."""
+    """Inject a :class:`VectorStore` instance into the application state.
+
+    If an existing store is configured and it exposes a ``close`` method it will
+    be closed prior to assigning the new store. This ensures background flush
+    threads are properly shut down.
+    """
+    existing = getattr(app.state, "vector_store", None)
+    if existing is not None and hasattr(existing, "close"):
+        existing.close()
     app.state.vector_store = store
 
 
