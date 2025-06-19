@@ -47,7 +47,10 @@ async def metrics_middleware(
     start = time.perf_counter()
     try:
         response = await call_next(request)
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "Unhandled exception while processing request", exc_info=exc
+        )
         REQUEST_LATENCY.labels(method=method, path=path).observe(
             time.perf_counter() - start
         )
