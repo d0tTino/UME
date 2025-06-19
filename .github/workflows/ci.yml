@@ -36,8 +36,9 @@ concurrency:
 
 jobs:
   test-and-lint:
-
     runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.changes.outputs.run }}
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -77,6 +78,8 @@ jobs:
 
   coverage:
     runs-on: ["self-hosted", "linux"]
+    needs: test-and-lint
+    if: needs.test-and-lint.outputs.run == 'true'
     strategy:
       matrix:
         python-version: ['3.12']
@@ -88,36 +91,17 @@ jobs:
       - name: Fetch main
         run: git fetch origin main --depth=1
 
-      - name: Detect code changes
-        id: changes
-        run: |
-          scripts/ci_should_run.py && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT"
-
       - name: Set up Python and install dependencies
         uses: ./.github/actions/setup-python-poetry
         with:
           python-version: ${{ matrix.python-version }}
-          run: ${{ steps.changes.outputs.run }}
-
-      - name: Run pre-commit
-        if: steps.changes.outputs.run == 'true'
-        run: poetry run pre-commit run --show-diff-on-failure --color always
-
-      - name: Run Ruff
-        if: steps.changes.outputs.run == 'true'
-        run: poetry run ruff check . --config pyproject.toml
-
-      - name: Run mypy
-        if: steps.changes.outputs.run == 'true'
-        run: poetry run mypy --config-file mypy.ini
+          run: 'true'
 
       - name: Run tests with coverage
-        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         run: |
           poetry run pytest --cov=src/ume --cov=ume_cli.py --cov-report=xml --cov-report=html
 
       - name: Upload coverage report
-        if: matrix.python-version == '3.12' && steps.changes.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
