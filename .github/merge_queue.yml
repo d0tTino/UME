@@ -4,4 +4,6 @@ merge_queue:
       merge_method: squash
       required_checks:
         - "CI / test-and-lint (3.12)"
+        - "CI / test-and-lint (3.11)"
+        - "CI / test-and-lint (3.10)"
         - "CI / coverage"

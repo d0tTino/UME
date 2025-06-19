@@ -2,14 +2,14 @@
 set -euo pipefail
 
 need_pkgs=()
-command -v python3.12 >/dev/null 2>&1 || need_pkgs+=(python3.12 python3.12-venv python3.12-dev)
+command -v python3.10 >/dev/null 2>&1 || need_pkgs+=(python3.10 python3.10-venv python3.10-dev)
 command -v gcc >/dev/null 2>&1 || need_pkgs+=(build-essential)
 if [ "${#need_pkgs[@]}" -ne 0 ]; then
     sudo apt-get update
     sudo apt-get install -y "${need_pkgs[@]}"
 fi
 
-python3.12 -m pip install --upgrade pip poetry
+python3.10 -m pip install --upgrade pip poetry
 
 if ! poetry install --with dev --no-interaction --no-ansi; then
     # If the lock file is out of sync, regenerate it and retry
@@ -25,7 +25,7 @@ else
     poetry run python -m spacy download en_core_web_lg || true
 fi
 
-python3.12 -m pip install types-PyYAML types-pytz types-requests types-ujson
+python3.10 -m pip install types-PyYAML types-pytz types-requests types-ujson
 
 poetry run pre-commit install
 
