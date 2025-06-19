@@ -60,6 +60,7 @@ class DAGExecutor:
             if not ready:
                 raise ValueError("Cycle detected in task graph")
             threads = []
+            exceptions: list[Exception] = []
             for name in ready:
                 task = self.tasks[name]
                 try:
@@ -72,14 +73,19 @@ class DAGExecutor:
                     t: Task = task,
                     sem_lock: threading.Semaphore = sem,
                 ) -> None:
-                    with sem_lock:
-                        results[n] = t.func()
+                    try:
+                        with sem_lock:
+                            results[n] = t.func()
+                    except Exception as exc:
+                        exceptions.append(exc)
 
                 thread = threading.Thread(target=worker)
                 thread.start()
                 threads.append(thread)
             for thread in threads:
                 thread.join()
+            if exceptions:
+                raise exceptions[0]
             for name in ready:
                 del remaining[name]
             for deps in remaining.values():
