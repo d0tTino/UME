@@ -47,7 +47,9 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(f"Node '{node_id}' already exists.")
 
     def update_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
-        cur = self.conn.execute("SELECT attributes FROM nodes WHERE id=?", (node_id,))
+        cur = self.conn.execute(
+            "SELECT attributes FROM nodes WHERE id=? AND redacted=0", (node_id,)
+        )
         row = cur.fetchone()
         if row is None:
             raise ProcessingError(f"Node '{node_id}' not found for update.")

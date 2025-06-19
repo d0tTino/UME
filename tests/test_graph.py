@@ -90,6 +90,17 @@ def test_update_node_non_existent_raises_error(graph: PersistentGraph):
         graph.update_node(node_id, attributes)
 
 
+def test_update_node_redacted_raises_error(graph: PersistentGraph):
+    """Test that updating a redacted node raises ProcessingError."""
+    node_id = "node_redacted"
+    graph.add_node(node_id, {"name": "hidden"})
+    graph.redact_node(node_id)
+    with pytest.raises(
+        ProcessingError, match=f"Node '{node_id}' not found for update."
+    ):
+        graph.update_node(node_id, {"name": "update"})
+
+
 # --- get_node tests ---
 def test_get_node_exists(graph: PersistentGraph):
     """Test get_node for an existing node."""
