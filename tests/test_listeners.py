@@ -1,9 +1,14 @@
 # tests/test_listeners.py
 import time
+import threading
 import pytest
 
 from ume import Event, EventType, MockGraph, apply_event_to_graph
-from ume._internal.listeners import register_listener, unregister_listener
+from ume._internal.listeners import (
+    register_listener,
+    unregister_listener,
+    get_registered_listeners,
+)
 
 
 class RecordingListener:
@@ -59,3 +64,50 @@ def test_listener_receives_edge_created_callback(graph: MockGraph) -> None:
     unregister_listener(listener)
 
     assert ("edge_created", ("s", "t", "L")) in listener.calls
+
+
+def test_register_unregister_thread_safety() -> None:
+    listener = RecordingListener()
+
+    # ensure clean slate
+    for existing in list(get_registered_listeners()):
+        unregister_listener(existing)
+
+    def worker() -> None:
+        for _ in range(100):
+            register_listener(listener)
+            unregister_listener(listener)
+
+    threads = [threading.Thread(target=worker) for _ in range(5)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert get_registered_listeners() == []
+
+
+def test_concurrent_unique_registration() -> None:
+    listeners = [RecordingListener() for _ in range(10)]
+
+    for existing in list(get_registered_listeners()):
+        unregister_listener(existing)
+
+    threads = [threading.Thread(target=register_listener, args=(listener,)) for listener in listeners]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    regs = get_registered_listeners()
+    for listener in listeners:
+        assert listener in regs
+
+    threads = [threading.Thread(target=unregister_listener, args=(listener,)) for listener in listeners]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert get_registered_listeners() == []
+
