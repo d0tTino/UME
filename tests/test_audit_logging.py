@@ -12,7 +12,7 @@ def test_audit_entry_on_policy_violation(tmp_path, monkeypatch):
     importlib.reload(ume.config)
     importlib.reload(ume.audit)
     importlib.reload(ume.plugins.alignment)
-    importlib.reload(ume.plugins.alignment.sample_policy)
+    importlib.reload(ume.plugins.alignment.sample_policy)  # type: ignore[attr-defined]
     importlib.reload(ume.persistent_graph)
     importlib.reload(ume)
 
@@ -51,7 +51,7 @@ def test_audit_entry_on_redactions(tmp_path, monkeypatch):
     importlib.reload(ume.config)
     importlib.reload(ume.audit)
     importlib.reload(ume.plugins.alignment)
-    importlib.reload(ume.plugins.alignment.sample_policy)
+    importlib.reload(ume.plugins.alignment.sample_policy)  # type: ignore[attr-defined]
     importlib.reload(ume.persistent_graph)
     importlib.reload(ume)
 
@@ -89,3 +89,28 @@ def test_s3_path_without_boto3(monkeypatch):
         audit._read_lines("s3://bucket/key")
     with pytest.raises(ImportError):
         audit._write_lines("s3://bucket/key", ["x"])
+
+
+def test_s3_read_logs_error(monkeypatch, caplog):
+    """Errors reading from S3 should be logged and return an empty list."""
+    import sys
+    import importlib
+    import types
+
+    class DummyClient:
+        def get_object(self, *args, **kwargs):  # pragma: no cover - stub
+            raise Exception("boom")
+
+    dummy_boto3 = types.SimpleNamespace(client=lambda name: DummyClient())
+    dummy_exceptions = types.SimpleNamespace(BotoCoreError=Exception, ClientError=Exception)
+    monkeypatch.setitem(sys.modules, "boto3", dummy_boto3)
+    monkeypatch.setitem(sys.modules, "botocore.exceptions", dummy_exceptions)
+
+    import ume.audit as audit
+    importlib.reload(audit)
+
+    with caplog.at_level("ERROR"):
+        assert audit._read_lines("s3://bucket/key") == []
+    assert any(
+        "Failed to read audit log from s3://bucket/key" in rec.message for rec in caplog.records
+    )
