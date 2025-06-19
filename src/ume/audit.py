@@ -8,8 +8,10 @@ from typing import List, Dict
 
 try:
     import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
 except Exception:  # pragma: no cover - boto3 optional
     boto3 = None
+    BotoCoreError = ClientError = Exception
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,8 @@ def _read_lines(path: str) -> List[str]:
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
             data = obj["Body"].read().decode()
-        except Exception:
+        except (BotoCoreError, ClientError, UnicodeDecodeError) as exc:
+            logger.error("Failed to read audit log from %s: %s", path, exc)
             return []
         return data.splitlines()
     else:
