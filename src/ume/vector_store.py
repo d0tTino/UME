@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 import json
+import logging
 
 import time
 import threading
@@ -14,6 +15,8 @@ import faiss
 from ._internal.listeners import GraphListener
 from .metrics import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
 from prometheus_client import Gauge, Histogram
+
+logger = logging.getLogger(__name__)
 
 
 class VectorStore:
@@ -67,7 +70,10 @@ class VectorStore:
 
         def _loop() -> None:
             while not self._flush_stop.wait(interval):
-                self.save()
+                try:
+                    self.save()
+                except Exception:  # pragma: no cover - log and continue
+                    logger.exception("Background flush failed")
 
         self._flush_stop.clear()
         self._flush_thread = threading.Thread(target=_loop, daemon=True)
