@@ -7,7 +7,7 @@ from confluent_kafka import Consumer, Producer, KafkaError
 from jsonschema import ValidationError
 from .config import Settings
 
-from .event import Event, parse_event
+from .event import Event, EventError, parse_event
 from .schema_utils import validate_event_dict
 
 
@@ -75,7 +75,11 @@ class UMEClient:
                 if msg.error().code() == KafkaError._PARTITION_EOF:
                     break
                 raise UMEClientError(f"Consumer error: {msg.error()}")
-            data = json.loads(msg.value().decode("utf-8"))
+            try:
+                data = json.loads(msg.value().decode("utf-8"))
+            except json.JSONDecodeError as exc:  # pragma: no cover - malformed message
+                logger.warning("Invalid JSON received: %s", exc)
+                continue
             payload = data.get("payload")
             if isinstance(payload, dict):
                 text_values = [v for v in payload.values() if isinstance(v, str)]
@@ -88,7 +92,12 @@ class UMEClient:
                         )
                     else:
                         payload["embedding"] = generate_embedding(" ".join(text_values))
-            yield parse_event(data)
+            try:
+                event = parse_event(data)
+            except EventError as exc:
+                logger.warning("Invalid event received: %s", exc)
+                continue
+            yield event
 
     def close(self) -> None:
         """Flush the producer and close the consumer."""

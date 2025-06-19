@@ -167,3 +167,36 @@ def test_consume_events_without_embedding(
     assert any(
         "skipping embedding generation" in rec.message.lower() for rec in caplog.records
     )
+
+
+def test_consume_events_invalid_message(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    consumer = DummyConsumer({})
+
+    class DummyMsg:
+        def __init__(self, value: bytes) -> None:
+            self._value = value
+
+        def error(self) -> None:
+            return None
+
+        def value(self) -> bytes:
+            return self._value
+
+    invalid = b"{bad json"
+    valid = json.dumps(
+        {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
+    ).encode()
+
+    consumer.messages.append(DummyMsg(invalid))
+    consumer.messages.append(DummyMsg(valid))
+
+    client = build_client(monkeypatch, consumer=lambda conf: consumer)
+    with caplog.at_level("WARNING"):
+        events = list(client.consume_events(timeout=0))
+
+    assert len(events) == 1
+    assert events[0].node_id == "n1"
+    assert any("invalid" in rec.message.lower() for rec in caplog.records)
+
