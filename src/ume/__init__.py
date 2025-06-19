@@ -6,6 +6,7 @@ from .persistent_graph import PersistentGraph
 from .neo4j_graph import Neo4jGraph
 from .auto_snapshot import (
     enable_periodic_snapshot,
+    disable_periodic_snapshot,
     enable_snapshot_autosave_and_restore,
 )
 from .graph_adapter import IGraphAdapter
@@ -74,6 +75,7 @@ __all__ = [
     "SnapshotError",
     "enable_snapshot_autosave_and_restore",
     "enable_periodic_snapshot",
+    "disable_periodic_snapshot",
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",
