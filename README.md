@@ -433,3 +433,7 @@ If you have questions, encounter issues, or want to discuss ideas related to UME
 
 *   **Open an Issue:** For bug reports, feature requests, or specific questions, please check the [GitHub Issues](https://github.com/your-username/universal-memory-engine/issues) page (please replace `your-username/universal-memory-engine` with the actual repository path).
 *   **Check our Contributing Guide:** For information on how to contribute to the project, see the [CONTRIBUTING.md](CONTRIBUTING.md) file.
+
+## Setting Up a Self-hosted Runner
+
+The CI workflow expects a runner with the `self-hosted` label. If you haven't configured one yet, follow the instructions in [docs/SELF_HOSTED_RUNNER.md](docs/SELF_HOSTED_RUNNER.md) to register a machine as a GitHub Actions runner.
