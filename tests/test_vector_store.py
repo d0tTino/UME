@@ -128,6 +128,31 @@ def test_vector_store_background_flush(tmp_path: Path) -> None:
     assert new_store.query([0.0, 1.0], k=1) == ["z"]
 
 
+def test_background_flush_continues_on_save_error(tmp_path: Path) -> None:
+    path = tmp_path / "err.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05)
+
+    calls = 0
+    orig_save = store.save
+
+    def failing_save(p: str | None = None) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("boom")
+        orig_save(p)
+
+    store.save = failing_save  # type: ignore[assignment]
+    store.add("c", [1.0, 0.0])
+    time.sleep(0.15)
+    store.stop_background_flush()
+
+    assert calls >= 2
+    new_store = VectorStore(dim=2, use_gpu=False)
+    new_store.load(str(path))
+    assert new_store.query([1.0, 0.0], k=1) == ["c"]
+
+
 def test_vector_store_metrics_init() -> None:
     lat = Histogram("test_query_latency", "desc")
     size = Gauge("test_index_size", "desc")
