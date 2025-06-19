@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 import pytest
+from typing import Any
 
 from ume.api import app, configure_graph, configure_vector_store
 from ume.vector_store import VectorStore
@@ -150,3 +151,27 @@ def test_endpoints_require_authentication(
     else:
         res = request(path)
     assert res.status_code == 401
+
+
+def test_exception_logging_on_query(monkeypatch, caplog) -> None:
+    """Exception inside endpoint should be logged with traceback."""
+    client = TestClient(app, raise_server_exceptions=False)
+
+    def raise_error(*_: Any, **__: Any) -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(app.state.query_engine, "execute_cypher", raise_error)
+
+    with caplog.at_level("ERROR"):
+        res = client.get(
+            "/query",
+            params={"cypher": "MATCH (n)"},
+            headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        )
+
+    assert res.status_code == 500
+    assert any(rec.exc_info for rec in caplog.records)
+    assert any(
+        "Unhandled exception while processing request" in rec.getMessage()
+        for rec in caplog.records
+    )
