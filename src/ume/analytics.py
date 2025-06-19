@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set, cast
 
 import networkx as nx
 import numpy as np
@@ -167,11 +167,13 @@ def temporal_node_counts(graph: IGraphAdapter, past_n_days: int) -> Dict[str, in
     for node_id in graph.get_all_node_ids():
         data = graph.get_node(node_id) or {}
         ts = data.get("timestamp")
-        if isinstance(ts, (int, float)):
-            dt = datetime.fromtimestamp(int(ts), timezone.utc)
-            if dt >= cutoff:
-                key = dt.date().isoformat()
-                buckets[key] = buckets.get(key, 0) + 1
+        try:
+            dt = datetime.fromtimestamp(int(cast(Any, ts)), timezone.utc)
+        except (TypeError, ValueError):
+            continue
+        if dt >= cutoff:
+            key = dt.date().isoformat()
+            buckets[key] = buckets.get(key, 0) + 1
     return buckets
 
 

@@ -34,6 +34,13 @@ def test_extract_subgraph():
     assert set(recent["nodes"].keys()) == {"c", "d"}
 
 
+def test_extract_subgraph_with_invalid_timestamp():
+    g = build_graph()
+    g.update_node("b", {"timestamp": "not-a-number"})
+    recent = g.extract_subgraph("a", depth=2, since_timestamp=3)
+    assert set(recent["nodes"].keys()) == {"c", "d"}
+
+
 def test_constrained_path():
     g = build_graph()
     assert g.constrained_path("a", "c", max_depth=2) == ["a", "b", "c"]
