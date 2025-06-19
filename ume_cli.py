@@ -8,6 +8,7 @@ import sys
 import time  # Added for timestamp in event creation
 import warnings
 from pathlib import Path
+import os
 
 # Ensure local package import when run directly without installation
 _src_path = Path(__file__).resolve().parent / "src"
@@ -427,6 +428,9 @@ def _setup_warnings(display: bool, log_file: str | None) -> None:
 
     logger = None
     if log_file:
+        dir_path = os.path.dirname(log_file)
+        if dir_path:
+            os.makedirs(dir_path, exist_ok=True)
         logger = logging.getLogger("ume_cli.warnings")
         handler = logging.FileHandler(log_file)
         logger.addHandler(handler)

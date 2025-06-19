@@ -76,8 +76,8 @@ Please refer to the `README.md` for instructions on setting up your development 
 3. Create a feature branch and implement your changes.
 4. Before committing, run the checks locally:
    ```bash
-   pre-commit run --all-files
-   pytest
+  pre-commit run --all-files
+  poetry run pytest
    ```
 5. Push your branch and open a pull request.
 
