@@ -16,6 +16,6 @@ UME_API_TOKEN=secret-token
 UME_ROLE=view-only
 ```
 
-UME requires **Python 3.12**. If your system Python is older than 3.12,
+UME requires **Python 3.10** or newer. If your system Python is older than 3.10,
 consider using [pyenv](https://github.com/pyenv/pyenv) or running in a
-container image that provides Python 3.12 to ensure compatibility.
+container image that provides a compatible Python version to ensure compatibility.

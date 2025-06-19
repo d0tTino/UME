@@ -33,8 +33,7 @@ This section outlines the necessary tools for developing and running the Univers
 
 ### Core Tools Required:
 
-*   **Python:** Version **3.12** is required. Lower versions (for example 3.11)
-    will fail due to `pydantic_settings` and other dependencies.
+*   **Python:** Version **3.10** or newer is required.
 *   **Poetry:** For Python dependency management. Installation instructions can be found at [https://python-poetry.org/docs/#installation](https://python-poetry.org/docs/#installation).
 *   **Docker:** Docker Desktop (for Windows/macOS) or Docker Engine + Docker Compose (for Linux) is required to run backend services like Redpanda. Download from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/).
 
@@ -184,8 +183,7 @@ This project uses [pytest](https://docs.pytest.org/) for unit and integration te
 
 ### Prerequisites
 
-You must run the tests with **Python 3.12**. Lower versions such as 3.11
-will fail due to `pydantic_settings` and other dependencies.
+You must run the tests with **Python 3.10** or newer.
 
 Ensure you have installed the development dependencies:
 ```bash
@@ -215,7 +213,7 @@ result.
     poetry run pytest
     ```
     Alternatively, run pytest directly by setting ``PYTHONPATH`` so the
-    source directory is discoverable (Python 3.12 or newer is required):
+    source directory is discoverable (Python 3.10 or newer is required):
     ```bash
     PYTHONPATH=src pytest
     ```
@@ -280,8 +278,7 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 ## Quickstart
 
 ### Prerequisites
-- Python **3.12** (required; lower versions such as 3.11 will fail due to
-  `pydantic_settings` and other dependencies)
+- Python **3.10** or newer
 - Poetry (https://python-poetry.org)
 - Docker & Docker Compose
 
@@ -299,7 +296,7 @@ run the helper script:
 ```bash
 ./codex_setup.sh
 ```
-This script installs Python 3.12 if missing, installs all dependencies and
+This script installs Python 3.10 if missing, installs all dependencies and
 development tools, automatically installs the pre-commit hooks, and fixes the
 lock file if needed. After running it, you can verify the environment with:
 ```bash
