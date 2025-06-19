@@ -6,6 +6,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from neo4j import GraphDatabase, Driver
+from .schema_manager import DEFAULT_SCHEMA_MANAGER
+from .processing import DEFAULT_VERSION
 
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
@@ -124,6 +126,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
 
     # ---- Edge methods -------------------------------------------------
     def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
+        schema.validate_edge_label(label)
+        escaped_label = label.replace("`", "``")
         with self._driver.session() as session:
             result = session.run(
                 "MATCH (s {id: $src}), (t {id: $tgt}) RETURN count(s) AS scnt, count(t) AS tcnt",
@@ -136,8 +141,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
                 )
             result = session.run(
-                "MATCH (s {id: $src})-[r:$label]->(t {id: $tgt}) RETURN count(r) AS cnt",
-                {"src": source_node_id, "tgt": target_node_id, "label": label},
+                f"MATCH (s {{id: $src}})-[r:`{escaped_label}`]->(t {{id: $tgt}}) RETURN count(r) AS cnt",
+                {"src": source_node_id, "tgt": target_node_id},
             )
             rec = result.single()
             assert rec is not None
@@ -146,8 +151,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
             session.run(
-                "MATCH (s {id: $src}), (t {id: $tgt}) CREATE (s)-[:$label {redacted:false}]->(t)",
-                {"src": source_node_id, "tgt": target_node_id, "label": label},
+                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` {{redacted:false}}]->(t)",
+                {"src": source_node_id, "tgt": target_node_id},
             )
 
     def get_all_edges(self) -> List[tuple[str, str, str]]:
@@ -162,10 +167,13 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
             return [(rec["src"], rec["tgt"], rec["label"]) for rec in result]
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
+        schema.validate_edge_label(label)
+        escaped_label = label.replace("`", "``")
         with self._driver.session() as session:
             result = session.run(
-                "MATCH (s {id: $src})-[r:$label]->(t {id: $tgt}) DELETE r RETURN count(r) AS cnt",
-                {"src": source_node_id, "tgt": target_node_id, "label": label},
+                f"MATCH (s {{id: $src}})-[r:`{escaped_label}`]->(t {{id: $tgt}}) DELETE r RETURN count(r) AS cnt",
+                {"src": source_node_id, "tgt": target_node_id},
             )
             rec = result.single()
             assert rec is not None
@@ -187,10 +195,13 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 raise ProcessingError(f"Node '{node_id}' not found to redact.")
 
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+        schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
+        schema.validate_edge_label(label)
+        escaped_label = label.replace("`", "``")
         with self._driver.session() as session:
             result = session.run(
-                "MATCH (s {id: $src})-[r:$label]->(t {id: $tgt}) SET r.redacted = true RETURN count(r) AS cnt",
-                {"src": source_node_id, "tgt": target_node_id, "label": label},
+                f"MATCH (s {{id: $src}})-[r:`{escaped_label}`]->(t {{id: $tgt}}) SET r.redacted = true RETURN count(r) AS cnt",
+                {"src": source_node_id, "tgt": target_node_id},
             )
             rec = result.single()
             assert rec is not None
