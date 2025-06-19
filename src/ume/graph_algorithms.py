@@ -80,7 +80,10 @@ def extract_subgraph(
         include = True
         if since_timestamp is not None:
             ts = data.get("timestamp")
-            if ts is None or int(ts) < since_timestamp:
+            try:
+                if int(cast(Any, ts)) < since_timestamp:
+                    include = False
+            except (TypeError, ValueError):
                 include = False
         if include:
             nodes[node] = data.copy()
@@ -157,7 +160,10 @@ class GraphAlgorithmsMixin:
                 if since_timestamp is not None:
                     data = self.get_node(neighbor) or {}
                     ts = data.get("timestamp")
-                    if ts is None or int(ts) < since_timestamp:
+                    try:
+                        if int(cast(Any, ts)) < since_timestamp:
+                            continue
+                    except (TypeError, ValueError):
                         continue
                 visited[neighbor] = node
                 queue.append((neighbor, depth + 1))
