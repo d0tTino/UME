@@ -59,3 +59,17 @@ def test_public_imports() -> None:
 
     assert PublicDAGExecutor is DAGExecutor
     assert PublicTask is Task
+
+
+def test_run_raises_on_task_error() -> None:
+    exec = DAGExecutor()
+
+    exec.add_task(Task(name="ok", func=lambda: None))
+
+    def boom() -> None:
+        raise RuntimeError("boom")
+
+    exec.add_task(Task(name="bad", func=boom))
+
+    with pytest.raises(RuntimeError):
+        exec.run()
