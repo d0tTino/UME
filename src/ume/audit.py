@@ -49,8 +49,18 @@ def _read_lines(path: str) -> List[str]:
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
             data = obj["Body"].read().decode()
-        except (BotoCoreError, ClientError, UnicodeDecodeError) as exc:
-            logger.error("Failed to read audit log from %s: %s", path, exc)
+        except BotoCoreError as exc:
+            logger.error(
+                "BotoCoreError while reading audit log from %s: %s", path, exc
+            )
+            return []
+        except ClientError as exc:
+            logger.error(
+                "ClientError while reading audit log from %s: %s", path, exc
+            )
+            return []
+        except UnicodeDecodeError as exc:
+            logger.error("Failed to decode audit log from %s: %s", path, exc)
             return []
         return data.splitlines()
     else:
@@ -70,10 +80,25 @@ def _write_lines(path: str, lines: List[str]) -> None:
             )
         bucket, key = _parse_s3(path)
         s3 = boto3.client("s3")
-        s3.put_object(Bucket=bucket, Key=key, Body=data.encode())
+        try:
+            s3.put_object(Bucket=bucket, Key=key, Body=data.encode())
+        except BotoCoreError as exc:
+            logger.error(
+                "BotoCoreError while writing audit log to %s: %s", path, exc
+            )
+            raise RuntimeError(f"Failed to write audit log to {path}") from exc
+        except ClientError as exc:
+            logger.error(
+                "ClientError while writing audit log to %s: %s", path, exc
+            )
+            raise RuntimeError(f"Failed to write audit log to {path}") from exc
     else:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(data)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(data)
+        except OSError as exc:
+            logger.error("Failed to write audit log to %s: %s", path, exc)
+            raise
 
 
 def log_audit_entry(user_id: str, reason: str, timestamp: int | None = None) -> None:
