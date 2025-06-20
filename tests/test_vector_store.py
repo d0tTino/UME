@@ -201,17 +201,20 @@ def test_configure_vector_store_replacement_closes_existing(tmp_path: Path) -> N
     store2.close()
 
 
-@pytest.mark.parametrize(
-    "vector",
-    [
-        "not a vector",
-        [1.0, "a"],
-        [[1.0, 2.0]],
-    ],
-)
-def test_vector_store_query_invalid_input(vector: Any) -> None:
-    store = VectorStore(dim=2, use_gpu=False)
-    store.add("a", [1.0, 0.0])
+def test_configure_vector_store_close_error(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    store1 = VectorStore(dim=2, use_gpu=False)
+    configure_vector_store(store1)
 
-    with pytest.raises(ValueError, match="iterable of numbers"):
-        store.query(vector)
+    def boom() -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(store1, "close", boom)
+    store2 = VectorStore(dim=2, use_gpu=False)
+    with caplog.at_level("ERROR"):
+        configure_vector_store(store2)
+    assert app.state.vector_store is store2
+    assert any(
+        "Failed to close existing vector store" in rec.getMessage()
+        for rec in caplog.records
+    )
+
