@@ -322,6 +322,8 @@ def api_add_vector(
     store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Store an embedding vector for later similarity search."""
+    if len(req.vector) != store.dim:
+        raise HTTPException(status_code=400, detail="Invalid vector dimension")
     store.add(req.id, req.vector)
     return {"status": "ok"}
 
@@ -334,6 +336,8 @@ def api_search_vectors(
     store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Find the IDs of the ``k`` nearest vectors to ``vector``."""
+    if len(vector) != store.dim:
+        raise HTTPException(status_code=400, detail="Invalid vector dimension")
     ids = store.query(vector, k=k)
     return {"ids": ids}
 
