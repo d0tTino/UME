@@ -125,6 +125,15 @@ def test_vector_store_add_persist(tmp_path: Path) -> None:
     assert new_store.query([1.0, 0.0], k=1) == ["y"]
 
 
+def test_vector_store_save_creates_directory(tmp_path: Path) -> None:
+    path = tmp_path / "nested" / "save.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path))
+    store.add("d", [1.0, 0.0])
+    store.save()
+
+    assert path.exists()
+
+
 def test_vector_store_background_flush(tmp_path: Path) -> None:
     path = tmp_path / "bg.faiss"
     store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
