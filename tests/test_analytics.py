@@ -12,6 +12,9 @@ from ume.analytics import (
     node_similarity,
     graph_similarity,
 )
+from typing import Any, Dict
+import networkx as nx
+import ume.analytics as analytics
 
 
 def build_basic_graph():
@@ -54,8 +57,11 @@ def test_temporal_node_counts():
     assert sum(counts.values()) == 2
 
 
-def test_centrality_and_similarity():
+def test_centrality_and_similarity(monkeypatch):
     g = build_basic_graph()
+
+    monkeypatch.setattr(nx, "pagerank", analytics._pagerank_numpy)
+
     pr = pagerank_centrality(g)
     bc = betweenness_centrality(g)
     sims = node_similarity(g)
@@ -66,7 +72,7 @@ def test_centrality_and_similarity():
     assert sim_score == 1.0
 
 
-def test_temporal_algorithms():
+def test_temporal_algorithms(monkeypatch):
     g = MockGraph()
     now = datetime.now(timezone.utc)
     g.add_node("n1", {"timestamp": int(now.timestamp())})
@@ -75,8 +81,54 @@ def test_temporal_algorithms():
     g.add_edge("n1", "n2", "L")
     g.add_edge("n2", "n3", "L")
 
+    monkeypatch.setattr(nx, "pagerank", analytics._pagerank_numpy)
+
     comms = temporal_community_detection(g, 5)
     cent = time_varying_centrality(g, 5)
 
     assert any("n1" in c for c in comms)
     assert "n1" in cent
+
+
+def test_pagerank_fallback(monkeypatch):
+    g = build_basic_graph()
+
+    def raise_exc(_: Any) -> None:
+        raise nx.NetworkXException("fail")
+
+    monkeypatch.setattr(nx, "pagerank", raise_exc)
+
+    called: dict[str, bool] = {"used": False}
+
+    def fake_numpy(_: Any) -> Dict[str, float]:
+        called["used"] = True
+        return {"a": 1.0}
+
+    monkeypatch.setattr(analytics, "_pagerank_numpy", fake_numpy)
+
+    result = pagerank_centrality(g)
+    assert called["used"]
+    assert result == {"a": 1.0}
+
+
+def test_time_varying_centrality_fallback(monkeypatch):
+    g = MockGraph()
+    now = datetime.now(timezone.utc)
+    g.add_node("n1", {"timestamp": int(now.timestamp())})
+
+    def raise_exc(_: Any) -> None:
+        raise nx.NetworkXException("fail")
+
+    monkeypatch.setattr(nx, "pagerank", raise_exc)
+
+    called: dict[str, bool] = {"used": False}
+
+    def fake_numpy(_: Any) -> Dict[str, float]:
+        called["used"] = True
+        return {"n1": 1.0}
+
+    monkeypatch.setattr(analytics, "_pagerank_numpy", fake_numpy)
+
+    result = time_varying_centrality(g, 1)
+    assert called["used"]
+    assert result == {"n1": 1.0}
