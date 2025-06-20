@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import numbers
 import json
 import logging
+import os
 
 import time
 import threading
@@ -36,6 +37,10 @@ class VectorStore:
 
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
+        if path:
+            dirpath = os.path.dirname(path)
+            if dirpath:
+                os.makedirs(dirpath, exist_ok=True)
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
         self.gpu_resources = None
