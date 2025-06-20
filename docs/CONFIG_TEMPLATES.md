@@ -83,6 +83,7 @@ below lists all available variables and their default values.
 | `UME_API_TOKEN` | `secret-token` | Token required by the API server. |
 | `UME_LOG_LEVEL` | `INFO` | Logging level used by `configure_logging`. |
 | `UME_LOG_JSON` | `False` | Output logs as JSON lines when set to `True`. |
+| `UME_GRAPH_RETENTION_DAYS` | `30` | Age in days before old nodes/edges are purged. |
 | `KAFKA_CA_CERT` | *(unset)* | CA certificate for Kafka TLS. |
 | `KAFKA_CLIENT_CERT` | *(unset)* | Client certificate for Kafka TLS. |
 | `KAFKA_CLIENT_KEY` | *(unset)* | Client key for Kafka TLS. |

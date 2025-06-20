@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     UME_API_ROLE: str | None = None
     UME_LOG_LEVEL: str = "INFO"
     UME_LOG_JSON: bool = False
+    UME_GRAPH_RETENTION_DAYS: int = 30
 
     # Vector store
     UME_VECTOR_DIM: int = 1536
