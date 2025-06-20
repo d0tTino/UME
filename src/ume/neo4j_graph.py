@@ -110,11 +110,13 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(f"Node '{node_id}' not found.")
         with self._driver.session() as session:
             if edge_label:
+                escaped_label = edge_label.replace("`", "``")
                 query = (
-                    "MATCH (n {id: $node_id})-[r:$label]->(m) "
-                    "WHERE coalesce(m.redacted, false) = false RETURN m.id AS id"
+                    f"MATCH (n {{id: $node_id}})-[r:`{escaped_label}`]->(m) "
+                    "WHERE coalesce(r.redacted, false) = false "
+                    "AND coalesce(m.redacted, false) = false RETURN m.id AS id"
                 )
-                result = session.run(query, {"node_id": node_id, "label": edge_label})
+                result = session.run(query, {"node_id": node_id})
             else:
                 query = (
                     "MATCH (n {id: $node_id})-[r]->(m) "

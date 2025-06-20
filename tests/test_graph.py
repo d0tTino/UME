@@ -314,6 +314,26 @@ def test_find_connected_nodes_no_matching_edges(graph: MockGraph):
     assert graph.find_connected_nodes("n3") == []
 
 
+def test_find_connected_nodes_ignores_redacted_edge_unlabeled(graph: PersistentGraph) -> None:
+    """Redacted edges should not appear in unlabeled queries."""
+    graph.add_node("s", {})
+    graph.add_node("t", {})
+    graph.add_edge("s", "t", "L")
+    graph.redact_edge("s", "t", "L")
+
+    assert graph.find_connected_nodes("s") == []
+
+
+def test_find_connected_nodes_ignores_redacted_edge_labeled(graph: PersistentGraph) -> None:
+    """Redacted edges should not appear in labeled queries."""
+    graph.add_node("s", {})
+    graph.add_node("t", {})
+    graph.add_edge("s", "t", "L")
+    graph.redact_edge("s", "t", "L")
+
+    assert graph.find_connected_nodes("s", edge_label="L") == []
+
+
 # --- delete_edge tests (New) ---
 def test_delete_edge_success(graph: PersistentGraph):
     """Test deleting an existing edge successfully."""
