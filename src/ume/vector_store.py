@@ -76,11 +76,26 @@ class VectorStore:
             return
 
         def _loop() -> None:
+            retries = 3
             while not self._flush_stop.wait(interval):
-                try:
-                    self.save()
-                except Exception:  # pragma: no cover - log and continue
-                    logger.exception("Background flush failed")
+                for attempt in range(retries):
+                    try:
+                        self.save()
+                        break
+                    except Exception:  # pragma: no cover - log and continue
+                        if attempt < retries - 1:
+                            logger.warning(
+                                "Background flush failed (attempt %s/%s), retrying",
+                                attempt + 1,
+                                retries,
+                            )
+                            time.sleep(0.1)
+                        else:
+                            logger.exception(
+                                "Background flush failed after %s attempts",
+                                retries,
+                            )
+                            break
 
         self._flush_stop.clear()
         self._flush_thread = threading.Thread(target=_loop, daemon=True)

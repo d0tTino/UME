@@ -8,6 +8,7 @@ import pytest
 from pathlib import Path
 from typing import Any
 from prometheus_client import Gauge, Histogram
+import logging
 
 
 def test_vector_store_add_and_query_cpu() -> None:
@@ -171,6 +172,34 @@ def test_background_flush_continues_on_save_error(tmp_path: Path) -> None:
     new_store = VectorStore(dim=2, use_gpu=False)
     new_store.load(str(path))
     assert new_store.query([1.0, 0.0], k=1) == ["c"]
+
+
+def test_background_flush_retries_on_save_error(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    path = tmp_path / "retry.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05)
+
+    calls = 0
+    orig_save = store.save
+
+    def failing_save(p: str | None = None) -> None:
+        nonlocal calls
+        calls += 1
+        if calls <= 3:
+            raise RuntimeError("boom")
+        orig_save(p)
+
+    store.save = failing_save  # type: ignore[assignment]
+    store.add("d", [1.0, 0.0])
+    with caplog.at_level(logging.WARNING, logger="ume.vector_store"):
+        time.sleep(0.7)
+    store.stop_background_flush()
+
+    assert calls >= 4
+    assert any("retrying" in rec.message.lower() for rec in caplog.records)
+    assert any("after 3 attempts" in rec.message for rec in caplog.records)
+    new_store = VectorStore(dim=2, use_gpu=False)
+    new_store.load(str(path))
+    assert new_store.query([1.0, 0.0], k=1) == ["d"]
 
 
 def test_vector_store_metrics_init() -> None:
