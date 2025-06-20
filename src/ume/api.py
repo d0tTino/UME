@@ -90,7 +90,10 @@ def configure_vector_store(store: VectorStore) -> None:
     """
     existing = getattr(app.state, "vector_store", None)
     if existing is not None and hasattr(existing, "close"):
-        existing.close()
+        try:
+            existing.close()
+        except Exception as exc:  # pragma: no cover - unexpected failure
+            logger.exception("Failed to close existing vector store", exc_info=exc)
     app.state.vector_store = store
 
 

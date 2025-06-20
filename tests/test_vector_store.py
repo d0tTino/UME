@@ -189,3 +189,21 @@ def test_configure_vector_store_replacement_closes_existing(tmp_path: Path) -> N
     assert store1._flush_thread is None
     assert app.state.vector_store is store2
     store2.close()
+
+
+def test_configure_vector_store_close_error(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    store1 = VectorStore(dim=2, use_gpu=False)
+    configure_vector_store(store1)
+
+    def boom() -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(store1, "close", boom)
+    store2 = VectorStore(dim=2, use_gpu=False)
+    with caplog.at_level("ERROR"):
+        configure_vector_store(store2)
+    assert app.state.vector_store is store2
+    assert any(
+        "Failed to close existing vector store" in rec.getMessage()
+        for rec in caplog.records
+    )
