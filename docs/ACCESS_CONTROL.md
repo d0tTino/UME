@@ -25,3 +25,29 @@ enforced:
   `find_connected_nodes`.
 
 Other roles attempting these operations will receive an `AccessDeniedError`.
+
+### Configuring Roles
+
+`RoleBasedGraphAdapter` reads the role from the environment. When running the
+HTTP API the `UME_API_ROLE` variable applies, while the command line interface
+uses `UME_ROLE`. If either variable is set, the underlying graph adapter is
+wrapped automatically.
+
+### Example Use Cases
+
+*Running the API with analytics permissions*
+
+```bash
+UME_API_ROLE=AnalyticsAgent uvicorn ume.api:app
+```
+
+Requests to `/analytics/*` will succeed. If the role is anything else, the API
+responds with HTTP 403.
+
+*Editing a user profile via the CLI*
+
+```bash
+UME_ROLE=UserService ume-cli new_node UserProfile.123 '{}'
+```
+
+Without the `UserService` role the command raises `AccessDeniedError`.
