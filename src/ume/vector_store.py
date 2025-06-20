@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List
+from collections.abc import Iterable
+import numbers
 import json
 import logging
+import os
 
 import time
 import threading
@@ -34,6 +37,10 @@ class VectorStore:
 
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
+        if path:
+            dirpath = os.path.dirname(path)
+            if dirpath:
+                os.makedirs(dirpath, exist_ok=True)
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
         self.gpu_resources = None
@@ -160,6 +167,12 @@ class VectorStore:
         try:
             if not self.idx_to_id:
                 return []
+            if (
+                not isinstance(vector, Iterable)
+                or isinstance(vector, (str, bytes))
+                or not all(isinstance(v, numbers.Real) for v in vector)
+            ):
+                raise ValueError("vector must be an iterable of numbers")
             arr = np.asarray(vector, dtype="float32").reshape(1, -1)
             if arr.shape[1] != self.dim:
                 raise ValueError(

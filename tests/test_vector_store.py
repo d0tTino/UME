@@ -6,6 +6,7 @@ from ume._internal.listeners import register_listener, unregister_listener
 import faiss
 import pytest
 from pathlib import Path
+from typing import Any
 from prometheus_client import Gauge, Histogram
 
 
@@ -125,6 +126,15 @@ def test_vector_store_add_persist(tmp_path: Path) -> None:
     assert new_store.query([1.0, 0.0], k=1) == ["y"]
 
 
+def test_vector_store_save_creates_directory(tmp_path: Path) -> None:
+    path = tmp_path / "nested" / "save.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path))
+    store.add("d", [1.0, 0.0])
+    store.save()
+
+    assert path.exists()
+
+
 def test_vector_store_background_flush(tmp_path: Path) -> None:
     path = tmp_path / "bg.faiss"
     store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
@@ -207,3 +217,4 @@ def test_configure_vector_store_close_error(monkeypatch: pytest.MonkeyPatch, cap
         "Failed to close existing vector store" in rec.getMessage()
         for rec in caplog.records
     )
+

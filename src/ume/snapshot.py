@@ -1,11 +1,21 @@
 # src/ume/snapshot.py
 import json
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Any
 import pathlib  # For type hinting path-like objects
 
 from .persistent_graph import PersistentGraph
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
+
+
+def _no_duplicate_pairs_hook(pairs: List[Tuple[str, Any]]) -> dict:
+    """Object pairs hook for ``json.load`` that rejects duplicate keys."""
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise SnapshotError(f"Duplicate key '{key}' encountered in snapshot.")
+        result[key] = value
+    return result
 
 
 class SnapshotError(ValueError):
@@ -65,7 +75,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
     """
     try:
         with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+            data = json.load(f, object_pairs_hook=_no_duplicate_pairs_hook)
     except FileNotFoundError:
         raise FileNotFoundError(f"Snapshot file not found at path: {path}")
     except json.JSONDecodeError as e:
@@ -89,12 +99,16 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
         )
 
     graph = PersistentGraph(":memory:")
+    seen_node_ids = set()
     for node_id, attributes in data["nodes"].items():
+        if node_id in seen_node_ids:
+            raise SnapshotError(f"Duplicate node ID '{node_id}' encountered in snapshot.")
         if not isinstance(attributes, dict):
             raise SnapshotError(
                 f"Invalid snapshot format for node '{node_id}': attributes should be a dictionary, "
                 f"got {type(attributes).__name__}."
             )
+        seen_node_ids.add(node_id)
         # Since MockGraph.add_node expects attributes to be Dict[str, Any],
         # and json.load ensures keys are strings, this should be fine.
         graph.add_node(node_id, attributes.copy())  # Use .copy() for attributes
@@ -107,6 +121,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
             )
 
         loaded_edges: List[Tuple[str, str, str]] = []
+        seen_edges = set()
         for i, edge_data in enumerate(data["edges"]):
             if not isinstance(edge_data, (list, tuple)):
                 raise SnapshotError(
@@ -123,7 +138,13 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
                     f"Invalid snapshot format for edge at index {i}: all edge elements "
                     f"(source, target, label) must be strings."
                 )
-            loaded_edges.append(tuple(edge_data))
+            edge_tuple = tuple(edge_data)
+            if edge_tuple in seen_edges:
+                raise SnapshotError(
+                    f"Duplicate edge {edge_tuple} encountered in snapshot."
+                )
+            seen_edges.add(edge_tuple)
+            loaded_edges.append(edge_tuple)
 
         # Use public API to add edges for consistency
         for src, tgt, lbl in loaded_edges:
@@ -141,10 +162,14 @@ def load_graph_into_existing(
     graph: IGraphAdapter, path: Union[str, pathlib.Path]
 ) -> None:
     """Load snapshot data from ``path`` into an existing graph adapter."""
-    loaded = load_graph_from_file(path)
+    # Load into a temporary graph first so the target is untouched if parsing
+    # fails. Only once loading completes without error do we replace the
+    # contents of ``graph``.
+    temp_graph = load_graph_from_file(path)
+
     graph.clear()
-    for node_id in loaded.get_all_node_ids():
-        attrs = loaded.get_node(node_id) or {}
+    for node_id in temp_graph.get_all_node_ids():
+        attrs = temp_graph.get_node(node_id) or {}
         graph.add_node(node_id, attrs)
-    for src, tgt, lbl in loaded.get_all_edges():
+    for src, tgt, lbl in temp_graph.get_all_edges():
         graph.add_edge(src, tgt, lbl)
