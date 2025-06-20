@@ -25,6 +25,16 @@ def test_vector_store_update_existing() -> None:
     assert res == ["a"]
 
 
+def test_vector_store_update_existing_gpu() -> None:
+    if not hasattr(faiss, "StandardGpuResources"):
+        pytest.skip("FAISS GPU not available")
+    store = VectorStore(dim=2, use_gpu=True)
+    store.add("a", [1.0, 0.0])
+    store.add("a", [0.0, 1.0])
+    res = store.query([0.0, 1.0], k=1)
+    assert res == ["a"]
+
+
 def test_vector_store_listener_on_create() -> None:
     store = VectorStore(dim=2, use_gpu=False)
     listener = VectorStoreListener(store)

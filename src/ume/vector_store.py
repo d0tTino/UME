@@ -98,7 +98,17 @@ class VectorStore:
             if hasattr(self.index, "vectors"):
                 self.index.vectors[idx] = arr[0]
             else:
-                raise ValueError(f"item_id {item_id} already exists")
+                cpu_index = faiss.index_gpu_to_cpu(self.index)
+                cpu_index.vectors = np.delete(cpu_index.vectors, idx, axis=0)
+                self.idx_to_id.pop(idx)
+                self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
+                cpu_index.add(arr)
+                self.id_to_idx[item_id] = len(self.idx_to_id)
+                self.idx_to_id.append(item_id)
+                if self.use_gpu and self.gpu_resources is not None:
+                    self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, cpu_index)
+                else:
+                    self.index = cpu_index
         else:
             self.index.add(arr)
             self.id_to_idx[item_id] = len(self.idx_to_id)
