@@ -14,6 +14,12 @@ UME_API_TOKEN=secret-token
 
 # Optional role for the CLI (leave unset for full permissions)
 UME_ROLE=view-only
+
+# Endpoint for the LLM Ferry listener
+LLM_FERRY_API_URL=https://example.com/api
+
+# API key used by LLM Ferry
+LLM_FERRY_API_KEY=
 ```
 
 UME requires **Python 3.10** or newer. If your system Python is older than 3.10,

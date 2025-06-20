@@ -86,3 +86,5 @@ below lists all available variables and their default values.
 | `KAFKA_CA_CERT` | *(unset)* | CA certificate for Kafka TLS. |
 | `KAFKA_CLIENT_CERT` | *(unset)* | Client certificate for Kafka TLS. |
 | `KAFKA_CLIENT_KEY` | *(unset)* | Client key for Kafka TLS. |
+| `LLM_FERRY_API_URL` | `https://example.com/api` | Endpoint for the `LLMFerry` listener. |
+| `LLM_FERRY_API_KEY` | *(unset)* | API key used by `LLMFerry` for authentication. |
