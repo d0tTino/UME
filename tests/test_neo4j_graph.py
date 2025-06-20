@@ -135,3 +135,45 @@ def test_gds_methods_issue_queries() -> None:
     assert "gds.beta.temporalClustering.stream" in queries[-2]
     assert "gds.beta.timeWeightedPageRank.stream" in queries[-1]
     assert len(queries) >= 7
+
+
+def test_find_connected_nodes_query_filters_redacted_edges_unlabeled() -> None:
+    results = [
+        DummyResult({"cnt": 1}),
+        [],
+    ]
+    driver = DummyDriver(results)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
+
+    graph.find_connected_nodes("n1")
+
+    query, params = driver.session_obj.calls[1]
+    assert "coalesce(r.redacted, false) = false" in query
+    assert params == {"node_id": "n1"}
+
+
+def test_find_connected_nodes_query_filters_redacted_edges_with_label() -> None:
+    results = [
+        DummyResult({"cnt": 1}),
+        [],
+    ]
+    driver = DummyDriver(results)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
+
+    graph.find_connected_nodes("n1", edge_label="REL")
+
+    query, params = driver.session_obj.calls[1]
+    assert "coalesce(r.redacted, false) = false" in query
+    assert "coalesce(m.redacted, false) = false" in query
+    assert "`REL`" in query
+    assert params == {"node_id": "n1"}
