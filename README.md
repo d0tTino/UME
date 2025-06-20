@@ -174,6 +174,7 @@ For current plans and eventual detailed documentation on the UME graph model, pl
 *   [**Graph Listener Guide (docs/GRAPH_LISTENERS.md)**](docs/GRAPH_LISTENERS.md)
 *   [**API Reference (docs/API_REFERENCE.md)**](docs/API_REFERENCE.md)
 *   [**Self-Hosted Runner Setup (docs/SELF_HOSTED_RUNNER.md)**](docs/SELF_HOSTED_RUNNER.md)
+*   [**DAGExecutor Guide (docs/DAG_EXECUTOR.md)**](docs/DAG_EXECUTOR.md)
 
 This documentation will be updated as the graph processing components of UME are developed.
 
