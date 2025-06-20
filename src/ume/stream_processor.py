@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import faust_stub as faust
+import faust
 import json
 from typing import Dict, Any
 

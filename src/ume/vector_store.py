@@ -120,13 +120,15 @@ class VectorStore:
             if hasattr(self.index, "vectors"):
                 self.index.vectors[idx] = arr[0]
             else:
-                cpu_index = faiss.index_gpu_to_cpu(self.index)
-                cpu_index.vectors = np.delete(cpu_index.vectors, idx, axis=0)
-                self.idx_to_id.pop(idx)
-                self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
-                cpu_index.add(arr)
-                self.id_to_idx[item_id] = len(self.idx_to_id)
-                self.idx_to_id.append(item_id)
+                try:
+                    cpu_index = faiss.index_gpu_to_cpu(self.index)
+                except AttributeError:
+                    cpu_index = self.index
+                vectors = [cpu_index.reconstruct(i) for i in range(cpu_index.ntotal)]
+                vectors[idx] = arr[0]
+                new_index = faiss.IndexFlatL2(self.dim)
+                new_index.add(np.asarray(vectors))
+                cpu_index = new_index
                 if self.use_gpu and self.gpu_resources is not None:
                     self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, cpu_index)
                 else:

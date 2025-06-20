@@ -43,6 +43,8 @@ dependencies (including development requirements) with:
 ```bash
 poetry install --with dev
 ```
+This installs core dependencies such as `faust-streaming` for stream processing
+and `faiss-cpu` for the vector store.
 
 ## Architecture
 
@@ -240,16 +242,6 @@ When contributing new features or fixing bugs, please include relevant tests:
 
 Strive for clear, concise tests that verify specific behaviors and edge cases.
 
-### Test Compatibility Modules
-
-For convenience, this repository includes lightweight stubs `faust_stub.py`,
-`faiss.py`, and `imp_compat.py`. These files mimic the real
-`faust-streaming`, `faiss`, and deprecated `imp` modules so tests can run
-without those dependencies installed. They live in the repository root to avoid
-clashing with any installed packages and are only imported by the test suite
-when the actual modules are unavailable. These stubs are not included when the
-library is packaged for distribution.
-
 ## CI Workflow
 
 This project uses GitHub Actions to run linting, type checks, unit tests, and
@@ -291,8 +283,8 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 git clone https://github.com/d0tTino/universal-memory-engine.git
 cd universal-memory-engine
 poetry install --with dev
-# Include optional embedding + vector dependencies to run the full test suite
-poetry install --with embedding --with vector
+# Include optional embedding dependencies to run the full test suite
+poetry install --with embedding
 poetry run python -m spacy download en_core_web_lg
 ```
 To automate the above steps (including installing development tools), you can
@@ -782,7 +774,7 @@ If the file specified by `UME_VECTOR_INDEX` exists, it is loaded automatically
 when the store is created. New vectors are written back to this file whenever
 they are added and when the store is closed.
 
-Install the optional dependencies with:
+Install GPU support with:
 
 ```bash
 poetry install --with vector
