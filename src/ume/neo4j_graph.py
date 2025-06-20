@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+import time
 
 from neo4j import GraphDatabase, Driver
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
@@ -44,8 +45,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
             if rec["cnt"] > 0:
                 raise ProcessingError(f"Node '{node_id}' already exists.")
             session.run(
-                "CREATE (n {id: $node_id}) SET n += $attrs",
-                {"node_id": node_id, "attrs": attributes},
+                "CREATE (n {id: $node_id, created_at:$ts}) SET n += $attrs",
+                {"node_id": node_id, "attrs": attributes, "ts": int(time.time())},
             )
 
     def update_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
@@ -153,8 +154,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
             session.run(
-                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` {{redacted:false}}]->(t)",
-                {"src": source_node_id, "tgt": target_node_id},
+                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` {{redacted:false, created_at:$ts}}]->(t)",
+                {"src": source_node_id, "tgt": target_node_id, "ts": int(time.time())},
             )
 
     def get_all_edges(self) -> List[tuple[str, str, str]]:

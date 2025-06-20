@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import time
 from typing import Dict, Any, Optional, List, Tuple
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
@@ -20,10 +21,26 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
     def _create_tables(self) -> None:
         with self.conn:
             self.conn.execute(
-                "CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, attributes TEXT, redacted INTEGER DEFAULT 0)"
+                """
+                CREATE TABLE IF NOT EXISTS nodes (
+                    id TEXT PRIMARY KEY,
+                    attributes TEXT,
+                    redacted INTEGER DEFAULT 0,
+                    created_at INTEGER DEFAULT (strftime('%s','now'))
+                )
+                """
             )
             self.conn.execute(
-                "CREATE TABLE IF NOT EXISTS edges (source TEXT, target TEXT, label TEXT, redacted INTEGER DEFAULT 0, PRIMARY KEY (source, target, label))"
+                """
+                CREATE TABLE IF NOT EXISTS edges (
+                    source TEXT,
+                    target TEXT,
+                    label TEXT,
+                    redacted INTEGER DEFAULT 0,
+                    created_at INTEGER DEFAULT (strftime('%s','now')),
+                    PRIMARY KEY (source, target, label)
+                )
+                """
             )
             # Indexes speed up queries for edges from a given source or target
             self.conn.execute(
@@ -40,8 +57,8 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
         try:
             with self.conn:
                 self.conn.execute(
-                    "INSERT INTO nodes(id, attributes) VALUES(?, ?)",
-                    (node_id, json.dumps(attributes)),
+                    "INSERT INTO nodes(id, attributes, created_at) VALUES(?, ?, ?)",
+                    (node_id, json.dumps(attributes), int(time.time())),
                 )
         except sqlite3.IntegrityError:
             raise ProcessingError(f"Node '{node_id}' already exists.")
@@ -90,8 +107,8 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
         try:
             with self.conn:
                 self.conn.execute(
-                    "INSERT INTO edges(source, target, label) VALUES(?, ?, ?)",
-                    (source_node_id, target_node_id, label),
+                    "INSERT INTO edges(source, target, label, created_at) VALUES(?, ?, ?, ?)",
+                    (source_node_id, target_node_id, label, int(time.time())),
                 )
         except sqlite3.IntegrityError:
             raise ProcessingError(
@@ -197,3 +214,15 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
             user_id,
             f"redact_edge {source_node_id} {target_node_id} {label}",
         )
+
+    def purge_old_records(self, max_age_seconds: int) -> None:
+        """Delete nodes and edges older than ``max_age_seconds``."""
+        cutoff = int(time.time()) - max_age_seconds
+        with self.conn:
+            self.conn.execute("DELETE FROM edges WHERE created_at < ?", (cutoff,))
+            self.conn.execute(
+                "DELETE FROM edges WHERE source IN (SELECT id FROM nodes WHERE created_at < ?) "
+                "OR target IN (SELECT id FROM nodes WHERE created_at < ?)",
+                (cutoff, cutoff),
+            )
+            self.conn.execute("DELETE FROM nodes WHERE created_at < ?", (cutoff,))

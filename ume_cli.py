@@ -49,6 +49,7 @@ class UMEPrompt(Cmd):
         super().__init__()
         db_path = settings.UME_CLI_DB
         base_graph = PersistentGraph(db_path)
+        self.base_graph = base_graph
         role = settings.UME_ROLE
         if role:
             print(f"INFO: UME-CLI running with role: '{role}'")
@@ -347,6 +348,27 @@ class UMEPrompt(Cmd):
             f"Index build time: {result['build_time']:.2f}s, "
             f"Avg query latency: {result['avg_query_latency']*1000:.3f}ms"
         )
+
+    def do_purge_old(self, arg):
+        """purge_old [--days N]
+        Delete nodes and edges older than N days."""
+        parser = argparse.ArgumentParser(prog="purge_old")
+        parser.add_argument(
+            "--days",
+            type=int,
+            default=settings.UME_GRAPH_RETENTION_DAYS,
+        )
+        try:
+            opts = parser.parse_args(shlex.split(arg))
+        except SystemExit:
+            return
+
+        purge_method = getattr(self.base_graph, "purge_old_records", None)
+        if callable(purge_method):
+            purge_method(opts.days * 86400)
+            print(f"Purged records older than {opts.days} days.")
+        else:
+            print("Purge not supported for this graph type.")
 
     # ----- Utility commands -----
     def do_clear(self, arg):
