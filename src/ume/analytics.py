@@ -109,7 +109,7 @@ def pagerank_centrality(graph: IGraphAdapter) -> Dict[str, float]:
     g = _to_networkx(graph)
     try:
         return nx.pagerank(g)
-    except Exception:
+    except nx.NetworkXException:
         # networkx>=3.5 relies on SciPy; fall back to a numpy implementation
         return _pagerank_numpy(g)
 
@@ -225,5 +225,5 @@ def time_varying_centrality(graph: IGraphAdapter, past_n_days: int) -> Dict[str,
         return {}
     try:
         return nx.pagerank(sub)
-    except Exception:
+    except nx.NetworkXException:
         return _pagerank_numpy(sub)
