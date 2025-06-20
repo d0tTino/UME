@@ -284,6 +284,7 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 - Python **3.10** or newer
 - Poetry (https://python-poetry.org)
 - Docker & Docker Compose
+- See [docs/WINDOWS_QUICKSTART.md](docs/WINDOWS_QUICKSTART.md) for Windows-specific instructions
 
 ### 1. Install Python Dependencies
 ```bash
