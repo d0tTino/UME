@@ -48,3 +48,18 @@ def test_apply_event_with_schema_version(graph: PersistentGraph):
 
     apply_event_to_graph(event, graph, schema_version="2.0.0")
     assert graph.node_exists("n1")
+
+
+def test_upgrade_transforms_graph(graph: PersistentGraph) -> None:
+    graph.add_node("a", {})
+    graph.add_node("b", {})
+    graph.add_edge("a", "b", "L")
+    graph.add_edge("b", "a", "TO_DELETE")
+
+    manager = GraphSchemaManager()
+    manager.upgrade_schema("1.0.0", "2.0.0", graph)
+
+    edges = graph.get_all_edges()
+    assert ("a", "b", "LINKS_TO") in edges
+    assert all(lbl != "L" for _, _, lbl in edges)
+    assert all(lbl != "TO_DELETE" for _, _, lbl in edges)
