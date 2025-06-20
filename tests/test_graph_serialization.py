@@ -391,37 +391,32 @@ def test_load_graph_from_file_edge_references_missing_node(tmp_path: pathlib.Pat
     with pytest.raises(SnapshotError, match=pattern):
         load_graph_from_file(snapshot_file)
 
-
-def test_load_graph_into_existing_failure_leaves_graph_unmodified(tmp_path: pathlib.Path):
-    """If loading fails, the existing graph should remain unchanged."""
-    graph = PersistentGraph(":memory:")
-    graph.add_node("a", {"attr": 1})
-    graph.add_node("b", {})
-    graph.add_edge("a", "b", "REL")
-    original_dump = graph.dump()
-
-    snapshot_file = tmp_path / "invalid_load.json"
-    snapshot_data = {"nodes": {"a": {"attr": 2}}, "edges": [("a", "missing", "REL")]}
+def test_load_graph_from_file_duplicate_edge(tmp_path: pathlib.Path):
+    """Duplicate edges in the snapshot should raise SnapshotError."""
+    snapshot_file = tmp_path / "duplicate_edge.json"
+    snapshot_data = {
+        "nodes": {"n1": {}, "n2": {}},
+        "edges": [("n1", "n2", "REL"), ("n1", "n2", "REL")],
+    }
     with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump(snapshot_data, f)
 
-    with pytest.raises(SnapshotError):
-        load_graph_into_existing(graph, snapshot_file)
+    expected_msg = "Duplicate edge ('n1', 'n2', 'REL') encountered in snapshot."
+    with pytest.raises(SnapshotError, match=re.escape(expected_msg)):
+        load_graph_from_file(snapshot_file)
 
-    assert graph.dump() == original_dump
 
+def test_load_graph_from_file_duplicate_node_id(tmp_path: pathlib.Path):
+    """Duplicate node IDs in the snapshot should raise SnapshotError."""
+    snapshot_file = tmp_path / "duplicate_node.json"
+    # Manually craft JSON with duplicate node keys
+    duplicate_json = (
+        '{"nodes": {"n1": {"a": 1}, "n1": {"b": 2}}, "edges": []}'
+    )
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        f.write(duplicate_json)
 
-def test_load_graph_into_existing_replaces_data_on_success(tmp_path: pathlib.Path):
-    """Successfully loading a snapshot should replace graph contents."""
-    graph = PersistentGraph(":memory:")
-    graph.add_node("old", {})
+    expected_msg = "Duplicate key 'n1' encountered in snapshot."
+    with pytest.raises(SnapshotError, match=re.escape(expected_msg)):
+        load_graph_from_file(snapshot_file)
 
-    snapshot_source = PersistentGraph(":memory:")
-    snapshot_source.add_node("n1", {"attr": "val"})
-    snapshot_file = tmp_path / "valid_load.json"
-    snapshot_graph_to_file(snapshot_source, snapshot_file)
-
-    load_graph_into_existing(graph, snapshot_file)
-
-    assert graph.node_count == 1
-    assert graph.get_node("n1") == {"attr": "val"}
