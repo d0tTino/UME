@@ -240,12 +240,13 @@ Strive for clear, concise tests that verify specific behaviors and edge cases.
 
 ### Test Compatibility Modules
 
-For convenience, this repository includes lightweight stubs `faust_stub.py` and
-`imp_compat.py`. These files mimic the real `faust-streaming` and deprecated
-`imp` modules so tests can run without those dependencies installed. They live
-in the repository root to avoid clashing with any installed packages and are
-only imported by the test suite. These stubs are not included when the library
-is packaged for distribution.
+For convenience, this repository includes lightweight stubs `faust_stub.py`,
+`faiss.py`, and `imp_compat.py`. These files mimic the real
+`faust-streaming`, `faiss`, and deprecated `imp` modules so tests can run
+without those dependencies installed. They live in the repository root to avoid
+clashing with any installed packages and are only imported by the test suite
+when the actual modules are unavailable. These stubs are not included when the
+library is packaged for distribution.
 
 ## CI Workflow
 
