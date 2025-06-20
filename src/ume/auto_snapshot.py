@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 _periodic_snapshot_thread: threading.Thread | None = None
 _periodic_snapshot_stop_event: threading.Event | None = None
+_atexit_handle: Callable | None = None
 
 
 def enable_periodic_snapshot(
@@ -22,7 +23,7 @@ def enable_periodic_snapshot(
     Returns the background thread used for snapshotting and a function to stop
     it.
     """
-    global _periodic_snapshot_thread, _periodic_snapshot_stop_event
+    global _periodic_snapshot_thread, _periodic_snapshot_stop_event, _atexit_handle
 
     snapshot_path = Path(path)
 
@@ -40,7 +41,7 @@ def enable_periodic_snapshot(
 
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()
-    atexit.register(_snapshot)
+    _atexit_handle = atexit.register(_snapshot)
 
     _periodic_snapshot_thread = thread
     _periodic_snapshot_stop_event = stop_event
@@ -54,12 +55,17 @@ def enable_periodic_snapshot(
 
 def disable_periodic_snapshot() -> None:
     """Stop the periodic snapshot thread if running."""
-    global _periodic_snapshot_thread, _periodic_snapshot_stop_event
+    global _periodic_snapshot_thread, _periodic_snapshot_stop_event, _atexit_handle
 
     if _periodic_snapshot_stop_event is not None:
         _periodic_snapshot_stop_event.set()
     if _periodic_snapshot_thread is not None:
         _periodic_snapshot_thread.join()
+    if _atexit_handle is not None:
+        try:
+            atexit.unregister(_atexit_handle)
+        finally:
+            _atexit_handle = None
 
     _periodic_snapshot_thread = None
     _periodic_snapshot_stop_event = None
