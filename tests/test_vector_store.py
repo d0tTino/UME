@@ -6,6 +6,7 @@ from ume._internal.listeners import register_listener, unregister_listener
 import faiss
 import pytest
 from pathlib import Path
+from typing import Any
 from prometheus_client import Gauge, Histogram
 
 
@@ -189,3 +190,19 @@ def test_configure_vector_store_replacement_closes_existing(tmp_path: Path) -> N
     assert store1._flush_thread is None
     assert app.state.vector_store is store2
     store2.close()
+
+
+@pytest.mark.parametrize(
+    "vector",
+    [
+        "not a vector",
+        [1.0, "a"],
+        [[1.0, 2.0]],
+    ],
+)
+def test_vector_store_query_invalid_input(vector: Any) -> None:
+    store = VectorStore(dim=2, use_gpu=False)
+    store.add("a", [1.0, 0.0])
+
+    with pytest.raises(ValueError, match="iterable of numbers"):
+        store.query(vector)

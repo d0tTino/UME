@@ -8,6 +8,7 @@ from ume import (
     PersistentGraph,
     snapshot_graph_to_file,
     load_graph_from_file,
+    load_graph_into_existing,
     SnapshotError,
 )  # Add new imports
 
@@ -390,7 +391,6 @@ def test_load_graph_from_file_edge_references_missing_node(tmp_path: pathlib.Pat
     with pytest.raises(SnapshotError, match=pattern):
         load_graph_from_file(snapshot_file)
 
-
 def test_load_graph_from_file_duplicate_edge(tmp_path: pathlib.Path):
     """Duplicate edges in the snapshot should raise SnapshotError."""
     snapshot_file = tmp_path / "duplicate_edge.json"
@@ -419,3 +419,4 @@ def test_load_graph_from_file_duplicate_node_id(tmp_path: pathlib.Path):
     expected_msg = "Duplicate key 'n1' encountered in snapshot."
     with pytest.raises(SnapshotError, match=re.escape(expected_msg)):
         load_graph_from_file(snapshot_file)
+
