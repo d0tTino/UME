@@ -112,7 +112,132 @@ def test_s3_read_logs_error(monkeypatch, caplog):
     with caplog.at_level("ERROR"):
         assert audit._read_lines("s3://bucket/key") == []
     assert any(
-        "Failed to read audit log from s3://bucket/key" in rec.message for rec in caplog.records
+        "BotoCoreError while reading audit log from s3://bucket/key" in rec.message
+        for rec in caplog.records
+    )
+
+
+def test_s3_read_logs_boto_core_error(monkeypatch, caplog):
+    """BotoCoreError reading from S3 is logged and results in an empty list."""
+    import sys
+    import importlib
+    import types
+
+    class BotoErr(Exception):
+        pass
+
+    class DummyClient:
+        def get_object(self, *args, **kwargs):
+            raise BotoErr("boom")
+
+    dummy_boto3 = types.SimpleNamespace(client=lambda name: DummyClient())
+    dummy_exceptions = types.SimpleNamespace(BotoCoreError=BotoErr, ClientError=Exception)
+    monkeypatch.setitem(sys.modules, "boto3", dummy_boto3)
+    monkeypatch.setitem(sys.modules, "botocore.exceptions", dummy_exceptions)
+
+    import ume.audit as audit
+    importlib.reload(audit)
+
+    with caplog.at_level("ERROR"):
+        assert audit._read_lines("s3://bucket/key") == []
+    assert any(
+        "BotoCoreError while reading audit log from s3://bucket/key" in rec.message
+        for rec in caplog.records
+    )
+
+
+def test_s3_read_logs_client_error(monkeypatch, caplog):
+    """ClientError reading from S3 is logged and results in an empty list."""
+    import sys
+    import importlib
+    import types
+
+    class ClientErr(Exception):
+        pass
+
+    class DummyClient:
+        def get_object(self, *args, **kwargs):
+            raise ClientErr("boom")
+
+    class BotoDummy(Exception):
+        pass
+
+    dummy_boto3 = types.SimpleNamespace(client=lambda name: DummyClient())
+    dummy_exceptions = types.SimpleNamespace(BotoCoreError=BotoDummy, ClientError=ClientErr)
+    monkeypatch.setitem(sys.modules, "boto3", dummy_boto3)
+    monkeypatch.setitem(sys.modules, "botocore.exceptions", dummy_exceptions)
+
+    import ume.audit as audit
+    importlib.reload(audit)
+
+    with caplog.at_level("ERROR"):
+        assert audit._read_lines("s3://bucket/key") == []
+    assert any(
+        "ClientError while reading audit log from s3://bucket/key" in rec.message
+        for rec in caplog.records
+    )
+
+
+def test_s3_write_logs_boto_core_error(monkeypatch, caplog):
+    """BotoCoreError writing to S3 should be logged and raised."""
+    import sys
+    import importlib
+    import types
+
+    class BotoErr(Exception):
+        pass
+
+    class DummyClient:
+        def put_object(self, *args, **kwargs):
+            raise BotoErr("boom")
+
+    dummy_boto3 = types.SimpleNamespace(client=lambda name: DummyClient())
+    dummy_exceptions = types.SimpleNamespace(BotoCoreError=BotoErr, ClientError=Exception)
+    monkeypatch.setitem(sys.modules, "boto3", dummy_boto3)
+    monkeypatch.setitem(sys.modules, "botocore.exceptions", dummy_exceptions)
+
+    import ume.audit as audit
+    importlib.reload(audit)
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(RuntimeError):
+            audit._write_lines("s3://bucket/key", ["x"])
+    assert any(
+        "BotoCoreError while writing audit log to s3://bucket/key" in rec.message
+        for rec in caplog.records
+    )
+
+
+def test_s3_write_logs_client_error(monkeypatch, caplog):
+    """ClientError writing to S3 should be logged and raised."""
+    import sys
+    import importlib
+    import types
+
+    class ClientErr(Exception):
+        pass
+
+    class DummyClient:
+        def put_object(self, *args, **kwargs):
+            raise ClientErr("boom")
+
+    class BotoDummy(Exception):
+        pass
+
+    dummy_boto3 = types.SimpleNamespace(client=lambda name: DummyClient())
+    dummy_exceptions = types.SimpleNamespace(BotoCoreError=BotoDummy, ClientError=ClientErr)
+    monkeypatch.setitem(sys.modules, "boto3", dummy_boto3)
+    monkeypatch.setitem(sys.modules, "botocore.exceptions", dummy_exceptions)
+
+    import ume.audit as audit
+    importlib.reload(audit)
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(RuntimeError):
+            audit._write_lines("s3://bucket/key", ["x"])
+    assert any(
+        "ClientError while writing audit log to s3://bucket/key" in rec.message
+        for rec in caplog.records
     )
 
 
