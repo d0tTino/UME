@@ -30,7 +30,7 @@ def enable_periodic_snapshot(
         try:
             snapshot_graph_to_file(graph, snapshot_path)
         except Exception:  # pragma: no cover - don't raise during shutdown
-            pass
+            logger.exception("Failed to snapshot graph to %s", snapshot_path)
 
     stop_event = threading.Event()
 
