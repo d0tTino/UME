@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from importlib import resources
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
+
+from .graph_adapter import IGraphAdapter
 
 from .graph_schema import GraphSchema, load_default_schema
 
@@ -39,12 +41,26 @@ class GraphSchemaManager:
             raise KeyError(f"Schema version '{version}' not found")
         return self._schemas[version]
 
-    def upgrade_schema(self, old_version: str, new_version: str) -> GraphSchema:
-        """Return the newer schema, placeholder for real migration logic."""
-        # In a real implementation this would perform migrations. Here we simply
-        # return the requested schema if available.
-        old_schema = self.get_schema(old_version)  # noqa: F841 - might be used later
-        return self.get_schema(new_version)
+    def upgrade_schema(
+        self,
+        old_version: str,
+        new_version: str,
+        graph: Optional[IGraphAdapter] = None,
+    ) -> GraphSchema:
+        """Upgrade stored data and return the requested schema."""
+
+        self.get_schema(old_version)  # validate versions exist
+        new_schema = self.get_schema(new_version)
+
+        if graph is not None and old_version == "1.0.0" and new_version == "2.0.0":
+            for src, tgt, label in list(graph.get_all_edges()):
+                if label == "L":
+                    graph.delete_edge(src, tgt, label)
+                    graph.add_edge(src, tgt, "LINKS_TO")
+                elif label == "TO_DELETE":
+                    graph.delete_edge(src, tgt, label)
+
+        return new_schema
 
 
 # Global manager instance used by ume internals

@@ -116,3 +116,25 @@ During initialization, indices on the `edges` table are created to
 speed up lookups. An index `idx_edges_source` is always created on the
 `source` column and an additional `idx_edges_target` index is created on
 the `target` column.
+
+## Schema Upgrades
+
+### Migrating from version 1.0.0 to 2.0.0
+
+UME provides the helper `GraphSchemaManager.upgrade_schema` to update both
+the schema definition and any stored data. When upgrading from `1.0.0` to
+`2.0.0` the following transformations occur:
+
+1. Edges labeled `L` are renamed to `LINKS_TO`.
+2. Edges labeled `TO_DELETE` are removed from the graph.
+
+Applications should instantiate a `GraphSchemaManager` and pass the graph
+instance when calling `upgrade_schema`:
+
+```python
+manager = GraphSchemaManager()
+schema = manager.upgrade_schema("1.0.0", "2.0.0", graph)
+```
+
+After the call, the provided graph will conform to the new schema and the
+returned schema object can be used for validating future events.
