@@ -54,6 +54,20 @@ Add a vector to the in-memory index.
 Search for nearest vectors.
 - **Query parameters**: repeated `vector` values forming the query vector and optional `k` (defaults to 5).
 
+### GET `/vectors/benchmark`
+Run a synthetic benchmark against the vector store.
+- **Query parameters**: `use_gpu` (boolean, default `false`), `num_vectors` (default `1000`), `num_queries` (default `100`).
+
+### GET `/metrics/summary`
+Return a summary of core Prometheus metrics including total request counts and vector index size.
+
+### GET `/dashboard/stats`
+Return basic graph and vector index statistics.
+
+### GET `/dashboard/recent_events`
+Return recent audit log entries, newest first.
+- **Query parameters**: optional `limit` (default `10`).
+
 ## API Documentation
 
 To explore the API interactively, run the FastAPI server and open the Swagger UI:
