@@ -141,10 +141,14 @@ def load_graph_into_existing(
     graph: IGraphAdapter, path: Union[str, pathlib.Path]
 ) -> None:
     """Load snapshot data from ``path`` into an existing graph adapter."""
-    loaded = load_graph_from_file(path)
+    # Load into a temporary graph first so the target is untouched if parsing
+    # fails. Only once loading completes without error do we replace the
+    # contents of ``graph``.
+    temp_graph = load_graph_from_file(path)
+
     graph.clear()
-    for node_id in loaded.get_all_node_ids():
-        attrs = loaded.get_node(node_id) or {}
+    for node_id in temp_graph.get_all_node_ids():
+        attrs = temp_graph.get_node(node_id) or {}
         graph.add_node(node_id, attrs)
-    for src, tgt, lbl in loaded.get_all_edges():
+    for src, tgt, lbl in temp_graph.get_all_edges():
         graph.add_edge(src, tgt, lbl)
