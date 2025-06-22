@@ -18,12 +18,13 @@ class DAGService:
     def start(self) -> None:
         if self._thread:
             return
+        self._executor.reset_stop_flag()
         self._thread = threading.Thread(target=self._executor.run, daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
         if not self._thread:
             return
-        # DAGExecutor lacks a stop mechanism; tasks should exit on their own.
+        self._executor.stop()
         self._thread.join()
         self._thread = None
