@@ -47,6 +47,7 @@ respx = "^0.22.0"
 [tool.poetry.extras]
 vector = ["faiss-gpu"]
 embedding = ["sentence-transformers"]
+policy = ["regopy"]
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
