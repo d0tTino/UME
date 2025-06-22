@@ -33,6 +33,7 @@ from ume import (  # noqa: E402
     IGraphAdapter,
     log_audit_entry,
     get_audit_entries,
+    DEFAULT_SCHEMA_MANAGER,
 )
 from ume.benchmarks import benchmark_vector_store
 
@@ -369,6 +370,34 @@ class UMEPrompt(Cmd):
             print(f"Purged records older than {opts.days} days.")
         else:
             print("Purge not supported for this graph type.")
+
+    def do_register_schema(self, arg):
+        """register_schema <version> <schema_path> <proto_module>
+        Register a new graph schema and protobuf mapping."""
+        try:
+            version, schema_path, proto_mod = shlex.split(arg)
+        except ValueError:
+            print("Usage: register_schema <version> <schema_path> <proto_module>")
+            return
+        try:
+            DEFAULT_SCHEMA_MANAGER.register_schema(version, schema_path, proto_mod)
+            print(f"Schema {version} registered.")
+        except Exception as e:
+            print(f"Error registering schema: {e}")
+
+    def do_migrate_schema(self, arg):
+        """migrate_schema <old_version> <new_version>
+        Migrate stored data to a new schema version."""
+        try:
+            old_ver, new_ver = shlex.split(arg)
+        except ValueError:
+            print("Usage: migrate_schema <old_version> <new_version>")
+            return
+        try:
+            DEFAULT_SCHEMA_MANAGER.upgrade_schema(old_ver, new_ver, self.graph)
+            print(f"Graph migrated from {old_ver} to {new_ver}.")
+        except Exception as e:
+            print(f"Error migrating schema: {e}")
 
     def do_watch(self, arg):
         """watch [path1,path2,...]

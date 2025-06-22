@@ -94,7 +94,9 @@ The :class:`ume.schema_manager.GraphSchemaManager` class discovers all schema
 files shipped with UME and exposes them by version.  `apply_event_to_graph`
 accepts a ``schema_version`` parameter, allowing events to be validated against
 different revisions of the ontology.  This makes it possible to evolve node and
-edge types while maintaining backward compatibility.
+edge types while maintaining backward compatibility.  Each schema version also
+maps to a Protobuf definition, accessible via ``GraphSchemaManager.get_proto``.
+This provides strongly typed representations for serialized graph snapshots.
 
 ```python
 from ume import Event, EventType, apply_event_to_graph, DEFAULT_SCHEMA_MANAGER
@@ -138,3 +140,12 @@ schema = manager.upgrade_schema("1.0.0", "2.0.0", graph)
 
 After the call, the provided graph will conform to the new schema and the
 returned schema object can be used for validating future events.
+
+### CLI Helpers
+
+The ``ume-cli`` tool includes two utilities for working with schema versions:
+
+* ``register_schema <version> <schema_path> <proto_module>`` – load an external
+  YAML schema file and associated Protobuf module at runtime.
+* ``migrate_schema <old_version> <new_version>`` – apply ``upgrade_schema`` to
+  the current graph.
