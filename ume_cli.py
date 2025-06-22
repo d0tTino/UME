@@ -33,6 +33,7 @@ from ume import (  # noqa: E402
     IGraphAdapter,
     log_audit_entry,
     get_audit_entries,
+    DEFAULT_SCHEMA_MANAGER,
 )
 from ume.benchmarks import benchmark_vector_store
 
@@ -405,6 +406,7 @@ class UMEPrompt(Cmd):
             pass
         finally:
             replicator.stop()
+
 
     def do_watch(self, arg):
         """watch [path1,path2,...]

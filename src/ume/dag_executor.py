@@ -27,6 +27,14 @@ class DAGExecutor:
         self.locks: Dict[str, threading.Semaphore] = {
             name: threading.Semaphore(count) for name, count in self.resources.items()
         }
+        self._stop_event = threading.Event()
+
+    def stop(self) -> None:
+        """Request execution to stop."""
+        self._stop_event.set()
+
+    def reset_stop_flag(self) -> None:
+        self._stop_event.clear()
 
     def add_task(self, task: Task) -> None:
         if task.name in self.tasks:
@@ -55,13 +63,16 @@ class DAGExecutor:
             name: set(task.dependencies) for name, task in self.tasks.items()
         }
         results: Dict[str, Any] = {}
-        while remaining:
+        while remaining and not self._stop_event.is_set():
             ready = [name for name, deps in remaining.items() if not deps]
             if not ready:
                 raise ValueError("Cycle detected in task graph")
             threads = []
+            started: list[str] = []
             exceptions: list[Exception] = []
             for name in ready:
+                if self._stop_event.is_set():
+                    break
                 task = self.tasks[name]
                 try:
                     sem = self.locks[task.resource]
@@ -82,13 +93,14 @@ class DAGExecutor:
                 thread = threading.Thread(target=worker)
                 thread.start()
                 threads.append(thread)
+                started.append(name)
             for thread in threads:
                 thread.join()
             if exceptions:
                 raise exceptions[0]
-            for name in ready:
+            for name in started:
                 del remaining[name]
             for deps in remaining.values():
-                for finished in ready:
+                for finished in started:
                     deps.discard(finished)
         return results

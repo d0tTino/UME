@@ -53,6 +53,7 @@ class VectorStore:
         self._flush_interval = flush_interval
         self._flush_thread: threading.Thread | None = None
         self._flush_stop = threading.Event()
+        self.lock = threading.Lock()
 
 
         self.index = faiss.IndexFlatL2(dim)
@@ -115,28 +116,29 @@ class VectorStore:
             raise ValueError(
                 f"Expected vector of dimension {self.dim}, got {arr.shape[1]}"
             )
-        if item_id in self.id_to_idx:
-            idx = self.id_to_idx[item_id]
-            if hasattr(self.index, "vectors"):
-                self.index.vectors[idx] = arr[0]
-            else:
-                try:
-                    cpu_index = faiss.index_gpu_to_cpu(self.index)
-                except AttributeError:
-                    cpu_index = self.index
-                vectors = [cpu_index.reconstruct(i) for i in range(cpu_index.ntotal)]
-                vectors[idx] = arr[0]
-                new_index = faiss.IndexFlatL2(self.dim)
-                new_index.add(np.asarray(vectors))
-                cpu_index = new_index
-                if self.use_gpu and self.gpu_resources is not None:
-                    self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, cpu_index)
+        with self.lock:
+            if item_id in self.id_to_idx:
+                idx = self.id_to_idx[item_id]
+                if hasattr(self.index, "vectors"):
+                    self.index.vectors[idx] = arr[0]
                 else:
-                    self.index = cpu_index
-        else:
-            self.index.add(arr)
-            self.id_to_idx[item_id] = len(self.idx_to_id)
-            self.idx_to_id.append(item_id)
+                    try:
+                        cpu_index = faiss.index_gpu_to_cpu(self.index)
+                    except AttributeError:
+                        cpu_index = self.index
+                    vectors = [cpu_index.reconstruct(i) for i in range(cpu_index.ntotal)]
+                    vectors[idx] = arr[0]
+                    new_index = faiss.IndexFlatL2(self.dim)
+                    new_index.add(np.asarray(vectors))
+                    cpu_index = new_index
+                    if self.use_gpu and self.gpu_resources is not None:
+                        self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, cpu_index)
+                    else:
+                        self.index = cpu_index
+            else:
+                self.index.add(arr)
+                self.id_to_idx[item_id] = len(self.idx_to_id)
+                self.idx_to_id.append(item_id)
         if persist and self.path:
             self.save(self.path)
 
@@ -145,33 +147,35 @@ class VectorStore:
         path = path or self.path
         if path is None:
             return
-        if self.use_gpu and self.gpu_resources is not None:
-            cpu_index = faiss.index_gpu_to_cpu(self.index)
-        else:
-            cpu_index = self.index
-        faiss.write_index(cpu_index, path)
-        with open(path + ".json", "w", encoding="utf-8") as f:
-            json.dump(self.idx_to_id, f)
+        with self.lock:
+            if self.use_gpu and self.gpu_resources is not None:
+                cpu_index = faiss.index_gpu_to_cpu(self.index)
+            else:
+                cpu_index = self.index
+            faiss.write_index(cpu_index, path)
+            with open(path + ".json", "w", encoding="utf-8") as f:
+                json.dump(self.idx_to_id, f)
 
     def load(self, path: str | None = None) -> None:
         """Load a FAISS index and metadata from ``path``."""
         path = path or self.path
         if path is None:
             return
-        self.index = faiss.read_index(path)
-        try:
-            with open(path + ".json", "r", encoding="utf-8") as f:
-                self.idx_to_id = json.load(f)
-        except FileNotFoundError:
-            self.idx_to_id = []
-        self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
-        self.dim = self.index.d
-        if self.use_gpu:
+        with self.lock:
+            self.index = faiss.read_index(path)
             try:
-                self.gpu_resources = faiss.StandardGpuResources()
-                self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
-            except AttributeError:
-                pass
+                with open(path + ".json", "r", encoding="utf-8") as f:
+                    self.idx_to_id = json.load(f)
+            except FileNotFoundError:
+                self.idx_to_id = []
+            self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
+            self.dim = self.index.d
+            if self.use_gpu:
+                try:
+                    self.gpu_resources = faiss.StandardGpuResources()
+                    self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
+                except AttributeError:
+                    pass
 
     def close(self) -> None:
         """Stop background flush and persist index to disk."""
@@ -195,8 +199,9 @@ class VectorStore:
                 raise ValueError(
                     f"Expected vector of dimension {self.dim}, got {arr.shape[1]}"
                 )
-            _, indices = self.index.search(arr, min(k, len(self.idx_to_id)))
-            return [self.idx_to_id[i] for i in indices[0] if i != -1]
+            with self.lock:
+                _, indices = self.index.search(arr, min(k, len(self.idx_to_id)))
+                return [self.idx_to_id[i] for i in indices[0] if i != -1]
         finally:
             if self.query_latency_metric is not None:
                 self.query_latency_metric.observe(time.perf_counter() - start)
