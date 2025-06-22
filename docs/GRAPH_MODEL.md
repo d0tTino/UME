@@ -117,6 +117,14 @@ speed up lookups. An index `idx_edges_source` is always created on the
 `source` column and an additional `idx_edges_target` index is created on
 the `target` column.
 
+## Graph retention
+
+Both the SQLite and Neo4j adapters track a `created_at` timestamp for
+every node and edge. The method `purge_old_records(max_age_seconds)`
+removes graph entries older than the provided age.  Edges are deleted
+first, followed by nodes that fall below the cutoff.  Any relationships
+attached to those nodes are removed automatically.
+
 ## Schema Upgrades
 
 ### Migrating from version 1.0.0 to 2.0.0
