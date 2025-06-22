@@ -47,6 +47,7 @@ else:  # pragma: no cover - optional dependency
 
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
+from .dag_service import DAGService
 
 
 try:  # Optional dependency
@@ -95,4 +96,5 @@ __all__ = [
     "generate_embedding",
     "Task",
     "DAGExecutor",
+    "DAGService",
 ]
