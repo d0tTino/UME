@@ -1,7 +1,9 @@
 # API Reference
 
 This document summarizes the HTTP routes exposed by the UME FastAPI application.
-All endpoints require a `Bearer` token provided in the `Authorization` header.
+Acquire a token from `/token` using the OAuth2 password flow and include it as a
+`Bearer` token in the `Authorization` header. Specify the desired role with the
+`scope` form field when requesting the token.
 
 ## Endpoints
 

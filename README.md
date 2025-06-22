@@ -358,19 +358,25 @@ web interface or the small CLI demo in `frontend/app.py`:
 ```bash
 uvicorn ume.api:app --reload
 # open frontend/index.html in your browser (e.g. with `python -m http.server`)
-poetry run python frontend/app.py --token secret-token query "MATCH (n) RETURN n"
+poetry run python frontend/app.py --username ume --password password query "MATCH (n) RETURN n"
 ```
 You can also search the vector store with either UI:
 
 ```bash
-poetry run python frontend/app.py --token secret-token search "1,0,0" --k 3
+poetry run python frontend/app.py --username ume --password password search "1,0,0" --k 3
 ```
 
 ### API Authentication
 
-All HTTP endpoints exposed by the FastAPI service require a `Bearer` token,
-configured via the `UME_API_TOKEN` environment variable. Include it in the
-`Authorization` header of each request:
+Obtain an OAuth2 token via the `/token` endpoint using the password grant:
+
+```bash
+curl -X POST -d "username=ume&password=password&scope=AnalyticsAgent" \
+  http://localhost:8000/token
+```
+
+Include the returned access token in the `Authorization` header for subsequent
+requests:
 
 ```http
 Authorization: Bearer <token>

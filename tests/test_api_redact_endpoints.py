@@ -19,9 +19,17 @@ def client_and_graph():
 
 def test_redact_node_endpoint(client_and_graph):
     client, g = client_and_graph
+    token = client.post(
+        "/token",
+        data={
+            "username": settings.UME_OAUTH_USERNAME,
+            "password": settings.UME_OAUTH_PASSWORD,
+            "scope": settings.UME_OAUTH_ROLE,
+        },
+    ).json()["access_token"]
     res = client.post(
         "/redact/node/a",
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     assert g.get_node("a") is None
@@ -29,10 +37,18 @@ def test_redact_node_endpoint(client_and_graph):
 
 def test_redact_edge_endpoint(client_and_graph):
     client, g = client_and_graph
+    token = client.post(
+        "/token",
+        data={
+            "username": settings.UME_OAUTH_USERNAME,
+            "password": settings.UME_OAUTH_PASSWORD,
+            "scope": settings.UME_OAUTH_ROLE,
+        },
+    ).json()["access_token"]
     res = client.post(
         "/redact/edge",
         json={"source": "a", "target": "b", "label": "L"},
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     assert g.get_all_edges() == []

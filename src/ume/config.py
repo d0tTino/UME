@@ -41,8 +41,10 @@ class Settings(BaseSettings):
     # Number of messages to batch before calling `Producer.flush()` in the privacy agent
     KAFKA_PRODUCER_BATCH_SIZE: int = 10
 
-    # API
-    UME_API_TOKEN: str = "secret-token"
+    # API authentication (OAuth2 Password grant)
+    UME_OAUTH_USERNAME: str = "ume"
+    UME_OAUTH_PASSWORD: str = "password"
+    UME_OAUTH_ROLE: str = "AnalyticsAgent"
 
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"

@@ -2,6 +2,8 @@ const { useState, useRef } = React;
 
 function App() {
   const [token, setToken] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [vector, setVector] = useState('');
   const [cypher, setCypher] = useState('');
   const [queryResult, setQueryResult] = useState('');
@@ -10,6 +12,17 @@ function App() {
   const [events, setEvents] = useState([]);
   const containerRef = useRef(null);
   const networkRef = useRef(null);
+
+  function login() {
+    fetch('/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ username, password, scope: 'AnalyticsAgent' }),
+    })
+      .then((res) => res.json())
+      .then((data) => setToken(data.access_token))
+      .catch((err) => console.error('Login failed', err));
+  }
 
   function loadGraph() {
     fetch('/analytics/subgraph', {
@@ -98,10 +111,22 @@ function App() {
       'div',
       { style: { padding: '8px', background: '#eee' } },
       React.createElement('input', {
-        placeholder: 'API Token',
-        value: token,
-        onChange: (e) => setToken(e.target.value),
+        placeholder: 'Username',
+        value: username,
+        onChange: (e) => setUsername(e.target.value),
       }),
+      React.createElement('input', {
+        placeholder: 'Password',
+        type: 'password',
+        value: password,
+        onChange: (e) => setPassword(e.target.value),
+        style: { marginLeft: '4px' },
+      }),
+      React.createElement(
+        'button',
+        { onClick: login, style: { marginLeft: '4px' } },
+        'Login'
+      ),
       React.createElement(
         'button',
         { onClick: loadGraph, style: { marginLeft: '4px' } },
