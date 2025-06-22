@@ -9,8 +9,11 @@ UME_CLI_DB=./ume.db
 # Location for audit log entries
 UME_AUDIT_LOG_PATH=./audit.log
 
-# Token used by the API server for authentication
-UME_API_TOKEN=secret-token
+# Credentials used to obtain OAuth tokens
+UME_OAUTH_USERNAME=ume
+UME_OAUTH_PASSWORD=password
+UME_OAUTH_ROLE=AnalyticsAgent
+UME_OAUTH_TTL=3600
 
 # Optional role for the CLI (leave unset for full permissions)
 UME_ROLE=view-only

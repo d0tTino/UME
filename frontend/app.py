@@ -1,8 +1,16 @@
-import argparse
 import json
 
 import httpx
-from httpx import QueryParams
+import argparse
+
+
+def fetch_token(api_url: str, username: str, password: str) -> str:
+    resp = httpx.post(
+        f"{api_url}/token", data={"username": username, "password": password}
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
 
 
 def run_query(api_url: str, token: str, cypher: str) -> None:
@@ -31,14 +39,16 @@ def main() -> None:
     parser.add_argument("command", choices=["query", "search"], help="Operation to perform")
     parser.add_argument("value", help="Cypher query or comma-separated vector")
     parser.add_argument("--api-url", default="http://localhost:8000", help="Base API URL")
-    parser.add_argument("--token", required=True, help="API token")
+    parser.add_argument("--username", required=True, help="API username")
+    parser.add_argument("--password", required=True, help="API password")
     parser.add_argument("--k", type=int, default=5, help="Neighbors to return when searching")
     args = parser.parse_args()
 
+    token = fetch_token(args.api_url, args.username, args.password)
     if args.command == "query":
-        run_query(args.api_url, args.token, args.value)
+        run_query(args.api_url, token, args.value)
     else:
-        search_vectors(args.api_url, args.token, args.value, args.k)
+        search_vectors(args.api_url, token, args.value, args.k)
 
 
 if __name__ == "__main__":
