@@ -64,6 +64,7 @@ class UMEPrompt(Cmd):
                 base_graph, settings.UME_SNAPSHOT_PATH, 24 * 3600
             )
         self.current_timestamp = int(time.time())
+        self.peer_cluster: str | None = None
 
     def _log_audit(self, reason: str) -> None:
         user_id = settings.UME_AGENT_ID
@@ -371,33 +372,41 @@ class UMEPrompt(Cmd):
         else:
             print("Purge not supported for this graph type.")
 
-    def do_register_schema(self, arg):
-        """register_schema <version> <schema_path> <proto_module>
-        Register a new graph schema and protobuf mapping."""
-        try:
-            version, schema_path, proto_mod = shlex.split(arg)
-        except ValueError:
-            print("Usage: register_schema <version> <schema_path> <proto_module>")
+    def do_set_peer(self, arg):
+        """set_peer <bootstrap_servers>
+        Configure a peer cluster for federation."""
+        peer = arg.strip()
+        if not peer:
+            print("Usage: set_peer <bootstrap_servers>")
             return
-        try:
-            DEFAULT_SCHEMA_MANAGER.register_schema(version, schema_path, proto_mod)
-            print(f"Schema {version} registered.")
-        except Exception as e:
-            print(f"Error registering schema: {e}")
+        self.peer_cluster = peer
+        print(f"Peer cluster set to {peer}")
 
-    def do_migrate_schema(self, arg):
-        """migrate_schema <old_version> <new_version>
-        Migrate stored data to a new schema version."""
+    def do_sync(self, arg):
+        """sync [--continuous]
+        Replicate events to the configured peer cluster."""
+        parser = argparse.ArgumentParser(prog="sync")
+        parser.add_argument("--continuous", action="store_true")
         try:
-            old_ver, new_ver = shlex.split(arg)
-        except ValueError:
-            print("Usage: migrate_schema <old_version> <new_version>")
+            opts = parser.parse_args(shlex.split(arg))
+        except SystemExit:
             return
+        if not self.peer_cluster:
+            print("Peer cluster not configured. Use set_peer first.")
+            return
+        from ume.federation import ClusterReplicator
+
+        replicator = ClusterReplicator(settings, self.peer_cluster)
         try:
-            DEFAULT_SCHEMA_MANAGER.upgrade_schema(old_ver, new_ver, self.graph)
-            print(f"Graph migrated from {old_ver} to {new_ver}.")
-        except Exception as e:
-            print(f"Error migrating schema: {e}")
+            if opts.continuous:
+                replicator.run()
+            else:
+                replicator.replicate_once()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            replicator.stop()
+
 
     def do_watch(self, arg):
         """watch [path1,path2,...]

@@ -14,7 +14,8 @@ def test_handler_produces_event(tmp_path) -> None:
 
     handler = DevLogHandler(Producer())
 
-    fake_event = FileModifiedEvent(str(tmp_path / "file.txt"))
+    fake_event = SimpleNamespace(src_path=str(tmp_path / "file.txt"), is_directory=False)
+
     handler.on_modified(fake_event)
 
     assert messages
