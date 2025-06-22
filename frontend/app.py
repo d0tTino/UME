@@ -2,6 +2,7 @@ import argparse
 import json
 
 import httpx
+from httpx import QueryParams
 
 
 def run_query(api_url: str, token: str, cypher: str) -> None:
@@ -14,8 +15,13 @@ def run_query(api_url: str, token: str, cypher: str) -> None:
 def search_vectors(api_url: str, token: str, vector: str, k: int) -> None:
     headers = {"Authorization": f"Bearer {token}"}
     floats = [float(x) for x in vector.split(',') if x.strip()]
-    params = [("vector", str(v)) for v in floats] + [("k", str(k))]
-    resp = httpx.get(f"{api_url}/vectors/search", params=params, headers=headers)
+    params_list: list[tuple[str, str | int | float | bool | None]] = [
+        ("vector", str(v)) for v in floats
+    ] + [("k", k)]
+    params = QueryParams(params_list)
+    resp = httpx.get(
+        f"{api_url}/vectors/search", params=params, headers=headers
+    )
     resp.raise_for_status()
     print(json.dumps(resp.json(), indent=2))
 
