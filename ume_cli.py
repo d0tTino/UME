@@ -63,6 +63,7 @@ class UMEPrompt(Cmd):
                 base_graph, settings.UME_SNAPSHOT_PATH, 24 * 3600
             )
         self.current_timestamp = int(time.time())
+        self.peer_cluster: str | None = None
 
     def _log_audit(self, reason: str) -> None:
         user_id = settings.UME_AGENT_ID
@@ -369,6 +370,41 @@ class UMEPrompt(Cmd):
             print(f"Purged records older than {opts.days} days.")
         else:
             print("Purge not supported for this graph type.")
+
+    def do_set_peer(self, arg):
+        """set_peer <bootstrap_servers>
+        Configure a peer cluster for federation."""
+        peer = arg.strip()
+        if not peer:
+            print("Usage: set_peer <bootstrap_servers>")
+            return
+        self.peer_cluster = peer
+        print(f"Peer cluster set to {peer}")
+
+    def do_sync(self, arg):
+        """sync [--continuous]
+        Replicate events to the configured peer cluster."""
+        parser = argparse.ArgumentParser(prog="sync")
+        parser.add_argument("--continuous", action="store_true")
+        try:
+            opts = parser.parse_args(shlex.split(arg))
+        except SystemExit:
+            return
+        if not self.peer_cluster:
+            print("Peer cluster not configured. Use set_peer first.")
+            return
+        from ume.federation import ClusterReplicator
+
+        replicator = ClusterReplicator(settings, self.peer_cluster)
+        try:
+            if opts.continuous:
+                replicator.run()
+            else:
+                replicator.replicate_once()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            replicator.stop()
 
     def do_watch(self, arg):
         """watch [path1,path2,...]

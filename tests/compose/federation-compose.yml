@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  redpanda1:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    command: ["redpanda","start","--smp","1","--overprovisioned","--node-id","0","--check=false","--kafka-addr","PLAINTEXT://0.0.0.0:9092","--advertise-kafka-addr","PLAINTEXT://redpanda1:9092"]
+    ports:
+      - "0:9092"
+    healthcheck:
+      test: ["CMD-SHELL","rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      retries: 5
+  neo4j1:
+    image: neo4j:5
+    environment:
+      - NEO4J_AUTH=neo4j/test
+    ports:
+      - "0:7687"
+  redpanda2:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    command: ["redpanda","start","--smp","1","--overprovisioned","--node-id","1","--check=false","--kafka-addr","PLAINTEXT://0.0.0.0:9092","--advertise-kafka-addr","PLAINTEXT://redpanda2:9092"]
+    ports:
+      - "0:9092"
+    healthcheck:
+      test: ["CMD-SHELL","rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      retries: 5
+  neo4j2:
+    image: neo4j:5
+    environment:
+      - NEO4J_AUTH=neo4j/test
+    ports:
+      - "0:7687"
