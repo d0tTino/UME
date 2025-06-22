@@ -19,11 +19,16 @@ def test_umeprompt_commands(tmp_path: Path) -> None:
     assert set(prompt.graph.get_all_node_ids()) == {"n1", "n2"}
     assert ("n1", "n2", "L") in prompt.graph.get_all_edges()
 
+    prompt.do_register_schema(
+        "2.0.0 src/ume/schemas/graph_schema_v2.yaml ume.protos.graph_v2_pb2"
+    )
+    prompt.do_migrate_schema("1.0.0 2.0.0")
+
     snap = tmp_path / "snap.json"
     prompt.do_snapshot_save(str(snap))
     assert snap.is_file()
 
-    prompt.do_del_edge("n1 n2 L")
+    prompt.do_del_edge("n1 n2 LINKS_TO")
     assert prompt.graph.get_all_edges() == []
 
     prompt.do_redact_node("n1")

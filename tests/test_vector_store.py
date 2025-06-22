@@ -8,6 +8,7 @@ import pytest
 from pathlib import Path
 from prometheus_client import Gauge, Histogram
 import logging
+import threading
 
 
 def test_vector_store_add_and_query_cpu() -> None:
@@ -245,4 +246,46 @@ def test_configure_vector_store_close_error(monkeypatch: pytest.MonkeyPatch, cap
         "Failed to close existing vector store" in rec.getMessage()
         for rec in caplog.records
     )
+
+
+def test_concurrent_add_and_query() -> None:
+    store = VectorStore(dim=2, use_gpu=False)
+
+    def adder(prefix: str) -> None:
+        for i in range(50):
+            store.add(f"{prefix}-{i}", [float(i), 0.0])
+
+    def querier() -> None:
+        for _ in range(100):
+            store.query([0.0, 0.0])
+
+    threads = [threading.Thread(target=adder, args=(str(i),)) for i in range(5)]
+    threads += [threading.Thread(target=querier) for _ in range(5)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(store.idx_to_id) == 250
+
+
+def test_concurrent_add_with_background_flush(tmp_path: Path) -> None:
+    path = tmp_path / "concurrent.faiss"
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05)
+
+    def worker(i: int) -> None:
+        store.add(f"id-{i}", [float(i), 0.0])
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    time.sleep(0.1)
+    store.stop_background_flush()
+
+    new_store = VectorStore(dim=2, use_gpu=False)
+    new_store.load(str(path))
+    assert len(new_store.idx_to_id) == 20
 

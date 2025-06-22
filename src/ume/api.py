@@ -6,6 +6,7 @@ import os
 import logging
 import time
 from typing import Any, Dict, List, Callable, Awaitable, cast
+import asyncio
 
 from .config import settings
 from .logging_utils import configure_logging
@@ -13,6 +14,7 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
@@ -40,6 +42,44 @@ app = FastAPI(
     version="0.1.0",
     description="HTTP API for the Universal Memory Engine.",
 )
+
+
+class _MemoryRedis:
+    def __init__(self) -> None:
+        self.counts: dict[str, int] = defaultdict(int)
+
+    async def script_load(self, _: str) -> str:
+        return "mem"
+
+    async def evalsha(self, __: str, _k: int, key: str, limit: str, _exp: str) -> int:
+        lim = int(limit)
+        if self.counts[key] >= lim:
+            return 1
+        self.counts[key] += 1
+        return 0
+
+    async def ping(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        self.counts.clear()
+
+
+@app.on_event("startup")
+async def _init_limiter() -> None:
+    """Initialize rate limiting using Redis or an in-memory fallback."""
+    url = os.getenv("UME_RATE_LIMIT_REDIS")
+    if url:
+        try:
+            redis_client = redis.from_url(
+                url, encoding="utf-8", decode_responses=True
+            )
+            await redis_client.ping()
+        except Exception:  # pragma: no cover - connection issue
+            redis_client = _MemoryRedis()
+    else:
+        redis_client = _MemoryRedis()
+    await FastAPILimiter.init(redis_client)
 
 
 
@@ -230,6 +270,30 @@ def api_constrained_path(
         req.since_timestamp,
     )
     return {"path": path}
+
+
+@app.get("/analytics/path/stream")
+async def api_constrained_path_stream(
+    source: str = Query(...),
+    target: str = Query(...),
+    max_depth: int | None = Query(None),
+    edge_label: str | None = Query(None),
+    since_timestamp: int | None = Query(None),
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+    __: None = Depends(RateLimiter(times=2, seconds=1)),
+) -> EventSourceResponse:
+    """Stream path nodes one by one as an SSE feed."""
+
+    async def _gen() -> Any:
+        path = graph.constrained_path(
+            source, target, max_depth, edge_label, since_timestamp
+        )
+        for node in path:
+            yield {"data": node}
+            await asyncio.sleep(0)
+
+    return EventSourceResponse(_gen())
 
 
 @app.post("/analytics/subgraph")

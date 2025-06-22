@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from importlib import resources
+from importlib import import_module, resources
+from types import ModuleType
 from typing import Dict, Iterable, Optional
 
 from .graph_adapter import IGraphAdapter
@@ -15,7 +16,9 @@ class GraphSchemaManager:
 
     def __init__(self) -> None:
         self._schemas: Dict[str, GraphSchema] = {}
+        self._protos: Dict[str, ModuleType] = {}
         self._load_available_schemas()
+        self._load_available_protos()
 
     def _load_available_schemas(self) -> None:
         pkg = resources.files("ume.schemas")
@@ -31,15 +34,35 @@ class GraphSchemaManager:
         default_schema = load_default_schema()
         self._schemas.setdefault(default_schema.version, default_schema)
 
+    def _load_available_protos(self) -> None:
+        try:
+            from ume.protos import PROTO_MAP
+        except Exception:  # pragma: no cover - optional during packaging
+            return
+        self._protos.update(PROTO_MAP)
+
     def available_versions(self) -> Iterable[str]:
         """Return available schema versions."""
         return self._schemas.keys()
+
+    def get_proto(self, version: str) -> ModuleType:
+        """Retrieve Protobuf module for a specific version."""
+        if version not in self._protos:
+            raise KeyError(f"Protobuf schema for version '{version}' not found")
+        return self._protos[version]
 
     def get_schema(self, version: str) -> GraphSchema:
         """Retrieve schema for a specific version."""
         if version not in self._schemas:
             raise KeyError(f"Schema version '{version}' not found")
         return self._schemas[version]
+
+    def register_schema(
+        self, version: str, schema_path: str, proto_module: str
+    ) -> None:
+        """Register a new schema and protobuf mapping."""
+        self._schemas[version] = GraphSchema.load(schema_path)
+        self._protos[version] = import_module(proto_module)
 
     def upgrade_schema(
         self,

@@ -179,3 +179,26 @@ def test_find_connected_nodes_query_filters_redacted_edges_with_label() -> None:
     assert "coalesce(m.redacted, false) = false" in query
     assert "`REL`" in query
     assert params == {"node_id": "n1"}
+
+
+def test_purge_old_records_issues_queries() -> None:
+    results = [
+        DummyResult(None),
+        DummyResult(None),
+    ]
+    driver = DummyDriver(results)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
+
+    graph.purge_old_records(3600)
+
+    delete_edges_query, delete_edges_params = driver.session_obj.calls[0]
+    delete_nodes_query, delete_nodes_params = driver.session_obj.calls[1]
+    assert "r.created_at < $cutoff" in delete_edges_query
+    assert "n.created_at < $cutoff" in delete_nodes_query
+    assert delete_edges_params == delete_nodes_params
+    assert isinstance(delete_edges_params["cutoff"], int)
