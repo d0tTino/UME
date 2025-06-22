@@ -370,6 +370,14 @@ class UMEPrompt(Cmd):
         else:
             print("Purge not supported for this graph type.")
 
+    def do_watch(self, arg):
+        """watch [path1,path2,...]
+        Run the development log watcher on the given comma-separated paths."""
+        paths = [p.strip() for p in arg.split(",")] if arg else settings.WATCH_PATHS
+        from ume.watchers.dev_log_watcher import run_watcher
+
+        run_watcher(paths)
+
     # ----- Utility commands -----
     def do_clear(self, arg):
         """

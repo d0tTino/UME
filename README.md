@@ -661,6 +661,7 @@ display an informational message at startup.
     *   Example: `snapshot_save memory_backup.json`
 *   **`snapshot_load <filepath>`**: Clear the current graph and load state from the given JSON file.
     *   Example: `snapshot_load memory_backup.json`
+*   **`watch [path1,path2]`**: Start the dev-log watcher for the provided paths (defaults to `WATCH_PATHS`).
 *   **`clear`**: Remove all nodes and edges from the current graph.
 *   **`exit`** or **`quit`** or **`EOF`** (Ctrl+D): Quit the UME CLI.
 *   **`help`** or **`?`**: Display help information.
