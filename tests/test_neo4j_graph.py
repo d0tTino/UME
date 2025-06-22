@@ -92,7 +92,9 @@ def test_add_edge_parameterized_label():
     assert label in check_query
     assert label in create_query
     assert check_params == {"src": "s1", "tgt": "t1"}
-    assert create_params == {"src": "s1", "tgt": "t1"}
+    assert create_params["src"] == "s1"
+    assert create_params["tgt"] == "t1"
+    assert isinstance(create_params.get("ts"), int)
 
 
 def test_add_node_duplicate_raises():

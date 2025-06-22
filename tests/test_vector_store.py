@@ -6,7 +6,6 @@ from ume._internal.listeners import register_listener, unregister_listener
 import faiss
 import pytest
 from pathlib import Path
-from typing import Any
 from prometheus_client import Gauge, Histogram
 import logging
 

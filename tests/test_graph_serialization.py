@@ -8,7 +8,6 @@ from ume import (
     PersistentGraph,
     snapshot_graph_to_file,
     load_graph_from_file,
-    load_graph_into_existing,
     SnapshotError,
 )  # Add new imports
 
