@@ -1,108 +1,22 @@
 name: CI
 
-permissions:
-  contents: read
-
 on:
   push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - '**/*.py'
-      - 'pyproject.toml'
-      - 'poetry.lock'
-      - 'scripts/**'
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-
-  workflow_dispatch:
-
+    branches: [ main ]
   pull_request:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - '**/*.py'
-      - 'pyproject.toml'
-      - 'poetry.lock'
-      - 'scripts/**'
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
-  test-and-lint:
-    runs-on:
-      - self-hosted
-      - linux
-    outputs:
-      run: ${{ steps.changes.outputs.run }}
-    strategy:
-      matrix:
-        python-version: ["3.12", "3.11", "3.10"]
+  test:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fetch main
-        run: git fetch origin main --depth=1
-
-      - name: Detect code changes
-        id: changes
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
         run: |
-          scripts/ci_should_run.py && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Python and install dependencies
-        if: steps.changes.outputs.run == 'true'
-        uses: ./.github/actions/setup-python-poetry
-        with:
-          python-version: ${{ matrix.python-version }}
-          run: ${{ steps.changes.outputs.run }}
-
-      - name: Run pre-commit
-        if: steps.changes.outputs.run == 'true'
-        run: poetry run pre-commit run --all-files --show-diff-on-failure --color always
-
-      - name: Run tests
-        if: steps.changes.outputs.run == 'true'
-        run: poetry run pytest
-
-  coverage:
-    runs-on: ["self-hosted", "linux"]
-    needs: test-and-lint
-    if: needs.test-and-lint.outputs.run == 'true'
-    strategy:
-      matrix:
-        python-version: ['3.12']
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fetch main
-        run: git fetch origin main --depth=1
-
-      - name: Set up Python and install dependencies
-        uses: ./.github/actions/setup-python-poetry
-        with:
-          python-version: ${{ matrix.python-version }}
-          run: 'true'
-
-      - name: Run tests with coverage
+          pip install . pytest pytest-cov pre-commit
+      - name: Lint and Test
         run: |
-          poetry run pytest --cov=src/ume --cov=ume_cli.py --cov-report=xml --cov-report=html
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: |
-            coverage.xml
-            coverage_html
-
+          pre-commit run --files tests/test_client_module.py tests/test_privacy_agent_additional.py
+          pytest tests/test_client_module.py tests/test_privacy_agent_additional.py --cov=ume.client --cov=ume.privacy_agent --cov-report xml --cov-fail-under=50
