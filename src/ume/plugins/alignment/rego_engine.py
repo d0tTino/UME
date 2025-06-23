@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from . import AlignmentPlugin, PolicyViolationError, register_plugin
 from ...event import Event
@@ -17,17 +17,30 @@ except Exception:  # pragma: no cover - optional dependency
 class RegoPolicyEngine(AlignmentPlugin):
     """Evaluate events against Rego policies."""
 
-    def __init__(self, policy_dir: str | Path, query: str = "data.ume.allow") -> None:
+    def __init__(
+        self, policy_paths: str | Path | Iterable[str | Path], query: str = "data.ume.allow"
+    ) -> None:
         if RegoInterpreter is None:
             raise ImportError("regopy is required for RegoPolicyEngine")
         self._interp = RegoInterpreter()
         self._query = query
-        self._load_policies(Path(policy_dir))
+        if isinstance(policy_paths, (str, Path)):
+            paths = [Path(policy_paths)]
+        else:
+            paths = [Path(p) for p in policy_paths]
+        for path in paths:
+            self._load_policies(path)
 
-    def _load_policies(self, policy_dir: Path) -> None:
-        for path in policy_dir.glob("*.rego"):
+    def _load_policies(self, path: Path) -> None:
+        if path.is_dir():
+            for file in path.rglob("*.rego"):
+                with file.open("r", encoding="utf-8") as f:
+                    self._interp.add_module(file.as_posix(), f.read())
+        elif path.suffix == ".rego" and path.is_file():
             with path.open("r", encoding="utf-8") as f:
-                self._interp.add_module(path.name, f.read())
+                self._interp.add_module(path.as_posix(), f.read())
+        else:
+            raise FileNotFoundError(f"Policy path {path} not found")
 
     def validate(self, event: Event) -> None:
         data: dict[str, Any] = event.__dict__
