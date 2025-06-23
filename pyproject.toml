@@ -55,6 +55,7 @@ policy = ["regopy"]
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
+benchmark_redpanda = "scripts.benchmark_redpanda:main"
 
 [tool.ruff]
 line-length = 88
