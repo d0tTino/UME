@@ -71,6 +71,8 @@ jobs:
 
       - name: Run tests
         if: steps.changes.outputs.run == 'true'
+        env:
+          UME_DOCKER_TESTS: ${{ steps.changes.outputs.run }}
         run: poetry run pytest
 
   coverage:
@@ -95,6 +97,8 @@ jobs:
           run: 'true'
 
       - name: Run tests with coverage
+        env:
+          UME_DOCKER_TESTS: true
         run: |
           poetry run pytest --cov=src/ume --cov=ume_cli.py --cov-report=xml --cov-report=html
 
