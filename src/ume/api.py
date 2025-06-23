@@ -5,8 +5,14 @@ from __future__ import annotations
 import os
 import logging
 import time
-from typing import Any, Dict, List, Callable, Awaitable, cast
+from typing import Any, Awaitable, Callable, Dict, List, cast
 import asyncio
+from collections import defaultdict
+
+import redis
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
+from sse_starlette.sse import EventSourceResponse
 
 from .config import settings
 from .logging_utils import configure_logging
@@ -71,16 +77,13 @@ async def _init_limiter() -> None:
     url = os.getenv("UME_RATE_LIMIT_REDIS")
     if url:
         try:
-            redis_client = redis.from_url(
-                url, encoding="utf-8", decode_responses=True
-            )
+            redis_client = redis.from_url(url, encoding="utf-8", decode_responses=True)
             await redis_client.ping()
         except Exception:  # pragma: no cover - connection issue
             redis_client = _MemoryRedis()
     else:
         redis_client = _MemoryRedis()
     await FastAPILimiter.init(redis_client)
-
 
 
 @app.middleware("http")
@@ -93,9 +96,7 @@ async def metrics_middleware(
     try:
         response = await call_next(request)
     except Exception as exc:
-        logger.exception(
-            "Unhandled exception while processing request", exc_info=exc
-        )
+        logger.exception("Unhandled exception while processing request", exc_info=exc)
         REQUEST_LATENCY.labels(method=method, path=path).observe(
             time.perf_counter() - start
         )
@@ -104,8 +105,11 @@ async def metrics_middleware(
     REQUEST_LATENCY.labels(method=method, path=path).observe(
         time.perf_counter() - start
     )
-    REQUEST_COUNT.labels(method=method, path=path, status=str(response.status_code)).inc()
+    REQUEST_COUNT.labels(
+        method=method, path=path, status=str(response.status_code)
+    ).inc()
     return response
+
 
 # These can be configured by the embedding application or tests
 app.state.query_engine = cast(Any, None)
@@ -115,7 +119,6 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     logger.warning("Vector store dependencies missing; continuing without one")
     app.state.vector_store = None
-
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
@@ -176,6 +179,11 @@ def get_current_role(token: str = Depends(oauth2_scheme)) -> str:
         TOKENS.pop(token, None)
         raise HTTPException(status_code=401, detail="Token expired")
     return role
+
+
+def require_token(_: str = Depends(oauth2_scheme)) -> None:
+    """Dependency that ensures a bearer token is provided."""
+    return None
 
 
 def get_query_engine() -> Neo4jQueryEngine:
@@ -441,7 +449,7 @@ def api_benchmark_vectors(
 
 
 @app.get("/metrics")
-def metrics_endpoint() -> Response:
+def metrics_endpoint(_: str = Depends(get_current_role)) -> Response:
     """Expose Prometheus metrics."""
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)
