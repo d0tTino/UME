@@ -35,7 +35,7 @@ spacy = "^3.8.7"
 prometheus-client = "^0.22.1"
 watchdog = "^2.3"
 grpcio = "*"
-protobuf = "*"
+
 
 
 
