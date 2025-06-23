@@ -270,6 +270,14 @@ ID `"forbidden"`. Additional policies can be added by dropping new modules in
 `ume/plugins/alignment/` that register themselves using
 `register_plugin()`.
 
+### Rego Policy Engine
+
+If the optional `policy` extras are installed (`poetry install --with policy`),
+UME also loads any `.rego` files found in `ume/plugins/alignment/policies/` and
+evaluates them using the built-in `RegoPolicyEngine`. Policies should define
+`allow` rules under the `ume` package. Events are rejected when the query
+`data.ume.allow` does not evaluate to `true` for the event input.
+
 ## Quickstart
 
 ### Prerequisites
