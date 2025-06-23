@@ -74,3 +74,44 @@ flowchart LR
   search endpoints.
 * The **Self-Improvement** and **Operational Resilience** pillars are primarily
   addressed by automation and infrastructure work described in the roadmap.
+
+## Streaming Pipeline
+
+```mermaid
+graph TD
+    Producer(Event Producer) --> RawEvents[ume-raw-events]
+    RawEvents --> PrivacyAgent
+    PrivacyAgent --> PolicyDSL[Policy DSL]
+    PolicyDSL --> CleanEvents[ume-clean-events]
+    CleanEvents --> Adapter
+    Adapter --> GraphDB[(Graph Storage)]
+    Adapter --> VectorStore[(Vector Store)]
+```
+
+Incoming events are streamed through Redpanda topics. The Privacy Agent applies
+rules defined in the Policy DSL before forwarding sanitized events to the graph
+adapter layer.
+
+## Policy DSL Flow
+
+```mermaid
+flowchart LR
+    PolicyFile[Policy File] --> Parser
+    Parser --> Rules
+    Rules -->|apply| PrivacyAgent
+```
+
+Policies are written in a small domain specific language and loaded at startup
+by the Privacy Agent. They dictate how data should be redacted or blocked.
+
+## gRPC Services
+
+```mermaid
+flowchart TD
+    Client -->|gRPC| APIService
+    APIService --> GraphAdapter
+    APIService --> VectorStore
+```
+
+All core APIs are exposed over gRPC, enabling efficient streaming queries from
+external agents and services.

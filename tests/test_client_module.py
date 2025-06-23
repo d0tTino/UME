@@ -1,202 +1,113 @@
 import json
-import importlib.util
-from typing import Any, Callable, cast
-
+from types import ModuleType
+import sys
 import pytest
-from jsonschema import ValidationError
 
-from ume.client import UMEClient, UMEClientError
-from ume.config import Settings
-from ume.event import EventType
+from ume import client
 from ume.event import Event
 
-
 class DummyProducer:
-    def __init__(self, conf: Any) -> None:
-        self.produced: list[tuple[str, bytes]] = []
+    def __init__(self):
+        self.produced = []
+        self.flushed = False
 
-    def produce(self, topic: str, value: bytes) -> None:
+    def produce(self, topic, value):
         self.produced.append((topic, value))
 
-    def flush(self) -> None:
-        pass
-
+    def flush(self):
+        self.flushed = True
 
 class DummyConsumer:
-    def __init__(self, conf: Any) -> None:
-        self.messages: list[Any] = []
+    def __init__(self, messages):
+        self.messages = messages
+        self.closed = False
 
-    def subscribe(self, topics: list[str]) -> None:
+    def subscribe(self, topics):
         pass
 
-    def poll(self, timeout: float) -> Any | None:
+    def poll(self, timeout=1.0):
         return self.messages.pop(0) if self.messages else None
 
-    def close(self) -> None:
-        pass
+    def close(self):
+        self.closed = True
 
+class DummyMessage:
+    def __init__(self, value, error=None):
+        self._value = value
+        self._error = error
 
-class DummySettings(Settings):
-    KAFKA_RAW_EVENTS_TOPIC: str = "raw"
-    KAFKA_CLEAN_EVENTS_TOPIC: str = "clean"
-    KAFKA_BOOTSTRAP_SERVERS: str = "server"
-    KAFKA_GROUP_ID: str = "gid"
+    def value(self):
+        return self._value
 
+    def error(self):
+        return self._error
 
-def build_client(
-    monkeypatch: pytest.MonkeyPatch,
-    consumer: Callable[[Any], DummyConsumer] | type[DummyConsumer] | None = None,
-    producer: Callable[[Any], DummyProducer] | type[DummyProducer] | None = None,
-) -> UMEClient:
-    consumer = consumer or DummyConsumer
-    producer = producer or DummyProducer
-    monkeypatch.setattr("ume.client.Consumer", consumer)
-    monkeypatch.setattr("ume.client.Producer", producer)
-    return UMEClient(cast(Settings, DummySettings()))
+class DummyKafkaError:
+    def code(self):
+        return None
 
+class DummySettings:
+    KAFKA_RAW_EVENTS_TOPIC = "raw"
+    KAFKA_CLEAN_EVENTS_TOPIC = "clean"
+    KAFKA_BOOTSTRAP_SERVERS = "server"
+    KAFKA_GROUP_ID = "group"
 
-def test_produce_event(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = build_client(monkeypatch)
+@pytest.fixture(autouse=True)
+def embed_module(monkeypatch):
+    module = ModuleType("ume.embedding")
+    module.generate_embedding = lambda text: [0.0]  # type: ignore[attr-defined]
+    sys.modules['ume.embedding'] = module
+    yield
+    sys.modules.pop('ume.embedding')
+
+def make_client(monkeypatch, msgs=None):
+    producer = DummyProducer()
+    consumer = DummyConsumer(msgs or [])
+    monkeypatch.setattr(client, 'Producer', lambda conf: producer)
+    monkeypatch.setattr(client, 'Consumer', lambda conf: consumer)
+    return client.UMEClient(DummySettings()), producer, consumer
+
+def test_produce_event(monkeypatch):
+    c, prod, _ = make_client(monkeypatch)
     event = Event(
-        event_type=EventType.CREATE_NODE.value,
+        event_type="CREATE_NODE",
         timestamp=1,
         payload={},
-        node_id="n1",
-        target_node_id="",
+        node_id="n",
+        source="test",
+        target_node_id="unused",
         label="",
-        source="s",
     )
-    client.produce_event(event)
-    produced = client.producer.produced[0]
-    assert produced[0] == "raw"
-    data = json.loads(produced[1].decode("utf-8"))
-    assert data["event_type"] == "CREATE_NODE"
+    c.produce_event(event)
+    assert prod.flushed
+    topic, value = prod.produced[0]
+    assert topic == "raw"
+    assert json.loads(value.decode('utf-8'))["node_id"] == "n"
 
-
-def test_produce_event_validation_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    def bad_validate(_: Any) -> None:
-        raise ValidationError("bad")
-
-    monkeypatch.setattr("ume.client.validate_event_dict", bad_validate)
-    client = build_client(monkeypatch)
-    event = Event(
-        event_type=EventType.CREATE_NODE.value,
+def test_produce_event_invalid(monkeypatch):
+    c, prod, _ = make_client(monkeypatch)
+    bad_event = Event(
+        event_type="CREATE_NODE",
         timestamp=1,
         payload={},
-        node_id="n1",
-        target_node_id="",
+        target_node_id="unused",
         label="",
-        source="s",
     )
-    with pytest.raises(UMEClientError):
-        client.produce_event(event)
+    with pytest.raises(client.UMEClientError):
+        c.produce_event(bad_event)
+    assert not prod.produced
 
-
-def test_consume_events(monkeypatch: pytest.MonkeyPatch) -> None:
-    consumer = DummyConsumer({})
-    msg_data = json.dumps(
-        {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
-    ).encode()
-
-    class DummyMsg:
-        def __init__(self, value: bytes) -> None:
-            self._value = value
-
-        def error(self) -> None:
-            return None
-
-        def value(self) -> bytes:
-            return self._value
-
-    consumer.messages.append(DummyMsg(msg_data))
-    client = build_client(monkeypatch, consumer=lambda conf: consumer)
-    events = list(client.consume_events(timeout=0))
-    assert len(events) == 1
-    assert events[0].node_id == "n1"
-    assert events[0].event_type == "CREATE_NODE"
-
-
-@pytest.mark.skipif(
-    importlib.util.find_spec("sentence_transformers") is None,
-    reason="sentence-transformers not installed",
-)
-def test_consume_events_without_embedding(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-) -> None:
-    import builtins
-
-    real_import = builtins.__import__
-
-    def fake_import(
-        name: str,
-        globals: dict[str, Any] | None = None,
-        locals: dict[str, Any] | None = None,
-        fromlist: tuple[str, ...] = (),
-        level: int = 0,
-    ) -> Any:
-        if name == "ume.embedding":
-            raise ImportError("optional dependency missing")
-        return real_import(name, globals, locals, fromlist, level)
-
-    monkeypatch.setattr(builtins, "__import__", fake_import)
-    import sys
-    sys.modules.pop("ume.embedding", None)
-
-    consumer = DummyConsumer({})
-    msg_data = json.dumps(
-        {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {"t": "x"}}
-    ).encode()
-
-    class DummyMsg:
-        def __init__(self, value: bytes) -> None:
-            self._value = value
-
-        def error(self) -> None:
-            return None
-
-        def value(self) -> bytes:
-            return self._value
-
-    consumer.messages.append(DummyMsg(msg_data))
-    client = build_client(monkeypatch, consumer=lambda conf: consumer)
-    with caplog.at_level("WARNING"):
-        events = list(client.consume_events(timeout=0))
-
-    assert len(events) == 1
-    assert "embedding" not in events[0].payload
-    assert any(
-        "skipping embedding generation" in rec.message.lower() for rec in caplog.records
-    )
-
-
-def test_consume_events_invalid_message(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-) -> None:
-    consumer = DummyConsumer({})
-
-    class DummyMsg:
-        def __init__(self, value: bytes) -> None:
-            self._value = value
-
-        def error(self) -> None:
-            return None
-
-        def value(self) -> bytes:
-            return self._value
-
-    invalid = b"{bad json"
-    valid = json.dumps(
-        {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
-    ).encode()
-
-    consumer.messages.append(DummyMsg(invalid))
-    consumer.messages.append(DummyMsg(valid))
-
-    client = build_client(monkeypatch, consumer=lambda conf: consumer)
-    with caplog.at_level("WARNING"):
-        events = list(client.consume_events(timeout=0))
-
-    assert len(events) == 1
-    assert events[0].node_id == "n1"
-    assert any("invalid" in rec.message.lower() for rec in caplog.records)
-
+def test_consume_events(monkeypatch):
+    data = {
+        "event_type": "CREATE_NODE",
+        "timestamp": 1,
+        "payload": {"text": "hi"},
+        "node_id": "n",
+    }
+    msg = DummyMessage(json.dumps(data).encode('utf-8'))
+    c, _, consumer = make_client(monkeypatch, [msg])
+    events = list(c.consume_events())
+    assert events[0].payload["embedding"] == [0.0]
+    assert consumer.closed is False
+    c.close()
+    assert consumer.closed

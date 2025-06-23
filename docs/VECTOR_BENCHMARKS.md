@@ -13,6 +13,7 @@ ume> benchmark_vectors --gpu --num-vectors 100000 --num-queries 100
 or via the HTTP API:
 
 ```bash
-curl -H "Authorization: Bearer <token>" \
+TOKEN=$(curl -s -X POST -d "username=ume&password=password" http://localhost:8000/token | jq -r .access_token)
+curl -H "Authorization: Bearer $TOKEN" \
   'http://localhost:8000/vectors/benchmark?use_gpu=true&num_vectors=100000&num_queries=100'
 ```
