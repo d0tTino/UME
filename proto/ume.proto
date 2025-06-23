@@ -1,0 +1,42 @@
+syntax = "proto3";
+package ume;
+
+import "google/protobuf/struct.proto";
+
+message CypherQuery {
+  string cypher = 1;
+}
+
+message CypherResult {
+  repeated google.protobuf.Struct records = 1;
+}
+
+message VectorSearchRequest {
+  repeated float vector = 1;
+  int32 k = 2;
+}
+
+message VectorSearchResponse {
+  repeated string ids = 1;
+}
+
+message AuditRequest {
+  int32 limit = 1;
+}
+
+message AuditEntry {
+  int64 timestamp = 1;
+  string user_id = 2;
+  string reason = 3;
+  string signature = 4;
+}
+
+message AuditResponse {
+  repeated AuditEntry entries = 1;
+}
+
+service UME {
+  rpc RunCypher(CypherQuery) returns (CypherResult);
+  rpc SearchVectors(VectorSearchRequest) returns (VectorSearchResponse);
+  rpc GetAuditEntries(AuditRequest) returns (AuditResponse);
+}
