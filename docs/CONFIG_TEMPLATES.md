@@ -91,3 +91,7 @@ below lists all available variables and their default values.
 | `KAFKA_CLIENT_KEY` | *(unset)* | Client key for Kafka TLS. |
 | `LLM_FERRY_API_URL` | `https://example.com/api` | Endpoint for the `LLMFerry` listener. |
 | `LLM_FERRY_API_KEY` | *(unset)* | API key used by `LLMFerry` for authentication. |
+
+## Benchmark Hardware
+A single-node Dell PowerEdge R7625 with an EPYC 9254P CPU, 256 GB RAM and four NVMe drives was used when validating the Redpanda benchmark.
+
