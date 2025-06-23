@@ -35,11 +35,13 @@ httpx = "*"
 
 
 
+
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
 mypy = "*"
 pytest = "*"
 pytest-cov = "*"
+
 pre-commit = "*"
 poetry-plugin-export = "^1.9.0"
 testcontainers = "*"
@@ -49,11 +51,13 @@ grpcio-tools = "*"
 [tool.poetry.extras]
 vector = ["faiss-gpu"]
 embedding = ["sentence-transformers"]
+policy = ["regopy"]
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
 compile-protos = "scripts.compile_protos:main"
+
 
 [tool.ruff]
 line-length = 88
