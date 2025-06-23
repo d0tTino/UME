@@ -126,6 +126,9 @@ every node and edge. The method `purge_old_records(max_age_seconds)`
 removes graph entries older than the provided age.  Edges are deleted
 first, followed by nodes that fall below the cutoff.  Any relationships
 attached to those nodes are removed automatically.
+The API runs a background task that calls this method once per day. The
+retention window defaults to 30 days and can be configured via the
+`UME_GRAPH_RETENTION_DAYS` environment variable.
 
 ## Schema Upgrades
 
