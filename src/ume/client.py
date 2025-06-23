@@ -58,9 +58,9 @@ class UMEClient:
             "label": event.label,
         }
         try:
+            envelope_dict = {"schema_version": DEFAULT_VERSION, "event": data_dict}
+            validate_event_dict(envelope_dict)
             if self.use_protobuf:
-                envelope_dict = {"schema_version": DEFAULT_VERSION, "event": data_dict}
-                validate_event_dict(envelope_dict)
                 proto_event = self._dict_to_proto(event)
                 proto_envelope = events_pb2.EventEnvelope(  # type: ignore[attr-defined]
                     schema_version=DEFAULT_VERSION,
@@ -68,9 +68,8 @@ class UMEClient:
                 setattr(proto_envelope, proto_event[0], proto_event[1])
                 self.producer.produce(self.produce_topic, proto_envelope.SerializeToString())
             else:
-                validate_event_dict(data_dict)
                 self.producer.produce(
-                    self.produce_topic, json.dumps(data_dict).encode("utf-8")
+                    self.produce_topic, json.dumps(envelope_dict).encode("utf-8")
                 )
             self.producer.flush()
         except ValidationError as e:
@@ -108,10 +107,19 @@ class UMEClient:
                     continue
             else:
                 try:
-                    event_dict = json.loads(msg.value().decode("utf-8"))
+                    data = json.loads(msg.value().decode("utf-8"))
                 except json.JSONDecodeError as exc:  # pragma: no cover - malformed message
                     logger.warning("Invalid JSON received: %s", exc)
                     continue
+                if isinstance(data, dict) and "event" in data and "schema_version" in data:
+                    try:
+                        validate_event_dict(data)
+                    except ValidationError as exc:
+                        logger.warning("Invalid JSON event: %s", exc)
+                        continue
+                    event_dict = data["event"]
+                else:
+                    event_dict = data
             payload = event_dict.get("payload")
             if isinstance(payload, dict):
                 text_values = [v for v in payload.values() if isinstance(v, str)]
