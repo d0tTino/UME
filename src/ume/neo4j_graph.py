@@ -214,6 +214,19 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     f"Edge {edge_tuple} does not exist and cannot be redacted."
                 )
 
+    def purge_old_records(self, max_age_seconds: int) -> None:
+        """Delete nodes and edges older than ``max_age_seconds``."""
+        cutoff = int(time.time()) - max_age_seconds
+        with self._driver.session() as session:
+            session.run(
+                "MATCH ()-[r]->() WHERE r.created_at < $cutoff DELETE r",
+                {"cutoff": cutoff},
+            )
+            session.run(
+                "MATCH (n) WHERE n.created_at < $cutoff DETACH DELETE n",
+                {"cutoff": cutoff},
+            )
+
     # ---- Graph Data Science helpers --------------------------------------------
     def _ensure_gds_enabled(self) -> None:
         if not getattr(self, "_use_gds", False):

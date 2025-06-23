@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 import pytest
 from typing import Any
+import time
 
 from ume.api import app, configure_graph, configure_vector_store
 from ume.vector_store import VectorStore
@@ -20,12 +21,21 @@ def setup_module(_: object) -> None:
     configure_graph(g)
 
 
+def _token(client: TestClient) -> str:
+    res = client.post(
+        "/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    )
+    return res.json()["access_token"]
+
+
 def test_run_query_authorized() -> None:
     client = TestClient(app)
+    token = _token(client)
     res = client.get(
         "/query",
         params={"cypher": "MATCH (n) RETURN n"},
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     assert res.json() == [{"q": "MATCH (n) RETURN n"}]
@@ -39,11 +49,12 @@ def test_run_query_unauthorized() -> None:
 
 def test_shortest_path_endpoint() -> None:
     client = TestClient(app)
+    token = _token(client)
     payload = {"source": "a", "target": "b"}
     res = client.post(
         "/analytics/shortest_path",
         json=payload,
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     assert res.json() == {"path": ["a", "b"]}
@@ -51,11 +62,12 @@ def test_shortest_path_endpoint() -> None:
 
 def test_constrained_path_endpoint() -> None:
     client = TestClient(app)
+    token = _token(client)
     payload = {"source": "a", "target": "b", "max_depth": 1}
     res = client.post(
         "/analytics/path",
         json=payload,
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     assert res.json() == {"path": ["a", "b"]}
@@ -63,11 +75,12 @@ def test_constrained_path_endpoint() -> None:
 
 def test_subgraph_endpoint() -> None:
     client = TestClient(app)
+    token = _token(client)
     payload = {"start": "a", "depth": 1}
     res = client.post(
         "/analytics/subgraph",
         json=payload,
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     assert set(res.json()["nodes"].keys()) == {"a", "b"}
@@ -75,12 +88,28 @@ def test_subgraph_endpoint() -> None:
 
 def test_token_header_whitespace_and_case() -> None:
     client = TestClient(app)
+    token = _token(client)
     res = client.get(
         "/query",
         params={"cypher": "MATCH (n)"},
-        headers={"Authorization": f"  bearer {settings.UME_API_TOKEN}  "},
+        headers={"Authorization": f"  bearer {token}  "},
     )
-    assert res.status_code == 200
+    assert res.status_code == 401
+
+
+def test_expired_token(monkeypatch) -> None:
+    client = TestClient(app)
+    token = _token(client)
+    # force expiry in the past
+    from ume import api as api_mod
+    role, _ = api_mod.TOKENS[token]
+    api_mod.TOKENS[token] = (role, time.time() - 1)
+    res = client.get(
+        "/query",
+        params={"cypher": "MATCH (n)"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 401
 
 
 def test_malformed_authorization_header() -> None:
@@ -91,7 +120,6 @@ def test_malformed_authorization_header() -> None:
         headers={"Authorization": "Token bad"},
     )
     assert res.status_code == 401
-    assert res.json()["detail"] == "Malformed Authorization header"
 
 
 def test_metrics_endpoint() -> None:
@@ -103,14 +131,15 @@ def test_metrics_endpoint() -> None:
 def test_metrics_summary() -> None:
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
+    token = _token(client)
     client.get(
         "/query",
         params={"cypher": "MATCH (n) RETURN n"},
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     res = client.get(
         "/metrics/summary",
-        headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     data = res.json()
@@ -166,7 +195,7 @@ def test_exception_logging_on_query(monkeypatch, caplog) -> None:
         res = client.get(
             "/query",
             params={"cypher": "MATCH (n)"},
-            headers={"Authorization": f"Bearer {settings.UME_API_TOKEN}"},
+            headers={"Authorization": f"Bearer {_token(client)}"},
         )
 
     assert res.status_code == 500

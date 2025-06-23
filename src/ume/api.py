@@ -6,11 +6,15 @@ import os
 import logging
 import time
 from typing import Any, Dict, List, Callable, Awaitable, cast
+import asyncio
 
 from .config import settings
 from .logging_utils import configure_logging
-from fastapi import Depends, FastAPI, HTTPException, Header, Query, Request
+from uuid import uuid4
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
@@ -28,13 +32,54 @@ logger = logging.getLogger(__name__)
 
 configure_logging()
 
-API_TOKEN = settings.UME_API_TOKEN
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# map token -> (role, expiry)
+TOKENS: Dict[str, tuple[str, float]] = {}
 
 app = FastAPI(
     title="UME API",
     version="0.1.0",
     description="HTTP API for the Universal Memory Engine.",
 )
+
+
+class _MemoryRedis:
+    def __init__(self) -> None:
+        self.counts: dict[str, int] = defaultdict(int)
+
+    async def script_load(self, _: str) -> str:
+        return "mem"
+
+    async def evalsha(self, __: str, _k: int, key: str, limit: str, _exp: str) -> int:
+        lim = int(limit)
+        if self.counts[key] >= lim:
+            return 1
+        self.counts[key] += 1
+        return 0
+
+    async def ping(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        self.counts.clear()
+
+
+@app.on_event("startup")
+async def _init_limiter() -> None:
+    """Initialize rate limiting using Redis or an in-memory fallback."""
+    url = os.getenv("UME_RATE_LIMIT_REDIS")
+    if url:
+        try:
+            redis_client = redis.from_url(
+                url, encoding="utf-8", decode_responses=True
+            )
+            await redis_client.ping()
+        except Exception:  # pragma: no cover - connection issue
+            redis_client = _MemoryRedis()
+    else:
+        redis_client = _MemoryRedis()
+    await FastAPILimiter.init(redis_client)
 
 
 
@@ -104,18 +149,33 @@ async def access_denied_handler(
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
-def require_token(authorization: str | None = Header(default=None)) -> None:
-    """Simple token-based auth using the Authorization header."""
-    if authorization is None:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
-    auth_header = authorization.strip()
-    if not auth_header.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Malformed Authorization header")
 
-    token = auth_header[7:].strip()  # len("Bearer ") == 7
-    if token != API_TOKEN:
-        raise HTTPException(status_code=401, detail="Invalid API token")
+@app.post("/token")
+def issue_token(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
+    if (
+        form_data.username == settings.UME_OAUTH_USERNAME
+        and form_data.password == settings.UME_OAUTH_PASSWORD
+    ):
+        token = str(uuid4())
+        expires_at = time.time() + settings.UME_OAUTH_TTL
+        TOKENS[token] = (settings.UME_OAUTH_ROLE, expires_at)
+        return TokenResponse(access_token=token)
+    raise HTTPException(status_code=400, detail="Invalid credentials")
+
+
+def get_current_role(token: str = Depends(oauth2_scheme)) -> str:
+    entry = TOKENS.get(token)
+    if entry is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    role, expiry = entry
+    if expiry < time.time():
+        TOKENS.pop(token, None)
+        raise HTTPException(status_code=401, detail="Token expired")
+    return role
 
 
 def get_query_engine() -> Neo4jQueryEngine:
@@ -125,10 +185,12 @@ def get_query_engine() -> Neo4jQueryEngine:
     return engine
 
 
-def get_graph() -> IGraphAdapter:
+def get_graph(role: str = Depends(get_current_role)) -> IGraphAdapter:
     graph = app.state.graph
     if graph is None:
         raise HTTPException(status_code=500, detail="Graph not configured")
+    if role:
+        return RoleBasedGraphAdapter(graph, role=role)
     return graph
 
 
@@ -142,7 +204,7 @@ def get_vector_store() -> VectorStore:
 @app.get("/query")
 def run_cypher(
     cypher: str,
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     engine: Neo4jQueryEngine = Depends(get_query_engine),
 ) -> List[Dict[str, Any]]:
     """Execute an arbitrary Cypher query and return the result set."""
@@ -187,7 +249,6 @@ class EdgeCreateRequest(BaseModel):
 @app.post("/analytics/shortest_path")
 def api_shortest_path(
     req: ShortestPathRequest,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Return the shortest path between two nodes."""
@@ -198,7 +259,6 @@ def api_shortest_path(
 @app.post("/analytics/path")
 def api_constrained_path(
     req: PathRequest,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Find a path subject to optional depth or label constraints."""
@@ -212,10 +272,33 @@ def api_constrained_path(
     return {"path": path}
 
 
+@app.get("/analytics/path/stream")
+async def api_constrained_path_stream(
+    source: str = Query(...),
+    target: str = Query(...),
+    max_depth: int | None = Query(None),
+    edge_label: str | None = Query(None),
+    since_timestamp: int | None = Query(None),
+    _: None = Depends(require_token),
+    graph: IGraphAdapter = Depends(get_graph),
+    __: None = Depends(RateLimiter(times=2, seconds=1)),
+) -> EventSourceResponse:
+    """Stream path nodes one by one as an SSE feed."""
+
+    async def _gen() -> Any:
+        path = graph.constrained_path(
+            source, target, max_depth, edge_label, since_timestamp
+        )
+        for node in path:
+            yield {"data": node}
+            await asyncio.sleep(0)
+
+    return EventSourceResponse(_gen())
+
+
 @app.post("/analytics/subgraph")
 def api_subgraph(
     req: SubgraphRequest,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Extract a subgraph starting from ``start`` to the given ``depth``."""
@@ -230,7 +313,6 @@ def api_subgraph(
 @app.post("/redact/node/{node_id}")
 def api_redact_node(
     node_id: str,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Redact (delete) a node by its ID."""
@@ -247,7 +329,6 @@ class RedactEdgeRequest(BaseModel):
 @app.post("/redact/edge")
 def api_redact_edge(
     req: RedactEdgeRequest,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Redact an edge between two nodes."""
@@ -258,7 +339,6 @@ def api_redact_edge(
 @app.post("/nodes")
 def api_create_node(
     req: NodeCreateRequest,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Create a node with optional attributes."""
@@ -270,7 +350,6 @@ def api_create_node(
 def api_update_node(
     node_id: str,
     req: NodeUpdateRequest,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Update attributes of an existing node."""
@@ -281,7 +360,6 @@ def api_update_node(
 @app.delete("/nodes/{node_id}")
 def api_delete_node(
     node_id: str,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Remove a node from the graph."""
@@ -292,7 +370,6 @@ def api_delete_node(
 @app.post("/edges")
 def api_create_edge(
     req: EdgeCreateRequest,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Create an edge between two nodes."""
@@ -305,7 +382,6 @@ def api_delete_edge(
     source: str,
     target: str,
     label: str,
-    _: None = Depends(require_token),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Delete an edge identified by source, target and label."""
@@ -321,7 +397,7 @@ class VectorAddRequest(BaseModel):
 @app.post("/vectors")
 def api_add_vector(
     req: VectorAddRequest,
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Store an embedding vector for later similarity search."""
@@ -335,7 +411,7 @@ def api_add_vector(
 def api_search_vectors(
     vector: List[float] = Query(...),
     k: int = 5,
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Find the IDs of the ``k`` nearest vectors to ``vector``."""
@@ -350,7 +426,7 @@ def api_benchmark_vectors(
     use_gpu: bool = Query(False),
     num_vectors: int = 1000,
     num_queries: int = 100,
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Run a synthetic benchmark against the vector store."""
@@ -373,7 +449,7 @@ def metrics_endpoint() -> Response:
 
 @app.get("/metrics/summary")
 def metrics_summary(
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
     """Return a summary of core Prometheus metrics."""
@@ -407,7 +483,7 @@ def metrics_summary(
 
 @app.get("/dashboard/stats")
 def dashboard_stats(
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     graph: IGraphAdapter = Depends(get_graph),
     store: VectorStore = Depends(get_vector_store),
 ) -> Dict[str, Any]:
@@ -425,7 +501,7 @@ def dashboard_stats(
 @app.get("/dashboard/recent_events")
 def dashboard_recent_events(
     limit: int = 10,
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
 ) -> List[Dict[str, Any]]:
     """Return recent audit log entries for the dashboard, newest first."""
     entries = get_audit_entries()

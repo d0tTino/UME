@@ -34,3 +34,14 @@ Use a multi-region database as the backing store for the graph (e.g., CockroachD
 **Cons**
 - Depends on a distributed database with global consistency.
 - Potentially higher operational complexity and cost.
+
+## Kafka Connect Replication
+Use Kafka Connect or MirrorMaker to mirror event topics between clusters.
+
+**Pros**
+- Leverages mature tooling with support for filtering and transforms.
+- Continuous replication keeps graphs up to date with minimal delay.
+
+**Cons**
+- Additional infrastructure to operate and monitor.
+- Requires careful ACL configuration between clusters.

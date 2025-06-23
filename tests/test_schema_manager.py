@@ -1,3 +1,6 @@
+import subprocess
+from pathlib import Path
+import sys
 import pytest
 
 from ume import (
@@ -35,6 +38,32 @@ def test_upgrade_schema_returns_new_version():
     manager = GraphSchemaManager()
     schema = manager.upgrade_schema("1.0.0", "2.0.0")
     assert schema.version == "2.0.0"
+
+
+def test_proto_lookup():
+    manager = GraphSchemaManager()
+    proto = manager.get_proto("1.0.0")
+    assert hasattr(proto, "Graph")
+
+
+def test_register_schema(tmp_path: Path):
+    manager = GraphSchemaManager()
+    schema_file = tmp_path / "s.yaml"
+    schema_file.write_text("version: '3.0.0'")
+    proto_file = tmp_path / "dummy.proto"
+    proto_file.write_text(
+        "syntax = 'proto3'; package x; message Graph {}"
+    )
+    out_dir = tmp_path
+    subprocess.run(
+        ["protoc", f"-I={tmp_path}", f"--python_out={out_dir}", str(proto_file)],
+        check=True,
+    )
+    sys.path.insert(0, str(tmp_path))
+    manager.register_schema(
+        "3.0.0", str(schema_file), f"{proto_file.stem}_pb2"
+    )
+    assert "3.0.0" in manager.available_versions()
 
 
 def test_apply_event_with_schema_version(graph: PersistentGraph):

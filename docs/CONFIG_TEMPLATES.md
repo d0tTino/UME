@@ -80,7 +80,10 @@ below lists all available variables and their default values.
 | `KAFKA_GROUP_ID` | `ume_client_group` | Consumer group for demos and stream processors. |
 | `KAFKA_PRIVACY_AGENT_GROUP_ID` | `ume-privacy-agent-group` | Consumer group for the privacy agent. |
 | `KAFKA_PRODUCER_BATCH_SIZE` | `10` | Number of messages before producer flush. |
-| `UME_API_TOKEN` | `secret-token` | Token required by the API server. |
+| `UME_OAUTH_USERNAME` | `ume` | Username for obtaining OAuth tokens. |
+| `UME_OAUTH_PASSWORD` | `password` | Password for obtaining OAuth tokens. |
+| `UME_OAUTH_ROLE` | `AnalyticsAgent` | Role assigned to issued tokens. |
+| `UME_OAUTH_TTL` | `3600` | Lifetime of issued tokens in seconds. |
 | `UME_LOG_LEVEL` | `INFO` | Logging level used by `configure_logging`. |
 | `UME_LOG_JSON` | `False` | Output logs as JSON lines when set to `True`. |
 | `UME_GRAPH_RETENTION_DAYS` | `30` | Age in days before old nodes/edges are purged. |
