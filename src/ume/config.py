@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     UME_VECTOR_USE_GPU: bool = False
     UME_VECTOR_GPU_MEM_MB: int = 256
 
+    # Neo4j connection for optional gRPC server
+    NEO4J_URI: str = "bolt://localhost:7687"
+    NEO4J_USER: str = "neo4j"
+    NEO4J_PASSWORD: str = "password"
+
     # Kafka/Redpanda
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
     KAFKA_RAW_EVENTS_TOPIC: str = "ume-raw-events"

@@ -1441,7 +1441,8 @@ version = "1.73.0"
 description = "HTTP/2-based RPC framework"
 optional = false
 python-versions = ">=3.9"
-groups = ["dev"]
+groups = ["main", "dev"]
+
 files = [
     {file = "grpcio-1.73.0-cp310-cp310-linux_armv7l.whl", hash = "sha256:d050197eeed50f858ef6c51ab09514856f957dba7b1f7812698260fc9cc417f6"},
     {file = "grpcio-1.73.0-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:ebb8d5f4b0200916fb292a964a4d41210de92aba9007e33d8551d85800ea16cb"},
@@ -5048,4 +5049,5 @@ vector = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "2d071cc9690070d4866d6a8dde648b3574802646ea9cdc790d55a24b8e623a55"
+content-hash = "ae0a002ae3abc70fa664c9a58956389ef6885c6830695d3a82b6c3c69268c72b"
+

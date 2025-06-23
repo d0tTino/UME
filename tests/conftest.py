@@ -4,8 +4,12 @@ import sys
 from pathlib import Path
 import os
 
-from testcontainers.core.container import DockerContainer
-from testcontainers.neo4j import Neo4jContainer
+try:
+    from testcontainers.core.container import DockerContainer
+    from testcontainers.neo4j import Neo4jContainer
+except Exception:  # pragma: no cover - optional dependency may be missing
+    DockerContainer = None
+    Neo4jContainer = None
 
 import pytest
 
@@ -15,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 try:
     from ume.pipeline import privacy_agent as privacy_agent_module
 except Exception:  # pragma: no cover - optional deps may be missing
-    privacy_agent_module = None  # type: ignore[assignment]
+    privacy_agent_module = None
 
 
 @pytest.fixture
@@ -24,7 +28,7 @@ def privacy_agent():
 
 
 def _docker_enabled() -> bool:
-    return bool(os.environ.get("UME_DOCKER_TESTS"))
+    return DockerContainer is not None and bool(os.environ.get("UME_DOCKER_TESTS"))
 
 
 @pytest.fixture(scope="session")
