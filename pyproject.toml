@@ -26,6 +26,7 @@ fastapi = ">=0.110,<1"
 jsonschema = "*"
 faust-streaming = "*"
 faiss-cpu = "*"
+protobuf = "*"
 pydantic = ">=2"
 pydantic-settings = ">=2"
 presidio-analyzer = "^2.2.358"
@@ -43,7 +44,7 @@ ruff = "*"
 mypy = "*"
 pytest = "*"
 pytest-cov = "*"
-httpx = "*"
+
 pre-commit = "*"
 poetry-plugin-export = "^1.9.0"
 testcontainers = "*"
@@ -53,13 +54,17 @@ grpcio-tools = "*"
 [tool.poetry.extras]
 vector = ["faiss-gpu"]
 embedding = ["sentence-transformers"]
+policy = ["regopy"]
 
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
+compile-protos = "scripts.compile_protos:main"
+
 
 [tool.ruff]
 line-length = 88
+exclude = ["src/ume/proto/*"]
 
 [build-system]
 requires = ["poetry-core"]

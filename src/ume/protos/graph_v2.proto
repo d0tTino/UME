@@ -1,0 +1,19 @@
+syntax = "proto3";
+package ume.graph.v2;
+
+message Node {
+  string id = 1;
+  map<string,string> attributes = 2;
+  string type = 3; // new field in v2
+}
+
+message Edge {
+  string source = 1;
+  string target = 2;
+  string label = 3;
+}
+
+message Graph {
+  repeated Node nodes = 1;
+  repeated Edge edges = 2;
+}

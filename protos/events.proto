@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package ume;
+
+import "google/protobuf/struct.proto";
+
+// Envelope carrying schema version and serialized event data.
+message EventEnvelope {
+  string schema_version = 1;
+  oneof payload {
+    CreateNode create_node = 2;
+    UpdateNodeAttributes update_node_attributes = 3;
+    CreateEdge create_edge = 4;
+    DeleteEdge delete_edge = 5;
+  }
+}
+
+message BaseEvent {
+  string event_id = 1;
+  string event_type = 2;
+  int64 timestamp = 3;
+  string source = 4;
+  string node_id = 5;
+  string target_node_id = 6;
+  string label = 7;
+  google.protobuf.Struct payload = 8;
+}
+
+message CreateNode {
+  BaseEvent meta = 1;
+}
+
+message UpdateNodeAttributes {
+  BaseEvent meta = 1;
+}
+
+message CreateEdge {
+  BaseEvent meta = 1;
+}
+
+message DeleteEdge {
+  BaseEvent meta = 1;
+}
