@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from importlib import resources
 from typing import Any, Dict
+from packaging.version import Version, InvalidVersion
 
 from jsonschema import validate, ValidationError
 
@@ -29,7 +30,17 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
 
 
 def validate_event_dict(event_data: Dict[str, Any]) -> None:
-    """Validate a raw event dictionary against its JSON schema."""
+    """Validate a raw event dictionary or envelope against its JSON schema."""
+    if "event" in event_data and "schema_version" in event_data:
+        version = event_data["schema_version"]
+        if not isinstance(version, str):
+            raise ValidationError("schema_version missing or not a string")
+        try:
+            Version(version)
+        except InvalidVersion as exc:
+            raise ValidationError("invalid schema_version") from exc
+        event_data = event_data["event"]
+
     event_type = event_data.get("event_type")
     if not isinstance(event_type, str):
         raise ValidationError("event_type missing or not a string")
