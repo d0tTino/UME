@@ -19,6 +19,11 @@ class AsyncUMEClient:
         response = await self._stub.RunCypher(request)
         return [dict(r) for r in response.records]
 
+    async def stream_cypher(self, cypher: str):
+        request = ume_pb2.CypherQuery(cypher=cypher)
+        async for rec in self._stub.StreamCypher(request):
+            yield dict(rec.record)
+
     async def search_vectors(self, vector: list[float], k: int = 5):
         request = ume_pb2.VectorSearchRequest(vector=vector, k=k)
         response = await self._stub.SearchVectors(request)

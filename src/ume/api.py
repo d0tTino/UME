@@ -14,6 +14,7 @@ from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
 from sse_starlette.sse import EventSourceResponse
 
+
 from .config import settings
 from .logging_utils import configure_logging
 from uuid import uuid4
@@ -24,6 +25,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
+from .retention import start_retention_scheduler
+from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -287,7 +290,7 @@ async def api_constrained_path_stream(
     max_depth: int | None = Query(None),
     edge_label: str | None = Query(None),
     since_timestamp: int | None = Query(None),
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     graph: IGraphAdapter = Depends(get_graph),
     __: None = Depends(RateLimiter(times=2, seconds=1)),
 ) -> EventSourceResponse:
