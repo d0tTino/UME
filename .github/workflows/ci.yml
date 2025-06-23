@@ -12,8 +12,44 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Install dependencies
+          python-version: ${{ matrix.python-version }}
+          run: ${{ steps.changes.outputs.run }}
+
+      - name: Run pre-commit
+        if: steps.changes.outputs.run == 'true'
+        run: poetry run pre-commit run --all-files --show-diff-on-failure --color always
+
+      - name: Run tests
+        if: steps.changes.outputs.run == 'true'
+        env:
+          UME_DOCKER_TESTS: ${{ steps.changes.outputs.run }}
+        run: poetry run pytest
+
+  coverage:
+    runs-on: ["self-hosted", "linux"]
+    needs: test-and-lint
+    if: needs.test-and-lint.outputs.run == 'true'
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fetch main
+        run: git fetch origin main --depth=1
+
+      - name: Set up Python and install dependencies
+        uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: ${{ matrix.python-version }}
+          run: 'true'
+
+      - name: Run tests with coverage
+        env:
+          UME_DOCKER_TESTS: true
+
         run: |
           pip install . pytest pytest-cov pre-commit
       - name: Lint and Test
