@@ -7,6 +7,11 @@ import logging
 import time
 from typing import Any, Dict, List, Callable, Awaitable, cast
 import asyncio
+from collections import defaultdict
+
+import redis.asyncio as redis
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
 
 from .config import settings
 from .logging_utils import configure_logging
@@ -18,6 +23,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
+from .retention import start_retention_scheduler
+from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -80,6 +87,22 @@ async def _init_limiter() -> None:
     else:
         redis_client = _MemoryRedis()
     await FastAPILimiter.init(redis_client)
+
+
+@app.on_event("startup")
+async def _start_retention_task() -> None:
+    """Start periodic purging of old graph records."""
+    graph = app.state.graph
+    if graph is not None:
+        _, stop = start_retention_scheduler(graph)
+        app.state.retention_stop = stop
+
+
+@app.on_event("shutdown")
+def _stop_retention_task() -> None:
+    stop = getattr(app.state, "retention_stop", None)
+    if stop:
+        stop()
 
 
 
@@ -279,7 +302,7 @@ async def api_constrained_path_stream(
     max_depth: int | None = Query(None),
     edge_label: str | None = Query(None),
     since_timestamp: int | None = Query(None),
-    _: None = Depends(require_token),
+    _: str = Depends(get_current_role),
     graph: IGraphAdapter = Depends(get_graph),
     __: None = Depends(RateLimiter(times=2, seconds=1)),
 ) -> EventSourceResponse:
