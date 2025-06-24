@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tume.proto\x12\x03ume\x1a\x1cgoogle/protobuf/struct.proto\"\x1d\n\x0b\x43ypherQuery\x12\x0e\n\x06\x63ypher\x18\x01 \x01(\t\"8\n\x0c\x43ypherResult\x12(\n\x07records\x18\x01 \x03(\x0b\x32\x17.google.protobuf.Struct\"7\n\x0c\x43ypherRecord\x12\'\n\x06record\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"0\n\x13VectorSearchRequest\x12\x0e\n\x06vector\x18\x01 \x03(\x02\x12\t\n\x01k\x18\x02 \x01(\x05\"#\n\x14VectorSearchResponse\x12\x0b\n\x03ids\x18\x01 \x03(\t\"\x1d\n\x0c\x41uditRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\"S\n\nAuditEntry\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x11\n\tsignature\x18\x04 \x01(\t\"1\n\rAuditResponse\x12 \n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x0f.ume.AuditEntry2\xee\x01\n\x03UME\x12\x30\n\tRunCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherResult\x12\x35\n\x0cStreamCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherRecord0\x01\x12\x44\n\rSearchVectors\x12\x18.ume.VectorSearchRequest\x1a\x19.ume.VectorSearchResponse\x12\x38\n\x0fGetAuditEntries\x12\x11.ume.AuditRequest\x1a\x12.ume.AuditResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tume.proto\x12\x03ume\x1a\x1cgoogle/protobuf/struct.proto\"\x1d\n\x0b\x43ypherQuery\x12\x0e\n\x06\x63ypher\x18\x01 \x01(\t\"8\n\x0c\x43ypherResult\x12(\n\x07records\x18\x01 \x03(\x0b\x32\x17.google.protobuf.Struct\"7\n\x0c\x43ypherRecord\x12\'\n\x06record\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"0\n\x13VectorSearchRequest\x12\x0e\n\x06vector\x18\x01 \x03(\x02\x12\t\n\x01k\x18\x02 \x01(\x05\"#\n\x14VectorSearchResponse\x12\x0b\n\x03ids\x18\x01 \x03(\t\"\x1d\n\x0c\x41uditRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\"S\n\nAuditEntry\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x11\n\tsignature\x18\x04 \x01(\t\"1\n\rAuditResponse\x12 \n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x0f.ume.AuditEntry\"#\n\x04Task\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0f\n\x07payload\x18\x02 \x01(\t\">\n\nTaskResult\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x0f\n\x07task_id\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x01\" \n\x0bPlanRequest\x12\x11\n\tobjective\x18\x01 \x01(\t\"(\n\x0cPlanResponse\x12\x18\n\x05tasks\x18\x01 \x03(\x0b\x32\t.ume.Task2\xee\x01\n\x03UME\x12\x30\n\tRunCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherResult\x12\x35\n\x0cStreamCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherRecord0\x01\x12\x44\n\rSearchVectors\x12\x18.ume.VectorSearchRequest\x1a\x19.ume.VectorSearchResponse\x12\x38\n\x0fGetAuditEntries\x12\x11.ume.AuditRequest\x1a\x12.ume.AuditResponse2k\n\x11\x41gentOrchestrator\x12+\n\x04Plan\x12\x10.ume.PlanRequest\x1a\x11.ume.PlanResponse\x12)\n\x0b\x45xecuteTask\x12\t.ume.Task\x1a\x0f.ume.TaskResultb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -48,6 +48,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_AUDITENTRY']._serialized_end=395
   _globals['_AUDITRESPONSE']._serialized_start=397
   _globals['_AUDITRESPONSE']._serialized_end=446
-  _globals['_UME']._serialized_start=449
-  _globals['_UME']._serialized_end=687
+  _globals['_TASK']._serialized_start=448
+  _globals['_TASK']._serialized_end=483
+  _globals['_TASKRESULT']._serialized_start=485
+  _globals['_TASKRESULT']._serialized_end=547
+  _globals['_PLANREQUEST']._serialized_start=549
+  _globals['_PLANREQUEST']._serialized_end=581
+  _globals['_PLANRESPONSE']._serialized_start=583
+  _globals['_PLANRESPONSE']._serialized_end=623
+  _globals['_UME']._serialized_start=626
+  _globals['_UME']._serialized_end=864
+  _globals['_AGENTORCHESTRATOR']._serialized_start=866
+  _globals['_AGENTORCHESTRATOR']._serialized_end=973
 # @@protoc_insertion_point(module_scope)

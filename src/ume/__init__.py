@@ -48,6 +48,7 @@ else:  # pragma: no cover - optional dependency
 
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
+from .agent_orchestrator import AgentOrchestrator, Supervisor, Critic, AgentTask
 from .dag_service import DAGService
 
 
@@ -97,6 +98,10 @@ __all__ = [
     "LLMFerry",
 
     "generate_embedding",
+    "AgentTask",
+    "AgentOrchestrator",
+    "Supervisor",
+    "Critic",
     "Task",
     "DAGExecutor",
     "DAGService",
