@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import typing
 
 import grpc
 from google.protobuf import struct_pb2
@@ -34,6 +35,15 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
             struct.update(rec)
             result.records.append(struct)
         return result
+
+    async def StreamCypher(
+        self, request: ume_pb2.CypherQuery, context: grpc.aio.ServicerContext
+    ) -> typing.AsyncIterator[ume_pb2.CypherRecord]:
+        records = self.query_engine.execute_cypher(request.cypher)
+        for rec in records:
+            struct = struct_pb2.Struct()
+            struct.update(rec)
+            yield ume_pb2.CypherRecord(record=struct)
 
     async def SearchVectors(
         self,

@@ -39,6 +39,11 @@ class UMEStub(object):
                 request_serializer=ume__pb2.CypherQuery.SerializeToString,
                 response_deserializer=ume__pb2.CypherResult.FromString,
                 _registered_method=True)
+        self.StreamCypher = channel.unary_stream(
+                '/ume.UME/StreamCypher',
+                request_serializer=ume__pb2.CypherQuery.SerializeToString,
+                response_deserializer=ume__pb2.CypherRecord.FromString,
+                _registered_method=True)
         self.SearchVectors = channel.unary_unary(
                 '/ume.UME/SearchVectors',
                 request_serializer=ume__pb2.VectorSearchRequest.SerializeToString,
@@ -56,6 +61,13 @@ class UMEServicer(object):
 
     def RunCypher(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StreamCypher(self, request, context):
+        """Server streaming variant of RunCypher
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -79,6 +91,11 @@ def add_UMEServicer_to_server(servicer, server):
                     servicer.RunCypher,
                     request_deserializer=ume__pb2.CypherQuery.FromString,
                     response_serializer=ume__pb2.CypherResult.SerializeToString,
+            ),
+            'StreamCypher': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamCypher,
+                    request_deserializer=ume__pb2.CypherQuery.FromString,
+                    response_serializer=ume__pb2.CypherRecord.SerializeToString,
             ),
             'SearchVectors': grpc.unary_unary_rpc_method_handler(
                     servicer.SearchVectors,
@@ -118,6 +135,33 @@ class UME(object):
             '/ume.UME/RunCypher',
             ume__pb2.CypherQuery.SerializeToString,
             ume__pb2.CypherResult.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StreamCypher(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/ume.UME/StreamCypher',
+            ume__pb2.CypherQuery.SerializeToString,
+            ume__pb2.CypherRecord.FromString,
             options,
             channel_credentials,
             insecure,

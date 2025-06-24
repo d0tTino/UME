@@ -65,7 +65,7 @@ def make_client(monkeypatch, msgs=None):
     consumer = DummyConsumer(msgs or [])
     monkeypatch.setattr(client, 'Producer', lambda conf: producer)
     monkeypatch.setattr(client, 'Consumer', lambda conf: consumer)
-    return client.UMEClient(DummySettings()), producer, consumer
+    return client.UMEClient(DummySettings()), producer, consumer  # type: ignore[arg-type]
 
 def test_produce_event(monkeypatch):
     c, prod, _ = make_client(monkeypatch)
@@ -82,7 +82,9 @@ def test_produce_event(monkeypatch):
     assert prod.flushed
     topic, value = prod.produced[0]
     assert topic == "raw"
-    assert json.loads(value.decode('utf-8'))["node_id"] == "n"
+    data = json.loads(value.decode("utf-8"))
+    assert data["schema_version"] == client.DEFAULT_VERSION
+    assert data["event"]["node_id"] == "n"
 
 def test_produce_event_invalid(monkeypatch):
     c, prod, _ = make_client(monkeypatch)
@@ -99,12 +101,15 @@ def test_produce_event_invalid(monkeypatch):
 
 def test_consume_events(monkeypatch):
     data = {
-        "event_type": "CREATE_NODE",
-        "timestamp": 1,
-        "payload": {"text": "hi"},
-        "node_id": "n",
+        "schema_version": client.DEFAULT_VERSION,
+        "event": {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "payload": {"text": "hi"},
+            "node_id": "n",
+        },
     }
-    msg = DummyMessage(json.dumps(data).encode('utf-8'))
+    msg = DummyMessage(json.dumps(data).encode("utf-8"))
     c, _, consumer = make_client(monkeypatch, [msg])
     events = list(c.consume_events())
     assert events[0].payload["embedding"] == [0.0]

@@ -24,7 +24,10 @@ def setup_module(_: object) -> None:
 def _token(client: TestClient) -> str:
     res = client.post(
         "/token",
-        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+        data={
+            "username": settings.UME_OAUTH_USERNAME,
+            "password": settings.UME_OAUTH_PASSWORD,
+        },
     )
     return res.json()["access_token"]
 
@@ -102,6 +105,7 @@ def test_expired_token(monkeypatch) -> None:
     token = _token(client)
     # force expiry in the past
     from ume import api as api_mod
+
     role, _ = api_mod.TOKENS[token]
     api_mod.TOKENS[token] = (role, time.time() - 1)
     res = client.get(
@@ -122,9 +126,10 @@ def test_malformed_authorization_header() -> None:
     assert res.status_code == 401
 
 
-def test_metrics_endpoint() -> None:
+def test_metrics_endpoint_authorized() -> None:
     client = TestClient(app)
-    res = client.get("/metrics")
+    token = _token(client)
+    res = client.get("/metrics", headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 200
 
 
@@ -166,6 +171,10 @@ def test_metrics_summary() -> None:
             None,
             [("vector", 0.0), ("vector", 0.0)],
         ),
+        ("get", "/metrics", None, None),
+        ("get", "/metrics/summary", None, None),
+        ("get", "/dashboard/stats", None, None),
+        ("get", "/dashboard/recent_events", None, None),
     ],
 )
 def test_endpoints_require_authentication(

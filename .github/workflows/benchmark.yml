@@ -1,0 +1,29 @@
+name: Weekly Benchmark
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: '3.12'
+          run: 'true'
+      - name: Run benchmark
+        run: |
+          python -m ume.benchmarks --runs 3 --csv results.csv
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: results.csv
+      - name: Post to dashboard
+        env:
+          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+        run: |
+          curl -X POST -F "file=@results.csv" "$DASHBOARD_URL"

@@ -11,6 +11,11 @@ message CypherResult {
   repeated google.protobuf.Struct records = 1;
 }
 
+// Individual record for streaming Cypher results
+message CypherRecord {
+  google.protobuf.Struct record = 1;
+}
+
 message VectorSearchRequest {
   repeated float vector = 1;
   int32 k = 2;
@@ -37,6 +42,8 @@ message AuditResponse {
 
 service UME {
   rpc RunCypher(CypherQuery) returns (CypherResult);
+  // Server streaming variant of RunCypher
+  rpc StreamCypher(CypherQuery) returns (stream CypherRecord);
   rpc SearchVectors(VectorSearchRequest) returns (VectorSearchResponse);
   rpc GetAuditEntries(AuditRequest) returns (AuditResponse);
 }
