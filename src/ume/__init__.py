@@ -52,12 +52,21 @@ from .dag_executor import DAGExecutor, Task
 from .agent_orchestrator import AgentOrchestrator, Supervisor, Critic, AgentTask
 from .dag_service import DAGService
 from .reliability import score_text, filter_low_confidence
+from ._internal.listeners import register_listener
 
 try:  # Optional dependency
     from .embedding import generate_embedding
+    _EMBEDDINGS_AVAILABLE = True
 except Exception:  # pragma: no cover - optional import
+    _EMBEDDINGS_AVAILABLE = False
+
     def generate_embedding(text: str) -> list[float]:
         raise ImportError("sentence-transformers is required to generate embeddings")
+
+if _EMBEDDINGS_AVAILABLE:
+    from .ontology import OntologyListener, configure_ontology_graph
+    _ONTOLOGY_LISTENER = OntologyListener()
+    register_listener(_ONTOLOGY_LISTENER)
 
 
 __all__ = [
@@ -105,6 +114,8 @@ __all__ = [
     "filter_low_confidence",
 
     "generate_embedding",
+    "configure_ontology_graph",
+    "OntologyListener",
     "AgentTask",
     "AgentOrchestrator",
     "Supervisor",
