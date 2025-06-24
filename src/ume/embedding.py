@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import List, TYPE_CHECKING, cast
 
 from .config import settings
@@ -14,7 +13,7 @@ _MODEL_CACHE: dict[str, "SentenceTransformer"] = {}
 def _get_model() -> "SentenceTransformer":
     from sentence_transformers import SentenceTransformer
 
-    model_name = os.getenv("UME_EMBED_MODEL", settings.UME_EMBED_MODEL)
+    model_name = settings.UME_EMBED_MODEL
     model = _MODEL_CACHE.get(model_name)
     if model is None:
         model = SentenceTransformer(model_name)

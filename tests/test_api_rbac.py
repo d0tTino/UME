@@ -1,4 +1,5 @@
 import os
+from typing import cast
 from fastapi.testclient import TestClient
 
 from ume.api import app, configure_graph
@@ -6,7 +7,7 @@ from ume import MockGraph, RoleBasedGraphAdapter
 from ume.config import settings
 
 
-def build_graph():
+def build_graph() -> MockGraph:
     g = MockGraph()
     g.add_node("a", {})
     g.add_node("b", {})
@@ -23,15 +24,17 @@ def _token(client: TestClient) -> str:
         "/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     )
-    return res.json()["access_token"]
+    return cast(str, res.json()["access_token"])
 
 
 def teardown_function(_):
     os.environ.pop("UME_API_ROLE", None)
+    settings.UME_API_ROLE = None
 
 
 def test_shortest_path_allowed_for_analytics_agent():
     os.environ["UME_API_ROLE"] = "AnalyticsAgent"
+    settings.UME_API_ROLE = "AnalyticsAgent"
     configure_graph(build_graph())
 
     client = TestClient(app)
@@ -48,6 +51,7 @@ def test_shortest_path_allowed_for_analytics_agent():
 
 def test_path_and_subgraph_allowed_for_analytics_agent():
     os.environ["UME_API_ROLE"] = "AnalyticsAgent"
+    settings.UME_API_ROLE = "AnalyticsAgent"
     configure_graph(build_graph())
 
     client = TestClient(app)
@@ -73,6 +77,7 @@ def test_path_and_subgraph_allowed_for_analytics_agent():
 
 def test_shortest_path_forbidden_for_other_roles():
     os.environ["UME_API_ROLE"] = "AutoDev"
+    settings.UME_API_ROLE = "AutoDev"
     configure_graph(build_graph())
 
     client = TestClient(app)

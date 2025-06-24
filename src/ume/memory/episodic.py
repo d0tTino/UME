@@ -16,6 +16,8 @@ class EpisodicMemory:
     def __init__(self, db_path: str | None = None, log_path: str | None = None) -> None:
         self.graph = PersistentGraph(db_path or ":memory:")
         self.log_path = Path(log_path) if log_path else None
+        if self.log_path and self.log_path.is_file():
+            self.load_events(str(self.log_path))
 
     def record_event(self, event: Event) -> None:
         """Apply ``event`` to the graph and append it to the log if configured."""

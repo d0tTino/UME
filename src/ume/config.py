@@ -18,6 +18,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_CLI_DB: str = "ume_graph.db"
     UME_ROLE: str | None = None
     UME_API_ROLE: str | None = None
+    UME_RATE_LIMIT_REDIS: str | None = None
     UME_LOG_LEVEL: str = "INFO"
     UME_LOG_JSON: bool = False
     UME_GRAPH_RETENTION_DAYS: int = 30
@@ -55,7 +56,6 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_OAUTH_TTL: int = 3600
 
     # API token used for test clients and simple auth
-    UME_API_TOKEN: str = "secret-token"
 
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
@@ -63,6 +63,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     # Angel Bridge
     ANGEL_BRIDGE_LOOKBACK_HOURS: int = 24
+
 
     def model_post_init(self, __context: Any) -> None:  # noqa: D401
         """Validate settings after initialization."""

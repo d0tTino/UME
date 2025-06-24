@@ -47,6 +47,16 @@ Create an edge.
 ### DELETE `/edges/{source}/{target}/{label}`
 Delete an edge.
 
+### GET `/policies`
+List available Rego policy files.
+
+### POST `/policies/{path}`
+Upload a policy file.
+- **Form field**: `file` – the `.rego` file contents.
+
+### DELETE `/policies/{path}`
+Delete a policy file.
+
 ### POST `/vectors`
 Add a vector to the in-memory index.
 - **Body**: `{"id": "id", "vector": [0.0, ...]}`

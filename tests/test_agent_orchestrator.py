@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import asyncio
 import importlib.util
 from pathlib import Path
 import sys
@@ -29,12 +30,12 @@ def test_execution_cycle() -> None:
     orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic())
     executed: list[str] = []
 
-    def worker(task: AgentTask) -> str:
+    async def worker(task: AgentTask) -> str:
         executed.append(task.payload)
         return "ok"
 
     orchestrator.register_worker("worker1", worker)
-    scores = orchestrator.execute_objective("test-task")
+    scores = asyncio.run(orchestrator.execute_objective("test-task"))
 
     assert executed == ["test-task"]
-    assert scores == {"worker1:t1": 1.0}
+    assert scores == {"worker1": 1.0}
