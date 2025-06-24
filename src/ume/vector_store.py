@@ -71,6 +71,24 @@ class VectorStore:
         if flush_interval is not None:  # pragma: no cover - requires threading
             self.start_background_flush(flush_interval)
 
+    def __enter__(self) -> "VectorStore":  # pragma: no cover - simple passthrough
+        """Return ``self`` to support use as a context manager."""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: Any | None,
+    ) -> None:  # pragma: no cover - context manager
+        self.close()
+
+    def __del__(self) -> None:  # pragma: no cover - destructor cleanup
+        try:
+            self.stop_background_flush()
+        except Exception:
+            logger.exception("Failed to stop background flush on delete")
+
     def start_background_flush(self, interval: float) -> None:  # pragma: no cover - background thread
         """Periodically persist the index to disk in a background thread."""
         if self._flush_thread and self._flush_thread.is_alive():
