@@ -4,6 +4,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import time
+import types
+import pytest
 
 from ume.persistent_graph import PersistentGraph
 import sqlite3

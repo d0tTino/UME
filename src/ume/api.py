@@ -21,6 +21,7 @@ from .logging_utils import configure_logging
 from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
+from sse_starlette.sse import EventSourceResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest

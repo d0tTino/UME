@@ -57,6 +57,7 @@ Redpanda’s sizing guide shows a single such node easily handles 100 MB/s susta
 | --- | ------- | ------ | ------------ | ------------------- | ------ |
 | **1-A** | LLM Ferry bot | Productive Collaboration | Developers | Chats mirrored and logged | M |
 | **1-B** | Tweet-bot + UI | Productive Collaboration | Community manager | Posts appear in digest | M |
+| | _Implemented via_ `ume.TweetBot` | | | | |
 | **1-C** | Document Guru | Productive Collaboration | Docs team | Reformatted files awaiting approval | M |
 | **1-D** | Dashboard | Productive Collaboration | All users | Web UI shows digests | M |
 | **1-E** | OPA “work-mode” toggle | Ethical Safeguards | Ops team | Rego rule blocks distractions during meetings | S |
