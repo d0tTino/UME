@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tume.proto\x12\x03ume\x1a\x1cgoogle/protobuf/struct.proto\"\x1d\n\x0b\x43ypherQuery\x12\x0e\n\x06\x63ypher\x18\x01 \x01(\t\"8\n\x0c\x43ypherResult\x12(\n\x07records\x18\x01 \x03(\x0b\x32\x17.google.protobuf.Struct\"0\n\x13VectorSearchRequest\x12\x0e\n\x06vector\x18\x01 \x03(\x02\x12\t\n\x01k\x18\x02 \x01(\x05\"#\n\x14VectorSearchResponse\x12\x0b\n\x03ids\x18\x01 \x03(\t\"\x1d\n\x0c\x41uditRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\"S\n\nAuditEntry\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x11\n\tsignature\x18\x04 \x01(\t\"1\n\rAuditResponse\x12 \n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x0f.ume.AuditEntry2\xb7\x01\n\x03UME\x12\x30\n\tRunCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherResult\x12\x44\n\rSearchVectors\x12\x18.ume.VectorSearchRequest\x1a\x19.ume.VectorSearchResponse\x12\x38\n\x0fGetAuditEntries\x12\x11.ume.AuditRequest\x1a\x12.ume.AuditResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tume.proto\x12\x03ume\x1a\x1cgoogle/protobuf/struct.proto\"\x1d\n\x0b\x43ypherQuery\x12\x0e\n\x06\x63ypher\x18\x01 \x01(\t\"8\n\x0c\x43ypherResult\x12(\n\x07records\x18\x01 \x03(\x0b\x32\x17.google.protobuf.Struct\"7\n\x0c\x43ypherRecord\x12\'\n\x06record\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"0\n\x13VectorSearchRequest\x12\x0e\n\x06vector\x18\x01 \x03(\x02\x12\t\n\x01k\x18\x02 \x01(\x05\"#\n\x14VectorSearchResponse\x12\x0b\n\x03ids\x18\x01 \x03(\t\"\x1d\n\x0c\x41uditRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\"S\n\nAuditEntry\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x11\n\tsignature\x18\x04 \x01(\t\"1\n\rAuditResponse\x12 \n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x0f.ume.AuditEntry2\xee\x01\n\x03UME\x12\x30\n\tRunCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherResult\x12\x35\n\x0cStreamCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherRecord0\x01\x12\x44\n\rSearchVectors\x12\x18.ume.VectorSearchRequest\x1a\x19.ume.VectorSearchResponse\x12\x38\n\x0fGetAuditEntries\x12\x11.ume.AuditRequest\x1a\x12.ume.AuditResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,16 +36,18 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CYPHERQUERY']._serialized_end=77
   _globals['_CYPHERRESULT']._serialized_start=79
   _globals['_CYPHERRESULT']._serialized_end=135
-  _globals['_VECTORSEARCHREQUEST']._serialized_start=137
-  _globals['_VECTORSEARCHREQUEST']._serialized_end=185
-  _globals['_VECTORSEARCHRESPONSE']._serialized_start=187
-  _globals['_VECTORSEARCHRESPONSE']._serialized_end=222
-  _globals['_AUDITREQUEST']._serialized_start=224
-  _globals['_AUDITREQUEST']._serialized_end=253
-  _globals['_AUDITENTRY']._serialized_start=255
-  _globals['_AUDITENTRY']._serialized_end=338
-  _globals['_AUDITRESPONSE']._serialized_start=340
-  _globals['_AUDITRESPONSE']._serialized_end=389
-  _globals['_UME']._serialized_start=392
-  _globals['_UME']._serialized_end=575
+  _globals['_CYPHERRECORD']._serialized_start=137
+  _globals['_CYPHERRECORD']._serialized_end=192
+  _globals['_VECTORSEARCHREQUEST']._serialized_start=194
+  _globals['_VECTORSEARCHREQUEST']._serialized_end=242
+  _globals['_VECTORSEARCHRESPONSE']._serialized_start=244
+  _globals['_VECTORSEARCHRESPONSE']._serialized_end=279
+  _globals['_AUDITREQUEST']._serialized_start=281
+  _globals['_AUDITREQUEST']._serialized_end=310
+  _globals['_AUDITENTRY']._serialized_start=312
+  _globals['_AUDITENTRY']._serialized_end=395
+  _globals['_AUDITRESPONSE']._serialized_start=397
+  _globals['_AUDITRESPONSE']._serialized_end=446
+  _globals['_UME']._serialized_start=449
+  _globals['_UME']._serialized_end=687
 # @@protoc_insertion_point(module_scope)

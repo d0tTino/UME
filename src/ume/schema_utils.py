@@ -10,7 +10,23 @@ from packaging.version import Version, InvalidVersion
 from jsonschema import validate, ValidationError
 
 
+_ENVELOPE_SCHEMA: Dict[str, Any] | None = None
+
+
 _SCHEMAS: Dict[str, Dict[str, Any]] = {}
+
+
+def _load_envelope_schema() -> Dict[str, Any]:
+    """Load JSON schema for the event envelope."""
+    global _ENVELOPE_SCHEMA
+    if _ENVELOPE_SCHEMA is None:
+        with (
+            resources.files("ume.schemas")
+            .joinpath("event_envelope.schema.json")
+            .open("r", encoding="utf-8")
+        ) as f:
+            _ENVELOPE_SCHEMA = json.load(f)
+    return _ENVELOPE_SCHEMA
 
 
 def _load_schema(event_type: str) -> Dict[str, Any]:
@@ -32,9 +48,8 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
 def validate_event_dict(event_data: Dict[str, Any]) -> None:
     """Validate a raw event dictionary or envelope against its JSON schema."""
     if "event" in event_data and "schema_version" in event_data:
+        validate(instance=event_data, schema=_load_envelope_schema())
         version = event_data["schema_version"]
-        if not isinstance(version, str):
-            raise ValidationError("schema_version missing or not a string")
         try:
             Version(version)
         except InvalidVersion as exc:

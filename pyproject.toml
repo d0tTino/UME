@@ -36,8 +36,6 @@ prometheus-client = "^0.22.1"
 watchdog = "^2.3"
 grpcio = "*"
 
-
-
 [tool.poetry.group.dev.dependencies]
 ruff = "*"
 mypy = "*"
