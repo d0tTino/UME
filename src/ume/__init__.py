@@ -51,7 +51,6 @@ from .dag_executor import DAGExecutor, Task
 from .dag_service import DAGService
 from .reliability import score_text, filter_low_confidence
 
-
 try:  # Optional dependency
     from .embedding import generate_embedding
 except Exception:  # pragma: no cover - optional import
@@ -101,6 +100,8 @@ __all__ = [
     "filter_low_confidence",
 
     "generate_embedding",
+    "build_concept_graph",
+    "update_concept_graph_for_node",
     "Task",
     "DAGExecutor",
     "DAGService",
