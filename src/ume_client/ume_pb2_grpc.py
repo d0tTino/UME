@@ -225,3 +225,118 @@ class UME(object):
             timeout,
             metadata,
             _registered_method=True)
+
+
+class AgentOrchestratorStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.Plan = channel.unary_unary(
+                '/ume.AgentOrchestrator/Plan',
+                request_serializer=ume__pb2.PlanRequest.SerializeToString,
+                response_deserializer=ume__pb2.PlanResponse.FromString,
+                _registered_method=True)
+        self.ExecuteTask = channel.unary_unary(
+                '/ume.AgentOrchestrator/ExecuteTask',
+                request_serializer=ume__pb2.Task.SerializeToString,
+                response_deserializer=ume__pb2.TaskResult.FromString,
+                _registered_method=True)
+
+
+class AgentOrchestratorServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def Plan(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ExecuteTask(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_AgentOrchestratorServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'Plan': grpc.unary_unary_rpc_method_handler(
+                    servicer.Plan,
+                    request_deserializer=ume__pb2.PlanRequest.FromString,
+                    response_serializer=ume__pb2.PlanResponse.SerializeToString,
+            ),
+            'ExecuteTask': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExecuteTask,
+                    request_deserializer=ume__pb2.Task.FromString,
+                    response_serializer=ume__pb2.TaskResult.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'ume.AgentOrchestrator', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('ume.AgentOrchestrator', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class AgentOrchestrator(object):
+    """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def Plan(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.AgentOrchestrator/Plan',
+            ume__pb2.PlanRequest.SerializeToString,
+            ume__pb2.PlanResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ExecuteTask(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.AgentOrchestrator/ExecuteTask',
+            ume__pb2.Task.SerializeToString,
+            ume__pb2.TaskResult.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)

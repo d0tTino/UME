@@ -8,83 +8,30 @@ services:
       - --smp 1
       - --overprovisioned
       - --node-id 0
-      - --kafka-addr PLAINTEXT://0.0.0.0:29092,SSL://0.0.0.0:29093,OUTSIDE://localhost:9092
-      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,SSL://redpanda:29093,OUTSIDE://localhost:9092
-      - --pandaproxy-addr PLAINTEXT://0.0.0.0:28082,OUTSIDE://localhost:8082
-      - --advertise-pandaproxy-addr PLAINTEXT://redpanda:28082,OUTSIDE://localhost:8082
-      - --tls-key /etc/redpanda/certs/redpanda.key
-      - --tls-cert /etc/redpanda/certs/redpanda.crt
-      - --tls-truststore-file /etc/redpanda/certs/ca.crt
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://localhost:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
     volumes:
       - ./certs:/etc/redpanda/certs:ro
     ports:
-      - "9092:9092"    # Kafka API (PLAINTEXT)
-      - "29093:29093"  # Kafka API over TLS
-      - "8082:8082"    # Pandaproxy HTTP API (includes schema registry if not separated)
+      - "9092:9092"
     healthcheck:
       test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  schema-registry: # Redpanda Console includes a schema registry
+  schema-registry:
     image: redpandadata/console:latest
-    # Explicitly set entrypoint to ensure console runs, not another utility in the image.
-    # This might not be strictly necessary depending on the image's default CMD.
-    # entrypoint: /app/console
     depends_on:
       redpanda:
         condition: service_healthy
     ports:
-      - "8081:8080" # Console runs on 8080 by default, exposing it as 8081
+      - "8081:8080"
     environment:
-      CONFIG_FILEPATH: /tmp/config.yaml # Default path used by the console
-    # The console image uses a config file for its settings.
-    # We can mount a config file or set environment variables that achieve the same.
-    # For simplicity here, we'll rely on environment variables that the console supports
-    # for Kafka and Schema Registry configuration.
-    # KAFKA_BROKERS, KAFKA_SCHEMAREGISTRY_ENABLED, KAFKA_SCHEMAREGISTRY_URIS are common.
-    # However, redpandadata/console might use specific ones like REDPANDA_BROKERS.
-    # Consulting the redpandadata/console documentation for precise env vars is best.
-    # Assuming it picks up Redpanda from the default Kafka port if not specified,
-    # or requires explicit configuration like this:
-      KAFKA_BROKERS: "redpanda:29092" # Internal Kafka address
-      # KAFKA_SCHEMAREGISTRY_LISTENERS: http://0.0.0.0:8081 # This is for standalone SR
-      # For Redpanda Console, schema registry is often part of its features
-      # and might be enabled by default or via a flag if it connects to Redpanda.
-      # The Pandaproxy on Redpanda itself also provides a schema registry on its port (8082 by default).
-      # If we want the schema registry on 8081 via Redpanda Console,
-      # we need to ensure Console is configured for it.
-      # Often, just connecting Console to Redpanda (KAFKA_BROKERS) is enough,
-      # and Console's own UI/API is on its port (8080, mapped to 8081).
-      # The schema registry functionality would then be accessed via Console's API,
-      # or potentially proxied if Console does that.
-
-      # Let's assume for now that Pandaproxy's schema registry on redpanda:8082 is the one we want
-      # to be 'fronted' or made available. If a separate SR process on 8081 is needed
-      # via the console image, the setup is more complex.
-
-      # The user request was "schema-registry (Redpanda’s optional container) on localhost:8081"
-      # Redpanda's documentation usually points to using the Pandaproxy port for schema registry
-      # or using the Redpanda Console which has an embedded schema registry.
-      # If the goal is just *a* schema registry, Pandaproxy on 8082 (mapped from Redpanda) is simplest.
-      # If it *must* be on 8081 and be the one from Redpanda Console, then the console config needs to be correct.
-
-      # Given the "Redpanda's optional container" phrasing, this likely means the console.
-      # The console listens on 8080 by default.
-      # We map 8081 to 8080 of the console container.
-      # The console then needs to be told where redpanda is.
-      REDPANDA_ADMIN_HOSTS: "redpanda:9644" # For admin operations if needed by console
-      REDPANDA_BROKERS: "redpanda:29092" # For Kafka operations
-
-      # To ensure the schema registry part of the console is used and accessible
-      # via the console's port 8080 (mapped to 8081):
-      # This is usually enabled by default when console connects to Redpanda.
-      # No specific env var like `CONSOLE_SCHEMAREGISTRY_ENABLE` is standard.
-      # It's part of the Kafka configuration for the console.
-      # Let's simplify and assume Redpanda Console exposes schema registry functionality
-      # through its main port (8080 internally) when connected to Redpanda.
-      # The user's requirement "schema-registry ... on localhost:8081" will be met by this.
+      REDPANDA_ADMIN_HOSTS: "redpanda:9644"
+      REDPANDA_BROKERS: "redpanda:29092"
+      CONFIG_FILEPATH: /tmp/config.yaml
 
   privacy-agent:
     build:
@@ -93,3 +40,10 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f privacy_agent.py || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
