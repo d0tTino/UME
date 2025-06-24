@@ -52,7 +52,7 @@ jobs:
 
         run: |
           pip install . pytest pytest-cov pre-commit
-      - name: Lint and Test
+        - name: Lint and Test
         run: |
           pre-commit run --files tests/test_client_module.py tests/test_privacy_agent_additional.py
-          pytest tests/test_client_module.py tests/test_privacy_agent_additional.py --cov=ume.client --cov=ume.privacy_agent --cov-report xml --cov-fail-under=50
+          pytest --cov=ume --cov-report xml --cov-fail-under=80

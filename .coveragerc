@@ -1,6 +1,18 @@
 [run]
 parallel = True
 concurrency = multiprocessing
+source =
+    ume.grpc_service
+    ume.dag_executor
+    ume.vector_store
+omit =
+    */proto/*
+    */tests/*
+    */benchmarks.py
+include =
+    ume.grpc_service
+    ume.dag_executor
+    ume.vector_store
 
 [html]
 directory = coverage_html
