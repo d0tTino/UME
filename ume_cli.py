@@ -33,9 +33,9 @@ from ume import (  # noqa: E402
     IGraphAdapter,
     log_audit_entry,
     get_audit_entries,
-    DEFAULT_SCHEMA_MANAGER,
 )
 from ume.benchmarks import benchmark_vector_store
+from ume.federation import MirrorMakerDriver
 
 # It's good practice to handle potential import errors if ume is not installed,
 # though for poetry run python ume_cli.py this should be fine.
@@ -65,6 +65,8 @@ class UMEPrompt(Cmd):
             )
         self.current_timestamp = int(time.time())
         self.peer_cluster: str | None = None
+        self.mm_topics: list[str] = [settings.KAFKA_RAW_EVENTS_TOPIC]
+        self.mm_driver: "MirrorMakerDriver | None" = None
 
     def _log_audit(self, reason: str) -> None:
         user_id = settings.UME_AGENT_ID
@@ -406,6 +408,49 @@ class UMEPrompt(Cmd):
             pass
         finally:
             replicator.stop()
+
+    def do_mirror_topics(self, arg):
+        """mirror_topics <topic1,topic2,...>
+        Set topics for MirrorMaker replication."""
+        if not arg.strip():
+            print("Usage: mirror_topics <topic1,topic2,...>")
+            return
+        self.mm_topics = [t.strip() for t in arg.split(",")]
+        print(f"MirrorMaker topics set to {', '.join(self.mm_topics)}")
+
+    def do_mirror_start(self, arg):
+        """mirror_start
+        Start MirrorMaker replication to the configured peer."""
+        peer = self.peer_cluster
+        if not peer:
+            print("Peer cluster not configured. Use set_peer first.")
+            return
+        if self.mm_driver:
+            print("MirrorMaker already running.")
+            return
+        self.mm_driver = MirrorMakerDriver(
+            settings.KAFKA_BOOTSTRAP_SERVERS, peer, self.mm_topics
+        )
+        self.mm_driver.start()
+        print("MirrorMaker started.")
+
+    def do_mirror_status(self, arg):
+        """mirror_status
+        Display MirrorMaker replication status."""
+        if not self.mm_driver:
+            print("MirrorMaker not running.")
+        else:
+            print(f"MirrorMaker {self.mm_driver.status()}")
+
+    def do_mirror_stop(self, arg):
+        """mirror_stop
+        Stop MirrorMaker replication."""
+        if self.mm_driver:
+            self.mm_driver.stop()
+            self.mm_driver = None
+            print("MirrorMaker stopped.")
+        else:
+            print("MirrorMaker not running.")
 
 
     def do_watch(self, arg):

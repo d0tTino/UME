@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import subprocess
+import tempfile
 import time
+from pathlib import Path
 from threading import Event as ThreadEvent
 
 from confluent_kafka import Consumer, Producer
@@ -60,3 +64,70 @@ class ClusterReplicator:
         self._stop.set()
         self._producer.flush()
         self._consumer.close()
+
+
+class MirrorMakerDriver:
+    """Run Kafka MirrorMaker 2 to replicate topics between clusters."""
+
+    def __init__(self, source_bootstrap: str, target_bootstrap: str, topics: list[str]):
+        self.source_bootstrap = source_bootstrap
+        self.target_bootstrap = target_bootstrap
+        self.topics = topics
+        self._process: subprocess.Popen[bytes] | None = None
+        self._config_file: Path | None = None
+
+    def _create_config(self) -> Path:
+        tmp = tempfile.NamedTemporaryFile("w", delete=False, suffix=".properties")
+        tmp.write(
+            """clusters = source,target
+source.bootstrap.servers={source}
+target.bootstrap.servers={target}
+
+source->target.enabled=true
+source->target.topics={topics}
+""".format(
+                source=self.source_bootstrap,
+                target=self.target_bootstrap,
+                topics=",".join(self.topics),
+            )
+        )
+        tmp.close()
+        return Path(tmp.name)
+
+    def start(self) -> None:
+        if self._process:
+            raise RuntimeError("MirrorMaker already running")
+        self._config_file = self._create_config()
+        cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "--network=host",
+            "-v",
+            f"{self._config_file}:/etc/mm2.properties:ro",
+            "confluentinc/cp-kafka:latest",
+            "bash",
+            "-c",
+            "connect-mirror-maker /etc/mm2.properties",
+        ]
+        self._process = subprocess.Popen(cmd)
+
+    def stop(self) -> None:
+        if self._process:
+            self._process.terminate()
+            try:
+                self._process.wait(timeout=10)
+            except Exception:
+                self._process.kill()
+        if self._config_file and self._config_file.exists():
+            os.unlink(self._config_file)
+        self._process = None
+        self._config_file = None
+
+    def status(self) -> str:
+        if not self._process:
+            return "stopped"
+        return "running" if self._process.poll() is None else "stopped"
+
+
+__all__ = ["ClusterReplicator", "MirrorMakerDriver"]
