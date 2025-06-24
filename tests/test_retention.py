@@ -1,11 +1,17 @@
 # mypy: ignore-errors
+from __future__ import annotations
+
 import sys
 from pathlib import Path
+import pytest
+import types
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import time
 import types
 import pytest
+
 
 from ume.persistent_graph import PersistentGraph
 import sqlite3

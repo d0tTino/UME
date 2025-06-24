@@ -67,6 +67,7 @@ below lists all available variables and their default values.
 | `UME_CLI_DB` | `ume_graph.db` | Database path used by the CLI. |
 | `UME_ROLE` | *(unset)* | Optional role for the CLI. |
 | `UME_API_ROLE` | *(unset)* | Optional role applied by the API server. |
+| `UME_RATE_LIMIT_REDIS` | *(unset)* | Redis URL for API rate limiting. |
 | `UME_VECTOR_DIM` | `1536` | Dimension of embedding vectors. |
 | `UME_VECTOR_INDEX` | `vectors.faiss` | FAISS index file path. |
 | `UME_VECTOR_USE_GPU` | `False` | Whether to build the index on a GPU. |
@@ -94,6 +95,9 @@ below lists all available variables and their default values.
 | `KAFKA_CLIENT_KEY` | *(unset)* | Client key for Kafka TLS. |
 | `LLM_FERRY_API_URL` | `https://example.com/api` | Endpoint for the `LLMFerry` listener. |
 | `LLM_FERRY_API_KEY` | *(unset)* | API key used by `LLMFerry` for authentication. |
+
+`UME_RATE_LIMIT_REDIS` may be set to a Redis URL to enable shared rate limiting.
+If unset, the API uses an in-memory limiter.
 
 ## Benchmark Hardware
 A single-node Dell PowerEdge R7625 with an EPYC 9254P CPU, 256 GB RAM and four NVMe drives was used when validating the Redpanda benchmark.

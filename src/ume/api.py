@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import logging
 import time
 from typing import Any, Awaitable, Callable, Dict, List, cast, AsyncGenerator
 import asyncio
 from collections import defaultdict
+from pathlib import Path
 
 try:  # pragma: no cover - optional dependency
     import redis
@@ -19,10 +19,11 @@ from fastapi_limiter.depends import RateLimiter
 from .config import settings
 from .logging_utils import configure_logging
 from uuid import uuid4
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import JSONResponse, Response
 from sse_starlette.sse import EventSourceResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sse_starlette.sse import EventSourceResponse
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -38,6 +39,9 @@ from .query import Neo4jQueryEngine
 from . import VectorStore, create_default_store
 
 logger = logging.getLogger(__name__)
+
+# Directory containing local Rego policy files
+POLICY_DIR = Path(__file__).with_name("plugins") / "alignment" / "policies"
 
 
 configure_logging()
@@ -78,7 +82,7 @@ class _MemoryRedis:
 @app.on_event("startup")
 async def _init_limiter() -> None:
     """Initialize rate limiting using Redis or an in-memory fallback."""
-    url = os.getenv("UME_RATE_LIMIT_REDIS")
+    url = settings.UME_RATE_LIMIT_REDIS
     if url and redis:
         try:
             redis_client = redis.from_url(
@@ -136,8 +140,8 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
-    """Set ``app.state.graph`` applying RBAC if ``UME_API_ROLE`` is defined."""
-    role = os.getenv("UME_API_ROLE")
+    """Set ``app.state.graph`` applying RBAC if ``settings.UME_API_ROLE`` is defined."""
+    role = settings.UME_API_ROLE
     if role:
         graph = RoleBasedGraphAdapter(graph, role=role)
     app.state.graph = graph
@@ -273,6 +277,14 @@ class EdgeCreateRequest(BaseModel):
     label: str
 
 
+class TweetCreateRequest(BaseModel):
+    text: str
+
+
+class DocumentUploadRequest(BaseModel):
+    content: str
+
+
 @app.post("/analytics/shortest_path")
 def api_shortest_path(
     req: ShortestPathRequest,
@@ -290,15 +302,16 @@ def api_constrained_path(
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Find a path subject to optional depth or label constraints."""
-    path = graph.constrained_path(
+    raw_path = graph.constrained_path(
         req.source,
         req.target,
         req.max_depth,
         req.edge_label,
         req.since_timestamp,
     )
-    filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
-    return {"path": filtered}
+    threshold = settings.UME_RELIABILITY_THRESHOLD
+    nodes = filter_low_confidence(raw_path, threshold)
+    return {"path": nodes}
 
 
 @app.get("/analytics/path/stream")
@@ -338,12 +351,15 @@ def api_subgraph(
         req.edge_label,
         req.since_timestamp,
     )
-    nodes = filter_low_confidence(
-        sg.get("nodes", {}).keys(), settings.UME_RELIABILITY_THRESHOLD
-    )
+    threshold = settings.UME_RELIABILITY_THRESHOLD
+    nodes = filter_low_confidence(sg.get("nodes", {}).keys(), threshold)
     sg["nodes"] = {n: sg["nodes"][n] for n in nodes}
     sg["edges"] = [
-        e for e in sg.get("edges", []) if e[0] in sg["nodes"] and e[1] in sg["nodes"]
+        e
+        for e in sg.get("edges", [])
+        if len(filter_low_confidence(e, threshold)) == len(e)
+        and e[0] in sg["nodes"]
+        and e[1] in sg["nodes"]
     ]
     return sg
 
@@ -425,6 +441,28 @@ def api_delete_edge(
     """Delete an edge identified by source, target and label."""
     graph.delete_edge(source, target, label)
     return {"status": "ok"}
+
+
+@app.post("/tweets")
+def api_post_tweet(
+    req: TweetCreateRequest,
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    """Create a tweet node used by the Tweet-bot."""
+    node_id = f"tweet:{uuid4()}"
+    graph.add_node(node_id, {"text": req.text, "timestamp": int(time.time())})
+    return {"id": node_id}
+
+
+@app.post("/documents")
+def api_upload_document(
+    req: DocumentUploadRequest,
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    """Upload a document for Document Guru."""
+    node_id = f"doc:{uuid4()}"
+    graph.add_node(node_id, {"content": req.content, "timestamp": int(time.time())})
+    return {"id": node_id}
 
 
 class VectorAddRequest(BaseModel):
@@ -544,3 +582,43 @@ def dashboard_recent_events(
     """Return recent audit log entries for the dashboard, newest first."""
     entries = get_audit_entries()
     return list(reversed(entries[-limit:]))
+
+
+def _resolve_policy_path(name: str) -> Path:
+    """Return absolute path for policy ``name`` within :data:`POLICY_DIR`."""
+    path = Path(name)
+    if path.is_absolute() or ".." in path.parts:
+        raise HTTPException(status_code=400, detail="Invalid policy path")
+    return (POLICY_DIR / path).resolve()
+
+
+@app.get("/policies")
+def list_policies(_: str = Depends(get_current_role)) -> Dict[str, List[str]]:
+    """List all available Rego policy files."""
+    files = [p.relative_to(POLICY_DIR).as_posix() for p in POLICY_DIR.rglob("*.rego")]
+    return {"policies": sorted(files)}
+
+
+@app.post("/policies/{name:path}")
+async def add_policy(
+    name: str,
+    file: UploadFile = File(...),
+    _: str = Depends(get_current_role),
+) -> Dict[str, str]:
+    """Upload a Rego policy file under ``name``."""
+    path = _resolve_policy_path(name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = await file.read()
+    with path.open("wb") as f:
+        f.write(content)
+    return {"status": "ok"}
+
+
+@app.delete("/policies/{name:path}")
+def delete_policy(name: str, _: str = Depends(get_current_role)) -> Dict[str, str]:
+    """Delete a policy file."""
+    path = _resolve_policy_path(name)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Policy not found")
+    path.unlink()
+    return {"status": "ok"}

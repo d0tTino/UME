@@ -175,9 +175,27 @@ For current plans and eventual detailed documentation on the UME graph model, pl
 *   [**Graph Model Documentation (docs/GRAPH_MODEL.md)**](docs/GRAPH_MODEL.md)
 *   [**Graph Listener Guide (docs/GRAPH_LISTENERS.md)**](docs/GRAPH_LISTENERS.md)
 *   [**LLM Ferry (docs/LLM_FERRY.md)**](docs/LLM_FERRY.md)
+*   [**Angel Bridge (docs/ANGEL_BRIDGE.md)**](docs/ANGEL_BRIDGE.md)
 *   [**API Reference (docs/API_REFERENCE.md)**](docs/API_REFERENCE.md)
 *   [**Self-Hosted Runner Setup (docs/SELF_HOSTED_RUNNER.md)**](docs/SELF_HOSTED_RUNNER.md)
 *   [**DAGExecutor Guide (docs/DAG_EXECUTOR.md)**](docs/DAG_EXECUTOR.md)
+*   [**Resource Scheduler**](#resource-scheduler)
+
+## Resource Scheduler
+
+The `ResourceScheduler` provides a lightweight way to limit how many tasks
+can use a given resource simultaneously. Concurrency counts are configured per
+resource.
+
+```python
+from ume import ResourceScheduler, ScheduledTask
+
+sched = ResourceScheduler(resources={"gpu": 1})
+sched.run([
+    ScheduledTask(func=lambda: do_gpu_work(), resource="gpu"),
+    ScheduledTask(func=lambda: more_gpu_work(), resource="gpu"),
+])
+```
 
 This documentation will be updated as the graph processing components of UME are developed.
 
