@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import logging
 import time
 from typing import Any, Awaitable, Callable, Dict, List, cast, AsyncGenerator
@@ -21,6 +20,7 @@ from .logging_utils import configure_logging
 from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
+from sse_starlette.sse import EventSourceResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -77,7 +77,7 @@ class _MemoryRedis:
 @app.on_event("startup")
 async def _init_limiter() -> None:
     """Initialize rate limiting using Redis or an in-memory fallback."""
-    url = os.getenv("UME_RATE_LIMIT_REDIS")
+    url = settings.UME_RATE_LIMIT_REDIS
     if url and redis:
         try:
             redis_client = redis.from_url(
@@ -135,8 +135,8 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
-    """Set ``app.state.graph`` applying RBAC if ``UME_API_ROLE`` is defined."""
-    role = os.getenv("UME_API_ROLE")
+    """Set ``app.state.graph`` applying RBAC if ``settings.UME_API_ROLE`` is defined."""
+    role = settings.UME_API_ROLE
     if role:
         graph = RoleBasedGraphAdapter(graph, role=role)
     app.state.graph = graph

@@ -18,13 +18,13 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_CLI_DB: str = "ume_graph.db"
     UME_ROLE: str | None = None
     UME_API_ROLE: str | None = None
+    UME_RATE_LIMIT_REDIS: str | None = None
     UME_LOG_LEVEL: str = "INFO"
     UME_LOG_JSON: bool = False
     UME_GRAPH_RETENTION_DAYS: int = 30
     UME_RELIABILITY_THRESHOLD: float = 0.5
     WATCH_PATHS: list[str] = ["."]
     DAG_RESOURCES: dict[str, int] = {"cpu": 1, "io": 1}
-    UME_RELIABILITY_THRESHOLD: float = 0.5
 
     # Vector store
     UME_VECTOR_DIM: int = 1536
@@ -54,7 +54,6 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_OAUTH_PASSWORD: str = "password"
     UME_OAUTH_ROLE: str = "AnalyticsAgent"
     UME_OAUTH_TTL: int = 3600
-    UME_API_TOKEN: str = "test-token"
 
     # API token used for test clients and simple auth
     UME_API_TOKEN: str = "secret-token"
