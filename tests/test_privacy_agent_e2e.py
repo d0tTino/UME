@@ -22,6 +22,7 @@ class DockerSettings(Settings):
     KAFKA_QUARANTINE_TOPIC: str = "ume_e2e_quarantine"
     KAFKA_GROUP_ID: str = "ume_e2e_group"
     KAFKA_PRIVACY_AGENT_GROUP_ID: str = "ume_e2e_agent"
+    UME_AUDIT_SIGNING_KEY: str = "test-key"
 
     def __init__(self, broker: str) -> None:
         super().__init__()

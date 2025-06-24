@@ -61,7 +61,7 @@ below lists all available variables and their default values.
 | `UME_DB_PATH` | `ume_graph.db` | SQLite database used by `PersistentGraph`. |
 | `UME_SNAPSHOT_PATH` | `ume_snapshot.json` | Path to graph snapshot file. |
 | `UME_AUDIT_LOG_PATH` | `audit.log` | Location of the audit log. |
-| `UME_AUDIT_SIGNING_KEY` | `default-key` | Key used to sign audit entries. |
+| `UME_AUDIT_SIGNING_KEY` | `default-key` | Key used to sign audit entries. Must be changed from the default or startup will fail. |
 | `UME_AGENT_ID` | `SYSTEM` | Identifier recorded in audit logs. |
 | `UME_EMBED_MODEL` | `all-MiniLM-L6-v2` | SentenceTransformer model name. |
 | `UME_CLI_DB` | `ume_graph.db` | Database path used by the CLI. |

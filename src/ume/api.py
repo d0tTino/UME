@@ -9,7 +9,10 @@ from typing import Any, Awaitable, Callable, Dict, List, cast
 import asyncio
 from collections import defaultdict
 
-import redis
+try:  # pragma: no cover - optional dependency
+    import redis
+except Exception:  # pragma: no cover - allow tests without redis installed
+    redis = None
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
 from sse_starlette.sse import EventSourceResponse
@@ -25,8 +28,6 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
-from .retention import start_retention_scheduler
-from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -78,9 +79,11 @@ class _MemoryRedis:
 async def _init_limiter() -> None:
     """Initialize rate limiting using Redis or an in-memory fallback."""
     url = os.getenv("UME_RATE_LIMIT_REDIS")
-    if url:
+    if url and redis:
         try:
-            redis_client = redis.from_url(url, encoding="utf-8", decode_responses=True)
+            redis_client = redis.from_url(
+                url, encoding="utf-8", decode_responses=True
+            )
             await redis_client.ping()
         except Exception:  # pragma: no cover - connection issue
             redis_client = _MemoryRedis()

@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Extra
+from typing import Any
 
 
 class Settings(BaseSettings):
@@ -55,6 +56,13 @@ class Settings(BaseSettings):
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
+
+    def model_post_init(self, __context: Any) -> None:  # noqa: D401
+        """Validate settings after initialization."""
+        if self.UME_AUDIT_SIGNING_KEY == "default-key":
+            raise ValueError(
+                "UME_AUDIT_SIGNING_KEY must be set to a non-default value"
+            )
 
 
 # Create a single, importable instance

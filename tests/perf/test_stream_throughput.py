@@ -15,6 +15,7 @@ class DockerSettings(Settings):
     KAFKA_RAW_EVENTS_TOPIC: str = "perf_raw"
     KAFKA_CLEAN_EVENTS_TOPIC: str = "perf_raw"
     KAFKA_GROUP_ID: str = "perf_group"
+    UME_AUDIT_SIGNING_KEY: str = "test-key"
 
     def __init__(self, broker: str) -> None:
         super().__init__()
