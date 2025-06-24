@@ -26,6 +26,7 @@ from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
+from .memory import EpisodicMemory, SemanticMemory
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
@@ -93,6 +94,9 @@ __all__ = [
     "VectorStore",
     "VectorStoreListener",
     "create_default_store",
+
+    "EpisodicMemory",
+    "SemanticMemory",
 
     "LLMFerry",
 
