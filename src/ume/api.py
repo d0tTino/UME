@@ -21,6 +21,7 @@ from .logging_utils import configure_logging
 from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
+from sse_starlette.sse import EventSourceResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -289,15 +290,16 @@ def api_constrained_path(
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Find a path subject to optional depth or label constraints."""
-    path = graph.constrained_path(
+    raw_path = graph.constrained_path(
         req.source,
         req.target,
         req.max_depth,
         req.edge_label,
         req.since_timestamp,
     )
-    filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
-    return {"path": filtered}
+    threshold = settings.UME_RELIABILITY_THRESHOLD
+    nodes = filter_low_confidence(raw_path, threshold)
+    return {"path": nodes}
 
 
 @app.get("/analytics/path/stream")
@@ -337,12 +339,15 @@ def api_subgraph(
         req.edge_label,
         req.since_timestamp,
     )
-    nodes = filter_low_confidence(
-        sg.get("nodes", {}).keys(), settings.UME_RELIABILITY_THRESHOLD
-    )
+    threshold = settings.UME_RELIABILITY_THRESHOLD
+    nodes = filter_low_confidence(sg.get("nodes", {}).keys(), threshold)
     sg["nodes"] = {n: sg["nodes"][n] for n in nodes}
     sg["edges"] = [
-        e for e in sg.get("edges", []) if e[0] in sg["nodes"] and e[1] in sg["nodes"]
+        e
+        for e in sg.get("edges", [])
+        if len(filter_low_confidence(e, threshold)) == len(e)
+        and e[0] in sg["nodes"]
+        and e[1] in sg["nodes"]
     ]
     return sg
 
