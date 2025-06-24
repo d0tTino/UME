@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Mapping
 
 import httpx
 
@@ -21,7 +21,7 @@ class OPAClient:
         self.token = token or settings.OPA_TOKEN
         self._client = httpx.Client(timeout=5)
 
-    def query(self, path: str, input_data: dict[str, Any]) -> Any:
+    def query(self, path: str, input_data: Mapping[str, object]) -> object:
         """Execute a policy query and return the result field."""
         url = f"{self.base_url.rstrip('/')}/v1/data/{path.lstrip('/')}"
         headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}

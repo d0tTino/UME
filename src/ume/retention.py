@@ -2,7 +2,7 @@ import logging
 import threading
 from collections.abc import Callable
 
-from typing import Any
+from typing import Protocol
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -12,8 +12,13 @@ _retention_thread: threading.Thread | None = None
 _stop_event: threading.Event | None = None
 
 
+class _SupportsPurge(Protocol):
+    def purge_old_records(self, max_age_seconds: int) -> None:
+        ...
+
+
 def start_retention_scheduler(
-    graph: Any,
+    graph: _SupportsPurge,
     *,
     interval_seconds: float = 24 * 3600,
 ) -> tuple[threading.Thread, Callable[[], None]]:

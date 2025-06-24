@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import logging
 import time
-from typing import Any, Awaitable, Callable, Dict, List, cast
+from typing import Any, Awaitable, Callable, Dict, List, cast, AsyncGenerator
 import asyncio
 from collections import defaultdict
 
@@ -138,6 +138,9 @@ def configure_graph(graph: IGraphAdapter) -> None:
     if role:
         graph = RoleBasedGraphAdapter(graph, role=role)
     app.state.graph = graph
+    if settings.UME_API_TOKEN:
+        expires_at = time.time() + settings.UME_OAUTH_TTL
+        TOKENS[settings.UME_API_TOKEN] = (settings.UME_OAUTH_ROLE, expires_at)
 
 
 def configure_vector_store(store: VectorStore) -> None:
@@ -306,7 +309,7 @@ async def api_constrained_path_stream(
 ) -> EventSourceResponse:
     """Stream path nodes one by one as an SSE feed."""
 
-    async def _gen() -> Any:
+    async def _gen() -> AsyncGenerator[dict[str, str], None]:
         path = graph.constrained_path(
             source, target, max_depth, edge_label, since_timestamp
         )

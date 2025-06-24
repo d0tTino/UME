@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 _periodic_snapshot_thread: threading.Thread | None = None
 _periodic_snapshot_stop_event: threading.Event | None = None
-_atexit_handle: Callable | None = None
+_atexit_handle: Callable[[], object] | None = None
 
 
 def enable_periodic_snapshot(

@@ -8,7 +8,7 @@ from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 
 
-def _no_duplicate_pairs_hook(pairs: List[Tuple[str, Any]]) -> dict:
+def _no_duplicate_pairs_hook(pairs: List[Tuple[str, Any]]) -> dict[str, Any]:
     """Object pairs hook for ``json.load`` that rejects duplicate keys."""
     result: dict[str, Any] = {}
     for key, value in pairs:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from ..event import Event, parse_event
 from ..processing import apply_event_to_graph
@@ -39,7 +39,7 @@ class EpisodicMemory:
                 evt = parse_event(data)
                 apply_event_to_graph(evt, self.graph)
 
-    def get_episode(self, node_id: str) -> Optional[dict]:
+    def get_episode(self, node_id: str) -> Optional[dict[str, Any]]:
         return self.graph.get_node(node_id)
 
     def related(self, node_id: str, label: str | None = None) -> list[str]:

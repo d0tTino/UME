@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 from collections.abc import Iterable
+from types import TracebackType
 import numbers
 import json
 import logging
@@ -79,7 +80,7 @@ class VectorStore:
         self,
         exc_type: type[BaseException] | None,
         exc: BaseException | None,
-        tb: Any | None,
+        tb: TracebackType | None,
     ) -> None:  # pragma: no cover - context manager
         self.close()
 
