@@ -30,8 +30,8 @@ class DevLogHandler(FileSystemEventHandler):
         evt = Event(
             event_type=EventType.CREATE_NODE,
             timestamp=int(time.time()),
-            node_id=event.src_path,
-            payload={"node_id": event.src_path, "attributes": payload},
+            node_id=str(event.src_path),
+            payload={"node_id": str(event.src_path), "attributes": payload},
         )
         data = {
             "event_id": evt.event_id,
@@ -56,7 +56,7 @@ def run_watcher(paths: Iterable[str]) -> None:
     observer = Observer()
     handler = DevLogHandler(producer)
     for p in paths:
-        observer.schedule(handler, Path(p), recursive=True)
+        observer.schedule(handler, str(Path(p)), recursive=True)
     observer.start()
     logger.info("Watching %s", list(paths))
     try:
