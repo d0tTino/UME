@@ -47,13 +47,15 @@ Create an edge.
 ### DELETE `/edges/{source}/{target}/{label}`
 Delete an edge.
 
-### POST `/tweets`
-Post a tweet for the Tweet-bot and Document Guru.
-- **Body**: `{"text": "tweet text"}`
+### GET `/policies`
+List available Rego policy files.
 
-### POST `/documents`
-Upload a document for Document Guru.
-- **Body**: `{"content": "text"}`
+### POST `/policies/{path}`
+Upload a policy file.
+- **Form field**: `file` – the `.rego` file contents.
+
+### DELETE `/policies/{path}`
+Delete a policy file.
 
 ### POST `/vectors`
 Add a vector to the in-memory index.

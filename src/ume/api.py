@@ -8,6 +8,7 @@ import time
 from typing import Any, Awaitable, Callable, Dict, List, cast, AsyncGenerator
 import asyncio
 from collections import defaultdict
+from pathlib import Path
 
 try:  # pragma: no cover - optional dependency
     import redis
@@ -19,8 +20,9 @@ from fastapi_limiter.depends import RateLimiter
 from .config import settings
 from .logging_utils import configure_logging
 from uuid import uuid4
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import JSONResponse, Response
+from sse_starlette.sse import EventSourceResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sse_starlette.sse import EventSourceResponse
 
@@ -38,6 +40,9 @@ from .query import Neo4jQueryEngine
 from . import VectorStore, create_default_store
 
 logger = logging.getLogger(__name__)
+
+# Directory containing local Rego policy files
+POLICY_DIR = Path(__file__).with_name("plugins") / "alignment" / "policies"
 
 
 configure_logging()
@@ -574,3 +579,43 @@ def dashboard_recent_events(
     """Return recent audit log entries for the dashboard, newest first."""
     entries = get_audit_entries()
     return list(reversed(entries[-limit:]))
+
+
+def _resolve_policy_path(name: str) -> Path:
+    """Return absolute path for policy ``name`` within :data:`POLICY_DIR`."""
+    path = Path(name)
+    if path.is_absolute() or ".." in path.parts:
+        raise HTTPException(status_code=400, detail="Invalid policy path")
+    return (POLICY_DIR / path).resolve()
+
+
+@app.get("/policies")
+def list_policies(_: str = Depends(get_current_role)) -> Dict[str, List[str]]:
+    """List all available Rego policy files."""
+    files = [p.relative_to(POLICY_DIR).as_posix() for p in POLICY_DIR.rglob("*.rego")]
+    return {"policies": sorted(files)}
+
+
+@app.post("/policies/{name:path}")
+async def add_policy(
+    name: str,
+    file: UploadFile = File(...),
+    _: str = Depends(get_current_role),
+) -> Dict[str, str]:
+    """Upload a Rego policy file under ``name``."""
+    path = _resolve_policy_path(name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = await file.read()
+    with path.open("wb") as f:
+        f.write(content)
+    return {"status": "ok"}
+
+
+@app.delete("/policies/{name:path}")
+def delete_policy(name: str, _: str = Depends(get_current_role)) -> Dict[str, str]:
+    """Delete a policy file."""
+    path = _resolve_policy_path(name)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Policy not found")
+    path.unlink()
+    return {"status": "ok"}
