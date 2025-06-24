@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-import faust
+try:
+    import faust
+    from faust.types import StreamT
+except Exception:  # pragma: no cover - optional dependency missing
+    faust = None  # type: ignore[assignment]
+    StreamT = object  # type: ignore[assignment]
 import json
 from typing import Dict
-from faust.types import StreamT
 
 from ume import EventType, parse_event, EventError
 from ..config import settings
@@ -21,8 +25,10 @@ EVENT_TOPIC_MAP: Dict[str, str] = {
 }
 
 
-def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS) -> faust.App:
+def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS):
     """Create a Faust App instance."""
+    if faust is None:  # pragma: no cover - optional dependency missing
+        raise RuntimeError("faust-streaming is not installed")
     app = faust.App("ume_stream_processor", broker=broker)
     app.conf.web_enabled = False
 
@@ -48,7 +54,7 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS) -> faust.App:
     return app
 
 
-app = build_app()
+app = build_app() if faust is not None else None
 
 
 def main() -> None:
