@@ -16,6 +16,8 @@ from jsonschema import ValidationError
 from ..config import settings
 from ..schema_utils import validate_event_dict
 from ..audit import log_audit_entry
+from ..event import parse_event, EventError
+from ..plugins.alignment import load_plugins, get_plugins, PolicyViolationError
 
 
 configure_logging()
@@ -60,6 +62,7 @@ def redact_event_payload(
 
 def run_privacy_agent() -> None:
     """Consume raw events, redact payloads, and produce sanitized versions."""
+    load_plugins()
     consumer_conf = {
         "bootstrap.servers": BOOTSTRAP_SERVERS,
         "group.id": GROUP_ID,
@@ -91,6 +94,19 @@ def run_privacy_agent() -> None:
                 validate_event_dict(data)
             except (json.JSONDecodeError, ValidationError) as exc:
                 logger.error("Invalid event received: %s", exc)
+                continue
+
+            try:
+                event = parse_event(data)
+            except EventError as exc:
+                logger.error("Failed to parse event: %s", exc)
+                continue
+
+            try:
+                for plugin in get_plugins():
+                    plugin.validate(event)
+            except PolicyViolationError as exc:
+                logger.warning("Event rejected by policy: %s", exc)
                 continue
 
             original_payload = data.get("payload", {})

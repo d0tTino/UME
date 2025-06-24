@@ -159,7 +159,8 @@ def test_privacy_agent_audit_log_written(tmp_path, monkeypatch):
     monkeypatch.setenv("UME_AGENT_ID", "tester")
 
     import importlib
-    from ume import config, audit, privacy_agent
+    from ume import config, audit
+    from ume.pipeline import privacy_agent
 
     importlib.reload(config)
     importlib.reload(audit)

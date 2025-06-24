@@ -60,6 +60,11 @@ class Settings(BaseSettings):  # type: ignore[misc]
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
 
+    # Alignment / policy configuration
+    OPA_URL: str | None = None
+    REGO_POLICY_PATHS: list[str] | None = None
+    OPA_TOKEN: str | None = None
+
     def model_post_init(self, __context: Any) -> None:  # noqa: D401
         """Validate settings after initialization."""
         if self.UME_AUDIT_SIGNING_KEY == "default-key":
