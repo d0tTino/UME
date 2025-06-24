@@ -49,6 +49,7 @@ else:  # pragma: no cover - optional dependency
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
 from .dag_service import DAGService
+from .reliability import score_text, filter_low_confidence
 
 
 try:  # Optional dependency
@@ -95,6 +96,9 @@ __all__ = [
     "create_default_store",
 
     "LLMFerry",
+
+    "score_text",
+    "filter_low_confidence",
 
     "generate_embedding",
     "Task",
