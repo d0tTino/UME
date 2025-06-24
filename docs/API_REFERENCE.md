@@ -47,6 +47,14 @@ Create an edge.
 ### DELETE `/edges/{source}/{target}/{label}`
 Delete an edge.
 
+### POST `/tweets`
+Post a tweet for the Tweet-bot and Document Guru.
+- **Body**: `{"text": "tweet text"}`
+
+### POST `/documents`
+Upload a document for Document Guru.
+- **Body**: `{"content": "text"}`
+
 ### POST `/vectors`
 Add a vector to the in-memory index.
 - **Body**: `{"id": "id", "vector": [0.0, ...]}`
