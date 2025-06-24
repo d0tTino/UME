@@ -61,7 +61,7 @@ compile-protos = "scripts.compile_protos:main"
 
 [tool.ruff]
 line-length = 88
-exclude = ["src/ume/proto/*"]
+exclude = ["src/ume/proto/*", "src/ume_client/ume_pb2*.py"]
 
 [build-system]
 requires = ["poetry-core"]

@@ -47,3 +47,27 @@ service UME {
   rpc SearchVectors(VectorSearchRequest) returns (VectorSearchResponse);
   rpc GetAuditEntries(AuditRequest) returns (AuditResponse);
 }
+
+message Task {
+  string id = 1;
+  string payload = 2;
+}
+
+message TaskResult {
+  string agent_id = 1;
+  string task_id = 2;
+  double score = 3;
+}
+
+message PlanRequest {
+  string objective = 1;
+}
+
+message PlanResponse {
+  repeated Task tasks = 1;
+}
+
+service AgentOrchestrator {
+  rpc Plan(PlanRequest) returns (PlanResponse);
+  rpc ExecuteTask(Task) returns (TaskResult);
+}
