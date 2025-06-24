@@ -8,6 +8,7 @@ from typing import Any, Iterable
 from . import AlignmentPlugin, PolicyViolationError, register_plugin
 from ...event import Event
 from ...policy.opa_client import OPAClient
+from ...config import settings
 
 try:  # Optional dependency
     from regopy import Interpreter as RegoInterpreter
@@ -70,5 +71,12 @@ class RegoPolicyEngine(AlignmentPlugin):
 
 # Register plugin automatically if regopy is installed
 if RegoInterpreter is not None:
-    default_dir = Path(__file__).with_name("policies")
-    register_plugin(RegoPolicyEngine(default_dir))
+    policy_paths = settings.REGO_POLICY_PATHS
+    opa_url = settings.OPA_URL
+    if opa_url:
+        client = OPAClient(base_url=opa_url, token=settings.OPA_TOKEN)
+        register_plugin(RegoPolicyEngine(policy_paths, opa_client=client))
+    else:
+        if policy_paths is None:
+            policy_paths = Path(__file__).with_name("policies")
+        register_plugin(RegoPolicyEngine(policy_paths))

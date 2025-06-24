@@ -6,6 +6,8 @@ function App() {
   const [password, setPassword] = useState('');
   const [vector, setVector] = useState('');
   const [cypher, setCypher] = useState('');
+  const [tweet, setTweet] = useState('');
+  const [documentText, setDocumentText] = useState('');
   const [queryResult, setQueryResult] = useState('');
   const [searchResult, setSearchResult] = useState('');
   const [stats, setStats] = useState(null);
@@ -82,6 +84,36 @@ function App() {
         )
       )
       .catch((err) => console.error('Search failed', err));
+  }
+
+  function postTweet() {
+    if (!tweet) return;
+    fetch('/tweets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+      },
+      body: JSON.stringify({ text: tweet }),
+    })
+      .then((res) => res.json())
+      .then(() => setTweet(''))
+      .catch((err) => console.error('Tweet failed', err));
+  }
+
+  function uploadDocument() {
+    if (!documentText) return;
+    fetch('/documents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+      },
+      body: JSON.stringify({ content: documentText }),
+    })
+      .then((res) => res.json())
+      .then(() => setDocumentText(''))
+      .catch((err) => console.error('Upload failed', err));
   }
 
   function runQuery() {
@@ -168,6 +200,28 @@ function App() {
         'button',
         { onClick: searchVectors, style: { marginLeft: '4px' } },
         'Search'
+      ),
+      React.createElement('input', {
+        placeholder: 'Tweet text',
+        value: tweet,
+        onChange: (e) => setTweet(e.target.value),
+        style: { marginLeft: '8px', width: '20%' },
+      }),
+      React.createElement(
+        'button',
+        { onClick: postTweet, style: { marginLeft: '4px' } },
+        'Tweet'
+      ),
+      React.createElement('textarea', {
+        placeholder: 'Document text',
+        value: documentText,
+        onChange: (e) => setDocumentText(e.target.value),
+        style: { marginLeft: '8px', width: '20%' },
+      }),
+      React.createElement(
+        'button',
+        { onClick: uploadDocument, style: { marginLeft: '4px' } },
+        'Upload Doc'
       ),
       React.createElement(
         'button',

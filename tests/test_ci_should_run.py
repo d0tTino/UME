@@ -66,3 +66,19 @@ def test_markdown_code_block_changes_trigger_ci():
         " ```",
     ]
     assert csr.code_diff_present(diff) is True
+
+
+def test_mixed_markdown_and_code_changes():
+    """Ensure a diff with docs and real code triggers CI."""
+
+    diff = [
+        "@@ -1 +1 @@",
+        "-Old docs",
+        "+Updated docs",
+        "@@ -10 +10 @@",
+        " def foo():",
+        "-    # comment",
+        "+    print('hi')",
+    ]
+
+    assert csr.code_diff_present(diff) is True
