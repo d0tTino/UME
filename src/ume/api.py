@@ -12,7 +12,6 @@ from collections import defaultdict
 import redis
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
-from sse_starlette.sse import EventSourceResponse
 
 
 from .config import settings
@@ -25,6 +24,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
+from sse_starlette.sse import EventSourceResponse
+
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -86,6 +87,14 @@ async def _init_limiter() -> None:
     else:
         redis_client = _MemoryRedis()
     await FastAPILimiter.init(redis_client)
+
+
+@app.on_event("shutdown")
+def _close_vector_store() -> None:
+    """Ensure the configured vector store is properly closed."""
+    store = getattr(app.state, "vector_store", None)
+    if store is not None and hasattr(store, "close"):
+        store.close()
 
 
 @app.middleware("http")
