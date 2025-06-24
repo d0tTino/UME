@@ -12,7 +12,7 @@ class AccessDeniedError(PermissionError):
 class RoleBasedGraphAdapter(IGraphAdapter):
     """Wraps another adapter and enforces basic role-based access control."""
 
-    def __init__(self, adapter: IGraphAdapter, role: str):
+    def __init__(self, adapter: IGraphAdapter, role: str) -> None:
         self._adapter = adapter
         self.role = role
 

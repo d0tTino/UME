@@ -1,38 +1,24 @@
 import time
-import importlib.util
-import sys
 import types
-from pathlib import Path
+import sqlite3
+from typing import Callable
 
-BASE = Path(__file__).resolve().parents[1] / "src" / "ume"
-
-ume_pkg = types.ModuleType("ume")
-ume_pkg.__path__ = [str(BASE)]
-sys.modules["ume"] = ume_pkg
-
-def _load(name: str) -> types.ModuleType:
-    spec = importlib.util.spec_from_file_location(f"ume.{name}", BASE / f"{name}.py")
-    assert spec is not None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[f"ume.{name}"] = mod
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
-
-pg = _load("persistent_graph")
-cfg = _load("config")
-ret = _load("retention")
-
-PersistentGraph = pg.PersistentGraph
-settings = cfg.settings
-start_retention_scheduler = ret.start_retention_scheduler
-stop_retention_scheduler = ret.stop_retention_scheduler
+from ume import PersistentGraph
+from ume.config import settings
+from ume.retention import start_retention_scheduler, stop_retention_scheduler
 
 
-def test_retention_scheduler_purges_records(monkeypatch) -> None:
+import pytest
+
+
+def test_retention_scheduler_purges_records(monkeypatch: pytest.MonkeyPatch) -> None:
     # Allow SQLite connection across threads for the retention scheduler
-    orig_connect = pg.sqlite3.connect
-    monkeypatch.setattr(pg.sqlite3, "connect", lambda *a, **kw: orig_connect(*a, check_same_thread=False, **kw))
+    orig_connect: Callable[..., sqlite3.Connection] = sqlite3.connect
+    monkeypatch.setattr(
+        sqlite3,
+        "connect",
+        lambda *a, **kw: orig_connect(*a, check_same_thread=False, **kw),
+    )
 
     graph = PersistentGraph(":memory:")
     graph.add_node("old", {})
@@ -54,7 +40,7 @@ def test_retention_scheduler_purges_records(monkeypatch) -> None:
     assert graph.get_all_edges() == []
 
 
-def test_retention_scheduler_reuses_thread(monkeypatch):
+def test_retention_scheduler_reuses_thread(monkeypatch: pytest.MonkeyPatch) -> None:
     graph = types.SimpleNamespace(purge_old_records=lambda *a, **k: None)
     thread1, stop1 = start_retention_scheduler(graph, interval_seconds=0.1)
     thread2, stop2 = start_retention_scheduler(graph, interval_seconds=0.1)
@@ -65,7 +51,7 @@ def test_retention_scheduler_reuses_thread(monkeypatch):
         stop_retention_scheduler()
 
 
-def test_retention_scheduler_continues_after_error(monkeypatch):
+def test_retention_scheduler_continues_after_error(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[None] = []
     def purge(_):
         calls.append(None)
