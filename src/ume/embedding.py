@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, cast
 
 from .config import settings
 
@@ -26,4 +26,4 @@ def generate_embedding(text: str) -> List[float]:
     """Generate an embedding vector for ``text`` using Sentence Transformers."""
     model = _get_model()
     embedding = model.encode(text)
-    return embedding.tolist()
+    return cast(List[float], embedding.tolist())

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 import time
 
 from neo4j import GraphDatabase, Driver
@@ -71,7 +71,9 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 {"node_id": node_id},
             )
             rec = result.single()
-            return rec["props"] if rec else None
+            if rec is None:
+                return None
+            return cast(Dict[str, Any], rec["props"])
 
     def node_exists(self, node_id: str) -> bool:
         with self._driver.session() as session:
@@ -81,7 +83,8 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
             )
             rec = result.single()
             assert rec is not None
-            return rec["cnt"] > 0
+            cnt = cast(int, rec["cnt"])
+            return cnt > 0
 
     def dump(self) -> Dict[str, Any]:
         nodes: Dict[str, Any] = {}

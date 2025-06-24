@@ -5,14 +5,16 @@ from __future__ import annotations
 import os
 import logging
 import time
-from typing import Any, Awaitable, Callable, Dict, List, cast
+from typing import Any, Awaitable, Callable, Dict, List, cast, AsyncGenerator
 import asyncio
 from collections import defaultdict
 
-import redis
+try:  # pragma: no cover - optional dependency
+    import redis
+except Exception:  # pragma: no cover - allow tests without redis installed
+    redis = None
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
-from sse_starlette.sse import EventSourceResponse
 
 from .config import settings
 from .logging_utils import configure_logging
@@ -27,6 +29,7 @@ from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from pydantic import BaseModel
 
 from .analytics import shortest_path
+from .reliability import filter_low_confidence
 from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
@@ -75,15 +78,25 @@ class _MemoryRedis:
 async def _init_limiter() -> None:
     """Initialize rate limiting using Redis or an in-memory fallback."""
     url = os.getenv("UME_RATE_LIMIT_REDIS")
-    if url:
+    if url and redis:
         try:
-            redis_client = redis.from_url(url, encoding="utf-8", decode_responses=True)
+            redis_client = redis.from_url(
+                url, encoding="utf-8", decode_responses=True
+            )
             await redis_client.ping()
         except Exception:  # pragma: no cover - connection issue
             redis_client = _MemoryRedis()
     else:
         redis_client = _MemoryRedis()
     await FastAPILimiter.init(redis_client)
+
+
+@app.on_event("shutdown")
+def _close_vector_store() -> None:
+    """Ensure the configured vector store is properly closed."""
+    store = getattr(app.state, "vector_store", None)
+    if store is not None and hasattr(store, "close"):
+        store.close()
 
 
 @app.middleware("http")
@@ -127,6 +140,9 @@ def configure_graph(graph: IGraphAdapter) -> None:
     if role:
         graph = RoleBasedGraphAdapter(graph, role=role)
     app.state.graph = graph
+    if settings.UME_API_TOKEN:
+        expires_at = time.time() + settings.UME_OAUTH_TTL
+        TOKENS[settings.UME_API_TOKEN] = (settings.UME_OAUTH_ROLE, expires_at)
 
 
 def configure_vector_store(store: VectorStore) -> None:
@@ -263,7 +279,8 @@ def api_shortest_path(
 ) -> Dict[str, Any]:
     """Return the shortest path between two nodes."""
     path = shortest_path(graph, req.source, req.target)
-    return {"path": path}
+    filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
+    return {"path": filtered}
 
 
 @app.post("/analytics/path")
@@ -279,7 +296,8 @@ def api_constrained_path(
         req.edge_label,
         req.since_timestamp,
     )
-    return {"path": path}
+    filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
+    return {"path": filtered}
 
 
 @app.get("/analytics/path/stream")
@@ -295,11 +313,12 @@ async def api_constrained_path_stream(
 ) -> EventSourceResponse:
     """Stream path nodes one by one as an SSE feed."""
 
-    async def _gen() -> Any:
+    async def _gen() -> AsyncGenerator[dict[str, str], None]:
         path = graph.constrained_path(
             source, target, max_depth, edge_label, since_timestamp
         )
-        for node in path:
+        filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
+        for node in filtered:
             yield {"data": node}
             await asyncio.sleep(0)
 
@@ -312,12 +331,20 @@ def api_subgraph(
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Extract a subgraph starting from ``start`` to the given ``depth``."""
-    return graph.extract_subgraph(
+    sg = graph.extract_subgraph(
         req.start,
         req.depth,
         req.edge_label,
         req.since_timestamp,
     )
+    nodes = filter_low_confidence(
+        sg.get("nodes", {}).keys(), settings.UME_RELIABILITY_THRESHOLD
+    )
+    sg["nodes"] = {n: sg["nodes"][n] for n in nodes}
+    sg["edges"] = [
+        e for e in sg.get("edges", []) if e[0] in sg["nodes"] and e[1] in sg["nodes"]
+    ]
+    return sg
 
 
 @app.post("/redact/node/{node_id}")

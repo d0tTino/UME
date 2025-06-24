@@ -61,7 +61,7 @@ below lists all available variables and their default values.
 | `UME_DB_PATH` | `ume_graph.db` | SQLite database used by `PersistentGraph`. |
 | `UME_SNAPSHOT_PATH` | `ume_snapshot.json` | Path to graph snapshot file. |
 | `UME_AUDIT_LOG_PATH` | `audit.log` | Location of the audit log. |
-| `UME_AUDIT_SIGNING_KEY` | `default-key` | Key used to sign audit entries. |
+| `UME_AUDIT_SIGNING_KEY` | `default-key` | Key used to sign audit entries. Must be changed from the default or startup will fail. |
 | `UME_AGENT_ID` | `SYSTEM` | Identifier recorded in audit logs. |
 | `UME_EMBED_MODEL` | `all-MiniLM-L6-v2` | SentenceTransformer model name. |
 | `UME_CLI_DB` | `ume_graph.db` | Database path used by the CLI. |
@@ -97,4 +97,22 @@ below lists all available variables and their default values.
 
 ## Benchmark Hardware
 A single-node Dell PowerEdge R7625 with an EPYC 9254P CPU, 256 GB RAM and four NVMe drives was used when validating the Redpanda benchmark.
+
+## Docker Compose Quickstart
+
+The repository ships with a `docker-compose.yml` for spinning up Redpanda
+alongside the privacy agent. To start the stack:
+
+1. Install Docker and Docker Compose.
+2. From the project root run:
+   ```bash
+   cd docker
+   # Optional: generate TLS certificates
+   bash generate-certs.sh
+   docker compose up
+   ```
+3. Wait until `redpanda` reports `healthy` with `docker compose ps`.
+4. Inspect logs with `docker compose logs -f privacy-agent`.
+5. Confirm both services report `healthy` with `docker compose ps`.
+6. Stop all containers with `docker compose down` when finished.
 

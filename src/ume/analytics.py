@@ -88,7 +88,7 @@ def find_communities(graph: IGraphAdapter) -> List[Set[str]]:
     db_method = getattr(graph, "community_detection", None)
     if callable(db_method):
         try:
-            return db_method()
+            return cast(List[Set[str]], db_method())
         except NotImplementedError:
             pass
 
@@ -102,13 +102,13 @@ def pagerank_centrality(graph: IGraphAdapter) -> Dict[str, float]:
     db_method = getattr(graph, "pagerank_centrality", None)
     if callable(db_method):
         try:
-            return db_method()
+            return cast(Dict[str, float], db_method())
         except NotImplementedError:
             pass
 
     g = _to_networkx(graph)
     try:
-        return nx.pagerank(g)
+        return cast(Dict[str, float], nx.pagerank(g))
     except nx.NetworkXException:
         # networkx>=3.5 relies on SciPy; fall back to a numpy implementation
         return _pagerank_numpy(g)
@@ -119,12 +119,12 @@ def betweenness_centrality(graph: IGraphAdapter) -> Dict[str, float]:
     db_method = getattr(graph, "betweenness_centrality", None)
     if callable(db_method):
         try:
-            return db_method()
+            return cast(Dict[str, float], db_method())
         except NotImplementedError:
             pass
 
     g = _to_networkx(graph).to_undirected()
-    return nx.betweenness_centrality(g)
+    return cast(Dict[str, float], nx.betweenness_centrality(g))
 
 
 def node_similarity(graph: IGraphAdapter) -> List[tuple[str, str, float]]:
@@ -132,7 +132,7 @@ def node_similarity(graph: IGraphAdapter) -> List[tuple[str, str, float]]:
     db_method = getattr(graph, "node_similarity", None)
     if callable(db_method):
         try:
-            return db_method()
+            return cast(List[tuple[str, str, float]], db_method())
         except NotImplementedError:
             pass
 
@@ -145,7 +145,7 @@ def graph_similarity(graph1: IGraphAdapter, graph2: IGraphAdapter) -> float:
     db_method = getattr(graph1, "graph_similarity", None)
     if callable(db_method) and type(graph1) is type(graph2):
         try:
-            return db_method(graph2)
+            return cast(float, db_method(graph2))
         except NotImplementedError:
             pass
 
@@ -184,7 +184,7 @@ def temporal_community_detection(
     db_method = getattr(graph, "temporal_community_detection", None)
     if callable(db_method):
         try:
-            return db_method(past_n_days)
+            return cast(List[Set[str]], db_method(past_n_days))
         except NotImplementedError:
             pass
 
@@ -208,7 +208,7 @@ def time_varying_centrality(graph: IGraphAdapter, past_n_days: int) -> Dict[str,
     db_method = getattr(graph, "time_varying_centrality", None)
     if callable(db_method):
         try:
-            return db_method(past_n_days)
+            return cast(Dict[str, float], db_method(past_n_days))
         except NotImplementedError:
             pass
 
@@ -224,6 +224,6 @@ def time_varying_centrality(graph: IGraphAdapter, past_n_days: int) -> Dict[str,
     if sub.number_of_nodes() == 0:
         return {}
     try:
-        return nx.pagerank(sub)
+        return cast(Dict[str, float], nx.pagerank(sub))
     except nx.NetworkXException:
         return _pagerank_numpy(sub)

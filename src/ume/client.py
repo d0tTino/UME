@@ -13,6 +13,7 @@ from .event import Event, EventError, parse_event, EventType
 from .schema_utils import validate_event_dict
 from .processing import DEFAULT_VERSION
 from .proto import events_pb2
+from .proto.events_pb2 import EventEnvelope  # type: ignore[attr-defined]
 from google.protobuf import struct_pb2
 from google.protobuf.json_format import MessageToDict
 
@@ -183,7 +184,7 @@ class UMEClient:
             return ("delete_edge", events_pb2.DeleteEdge(meta=meta))  # type: ignore[attr-defined]
         raise UMEClientError(f"Unknown event type: {event.event_type}")
 
-    def _proto_to_dict(self, envelope: Any) -> dict[str, Any]:
+    def _proto_to_dict(self, envelope: EventEnvelope) -> dict[str, Any]:
         if envelope.HasField("create_node"):
             meta = envelope.create_node.meta
         elif envelope.HasField("update_node_attributes"):

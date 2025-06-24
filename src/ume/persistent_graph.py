@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import time
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, cast
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .audit import log_audit_entry
@@ -86,7 +86,7 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
         row = cur.fetchone()
         if row is None:
             return None
-        return json.loads(row["attributes"])
+        return cast(Dict[str, Any], json.loads(row["attributes"]))
 
     def node_exists(self, node_id: str) -> bool:
         cur = self.conn.execute(

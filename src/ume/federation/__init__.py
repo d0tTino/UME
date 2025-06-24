@@ -69,7 +69,7 @@ class ClusterReplicator:
 class MirrorMakerDriver:
     """Run Kafka MirrorMaker 2 to replicate topics between clusters."""
 
-    def __init__(self, source_bootstrap: str, target_bootstrap: str, topics: list[str]):
+    def __init__(self, source_bootstrap: str, target_bootstrap: str, topics: list[str]) -> None:
         self.source_bootstrap = source_bootstrap
         self.target_bootstrap = target_bootstrap
         self.topics = topics

@@ -48,7 +48,7 @@ def _read_lines(path: str) -> List[str]:
         s3 = boto3.client("s3")
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
-            data = obj["Body"].read().decode()
+            data: str = obj["Body"].read().decode()
         except BotoCoreError as exc:
             logger.error(
                 "BotoCoreError while reading audit log from %s: %s", path, exc

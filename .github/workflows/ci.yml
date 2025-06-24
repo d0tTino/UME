@@ -6,53 +6,72 @@ on:
   pull_request:
 
 jobs:
-  test:
+  test-and-lint:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
+      - name: Decide whether to run CI
+        id: changes
+        run: |
+          python scripts/ci_should_run.py
+          status=$?
+          if [ "$status" = 0 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          run: ${{ steps.changes.outputs.run }}
-
+      - name: Install dependencies
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install --no-interaction --no-ansi --with dev
       - name: Run pre-commit
         if: steps.changes.outputs.run == 'true'
         run: poetry run pre-commit run --all-files --show-diff-on-failure --color always
-
-      - name: Run tests
+      - name: Run tests with coverage
         if: steps.changes.outputs.run == 'true'
         env:
-          UME_DOCKER_TESTS: ${{ steps.changes.outputs.run }}
-        run: poetry run pytest
-
-  coverage:
-    runs-on: ["self-hosted", "linux"]
-    needs: test-and-lint
-    if: needs.test-and-lint.outputs.run == 'true'
-    strategy:
-      matrix:
-        python-version: ['3.12']
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fetch main
-        run: git fetch origin main --depth=1
-
-      - name: Set up Python and install dependencies
-        uses: ./.github/actions/setup-python-poetry
-        with:
-          python-version: ${{ matrix.python-version }}
-          run: 'true'
-
-      - name: Run tests with coverage
-        env:
           UME_DOCKER_TESTS: true
+        run: poetry run pytest --cov=ume --cov-report xml --cov-fail-under=80
 
+  compose-smoke:
+    runs-on: ubuntu-latest
+    needs: test-and-lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start stack
         run: |
-          pip install . pytest pytest-cov pre-commit
-        - name: Lint and Test
+          cd docker
+          docker compose up -d
+      - name: Wait for Redpanda health
         run: |
-          pre-commit run --files tests/test_client_module.py tests/test_privacy_agent_additional.py
-          pytest --cov=ume --cov-report xml --cov-fail-under=80
+          cd docker
+          for i in {1..30}; do
+            status=$(docker compose ps --format '{{.Name}} {{.Health}}' | grep redpanda | awk '{print $2}')
+            if [ "$status" = "healthy" ]; then exit 0; fi
+            sleep 5
+          done
+          docker compose logs redpanda
+          exit 1
+      - name: Wait for privacy-agent health
+        run: |
+          cd docker
+          for i in {1..30}; do
+            status=$(docker compose ps --format '{{.Name}} {{.Health}}' | grep privacy-agent | awk '{print $2}')
+            if [ "$status" = "healthy" ]; then exit 0; fi
+            sleep 5
+          done
+          docker compose logs privacy-agent
+          exit 1
+      - name: Check privacy-agent running
+        run: |
+          cd docker
+          docker compose ps privacy-agent
+      - name: Tear down
+        if: always()
+        run: |
+          cd docker
+          docker compose down -v

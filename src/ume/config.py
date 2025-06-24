@@ -1,8 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Extra
+from typing import Any
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):  # type: ignore[misc]
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
     )
@@ -20,8 +21,10 @@ class Settings(BaseSettings):
     UME_LOG_LEVEL: str = "INFO"
     UME_LOG_JSON: bool = False
     UME_GRAPH_RETENTION_DAYS: int = 30
+    UME_RELIABILITY_THRESHOLD: float = 0.5
     WATCH_PATHS: list[str] = ["."]
     DAG_RESOURCES: dict[str, int] = {"cpu": 1, "io": 1}
+    UME_RELIABILITY_THRESHOLD: float = 0.5
 
     # Vector store
     UME_VECTOR_DIM: int = 1536
@@ -51,6 +54,7 @@ class Settings(BaseSettings):
     UME_OAUTH_PASSWORD: str = "password"
     UME_OAUTH_ROLE: str = "AnalyticsAgent"
     UME_OAUTH_TTL: int = 3600
+    UME_API_TOKEN: str = "test-token"
 
     # API token used for test clients and simple auth
     UME_API_TOKEN: str = "secret-token"
@@ -59,6 +63,12 @@ class Settings(BaseSettings):
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
 
+    def model_post_init(self, __context: Any) -> None:  # noqa: D401
+        """Validate settings after initialization."""
+        if self.UME_AUDIT_SIGNING_KEY == "default-key":
+            raise ValueError(
+                "UME_AUDIT_SIGNING_KEY must be set to a non-default value"
+            )
 
 # Create a single, importable instance
 settings = Settings()

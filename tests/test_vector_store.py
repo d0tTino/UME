@@ -144,7 +144,7 @@ def test_vector_store_background_flush(tmp_path: Path) -> None:
     store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
     store.add("z", [0.0, 1.0])
     time.sleep(0.2)
-    store.stop_background_flush()
+    store.close()
 
     new_store = VectorStore(dim=2, use_gpu=False)
     new_store.load(str(path))
@@ -169,7 +169,7 @@ def test_background_flush_continues_on_save_error(tmp_path: Path) -> None:
     store.save = failing_save  # type: ignore[assignment]
     store.add("c", [1.0, 0.0])
     time.sleep(0.15)
-    store.stop_background_flush()
+    store.close()
 
     assert calls >= 2
     new_store = VectorStore(dim=2, use_gpu=False)
@@ -195,7 +195,7 @@ def test_background_flush_retries_on_save_error(tmp_path: Path, caplog: pytest.L
     store.add("d", [1.0, 0.0])
     with caplog.at_level(logging.WARNING, logger="ume.vector_store"):
         time.sleep(0.7)
-    store.stop_background_flush()
+    store.close()
 
     assert calls >= 4
     assert any("retrying" in rec.message.lower() for rec in caplog.records)
@@ -286,9 +286,18 @@ def test_concurrent_add_with_background_flush(tmp_path: Path) -> None:
         t.join()
 
     time.sleep(0.1)
-    store.stop_background_flush()
+    store.close()
 
     new_store = VectorStore(dim=2, use_gpu=False)
     new_store.load(str(path))
     assert len(new_store.idx_to_id) == 20
+
+
+def test_context_manager_stops_flush_thread(tmp_path: Path) -> None:
+    path = tmp_path / "cm.faiss"
+    with VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05) as store:
+        store.add("ctx", [1.0, 0.0])
+        thread = store._flush_thread
+        assert thread is not None and thread.is_alive()
+    assert thread is not None and not thread.is_alive()
 

@@ -2,6 +2,8 @@
 
 Thank you for considering contributing to the Universal Memory Engine project! We welcome contributions from the community.
 
+Before participating, please take a moment to read our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Architecture Decision Records can be found in the [adr/](adr) directory for additional project context.
+
 ## How to Contribute
 
 We encourage contributions of all kinds, including bug reports, feature requests, documentation improvements, and code contributions.
