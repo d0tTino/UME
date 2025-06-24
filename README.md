@@ -810,3 +810,4 @@ If you have questions, encounter issues, or want to discuss ideas related to UME
 
 *   **Open an Issue:** For bug reports, feature requests, or specific questions, please check the [GitHub Issues](https://github.com/d0tTino/universal-memory-engine/issues) page.
 *   **Check our Contributing Guide:** For information on how to contribute to the project, see the [CONTRIBUTING.md](CONTRIBUTING.md) file.
+*   **Be Mindful of Our Code of Conduct:** Please review our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before participating.
