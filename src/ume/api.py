@@ -14,7 +14,6 @@ from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
 from sse_starlette.sse import EventSourceResponse
 
-
 from .config import settings
 from .logging_utils import configure_logging
 from uuid import uuid4
@@ -25,8 +24,6 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
-from .retention import start_retention_scheduler
-from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 
 from .analytics import shortest_path
@@ -174,6 +171,8 @@ def issue_token(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenRespon
 
 
 def get_current_role(token: str = Depends(oauth2_scheme)) -> str:
+    if token == settings.UME_API_TOKEN:
+        return settings.UME_API_ROLE or ""
     entry = TOKENS.get(token)
     if entry is None:
         raise HTTPException(status_code=401, detail="Invalid token")

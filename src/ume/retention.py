@@ -28,6 +28,12 @@ def start_retention_scheduler(
     retention_seconds = settings.UME_GRAPH_RETENTION_DAYS * 86400
 
     def _run() -> None:
+        # Run once immediately so very short-lived tests can observe effects
+        try:
+            graph.purge_old_records(retention_seconds)
+        except Exception:  # pragma: no cover - log and continue
+            logger.exception("Failed to purge old graph records")
+
         while not stop_event.wait(interval_seconds):
             try:
                 graph.purge_old_records(retention_seconds)

@@ -26,7 +26,7 @@ class TestServicer(ume_pb2_grpc.UMEServicer):
         for rec in DummyQE().execute_cypher(request.cypher):
             struct = ume_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
             struct.update(rec)
-            yield ume_pb2.CypherRecord(record=struct)
+            yield ume_pb2.CypherRecord(record=struct)  # type: ignore[attr-defined]
 
 
 async def _run_server(port_holder: list[int]):

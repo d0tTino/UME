@@ -36,6 +36,7 @@ from ume import (  # noqa: E402
 )
 from ume.benchmarks import benchmark_vector_store
 from ume.federation import MirrorMakerDriver
+from ume import DEFAULT_SCHEMA_MANAGER
 
 # It's good practice to handle potential import errors if ume is not installed,
 # though for poetry run python ume_cli.py this should be fine.
@@ -330,6 +331,34 @@ class UMEPrompt(Cmd):
         except Exception as e:
             print(f"An unexpected error occurred during load: {e}")
             self._log_audit(str(e))
+
+    def do_register_schema(self, arg):
+        """register_schema <version> <schema_path> <proto_module>"""
+        try:
+            version, schema_path, proto_module = shlex.split(arg)
+        except ValueError:
+            print("Usage: register_schema <version> <schema_path> <proto_module>")
+            return
+
+        try:
+            DEFAULT_SCHEMA_MANAGER.register_schema(version, schema_path, proto_module)
+            print("Schema registered.")
+        except Exception as e:
+            print(f"Error registering schema: {e}")
+
+    def do_migrate_schema(self, arg):
+        """migrate_schema <from_version> <to_version>"""
+        try:
+            old_ver, new_ver = shlex.split(arg)
+        except ValueError:
+            print("Usage: migrate_schema <from_version> <to_version>")
+            return
+
+        try:
+            DEFAULT_SCHEMA_MANAGER.upgrade_schema(old_ver, new_ver, graph=self.graph)
+            print("Schema migrated.")
+        except Exception as e:
+            print(f"Error migrating schema: {e}")
 
     def do_benchmark_vectors(self, arg):
         """benchmark_vectors [--gpu] [--num-vectors N] [--num-queries Q]

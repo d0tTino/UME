@@ -1,38 +1,23 @@
-import time
-import importlib.util
+# mypy: ignore-errors
 import sys
-import types
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-BASE = Path(__file__).resolve().parents[1] / "src" / "ume"
+import time
 
-ume_pkg = types.ModuleType("ume")
-ume_pkg.__path__ = [str(BASE)]
-sys.modules["ume"] = ume_pkg
-
-def _load(name: str) -> types.ModuleType:
-    spec = importlib.util.spec_from_file_location(f"ume.{name}", BASE / f"{name}.py")
-    assert spec is not None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[f"ume.{name}"] = mod
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
-
-pg = _load("persistent_graph")
-cfg = _load("config")
-ret = _load("retention")
-
-PersistentGraph = pg.PersistentGraph
-settings = cfg.settings
-start_retention_scheduler = ret.start_retention_scheduler
-stop_retention_scheduler = ret.stop_retention_scheduler
+from ume.persistent_graph import PersistentGraph
+import sqlite3
+from ume.config import settings
+from ume.retention import start_retention_scheduler, stop_retention_scheduler
 
 
 def test_retention_scheduler_purges_records(monkeypatch) -> None:
-    # Allow SQLite connection across threads for the retention scheduler
-    orig_connect = pg.sqlite3.connect
-    monkeypatch.setattr(pg.sqlite3, "connect", lambda *a, **kw: orig_connect(*a, check_same_thread=False, **kw))
+    orig_connect = sqlite3.connect
+
+    def _connect(*a, **kw):  # type: ignore[no-redef]
+        return orig_connect(*a, check_same_thread=False, **kw)
+
+    monkeypatch.setattr(sqlite3, "connect", _connect)  # type: ignore[arg-type]
 
     graph = PersistentGraph(":memory:")
     graph.add_node("old", {})

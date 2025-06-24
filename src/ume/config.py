@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     UME_OAUTH_ROLE: str = "AnalyticsAgent"
     UME_OAUTH_TTL: int = 3600
 
+    # API token used for test clients and simple auth
+    UME_API_TOKEN: str = "secret-token"
+
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""

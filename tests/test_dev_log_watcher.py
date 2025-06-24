@@ -1,5 +1,6 @@
-from watchdog.events import FileModifiedEvent
 import json
+from types import SimpleNamespace
+from typing import Any
 
 from ume.watchers.dev_log_watcher import DevLogHandler
 from ume.event import parse_event
@@ -14,7 +15,7 @@ def test_handler_produces_event(tmp_path) -> None:
 
     handler = DevLogHandler(Producer())
 
-    fake_event = SimpleNamespace(src_path=str(tmp_path / "file.txt"), is_directory=False)
+    fake_event: Any = SimpleNamespace(src_path=str(tmp_path / "file.txt"), is_directory=False)
 
     handler.on_modified(fake_event)
 
