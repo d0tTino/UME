@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
 
+    # Reliability
+    UME_RELIABILITY_THRESHOLD: float = 0.8
+
 
 # Create a single, importable instance
 settings = Settings()

@@ -21,3 +21,13 @@ VECTOR_INDEX_SIZE = Gauge(
     "ume_vector_index_size",
     "Number of vectors stored in the VectorStore",
 )
+
+# Reliability metrics
+RESPONSE_CONFIDENCE = Histogram(
+    "ume_response_confidence",
+    "Confidence scores for analytics responses",
+)
+FALSE_TEXT_RATE = Counter(
+    "ume_false_text_total",
+    "Number of low-confidence items filtered",
+)
