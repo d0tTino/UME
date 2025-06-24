@@ -24,7 +24,6 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_RELIABILITY_THRESHOLD: float = 0.5
     WATCH_PATHS: list[str] = ["."]
     DAG_RESOURCES: dict[str, int] = {"cpu": 1, "io": 1}
-    UME_RELIABILITY_THRESHOLD: float = 0.5
 
     # Vector store
     UME_VECTOR_DIM: int = 1536
@@ -54,10 +53,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_OAUTH_PASSWORD: str = "password"
     UME_OAUTH_ROLE: str = "AnalyticsAgent"
     UME_OAUTH_TTL: int = 3600
-    UME_API_TOKEN: str = "test-token"
+    UME_API_TOKEN: str = "secret-token"
 
     # API token used for test clients and simple auth
-    UME_API_TOKEN: str = "secret-token"
 
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
