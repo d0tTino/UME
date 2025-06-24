@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-import pytest
 from ume.api import app, configure_graph
 from pathlib import Path
 import sys
@@ -61,6 +60,6 @@ def test_backpressure() -> None:
         it = (line for line in res.iter_lines() if line)
         first = next(it)
         assert first == "data: a"
-        sleep(0.05)
+        time.sleep(0.05)
         second = next(it)
         assert second == "data: b"

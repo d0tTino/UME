@@ -61,8 +61,12 @@ class Settings(BaseSettings):  # type: ignore[misc]
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
 
+    # Tweet bot
+    TWITTER_BEARER_TOKEN: str | None = None
+
     # Angel Bridge
     ANGEL_BRIDGE_LOOKBACK_HOURS: int = 24
+
 
 
     def model_post_init(self, __context: Any) -> None:  # noqa: D401
