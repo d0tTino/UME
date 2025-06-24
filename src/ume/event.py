@@ -15,6 +15,7 @@ class EventType(str, Enum):
     UPDATE_NODE_ATTRIBUTES = "UPDATE_NODE_ATTRIBUTES"
     CREATE_EDGE = "CREATE_EDGE"
     DELETE_EDGE = "DELETE_EDGE"
+    CREATE_ONTOLOGY_RELATION = "CREATE_ONTOLOGY_RELATION"
 
 
 @dataclass(frozen=True)
@@ -139,7 +140,11 @@ def parse_event(data: Dict[str, Any]) -> Event:
             logger.error(msg)
             raise EventError(msg)
 
-    elif event_type in [EventType.CREATE_EDGE.value, EventType.DELETE_EDGE.value]:
+    elif event_type in [
+        EventType.CREATE_EDGE.value,
+        EventType.DELETE_EDGE.value,
+        EventType.CREATE_ONTOLOGY_RELATION.value,
+    ]:
         required_fields_for_edge = {"node_id", "target_node_id", "label"}
         missing_fields = required_fields_for_edge - data.keys()
         if missing_fields:

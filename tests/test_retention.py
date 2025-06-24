@@ -45,10 +45,35 @@ def test_retention_scheduler_purges_records(monkeypatch) -> None:
         graph.conn.execute("UPDATE edges SET created_at=?", (old_ts,))
 
     monkeypatch.setattr(settings, "UME_GRAPH_RETENTION_DAYS", 0)
-    start_retention_scheduler(graph, interval_seconds=0.1)
-    time.sleep(0.2)
+    start_retention_scheduler(graph, interval_seconds=0.05)
+    time.sleep(0.1)
     stop_retention_scheduler()
 
     assert not graph.node_exists("old")
     assert graph.node_exists("new")
     assert graph.get_all_edges() == []
+
+
+def test_retention_scheduler_reuses_thread(monkeypatch):
+    graph = types.SimpleNamespace(purge_old_records=lambda *a, **k: None)
+    thread1, stop1 = start_retention_scheduler(graph, interval_seconds=0.1)
+    thread2, stop2 = start_retention_scheduler(graph, interval_seconds=0.1)
+    try:
+        assert thread1 is thread2
+    finally:
+        stop1()
+        stop_retention_scheduler()
+
+
+def test_retention_scheduler_continues_after_error(monkeypatch):
+    calls: list[None] = []
+    def purge(_):
+        calls.append(None)
+        raise RuntimeError("fail")
+    graph = types.SimpleNamespace(purge_old_records=purge)
+    monkeypatch.setattr(settings, "UME_GRAPH_RETENTION_DAYS", 0)
+    thread, stop = start_retention_scheduler(graph, interval_seconds=0.05)
+    time.sleep(0.12)
+    stop()
+    stop_retention_scheduler()
+    assert len(calls) > 1

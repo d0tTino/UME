@@ -60,6 +60,5 @@ class Settings(BaseSettings):
     OPA_URL: str = "http://localhost:8181"
     OPA_TOKEN: str | None = None
 
-
 # Create a single, importable instance
 settings = Settings()
