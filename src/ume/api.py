@@ -24,6 +24,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile,
 from fastapi.responses import JSONResponse, Response
 from sse_starlette.sse import EventSourceResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sse_starlette.sse import EventSourceResponse
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -277,6 +278,14 @@ class EdgeCreateRequest(BaseModel):
     label: str
 
 
+class TweetCreateRequest(BaseModel):
+    text: str
+
+
+class DocumentUploadRequest(BaseModel):
+    content: str
+
+
 @app.post("/analytics/shortest_path")
 def api_shortest_path(
     req: ShortestPathRequest,
@@ -429,6 +438,28 @@ def api_delete_edge(
     """Delete an edge identified by source, target and label."""
     graph.delete_edge(source, target, label)
     return {"status": "ok"}
+
+
+@app.post("/tweets")
+def api_post_tweet(
+    req: TweetCreateRequest,
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    """Create a tweet node used by the Tweet-bot."""
+    node_id = f"tweet:{uuid4()}"
+    graph.add_node(node_id, {"text": req.text, "timestamp": int(time.time())})
+    return {"id": node_id}
+
+
+@app.post("/documents")
+def api_upload_document(
+    req: DocumentUploadRequest,
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    """Upload a document for Document Guru."""
+    node_id = f"doc:{uuid4()}"
+    graph.add_node(node_id, {"content": req.content, "timestamp": int(time.time())})
+    return {"id": node_id}
 
 
 class VectorAddRequest(BaseModel):

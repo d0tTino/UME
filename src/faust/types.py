@@ -1,0 +1,2 @@
+class StreamT(list):
+    pass

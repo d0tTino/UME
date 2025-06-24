@@ -9,6 +9,7 @@ from .embedding import generate_embedding
 from .event import Event, EventType
 from .graph_adapter import IGraphAdapter
 from .processing import apply_event_to_graph
+from ._internal.listeners import GraphListener
 
 logger = logging.getLogger(__name__)
 
@@ -108,3 +109,38 @@ def update_concept_graph_for_node(
         "Updated ontology for %s with %s relations", node_id, len(events)
     )
     return events
+
+
+_ONTOLOGY_GRAPH: IGraphAdapter | None = None
+
+
+def configure_ontology_graph(graph: IGraphAdapter) -> None:
+    """Set the graph used by :class:`OntologyListener`."""
+    global _ONTOLOGY_GRAPH
+    _ONTOLOGY_GRAPH = graph
+
+
+class OntologyListener(GraphListener):
+    """Listener that updates ontology relations on new nodes."""
+
+    def __init__(self, *, threshold: float = 0.8) -> None:
+        self.threshold = threshold
+
+    def on_node_created(self, node_id: str, attributes: Dict[str, object]) -> None:
+        if _ONTOLOGY_GRAPH is not None:
+            update_concept_graph_for_node(
+                _ONTOLOGY_GRAPH, node_id, threshold=self.threshold
+            )
+
+    def on_node_updated(self, node_id: str, attributes: Dict[str, object]) -> None:
+        pass  # No-op
+
+    def on_edge_created(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
+        pass  # No-op
+
+    def on_edge_deleted(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
+        pass  # No-op
