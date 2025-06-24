@@ -26,6 +26,7 @@ from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .config import Settings
 from .utils import ssl_config
+from .memory import EpisodicMemory, SemanticMemory
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
@@ -50,7 +51,7 @@ from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
 from .agent_orchestrator import AgentOrchestrator, Supervisor, Critic, AgentTask
 from .dag_service import DAGService
-
+from .reliability import score_text, filter_low_confidence
 
 try:  # Optional dependency
     from .embedding import generate_embedding
@@ -95,7 +96,13 @@ __all__ = [
     "VectorStoreListener",
     "create_default_store",
 
+    "EpisodicMemory",
+    "SemanticMemory",
+
     "LLMFerry",
+
+    "score_text",
+    "filter_low_confidence",
 
     "generate_embedding",
     "AgentTask",
