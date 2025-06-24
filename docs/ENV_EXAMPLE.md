@@ -23,6 +23,9 @@ LLM_FERRY_API_URL=https://example.com/api
 
 # API key used by LLM Ferry
 LLM_FERRY_API_KEY=
+
+# Number of hours of events to include in Angel Bridge summaries
+ANGEL_BRIDGE_LOOKBACK_HOURS=24
 ```
 
 UME requires **Python 3.10** or newer. If your system Python is older than 3.10,
