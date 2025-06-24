@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 import json
 
-from ume import privacy_agent
+from ume.pipeline import privacy_agent
 
 class FakeAnalyzer:
     def analyze(self, text: str, language: str = "en"):
@@ -16,7 +16,7 @@ def test_redact_event_payload_invalid_json(monkeypatch):
     monkeypatch.setattr(privacy_agent, "_ANALYZER", FakeAnalyzer())
     monkeypatch.setattr(privacy_agent, "_ANONYMIZER", FakeAnonymizer())
     payload = {"field": "value"}
-    redacted, flag = privacy_agent.redact_event_payload(payload)
+    redacted, flag = privacy_agent.redact_event_payload(payload)  # type: ignore[arg-type]
     assert redacted == payload
     assert flag is False
 
