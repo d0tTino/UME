@@ -53,7 +53,6 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_OAUTH_PASSWORD: str = "password"
     UME_OAUTH_ROLE: str = "AnalyticsAgent"
     UME_OAUTH_TTL: int = 3600
-    UME_API_TOKEN: str = "secret-token"
 
     # API token used for test clients and simple auth
 

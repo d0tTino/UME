@@ -37,3 +37,20 @@ def test_semantic_memory_save_load(tmp_path):
     assert loaded.get_fact("f1") == {"value": 1}
     assert loaded.related_facts("f1") == ["f1"]
     loaded.close()
+
+
+def test_log_replayed_on_new_instance(tmp_path):
+    log = tmp_path / "events.log"
+    mem = EpisodicMemory(db_path=":memory:", log_path=str(log))
+    evt = Event(
+        event_type=EventType.CREATE_NODE,
+        timestamp=int(time.time()),
+        node_id="e2",
+        payload={"node_id": "e2", "attributes": {"text": "hi"}},
+    )
+    mem.record_event(evt)
+    mem.close()
+
+    mem2 = EpisodicMemory(db_path=":memory:", log_path=str(log))
+    assert mem2.get_episode("e2") == {"text": "hi"}
+    mem2.close()
