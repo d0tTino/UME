@@ -51,6 +51,7 @@ from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
 from .agent_orchestrator import AgentOrchestrator, Supervisor, Critic, AgentTask
 from .dag_service import DAGService
+from .resource_scheduler import ResourceScheduler, ScheduledTask
 from .reliability import score_text, filter_low_confidence
 
 try:  # Optional dependency
@@ -112,4 +113,6 @@ __all__ = [
     "Task",
     "DAGExecutor",
     "DAGService",
+    "ScheduledTask",
+    "ResourceScheduler",
 ]
