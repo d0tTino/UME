@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import logging
 import time
 from typing import Any, Awaitable, Callable, Dict, List, cast, AsyncGenerator
@@ -83,7 +82,7 @@ class _MemoryRedis:
 @app.on_event("startup")
 async def _init_limiter() -> None:
     """Initialize rate limiting using Redis or an in-memory fallback."""
-    url = os.getenv("UME_RATE_LIMIT_REDIS")
+    url = settings.UME_RATE_LIMIT_REDIS
     if url and redis:
         try:
             redis_client = redis.from_url(
@@ -141,8 +140,8 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
-    """Set ``app.state.graph`` applying RBAC if ``UME_API_ROLE`` is defined."""
-    role = os.getenv("UME_API_ROLE")
+    """Set ``app.state.graph`` applying RBAC if ``settings.UME_API_ROLE`` is defined."""
+    role = settings.UME_API_ROLE
     if role:
         graph = RoleBasedGraphAdapter(graph, role=role)
     app.state.graph = graph
