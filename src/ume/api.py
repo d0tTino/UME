@@ -25,9 +25,11 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from sse_starlette.sse import EventSourceResponse
+
 from pydantic import BaseModel
 
 from .analytics import shortest_path
+from .reliability import filter_low_confidence
 from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
@@ -270,7 +272,8 @@ def api_shortest_path(
 ) -> Dict[str, Any]:
     """Return the shortest path between two nodes."""
     path = shortest_path(graph, req.source, req.target)
-    return {"path": path}
+    filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
+    return {"path": filtered}
 
 
 @app.post("/analytics/path")
@@ -286,7 +289,8 @@ def api_constrained_path(
         req.edge_label,
         req.since_timestamp,
     )
-    return {"path": path}
+    filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
+    return {"path": filtered}
 
 
 @app.get("/analytics/path/stream")
@@ -306,7 +310,8 @@ async def api_constrained_path_stream(
         path = graph.constrained_path(
             source, target, max_depth, edge_label, since_timestamp
         )
-        for node in path:
+        filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
+        for node in filtered:
             yield {"data": node}
             await asyncio.sleep(0)
 
@@ -319,12 +324,20 @@ def api_subgraph(
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Extract a subgraph starting from ``start`` to the given ``depth``."""
-    return graph.extract_subgraph(
+    sg = graph.extract_subgraph(
         req.start,
         req.depth,
         req.edge_label,
         req.since_timestamp,
     )
+    nodes = filter_low_confidence(
+        sg.get("nodes", {}).keys(), settings.UME_RELIABILITY_THRESHOLD
+    )
+    sg["nodes"] = {n: sg["nodes"][n] for n in nodes}
+    sg["edges"] = [
+        e for e in sg.get("edges", []) if e[0] in sg["nodes"] and e[1] in sg["nodes"]
+    ]
+    return sg
 
 
 @app.post("/redact/node/{node_id}")

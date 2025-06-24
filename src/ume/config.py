@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
 
+    # OPA integration
+    OPA_URL: str = "http://localhost:8181"
+    OPA_TOKEN: str | None = None
 
 # Create a single, importable instance
 settings = Settings()
