@@ -35,8 +35,11 @@ spacy = "^3.8.7"
 prometheus-client = "^0.22.1"
 watchdog = "^2.3"
 grpcio = "*"
-sse-starlette = "^2.3.6"
-python-multipart = "^0.0.20"
+redis = "*"
+fastapi-limiter = "*"
+sse-starlette = "*"
+python-multipart = "*"
+
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"

@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
 import pytest
 
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ume import VectorStore
 from ume.api import app, configure_vector_store
 from ume.config import settings

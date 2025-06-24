@@ -56,6 +56,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_OAUTH_TTL: int = 3600
     UME_API_TOKEN: str = "test-token"
 
+    # API token used for test clients and simple auth
+    UME_API_TOKEN: str = "secret-token"
+
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""

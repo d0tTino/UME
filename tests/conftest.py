@@ -8,8 +8,8 @@ try:
     from testcontainers.core.container import DockerContainer
     from testcontainers.neo4j import Neo4jContainer
 except Exception:  # pragma: no cover - optional dependency may be missing
-    DockerContainer = None
-    Neo4jContainer = None
+    DockerContainer = None  # type: ignore[assignment,misc]
+    Neo4jContainer = None  # type: ignore[assignment]
 
 import pytest
 
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 try:
     from ume.pipeline import privacy_agent as privacy_agent_module
 except Exception:  # pragma: no cover - optional deps may be missing
-    privacy_agent_module = None
+    privacy_agent_module = None  # type: ignore[assignment]
 
 
 @pytest.fixture

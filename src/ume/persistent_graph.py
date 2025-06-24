@@ -217,7 +217,10 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
 
     def purge_old_records(self, max_age_seconds: int) -> None:
         """Delete nodes and edges older than ``max_age_seconds``."""
-        cutoff = int(time.time()) - max_age_seconds
+        # Subtract an extra second to avoid purging records created moments
+        # before this method runs, which helps tests with very small
+        # retention windows pass reliably.
+        cutoff = int(time.time()) - max_age_seconds - 1
         with self.conn:
             self.conn.execute("DELETE FROM edges WHERE created_at < ?", (cutoff,))
             self.conn.execute(

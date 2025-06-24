@@ -25,13 +25,19 @@ the running UME API and visualizes it using `vis-network`.
 
    Then open `http://localhost:8001/index.html` in your browser.
 
-3. **Load the Graph**
+3. **Login**
 
-   Enter the API token when prompted and click **Load Graph** to fetch the
-   `/analytics/subgraph` endpoint. You can also input a comma-separated vector
-   to query `/vectors/search` via the optional search box.
+   Provide your API username and password to obtain an OAuth token. The
+   dashboard automatically fetches graph statistics and recent audit events
+   after logging in.
 
-4. **View Metrics**
+4. **Load the Graph**
+
+   Click **Load Graph** to fetch the `/analytics/subgraph` endpoint. You can also
+   input a comma-separated vector to query `/vectors/search` via the optional
+   search box.
+
+5. **View Metrics**
 
    Use **Load Stats** to display node and edge counts along with vector index
    size. Click **Recent Events** to fetch the latest audit log entries, shown

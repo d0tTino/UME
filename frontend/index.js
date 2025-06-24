@@ -1,4 +1,4 @@
-const { useState, useRef } = React;
+const { useState, useRef, useEffect } = React;
 
 function App() {
   const [token, setToken] = useState('');
@@ -13,7 +13,15 @@ function App() {
   const containerRef = useRef(null);
   const networkRef = useRef(null);
 
-  function login() {
+  useEffect(() => {
+    if (token) {
+      loadStats();
+      loadEvents();
+    }
+  }, [token]);
+
+  function login(e) {
+    if (e) e.preventDefault();
     fetch('/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -104,12 +112,10 @@ function App() {
       .catch((err) => console.error('Failed to load events', err));
   }
 
-  return React.createElement(
-    'div',
-    { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
-    React.createElement(
-      'div',
-      { style: { padding: '8px', background: '#eee' } },
+  if (!token) {
+    return React.createElement(
+      'form',
+      { onSubmit: login, style: { padding: '20px' } },
       React.createElement('input', {
         placeholder: 'Username',
         value: username,
@@ -124,9 +130,18 @@ function App() {
       }),
       React.createElement(
         'button',
-        { onClick: login, style: { marginLeft: '4px' } },
+        { type: 'submit', style: { marginLeft: '4px' } },
         'Login'
-      ),
+      )
+    );
+  }
+
+  return React.createElement(
+    'div',
+    { style: { height: '100%', display: 'flex', flexDirection: 'column' } },
+    React.createElement(
+      'div',
+      { style: { padding: '8px', background: '#eee' } },
       React.createElement(
         'button',
         { onClick: loadGraph, style: { marginLeft: '4px' } },

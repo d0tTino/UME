@@ -1170,7 +1170,8 @@ version = "0.1.6"
 description = "A request rate limiter for fastapi"
 optional = false
 python-versions = ">=3.9,<4.0"
-groups = ["dev"]
+groups = ["main"]
+
 files = [
     {file = "fastapi_limiter-0.1.6-py3-none-any.whl", hash = "sha256:2e53179a4208b8f2c8795e38bb001324d3dc37d2800ff49fd28ec5caabf7a240"},
     {file = "fastapi_limiter-0.1.6.tar.gz", hash = "sha256:6f5fde8efebe12eb33861bdffb91009f699369a3c2862cdc7c1d9acf912ff443"},
@@ -3530,7 +3531,8 @@ version = "6.2.0"
 description = "Python client for Redis database and key-value store"
 optional = false
 python-versions = ">=3.9"
-groups = ["dev"]
+groups = ["main"]
+
 files = [
     {file = "redis-6.2.0-py3-none-any.whl", hash = "sha256:c8ddf316ee0aab65f04a11229e94a64b2618451dab7a67cb2f77eb799d872d5e"},
     {file = "redis-6.2.0.tar.gz", hash = "sha256:e821f129b75dde6cb99dd35e5c76e8c49512a5a0d8dfdc560b2fbd44b85ca977"},
@@ -5119,4 +5121,5 @@ vector = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "f662e33c2b81468521934443c9530e5d96dc1577f4d98b368f2cb9edae7d3b93"
+content-hash = "59cfe3321aaecb5b96ed544657bed3c76170f8338f8fc5a11913b9e7fa569b52"
+

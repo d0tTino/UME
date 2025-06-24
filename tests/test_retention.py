@@ -1,24 +1,24 @@
-import time
-import types
-import sqlite3
-from typing import Callable
+# mypy: ignore-errors
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from ume import PersistentGraph
+import time
+
+from ume.persistent_graph import PersistentGraph
+import sqlite3
 from ume.config import settings
 from ume.retention import start_retention_scheduler, stop_retention_scheduler
 
 
-import pytest
+def test_retention_scheduler_purges_records(monkeypatch) -> None:
+    orig_connect = sqlite3.connect
 
+    def _connect(*a, **kw):  # type: ignore[no-redef]
+        return orig_connect(*a, check_same_thread=False, **kw)
 
-def test_retention_scheduler_purges_records(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Allow SQLite connection across threads for the retention scheduler
-    orig_connect: Callable[..., sqlite3.Connection] = sqlite3.connect
-    monkeypatch.setattr(
-        sqlite3,
-        "connect",
-        lambda *a, **kw: orig_connect(*a, check_same_thread=False, **kw),
-    )
+    monkeypatch.setattr(sqlite3, "connect", _connect)  # type: ignore[arg-type]
+
 
     graph = PersistentGraph(":memory:")
     graph.add_node("old", {})

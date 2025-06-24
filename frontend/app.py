@@ -1,6 +1,7 @@
 import json
 
 import httpx
+from httpx import QueryParams
 import argparse
 
 

@@ -374,6 +374,21 @@ You can also search the vector store with either UI:
 poetry run python frontend/app.py --username ume --password password search "1,0,0" --k 3
 ```
 
+### Building and Deploying the Frontend
+
+The React dashboard in `frontend/` is fully static and does not require a build
+step. Serve the files with any web server:
+
+```bash
+cd frontend
+python -m http.server 8001
+```
+
+Visit `http://localhost:8001/` after starting the API to log in with your API
+credentials. To deploy, copy the contents of `frontend/` to your preferred
+static hosting service or configure your production web server to serve the
+files alongside the FastAPI application.
+
 ### API Authentication
 
 Obtain an OAuth2 token via the `/token` endpoint using the password grant:
