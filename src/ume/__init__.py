@@ -49,6 +49,7 @@ else:  # pragma: no cover - optional dependency
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
 from .dag_service import DAGService
+from .ontology import build_concept_graph, update_concept_graph_for_node
 
 
 try:  # Optional dependency
@@ -97,6 +98,8 @@ __all__ = [
     "LLMFerry",
 
     "generate_embedding",
+    "build_concept_graph",
+    "update_concept_graph_for_node",
     "Task",
     "DAGExecutor",
     "DAGService",

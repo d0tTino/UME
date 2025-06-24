@@ -140,6 +140,30 @@ def apply_event_to_graph(
         for listener in get_registered_listeners():
             listener.on_edge_created(source_node_id, target_node_id, label)
 
+    elif event.event_type == EventType.CREATE_ONTOLOGY_RELATION:
+        source_node_id = event.node_id
+        target_node_id = event.target_node_id
+        label = event.label
+
+        if not (
+            isinstance(source_node_id, str)
+            and isinstance(target_node_id, str)
+            and isinstance(label, str)
+        ):
+            raise ProcessingError(
+                f"Invalid event structure for CREATE_ONTOLOGY_RELATION: source_node_id, target_node_id, "
+                f"and label must be strings. Event ID: {event.event_id}"
+            )
+
+        assert isinstance(source_node_id, str)
+        assert isinstance(target_node_id, str)
+        assert isinstance(label, str)
+        schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
+        schema.validate_edge_label(label)
+        graph.add_edge(source_node_id, target_node_id, label)
+        for listener in get_registered_listeners():
+            listener.on_edge_created(source_node_id, target_node_id, label)
+
     elif event.event_type == EventType.DELETE_EDGE:
         # parse_event should have validated presence and type of node_id, target_node_id, label
         source_node_id = event.node_id
