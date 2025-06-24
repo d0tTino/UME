@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     UME_LOG_LEVEL: str = "INFO"
     UME_LOG_JSON: bool = False
     UME_GRAPH_RETENTION_DAYS: int = 30
+    UME_RELIABILITY_THRESHOLD: float = 0.5
     WATCH_PATHS: list[str] = ["."]
     DAG_RESOURCES: dict[str, int] = {"cpu": 1, "io": 1}
 

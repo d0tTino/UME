@@ -36,3 +36,42 @@ jobs:
         env:
           UME_DOCKER_TESTS: true
         run: poetry run pytest --cov=ume --cov-report xml --cov-fail-under=80
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    needs: test-and-lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start stack
+        run: |
+          cd docker
+          docker compose up -d
+      - name: Wait for Redpanda health
+        run: |
+          cd docker
+          for i in {1..30}; do
+            status=$(docker compose ps --format '{{.Name}} {{.Health}}' | grep redpanda | awk '{print $2}')
+            if [ "$status" = "healthy" ]; then exit 0; fi
+            sleep 5
+          done
+          docker compose logs redpanda
+          exit 1
+      - name: Wait for privacy-agent health
+        run: |
+          cd docker
+          for i in {1..30}; do
+            status=$(docker compose ps --format '{{.Name}} {{.Health}}' | grep privacy-agent | awk '{print $2}')
+            if [ "$status" = "healthy" ]; then exit 0; fi
+            sleep 5
+          done
+          docker compose logs privacy-agent
+          exit 1
+      - name: Check privacy-agent running
+        run: |
+          cd docker
+          docker compose ps privacy-agent
+      - name: Tear down
+        if: always()
+        run: |
+          cd docker
+          docker compose down -v

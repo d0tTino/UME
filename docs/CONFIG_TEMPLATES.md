@@ -98,3 +98,21 @@ below lists all available variables and their default values.
 ## Benchmark Hardware
 A single-node Dell PowerEdge R7625 with an EPYC 9254P CPU, 256 GB RAM and four NVMe drives was used when validating the Redpanda benchmark.
 
+## Docker Compose Quickstart
+
+The repository ships with a `docker-compose.yml` for spinning up Redpanda
+alongside the privacy agent. To start the stack:
+
+1. Install Docker and Docker Compose.
+2. From the project root run:
+   ```bash
+   cd docker
+   # Optional: generate TLS certificates
+   bash generate-certs.sh
+   docker compose up
+   ```
+3. Wait until `redpanda` reports `healthy` with `docker compose ps`.
+4. Inspect logs with `docker compose logs -f privacy-agent`.
+5. Confirm both services report `healthy` with `docker compose ps`.
+6. Stop all containers with `docker compose down` when finished.
+
