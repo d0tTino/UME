@@ -51,7 +51,10 @@ If you find a bug or have an idea for a new feature, please check our issue trac
 
 ### Pull Requests
 
-- Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR.
+ - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR. Coverage for the `ume` package must remain above 80%, verified with:
+   ```bash
+   pytest --cov=ume --cov-fail-under=80
+   ```
 - All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, formatting checks, and mypy) before merging.
 - The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.
 

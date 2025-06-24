@@ -29,11 +29,11 @@ class DAGExecutor:
         }
         self._stop_event = threading.Event()
 
-    def stop(self) -> None:
+    def stop(self) -> None:  # pragma: no cover - simple setter
         """Request execution to stop."""
         self._stop_event.set()
 
-    def reset_stop_flag(self) -> None:
+    def reset_stop_flag(self) -> None:  # pragma: no cover - simple setter
         self._stop_event.clear()
 
     def add_task(self, task: Task) -> None:

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from importlib import resources
 from typing import Dict
 import json
-import yaml  # type: ignore
+import yaml
 
 
 @dataclass
