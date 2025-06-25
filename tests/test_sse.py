@@ -1,4 +1,6 @@
 from fastapi.testclient import TestClient
+from starlette.responses import Response
+from typing import cast
 from ume.api import app, configure_graph
 from pathlib import Path
 import sys
@@ -16,6 +18,7 @@ def setup_module(_: object) -> None:
     g.add_node("a", {})
     g.add_node("b", {})
     g.add_edge("a", "b", "L")
+    object.__setattr__(settings, "UME_API_TOKEN", "")
     configure_graph(g)
 
 
@@ -24,10 +27,10 @@ def _token(client: TestClient) -> str:
         "/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     )
-    return res.json()["access_token"]
+    return cast(str, res.json()["access_token"])
 
 
-def _get(client: TestClient):
+def _get(client: TestClient) -> Response:
     return client.get(
         "/analytics/path/stream",
         params={"source": "a", "target": "b"},
@@ -43,7 +46,7 @@ def test_streaming_path() -> None:
         assert data == ["data: a", "data: b"]
 
 
-@pytest.mark.skip("Redis not available for rate limit test")
+@pytest.mark.skip("Redis not available for rate limit test")  # type: ignore[misc]
 def test_rate_limit() -> None:
     with TestClient(app) as client:
         _get(client)
@@ -52,7 +55,7 @@ def test_rate_limit() -> None:
         assert res.status_code == 429
 
 
-@pytest.mark.skip("Redis not available for backpressure test")
+@pytest.mark.skip("Redis not available for backpressure test")  # type: ignore[misc]
 def test_backpressure() -> None:
     with TestClient(app) as client:
         res = _get(client)

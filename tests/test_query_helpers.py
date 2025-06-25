@@ -4,7 +4,7 @@ from ume import graph_adapter as real_ga, MockGraph
 from ume._internal import query_helpers as qh  # noqa: E402
 
 
-def test_import_igraphadapter_consistency():
+def test_import_igraphadapter_consistency() -> None:
     assert qh.IGraphAdapter is real_ga.IGraphAdapter
 
 
@@ -20,7 +20,7 @@ def build_graph() -> MockGraph:
     return g
 
 
-def test_wrapper_methods_execute_algorithms():
+def test_wrapper_methods_execute_algorithms() -> None:
     g = build_graph()
     assert qh.shortest_path(g, "a", "c") == ["a", "b", "c"]
     assert set(qh.traverse(g, "a", 2)) == {"b", "d", "c"}
