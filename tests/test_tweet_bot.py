@@ -1,14 +1,15 @@
 import json
-import httpx
 import importlib.util
 from pathlib import Path
 import pytest
 
+httpx = pytest.importorskip("httpx")
+
 spec = importlib.util.spec_from_file_location(
     "ume.tweet_bot", Path(__file__).resolve().parents[1] / "src" / "ume" / "tweet_bot.py"
 )
+assert spec is not None and spec.loader is not None
 tweet_bot = importlib.util.module_from_spec(spec)
-assert spec.loader is not None
 spec.loader.exec_module(tweet_bot)
 TweetBot = tweet_bot.TweetBot
 DEFAULT_TWEET_URL = tweet_bot.DEFAULT_TWEET_URL

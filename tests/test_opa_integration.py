@@ -1,10 +1,10 @@
-import httpx
 import pytest
 
 from ume.event import Event, EventType
-from ume.plugins.alignment.rego_engine import RegoPolicyEngine, PolicyViolationError
+from ume.plugins.alignment.rego_engine import RegoPolicyEngine, PolicyViolationError  # type: ignore[attr-defined]
 from ume.policy.opa_client import OPAClient
 
+httpx = pytest.importorskip("httpx")
 respx = pytest.importorskip("respx")
 
 

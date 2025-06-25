@@ -3,7 +3,6 @@ import socket
 import subprocess
 import time
 
-import httpx
 import pytest
 
 from ume.event import Event, EventType
@@ -13,6 +12,8 @@ from ume.config import settings
 
 
 from typing import cast
+
+httpx = pytest.importorskip("httpx")
 
 
 def _get_free_port() -> int:

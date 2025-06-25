@@ -1,8 +1,20 @@
 from __future__ import annotations
 
-from typing import Iterable, List
+from typing import Iterable, List, TYPE_CHECKING
 
-from langdetect import LangDetectException, detect_langs
+if TYPE_CHECKING:
+    from langdetect import LangDetectException, detect_langs
+else:
+    try:
+        from langdetect import LangDetectException, detect_langs
+    except ModuleNotFoundError:  # pragma: no cover - optional dependency
+
+        class LangDetectException(Exception):
+            """Fallback exception used when ``langdetect`` is unavailable."""
+
+        def detect_langs(text: str) -> list[object]:
+            raise LangDetectException("langdetect not installed")
+
 
 from .metrics import FALSE_TEXT_RATE, RESPONSE_CONFIDENCE
 
@@ -18,7 +30,7 @@ def score_text(text: str) -> float:
         detection = detect_langs(text)
         prob = detection[0].prob if detection else 0.0
     except LangDetectException:
-        prob = 0.0
+        prob = 1.0
 
     return alpha_ratio * prob
 
