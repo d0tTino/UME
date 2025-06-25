@@ -27,16 +27,20 @@ class RegoPolicyEngine(AlignmentPlugin):
         opa_client: OPAClient | None = None,
         opa_path: str = "ume/allow",
     ) -> None:
+        if opa_client is None and settings.OPA_URL:
+            opa_client = OPAClient(base_url=settings.OPA_URL, token=settings.OPA_TOKEN)
+
         self._opa_client = opa_client
         self._opa_path = opa_path
         self._query = query
-        if opa_client is None:
+
+        if self._opa_client is None:
             if RegoInterpreter is None:
                 raise ImportError(
                     "regopy is required for RegoPolicyEngine when no OPA client is provided"
                 )
             if policy_paths is None:
-                raise ValueError("policy_paths is required without opa_client")
+                raise ValueError("policy_paths is required without opa_client or OPA_URL")
             self._interp = RegoInterpreter()
             if isinstance(policy_paths, (str, Path)):
                 paths = [Path(policy_paths)]

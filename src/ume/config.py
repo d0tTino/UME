@@ -57,6 +57,10 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     # API token used for test clients and simple auth
 
+    # Remote OPA configuration
+    OPA_URL: str | None = None
+    OPA_TOKEN: str | None = None
+
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
