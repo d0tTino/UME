@@ -37,7 +37,6 @@ class ResourceScheduler:
         self._stop_event.clear()
 
     def run(self, tasks: Iterable[ScheduledTask]) -> None:
-        threads: list[threading.Thread] = []
         for task in tasks:
             if self._stop_event.is_set():
                 break
@@ -45,16 +44,5 @@ class ResourceScheduler:
                 sem = self.locks[task.resource]
             except KeyError as exc:
                 raise ValueError(f"Unknown resource {task.resource}") from exc
-
-            def worker(
-                t: ScheduledTask = task,
-                s: threading.Semaphore = sem,
-            ) -> None:
-                with s:
-                    t.func()
-
-            thread = threading.Thread(target=worker)
-            thread.start()
-            threads.append(thread)
-        for thread in threads:
-            thread.join()
+            with sem:
+                task.func()
