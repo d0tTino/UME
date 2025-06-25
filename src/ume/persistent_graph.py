@@ -42,6 +42,16 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 )
                 """
             )
+            self.conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS scores (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id TEXT,
+                    agent_id TEXT,
+                    score REAL
+                )
+                """
+            )
             # Indexes speed up queries for edges from a given source or target
             self.conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_edges_source ON edges (source)"
@@ -167,10 +177,29 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
             )
         return [row["target"] for row in cur.fetchall()]
 
+    def add_score(
+        self, task_id: str | None, agent_id: str | None, score: float
+    ) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO scores(task_id, agent_id, score) VALUES(?, ?, ?)",
+                (task_id, agent_id, score),
+            )
+
+    def get_scores(self) -> List[Tuple[str | None, str | None, float]]:
+        cur = self.conn.execute(
+            "SELECT task_id, agent_id, score FROM scores"
+        )
+        return [
+            (row["task_id"], row["agent_id"], float(row["score"]))
+            for row in cur.fetchall()
+        ]
+
     def clear(self) -> None:
         with self.conn:
             self.conn.execute("DELETE FROM edges")
             self.conn.execute("DELETE FROM nodes")
+            self.conn.execute("DELETE FROM scores")
 
     @property
     def node_count(self) -> int:

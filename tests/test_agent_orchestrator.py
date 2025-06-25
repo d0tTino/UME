@@ -22,7 +22,7 @@ class DummySupervisor(Supervisor):
 
 
 class DummyCritic(Critic):
-    def score(self, result):
+    def score(self, result, *, task=None, agent_id=None):  # type: ignore[override]
         return 1.0 if result == "ok" else 0.0
 
 
@@ -39,3 +39,30 @@ def test_execution_cycle() -> None:
 
     assert executed == ["test-task"]
     assert scores == {"worker1": 1.0}
+
+
+def test_supervisor_decomposes_objective() -> None:
+    supervisor = Supervisor()
+    tasks = supervisor.plan("step1;step2;step3")
+    assert [t.payload for t in tasks] == ["step1", "step2", "step3"]
+
+
+def test_scoring_persists_across_workers() -> None:
+    graph = module.PersistentGraph(":memory:")  # type: ignore[attr-defined]
+    critic = Critic(graph)
+    orchestrator = AgentOrchestrator(Supervisor(), critic)
+
+    async def worker(task: AgentTask) -> str:
+        return "done"
+
+    orchestrator.register_worker("a", worker)
+    orchestrator.register_worker("b", worker)
+    scores = asyncio.run(orchestrator.execute_objective("one;two"))
+    assert scores == {"a": 1.0, "b": 1.0}
+    stored = graph.get_scores()
+    assert len(stored) == 4
+    agents = {agent_id for _, agent_id, _ in stored}
+    tasks = {task_id for task_id, _, _ in stored}
+    assert agents == {"a", "b"}
+    assert tasks == {"task-1", "task-2"}
+
