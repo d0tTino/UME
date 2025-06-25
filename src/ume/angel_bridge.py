@@ -5,6 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable, Dict, Any, List
 import logging
+import time
+import json
+
+from .persistent_graph import PersistentGraph
 
 from .config import settings
 
@@ -26,8 +30,44 @@ class AngelBridge:
         """
 
         logger.debug("Consuming events for last %s hours", self.lookback_hours)
-        # TODO: fetch events from storage
-        return []
+        cutoff = int(time.time()) - self.lookback_hours * 3600
+        events: List[Dict[str, Any]] = []
+        graph = PersistentGraph()
+        try:
+            cur = graph.conn.execute(
+                "SELECT id, attributes, created_at FROM nodes "
+                "WHERE redacted=0 AND created_at >= ?",
+                (cutoff,),
+            )
+            for row in cur.fetchall():
+                events.append(
+                    {
+                        "type": "node",
+                        "id": row["id"],
+                        "timestamp": row["created_at"],
+                        "attributes": json.loads(row["attributes"]),
+                    }
+                )
+
+            cur = graph.conn.execute(
+                "SELECT source, target, label, created_at FROM edges "
+                "WHERE redacted=0 AND created_at >= ?",
+                (cutoff,),
+            )
+            for row in cur.fetchall():
+                events.append(
+                    {
+                        "type": "edge",
+                        "source": row["source"],
+                        "target": row["target"],
+                        "label": row["label"],
+                        "timestamp": row["created_at"],
+                    }
+                )
+        finally:
+            graph.close()
+
+        return events
 
     def generate_summary(self, events: Iterable[Dict[str, Any]]) -> str:
         """Generate a text summary for the provided events."""
