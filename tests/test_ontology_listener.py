@@ -1,6 +1,9 @@
 import types
 import sys
 import time
+import pytest
+
+pytest.importorskip("sentence_transformers")
 
 
 def test_listener_creates_edges(monkeypatch):

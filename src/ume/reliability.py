@@ -2,19 +2,25 @@ from __future__ import annotations
 
 from typing import Iterable, List
 
+from langdetect import LangDetectException, detect_langs
+
 from .metrics import FALSE_TEXT_RATE, RESPONSE_CONFIDENCE
 
 
 def score_text(text: str) -> float:
-    """Return a naive confidence score for ``text``.
-
-    The score is the ratio of alphabetic characters to the total length
-    of the text. Empty strings yield a score of 0.0.
-    """
+    """Return a confidence score for ``text`` using language detection."""
     if not text:
         return 0.0
-    alpha = sum(1 for c in text if c.isalpha())
-    return alpha / len(text)
+
+    alpha_ratio = sum(1 for c in text if c.isalpha()) / len(text)
+
+    try:
+        detection = detect_langs(text)
+        prob = detection[0].prob if detection else 0.0
+    except LangDetectException:
+        prob = 0.0
+
+    return alpha_ratio * prob
 
 
 def filter_low_confidence(items: Iterable[str], threshold: float) -> List[str]:

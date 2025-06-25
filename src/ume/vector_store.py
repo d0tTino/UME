@@ -14,7 +14,10 @@ import threading
 from .config import settings
 
 import numpy as np
-import faiss
+try:  # optional dependency
+    import faiss  # type: ignore
+except Exception:  # pragma: no cover - optional dependency missing
+    faiss = None  # type: ignore
 
 from ._internal.listeners import GraphListener
 from .metrics import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
@@ -37,6 +40,9 @@ class VectorStore:
         index_size_metric: Gauge | None = None,
 
     ) -> None:
+        if faiss is None:
+            raise ImportError("faiss is required for VectorStore")
+
         self.path = path or settings.UME_VECTOR_INDEX
         if path:  # pragma: no cover - filesystem
             dirpath = os.path.dirname(path)

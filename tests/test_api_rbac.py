@@ -15,8 +15,9 @@ def build_graph() -> MockGraph:
     return g
 
 
-def setup_module(_):
+def setup_module(_: object) -> None:
     app.state.query_engine = type("QE", (), {"execute_cypher": lambda self, q: []})()
+    object.__setattr__(settings, "UME_API_TOKEN", "")
 
 
 def _token(client: TestClient) -> str:
@@ -27,12 +28,12 @@ def _token(client: TestClient) -> str:
     return cast(str, res.json()["access_token"])
 
 
-def teardown_function(_):
+def teardown_function(_: object) -> None:
     os.environ.pop("UME_API_ROLE", None)
     settings.UME_API_ROLE = None
 
 
-def test_shortest_path_allowed_for_analytics_agent():
+def test_shortest_path_allowed_for_analytics_agent() -> None:
     os.environ["UME_API_ROLE"] = "AnalyticsAgent"
     settings.UME_API_ROLE = "AnalyticsAgent"
     configure_graph(build_graph())
@@ -49,7 +50,7 @@ def test_shortest_path_allowed_for_analytics_agent():
     assert res.json() == {"path": ["a", "b"]}
 
 
-def test_path_and_subgraph_allowed_for_analytics_agent():
+def test_path_and_subgraph_allowed_for_analytics_agent() -> None:
     os.environ["UME_API_ROLE"] = "AnalyticsAgent"
     settings.UME_API_ROLE = "AnalyticsAgent"
     configure_graph(build_graph())
@@ -75,7 +76,7 @@ def test_path_and_subgraph_allowed_for_analytics_agent():
     assert set(res.json()["nodes"].keys()) == {"a", "b"}
 
 
-def test_shortest_path_forbidden_for_other_roles():
+def test_shortest_path_forbidden_for_other_roles() -> None:
     os.environ["UME_API_ROLE"] = "AutoDev"
     settings.UME_API_ROLE = "AutoDev"
     configure_graph(build_graph())
@@ -106,7 +107,7 @@ def test_shortest_path_forbidden_for_other_roles():
     assert res.status_code == 403
 
 
-def test_path_forbidden_with_role_based_adapter():
+def test_path_forbidden_with_role_based_adapter() -> None:
     graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
     configure_graph(graph)
 
@@ -121,7 +122,7 @@ def test_path_forbidden_with_role_based_adapter():
     assert res.status_code == 403
 
 
-def test_subgraph_forbidden_with_role_based_adapter():
+def test_subgraph_forbidden_with_role_based_adapter() -> None:
     graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
     configure_graph(graph)
 
@@ -136,7 +137,7 @@ def test_subgraph_forbidden_with_role_based_adapter():
     assert res.status_code == 403
 
 
-def test_redact_node_forbidden_with_role_based_adapter():
+def test_redact_node_forbidden_with_role_based_adapter() -> None:
     graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
     configure_graph(graph)
 
@@ -149,7 +150,7 @@ def test_redact_node_forbidden_with_role_based_adapter():
     assert res.status_code == 403
 
 
-def test_redact_edge_forbidden_with_role_based_adapter():
+def test_redact_edge_forbidden_with_role_based_adapter() -> None:
     graph = RoleBasedGraphAdapter(build_graph(), role="AutoDev")
     configure_graph(graph)
 

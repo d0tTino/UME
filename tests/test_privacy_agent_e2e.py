@@ -3,6 +3,8 @@ import threading
 import time
 
 import pytest
+
+pytest.importorskip("confluent_kafka")
 from confluent_kafka import Consumer as KafkaConsumer
 
 from ume.event import Event, EventType

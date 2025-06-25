@@ -127,5 +127,7 @@ __all__ = [
     "ResourceScheduler",
     "ScheduledTask",
     "TweetBot",
+    "ResourceScheduler",
+    "ScheduledTask",
 
 ]

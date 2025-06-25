@@ -39,6 +39,7 @@ redis = "*"
 fastapi-limiter = "*"
 sse-starlette = "*"
 python-multipart = "*"
+httpx = "*"
 
 
 [tool.poetry.group.dev.dependencies]

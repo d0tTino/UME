@@ -8,7 +8,9 @@ from ume import VectorStore
 from ume.api import app, configure_vector_store
 from ume.config import settings
 
-pytest.importorskip("faiss")
+faiss = pytest.importorskip("faiss")
+if not hasattr(faiss, "IndexFlatL2"):
+    pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 
 def test_add_vector_authorized() -> None:

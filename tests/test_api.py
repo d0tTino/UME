@@ -1,16 +1,23 @@
+# ruff: noqa: E402
 from fastapi.testclient import TestClient
 import pytest
 from typing import Any
 import time
 
+faiss = pytest.importorskip("faiss")
+if not hasattr(faiss, "IndexFlatL2"):
+    pytest.skip("faiss is missing required functionality", allow_module_level=True)
+
 from ume.api import app, configure_graph, configure_vector_store
 from ume.vector_store import VectorStore
 from ume import MockGraph
 from ume.config import settings
+from pytest import MonkeyPatch, LogCaptureFixture
 
 
 def setup_module(_: object) -> None:
     # configure app state for tests
+    object.__setattr__(settings, "UME_API_TOKEN", "secret-token")
     app.state.query_engine = type(
         "QE", (), {"execute_cypher": lambda self, q: [{"q": q}]}
     )()
@@ -29,7 +36,9 @@ def _token(client: TestClient) -> str:
             "password": settings.UME_OAUTH_PASSWORD,
         },
     )
-    return res.json()["access_token"]
+    token = res.json()["access_token"]
+    assert isinstance(token, str)
+    return token
 
 
 def test_run_query_authorized() -> None:
@@ -100,7 +109,7 @@ def test_token_header_whitespace_and_case() -> None:
     assert res.status_code == 401
 
 
-def test_expired_token(monkeypatch) -> None:
+def test_expired_token(monkeypatch: MonkeyPatch) -> None:
     client = TestClient(app)
     token = _token(client)
     # force expiry in the past
@@ -152,6 +161,27 @@ def test_metrics_summary() -> None:
     assert "average_request_latency" in data
 
 
+def test_dashboard_endpoints() -> None:
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    client = TestClient(app)
+    token = _token(client)
+    res_stats = client.get(
+        "/dashboard/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res_stats.status_code == 200
+    stats = res_stats.json()
+    assert "node_count" in stats
+    assert "edge_count" in stats
+    assert "vector_index_size" in stats
+    res_events = client.get(
+        "/dashboard/recent_events",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res_events.status_code == 200
+    assert isinstance(res_events.json(), list)
+
+
 @pytest.mark.parametrize(
     "method,path,body,params",
     [
@@ -178,7 +208,7 @@ def test_metrics_summary() -> None:
     ],
 )
 def test_endpoints_require_authentication(
-    method: str, path: str, body: dict | None, params: list | None
+    method: str, path: str, body: dict[str, Any] | None, params: list[Any] | None
 ) -> None:
     client = TestClient(app)
     request = getattr(client, method)
@@ -191,7 +221,9 @@ def test_endpoints_require_authentication(
     assert res.status_code == 401
 
 
-def test_exception_logging_on_query(monkeypatch, caplog) -> None:
+def test_exception_logging_on_query(
+    monkeypatch: MonkeyPatch, caplog: LogCaptureFixture
+) -> None:
     """Exception inside endpoint should be logged with traceback."""
     client = TestClient(app, raise_server_exceptions=False)
 

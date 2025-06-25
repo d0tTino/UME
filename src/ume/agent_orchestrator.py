@@ -5,6 +5,8 @@ import asyncio
 from collections import defaultdict
 from typing import Callable, Any, Dict, List, Awaitable
 
+from .persistent_graph import PersistentGraph
+
 
 @dataclass
 class AgentTask:
@@ -19,15 +21,32 @@ class Supervisor:
 
     def plan(self, objective: str) -> List[AgentTask]:
         """Return a list of tasks to accomplish the given objective."""
-        return [AgentTask(id="task-1", payload=objective)]
+        parts = [p.strip() for p in objective.split(";") if p.strip()]
+        if not parts:
+            parts = [objective]
+        return [
+            AgentTask(id=f"task-{i+1}", payload=part)
+            for i, part in enumerate(parts)
+        ]
 
 
 class Critic:
-    """Evaluate task outcomes."""
+    """Evaluate task outcomes and persist scores."""
 
-    def score(self, result: Any) -> float:
-        """Return a numeric score for the given result."""
-        return 1.0 if result is not None else 0.0
+    def __init__(self, graph: PersistentGraph | None = None) -> None:
+        self.graph = graph or PersistentGraph(":memory:")
+
+    def score(
+        self,
+        result: Any,
+        *,
+        task: AgentTask | None = None,
+        agent_id: str | None = None,
+    ) -> float:
+        """Return a numeric score for ``result`` and persist it."""
+        score = 1.0 if result is not None else 0.0
+        self.graph.add_score(task.id if task else None, agent_id, score)
+        return score
 
 
 class AgentOrchestrator:
@@ -54,7 +73,9 @@ class AgentOrchestrator:
             task: AgentTask,
         ) -> tuple[str, float]:
             result = await worker(task)
-            return agent_id, self.critic.score(result)
+            return agent_id, self.critic.score(
+                result, task=task, agent_id=agent_id
+            )
 
         coros = [
             _run(worker, agent_id, task)

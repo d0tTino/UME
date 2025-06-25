@@ -3,7 +3,7 @@ from pydantic import Extra
 from typing import Any
 
 
-class Settings(BaseSettings):  # type: ignore[misc]
+class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
     )
@@ -57,6 +57,11 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_OAUTH_TTL: int = 3600
 
     # API token used for test clients and simple auth
+    UME_API_TOKEN: str | None = None
+
+    # Remote OPA configuration
+    OPA_URL: str | None = None
+    OPA_TOKEN: str | None = None
 
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
