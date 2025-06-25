@@ -1,7 +1,12 @@
+# ruff: noqa: E402
 from fastapi.testclient import TestClient
 import pytest
 from typing import Any
 import time
+
+faiss = pytest.importorskip("faiss")
+if not hasattr(faiss, "IndexFlatL2"):
+    pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 from ume.api import app, configure_graph, configure_vector_store
 from ume.vector_store import VectorStore

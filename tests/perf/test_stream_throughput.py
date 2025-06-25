@@ -3,6 +3,8 @@ import os
 import time
 
 import pytest
+
+pytest.importorskip("testcontainers")
 from testcontainers.kafka import KafkaContainer
 
 from ume.client import UMEClient

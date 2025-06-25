@@ -1,4 +1,9 @@
+# ruff: noqa: E402
 import pytest
+
+faiss = pytest.importorskip("faiss")
+if not hasattr(faiss, "IndexFlatL2"):
+    pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 from ume.vector_store import VectorStore
 

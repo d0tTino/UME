@@ -23,7 +23,6 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile,
 from fastapi.responses import JSONResponse, Response
 from sse_starlette.sse import EventSourceResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sse_starlette.sse import EventSourceResponse
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
