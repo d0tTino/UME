@@ -1,13 +1,19 @@
+# ruff: noqa: E402
 import time
 from pathlib import Path
 import sys
+import pytest
+
+faiss = pytest.importorskip("faiss")
+if not hasattr(faiss, "IndexFlatL2"):
+    pytest.skip("faiss is missing required functionality", allow_module_level=True)
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
 from ume.api import configure_vector_store, app
 from ume._internal.listeners import register_listener, unregister_listener
 import faiss
-import pytest
 from pathlib import Path
 from prometheus_client import Gauge, Histogram
 import logging

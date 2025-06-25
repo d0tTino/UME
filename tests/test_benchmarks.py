@@ -1,7 +1,13 @@
+# ruff: noqa: E402
 import csv
 import importlib.util
 from pathlib import Path
 import sys
+import pytest
+
+faiss = pytest.importorskip("faiss")
+if not hasattr(faiss, "IndexFlatL2"):
+    pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 module_path = Path(__file__).resolve().parents[1] / "src" / "ume" / "benchmarks.py"
 spec = importlib.util.spec_from_file_location("ume.benchmarks", module_path)
