@@ -14,10 +14,11 @@ import threading
 from .config import settings
 
 import numpy as np
+
 try:  # optional dependency
-    import faiss  # type: ignore
+    import faiss
 except Exception:  # pragma: no cover - optional dependency missing
-    faiss = None  # type: ignore
+    faiss = None
 
 from ._internal.listeners import GraphListener
 from .metrics import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
@@ -38,7 +39,6 @@ class VectorStore:
         flush_interval: float | None = None,
         query_latency_metric: Histogram | None = None,
         index_size_metric: Gauge | None = None,
-
     ) -> None:
         if faiss is None:
             raise ImportError("faiss is required for VectorStore")
@@ -61,7 +61,6 @@ class VectorStore:
         self._flush_thread: threading.Thread | None = None
         self._flush_stop = threading.Event()
         self.lock = threading.Lock()
-
 
         self.index = faiss.IndexFlatL2(dim)
         if self.use_gpu:  # pragma: no cover - GPU code not exercised in tests
@@ -96,7 +95,9 @@ class VectorStore:
         except Exception:
             logger.exception("Failed to stop background flush on delete")
 
-    def start_background_flush(self, interval: float) -> None:  # pragma: no cover - background thread
+    def start_background_flush(
+        self, interval: float
+    ) -> None:  # pragma: no cover - background thread
         """Periodically persist the index to disk in a background thread."""
         if self._flush_thread and self._flush_thread.is_alive():
             return
@@ -127,7 +128,6 @@ class VectorStore:
         self._flush_thread = threading.Thread(target=_loop, daemon=True)
         self._flush_thread.start()
 
-
     def stop_background_flush(self) -> None:  # pragma: no cover - background thread
         """Stop the background flush thread if running."""
         if self._flush_thread:
@@ -151,13 +151,17 @@ class VectorStore:
                         cpu_index = faiss.index_gpu_to_cpu(self.index)
                     except AttributeError:
                         cpu_index = self.index
-                    vectors = [cpu_index.reconstruct(i) for i in range(cpu_index.ntotal)]
+                    vectors = [
+                        cpu_index.reconstruct(i) for i in range(cpu_index.ntotal)
+                    ]
                     vectors[idx] = arr[0]
                     new_index = faiss.IndexFlatL2(self.dim)
                     new_index.add(np.asarray(vectors))
                     cpu_index = new_index
                     if self.use_gpu and self.gpu_resources is not None:
-                        self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, cpu_index)
+                        self.index = faiss.index_cpu_to_gpu(
+                            self.gpu_resources, 0, cpu_index
+                        )
                     else:
                         self.index = cpu_index
             else:
@@ -198,7 +202,9 @@ class VectorStore:
             if self.use_gpu:
                 try:
                     self.gpu_resources = faiss.StandardGpuResources()
-                    self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.index)
+                    self.index = faiss.index_cpu_to_gpu(
+                        self.gpu_resources, 0, self.index
+                    )
                 except AttributeError:
                     pass
 
@@ -240,12 +246,16 @@ class VectorStoreListener(GraphListener):
     def __init__(self, store: VectorStore) -> None:
         self.store = store
 
-    def on_node_created(self, node_id: str, attributes: Dict[str, Any]) -> None:  # pragma: no cover - simple passthrough
+    def on_node_created(
+        self, node_id: str, attributes: Dict[str, Any]
+    ) -> None:  # pragma: no cover - simple passthrough
         emb = attributes.get("embedding")
         if isinstance(emb, list):
             self.store.add(node_id, emb)
 
-    def on_node_updated(self, node_id: str, attributes: Dict[str, Any]) -> None:  # pragma: no cover - simple passthrough
+    def on_node_updated(
+        self, node_id: str, attributes: Dict[str, Any]
+    ) -> None:  # pragma: no cover - simple passthrough
         emb = attributes.get("embedding")
         if isinstance(emb, list):
             self.store.add(node_id, emb)
@@ -270,6 +280,7 @@ def create_default_store() -> VectorStore:  # pragma: no cover - trivial wrapper
         query_latency_metric=VECTOR_QUERY_LATENCY,
         index_size_metric=VECTOR_INDEX_SIZE,
     )
+
 
 # For backward compatibility ---------------------------------------------------
 

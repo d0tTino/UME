@@ -3,7 +3,7 @@ from pydantic import Extra
 from typing import Any
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):  # type: ignore[misc]
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
     )
@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     UME_CLI_DB: str = "ume_graph.db"
     UME_ROLE: str | None = None
     UME_API_ROLE: str | None = None
-    UME_API_TOKEN: str | None = None
     UME_RATE_LIMIT_REDIS: str | None = None
     UME_LOG_LEVEL: str = "INFO"
     UME_LOG_JSON: bool = False
@@ -73,14 +72,11 @@ class Settings(BaseSettings):
     # Angel Bridge
     ANGEL_BRIDGE_LOOKBACK_HOURS: int = 24
 
-
-
     def model_post_init(self, __context: Any) -> None:  # noqa: D401
         """Validate settings after initialization."""
         if self.UME_AUDIT_SIGNING_KEY == "default-key":
-            raise ValueError(
-                "UME_AUDIT_SIGNING_KEY must be set to a non-default value"
-            )
+            raise ValueError("UME_AUDIT_SIGNING_KEY must be set to a non-default value")
+
 
 # Create a single, importable instance
 settings = Settings()

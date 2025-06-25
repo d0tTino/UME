@@ -5,22 +5,26 @@ from typing import List, TYPE_CHECKING, cast
 from .config import settings
 
 if TYPE_CHECKING:  # pragma: no cover - type hints only
-    from sentence_transformers import SentenceTransformer
-try:  # pragma: no cover - optional dependency
-    from sentence_transformers import SentenceTransformer
-except ModuleNotFoundError:  # pragma: no cover - used in tests without package
-    class SentenceTransformer:  # type: ignore[too-many-instance-attributes]
-        def __init__(self, model_name: str) -> None:
-            self.model_name = model_name
+    from sentence_transformers import SentenceTransformer as SentenceTransformerImpl
+else:
+    try:  # pragma: no cover - optional dependency
+        from sentence_transformers import SentenceTransformer as SentenceTransformerImpl
+    except ModuleNotFoundError:
 
-        def encode(self, text: str):  # type: ignore[override]
-            return [1.0, 0.0] if "apple" in text else [0.9, 0.1]
+        class SentenceTransformerImpl:
+            def __init__(self, model_name: str) -> None:
+                self.model_name = model_name
 
-_MODEL_CACHE: dict[str, "SentenceTransformer"] = {}
+            def encode(self, text: str) -> list[float]:
+                return [1.0, 0.0] if "apple" in text else [0.9, 0.1]
 
 
-def _get_model() -> "SentenceTransformer":
+SentenceTransformer: type[SentenceTransformerImpl] = SentenceTransformerImpl
 
+_MODEL_CACHE: dict[str, SentenceTransformerImpl] = {}
+
+
+def _get_model() -> SentenceTransformerImpl:
     model_name = settings.UME_EMBED_MODEL
     model = _MODEL_CACHE.get(model_name)
     if model is None:

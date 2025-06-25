@@ -1,9 +1,10 @@
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.llm_ferry import LLMFerry
 from ume._internal.listeners import register_listener, unregister_listener
-import httpx
 import pytest
 import json
+
+httpx = pytest.importorskip("httpx")
 
 respx = pytest.importorskip("respx")
 
