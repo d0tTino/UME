@@ -2,20 +2,18 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
-import pytest
 import types
+from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import time
-import types
-import pytest
-
-
-from ume.persistent_graph import PersistentGraph
 import sqlite3
+import time
+
 from ume.config import settings
+from ume.persistent_graph import PersistentGraph
 from ume.retention import start_retention_scheduler, stop_retention_scheduler
 
 
