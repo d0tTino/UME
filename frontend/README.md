@@ -1,44 +1,35 @@
 # UME Frontend
 
-This directory contains a small React application that fetches graph data from
-the running UME API and visualizes it using `vis-network`.
+This directory contains a small React dashboard for the UME API. It allows you to log in, view graph statistics and recent audit events, and toggle alignment policies.
 
-## Running the Demo
+## Development
 
-1. **Start the API**
+Install dependencies with npm (Node 18+ required):
 
-   Launch the FastAPI server from the repository root:
+```bash
+npm install
+```
 
-   ```bash
-   uvicorn ume.api:app --reload
-   ```
+Start the development server:
 
-   The default API token is `secret-token` (see `src/ume/config.py`).
+```bash
+npm run dev
+```
 
-2. **Serve the Frontend**
+The app will be available at <http://localhost:5173>. The development server proxies requests to the running API at `http://localhost:8000`.
 
-   In another terminal, start a simple static web server:
+## Building
 
-   ```bash
-   cd frontend && python -m http.server 8001
-   ```
+Create an optimized build under `dist/`:
 
-   Then open `http://localhost:8001/index.html` in your browser.
+```bash
+npm run build
+```
 
-3. **Login**
+You can preview the production build locally:
 
-   Provide your API username and password to obtain an OAuth token. The
-   dashboard automatically fetches graph statistics and recent audit events
-   after logging in.
+```bash
+npm run preview
+```
 
-4. **Load the Graph**
-
-   Click **Load Graph** to fetch the `/analytics/subgraph` endpoint. You can also
-   input a comma-separated vector to query `/vectors/search` via the optional
-   search box.
-
-5. **View Metrics**
-
-   Use **Load Stats** to display node and edge counts along with vector index
-   size. Click **Recent Events** to fetch the latest audit log entries, shown
-   with the most recent first.
+To deploy, serve the files in `frontend/dist/` with any static web server alongside the UME API.
