@@ -95,6 +95,8 @@ below lists all available variables and their default values.
 | `KAFKA_CLIENT_KEY` | *(unset)* | Client key for Kafka TLS. |
 | `LLM_FERRY_API_URL` | `https://example.com/api` | Endpoint for the `LLMFerry` listener. |
 | `LLM_FERRY_API_KEY` | *(unset)* | API key used by `LLMFerry` for authentication. |
+| `UME_OPA_URL` | *(unset)* | Base URL of a remote OPA server used by `RegoPolicyEngine`. |
+| `UME_OPA_TOKEN` | *(unset)* | Bearer token sent with OPA requests. |
 
 `UME_RATE_LIMIT_REDIS` may be set to a Redis URL to enable shared rate limiting.
 If unset, the API uses an in-memory limiter.

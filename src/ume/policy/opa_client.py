@@ -17,7 +17,10 @@ class OPAClient:
     """Simple wrapper around the OPA HTTP API."""
 
     def __init__(self, base_url: str | None = None, token: str | None = None) -> None:
-        self.base_url = base_url or settings.OPA_URL
+        resolved_url = base_url or settings.OPA_URL
+        if not resolved_url:
+            raise ValueError("OPA base URL must be provided")
+        self.base_url = resolved_url
         self.token = token or settings.OPA_TOKEN
         self._client = httpx.Client(timeout=5)
 

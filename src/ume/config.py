@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     # API token used for test clients and simple auth
     UME_API_TOKEN: str | None = None
 
+    # Remote OPA configuration
+    OPA_URL: str | None = None
+    OPA_TOKEN: str | None = None
+
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"
     LLM_FERRY_API_KEY: str = ""
