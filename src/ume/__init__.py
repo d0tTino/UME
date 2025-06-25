@@ -124,6 +124,8 @@ __all__ = [
     "Task",
     "DAGExecutor",
     "DAGService",
+    "ResourceScheduler",
+    "ScheduledTask",
     "TweetBot",
 
 ]
