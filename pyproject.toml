@@ -51,6 +51,7 @@ redis = "*"
 fastapi-limiter = "*"
 
 pre-commit = "*"
+detect-secrets = "*"
 poetry-plugin-export = "^1.9.0"
 testcontainers = "*"
 respx = "^0.22.0"
