@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import PiiStatus from './PiiStatus';
+import PolicyEditor from './PolicyEditor';
 
 const POLICY_CONTENT = {
   'allow.rego': `package ume
@@ -49,6 +51,7 @@ function App() {
   const [stats, setStats] = useState(null);
   const [events, setEvents] = useState([]);
   const [policies, setPolicies] = useState([]);
+  const [editingPolicy, setEditingPolicy] = useState('');
 
   const login = async (e) => {
     e.preventDefault();
@@ -106,6 +109,10 @@ function App() {
     loadPolicies();
   };
 
+  const editPolicy = (name) => {
+    setEditingPolicy(name);
+  };
+
   if (!token) {
     return (
       <form onSubmit={login} style={{ padding: '20px' }}>
@@ -139,6 +146,7 @@ function App() {
       {events.length > 0 && (
         <pre style={{ background: '#eee', padding: '8px' }}>{JSON.stringify(events, null, 2)}</pre>
       )}
+      <PiiStatus token={token} />
       <h3>Policies</h3>
       <ul>
         {policies.map((p) => (
@@ -149,11 +157,14 @@ function App() {
                 checked={p.enabled}
                 onChange={() => togglePolicy(p.name)}
               />
-              {p.name}
+              <span onClick={() => editPolicy(p.name)} style={{ cursor: 'pointer' }}>
+                {p.name}
+              </span>
             </label>
           </li>
         ))}
       </ul>
+      <PolicyEditor token={token} policy={editingPolicy} onSaved={loadPolicies} />
     </div>
   );
 }
