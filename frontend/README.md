@@ -1,6 +1,6 @@
 # UME Frontend
 
-This directory contains a small React dashboard for the UME API. It allows you to log in, view graph statistics and recent audit events, and toggle alignment policies.
+This directory contains a small React dashboard for the UME API. It allows you to log in, view graph statistics and recent audit events, toggle alignment policies, monitor PII redaction activity, and edit Rego policies.
 
 ## Development
 
@@ -17,6 +17,8 @@ npm run dev
 ```
 
 The app will be available at <http://localhost:5173>. The development server proxies requests to the running API at `http://localhost:8000`.
+
+The dashboard shows a counter of how many event payloads have been redacted for PII. It polls the `/pii/redactions` endpoint every second. Clicking a policy name opens an inline editor where you can modify the Rego code, validate it via the API, and save your changes.
 
 ## Building
 

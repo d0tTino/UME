@@ -3,7 +3,7 @@ from pydantic import Extra
 from typing import Any
 
 
-class Settings(BaseSettings):  # type: ignore[misc]
+class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
     )
@@ -31,6 +31,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_VECTOR_INDEX: str = "vectors.faiss"
     UME_VECTOR_USE_GPU: bool = False
     UME_VECTOR_GPU_MEM_MB: int = 256
+    UME_VECTOR_MAX_AGE_DAYS: int = 90
 
     # Neo4j connection for optional gRPC server
     NEO4J_URI: str = "bolt://localhost:7687"
@@ -61,6 +62,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # Remote OPA configuration
     OPA_URL: str | None = None
     OPA_TOKEN: str | None = None
+
+    # OpenTelemetry
+    UME_OTLP_ENDPOINT: str | None = None
 
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"

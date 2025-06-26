@@ -18,6 +18,8 @@ from fastapi_limiter.depends import RateLimiter
 
 from .config import settings
 from .logging_utils import configure_logging
+from .tracing import configure_tracing, is_tracing_enabled
+from opentelemetry import trace
 from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import JSONResponse, Response
@@ -44,6 +46,7 @@ POLICY_DIR = Path(__file__).with_name("plugins") / "alignment" / "policies"
 
 
 configure_logging()
+configure_tracing()
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -55,6 +58,11 @@ app = FastAPI(
     version="0.1.0",
     description="HTTP API for the Universal Memory Engine.",
 )
+
+if is_tracing_enabled():
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=trace.get_tracer_provider())
 
 
 class _MemoryRedis:
@@ -281,6 +289,10 @@ class TweetCreateRequest(BaseModel):
 
 
 class DocumentUploadRequest(BaseModel):
+    content: str
+
+
+class PolicySource(BaseModel):
     content: str
 
 
@@ -583,6 +595,20 @@ def dashboard_recent_events(
     return list(reversed(entries[-limit:]))
 
 
+def _redaction_count() -> int:
+    """Return the number of payload redactions recorded in the audit log."""
+    entries = get_audit_entries()
+    return sum(
+        1 for e in entries if "payload_redacted" in str(e.get("reason", ""))
+    )
+
+
+@app.get("/pii/redactions")
+def pii_redactions(_: str = Depends(get_current_role)) -> Dict[str, int]:
+    """Return the total count of redacted payloads."""
+    return {"redacted": _redaction_count()}
+
+
 def _resolve_policy_path(name: str) -> Path:
     """Return absolute path for policy ``name`` within :data:`POLICY_DIR`."""
     path = Path(name)
@@ -620,4 +646,42 @@ def delete_policy(name: str, _: str = Depends(get_current_role)) -> Dict[str, st
     if not path.exists():
         raise HTTPException(status_code=404, detail="Policy not found")
     path.unlink()
+    return {"status": "ok"}
+
+
+@app.get("/policies/{name:path}")
+def get_policy(name: str, _: str = Depends(get_current_role)) -> Response:
+    """Return the raw contents of a policy file."""
+    path = _resolve_policy_path(name)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Policy not found")
+    return Response(path.read_text(encoding="utf-8"), media_type="text/plain")
+
+
+@app.put("/policies/{name:path}")
+async def update_policy(
+    name: str, file: UploadFile = File(...), _: str = Depends(get_current_role)
+) -> Dict[str, str]:
+    """Replace an existing policy file."""
+    path = _resolve_policy_path(name)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Policy not found")
+    content = await file.read()
+    with path.open("wb") as f:
+        f.write(content)
+    return {"status": "ok"}
+
+
+@app.post("/policies/validate")
+def validate_policy(req: PolicySource, _: str = Depends(get_current_role)) -> Dict[str, str]:
+    """Validate Rego policy text using regopy if available."""
+    try:
+        from regopy import Interpreter as RegoInterpreter  # type: ignore
+    except Exception as exc:  # pragma: no cover - optional dependency
+        raise HTTPException(status_code=500, detail="Rego support not installed") from exc
+    interp = RegoInterpreter()
+    try:
+        interp.add_module("policy.rego", req.content)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"status": "ok"}

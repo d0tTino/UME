@@ -33,6 +33,13 @@ def run_cli_commands(
     env = os.environ.copy()
     env["UME_DB_PATH"] = ":memory:"
     env["UME_CLI_DB"] = ":memory:"
+    # Remove coverage-related environment variables that may interfere with
+    # subprocess execution. These are added by pytest-cov when running tests
+    # with coverage enabled and cause warnings on stderr which break the CLI
+    # smoke tests' expectations.
+    for key in list(env.keys()):
+        if key.startswith("COV_CORE_") or key.startswith("COVERAGE_"):
+            env.pop(key, None)
     process = subprocess.Popen(
         [sys.executable, CLI_SCRIPT_PATH] + (cli_args or []),
         stdin=subprocess.PIPE,
