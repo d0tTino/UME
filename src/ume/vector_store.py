@@ -51,6 +51,7 @@ class VectorStore:
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
         self.vector_ts: Dict[str, int] = {}
+
         self.gpu_resources = None
         self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
         self.dim = dim
@@ -170,6 +171,7 @@ class VectorStore:
                 self.id_to_idx[item_id] = len(self.idx_to_id)
                 self.idx_to_id.append(item_id)
             self.vector_ts[item_id] = int(time.time())
+
         if persist and self.path:
             self.save(self.path)
 
@@ -224,6 +226,7 @@ class VectorStore:
             with open(path + ".json", "w", encoding="utf-8") as f:
                 json.dump({"ids": self.idx_to_id, "ts": self.vector_ts}, f)
 
+
     def load(self, path: str | None = None) -> None:  # pragma: no cover - filesystem
         """Load a FAISS index and metadata from ``path``."""
         path = path or self.path
@@ -243,6 +246,7 @@ class VectorStore:
             except FileNotFoundError:
                 self.idx_to_id = []
                 self.vector_ts = {}
+
             self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
             self.dim = self.index.d
             if self.use_gpu:
@@ -284,6 +288,11 @@ class VectorStore:
                 self.query_latency_metric.observe(time.perf_counter() - start)
             if self.index_size_metric is not None:
                 self.index_size_metric.set(len(self.idx_to_id))
+
+    def get_vector_timestamps(self) -> Dict[str, int]:
+        """Return mapping of item IDs to their last update timestamp."""
+        with self.lock:
+            return dict(self.id_to_ts)
 
 
 class VectorStoreListener(GraphListener):

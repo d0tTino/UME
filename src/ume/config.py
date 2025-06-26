@@ -31,6 +31,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_VECTOR_INDEX: str = "vectors.faiss"
     UME_VECTOR_USE_GPU: bool = False
     UME_VECTOR_GPU_MEM_MB: int = 256
+    UME_VECTOR_MAX_AGE_DAYS: int = 90
 
     # Neo4j connection for optional gRPC server
     NEO4J_URI: str = "bolt://localhost:7687"

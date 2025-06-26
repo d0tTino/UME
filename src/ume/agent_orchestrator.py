@@ -49,12 +49,33 @@ class Critic:
         return score
 
 
+@dataclass
+class MessageEnvelope:
+    """Envelope used for agent communication."""
+
+    content: str
+    meta: Dict[str, Any] | None = None
+
+
+class ReflectionAgent:
+    """Optional agent that can post-process worker output."""
+
+    def review(self, message: MessageEnvelope) -> MessageEnvelope:  # pragma: no cover - default passthrough
+        return message
+
+
 class AgentOrchestrator:
     """Coordinate workers executing tasks produced by a :class:`Supervisor`."""
 
-    def __init__(self, supervisor: Supervisor | None = None, critic: Critic | None = None) -> None:
+    def __init__(
+        self,
+        supervisor: Supervisor | None = None,
+        critic: Critic | None = None,
+        reflection: ReflectionAgent | None = None,
+    ) -> None:
         self.supervisor = supervisor or Supervisor()
         self.critic = critic or Critic()
+        self.reflection = reflection or ReflectionAgent()
         self._workers: Dict[str, Callable[[AgentTask], Awaitable[Any]]] = {}
 
     def register_worker(
@@ -73,8 +94,11 @@ class AgentOrchestrator:
             task: AgentTask,
         ) -> tuple[str, float]:
             result = await worker(task)
+            if not isinstance(result, MessageEnvelope):
+                result = MessageEnvelope(content=str(result))
+            reviewed = self.reflection.review(result)
             return agent_id, self.critic.score(
-                result, task=task, agent_id=agent_id
+                reviewed.content, task=task, agent_id=agent_id
             )
 
         coros = [

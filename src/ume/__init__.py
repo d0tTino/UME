@@ -50,7 +50,14 @@ else:  # pragma: no cover - optional dependency
 
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
-from .agent_orchestrator import AgentOrchestrator, Supervisor, Critic, AgentTask
+from .agent_orchestrator import (
+    AgentOrchestrator,
+    Supervisor,
+    Critic,
+    AgentTask,
+    MessageEnvelope,
+    ReflectionAgent,
+)
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 from .reliability import score_text, filter_low_confidence
@@ -124,6 +131,8 @@ __all__ = [
     "AgentOrchestrator",
     "Supervisor",
     "Critic",
+    "MessageEnvelope",
+    "ReflectionAgent",
     "Task",
     "DAGExecutor",
     "DAGService",

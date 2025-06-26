@@ -14,6 +14,8 @@ AgentOrchestrator = module.AgentOrchestrator  # type: ignore[attr-defined]
 Supervisor = module.Supervisor  # type: ignore[attr-defined]
 Critic = module.Critic  # type: ignore[attr-defined]
 AgentTask = module.AgentTask  # type: ignore[attr-defined]
+MessageEnvelope = module.MessageEnvelope  # type: ignore[attr-defined]
+ReflectionAgent = module.ReflectionAgent  # type: ignore[attr-defined]
 
 
 class DummySupervisor(Supervisor):
@@ -24,6 +26,13 @@ class DummySupervisor(Supervisor):
 class DummyCritic(Critic):
     def score(self, result, *, task=None, agent_id=None):  # type: ignore[override]
         return 1.0 if result == "ok" else 0.0
+
+
+class FilteringReflection(ReflectionAgent):
+    def review(self, message: MessageEnvelope) -> MessageEnvelope:
+        if message.content.isdigit():
+            return MessageEnvelope(content="")
+        return message
 
 
 def test_execution_cycle() -> None:
@@ -65,4 +74,16 @@ def test_scoring_persists_across_workers() -> None:
     tasks = {task_id for task_id, _, _ in stored}
     assert agents == {"a", "b"}
     assert tasks == {"task-1", "task-2"}
+
+
+def test_reflection_filters_hallucinations() -> None:
+    orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic(), FilteringReflection())
+
+    async def worker(task: AgentTask) -> MessageEnvelope:
+        return MessageEnvelope(content="123")
+
+    orchestrator.register_worker("worker", worker)
+    scores = asyncio.run(orchestrator.execute_objective("t"))
+
+    assert scores == {"worker": 0.0}
 
