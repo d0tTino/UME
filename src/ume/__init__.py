@@ -11,7 +11,8 @@ from .snapshot import (
     snapshot_graph_to_file,
     load_graph_from_file,
     SnapshotError,
-)  # Modify this import
+)
+from .memory import MemoryManager
 
 __all__ = [
     "Event",
@@ -24,4 +25,5 @@ __all__ = [
     "snapshot_graph_to_file",
     "load_graph_from_file",  # Add this
     "SnapshotError",  # Add this
+    "MemoryManager",
 ]
