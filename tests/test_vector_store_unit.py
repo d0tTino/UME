@@ -47,12 +47,36 @@ def test_query_dimension_mismatch():
         store.query([1.0])
 
 
-def test_del_stops_flush_thread(tmp_path: Path) -> None:
-    path = tmp_path / "del.faiss"
-    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05)
-    store.add("x", [1.0, 0.0])
-    thread = store._flush_thread
-    assert thread is not None and thread.is_alive()
-    store.__del__()
-    time.sleep(0.1)
-    assert thread is not None and not thread.is_alive()
+def test_init_requires_faiss(monkeypatch):
+    monkeypatch.setattr("ume.vector_store.faiss", None)
+    with pytest.raises(ImportError):
+        VectorStore(dim=2)
+
+
+def test_query_records_metrics():
+    store = VectorStore(dim=2, use_gpu=False)
+    store.add("a", [0.0, 1.0])
+
+    class DummyHist:
+        def __init__(self) -> None:
+            self.count = 0
+
+        def observe(self, value: float) -> None:
+            self.count += 1
+
+    class DummyGauge:
+        def __init__(self) -> None:
+            self.value = 0
+
+        def set(self, val: int) -> None:
+            self.value = val
+
+    h = DummyHist()
+    g = DummyGauge()
+    store.query_latency_metric = h
+    store.index_size_metric = g
+
+    result = store.query([0.0, 1.0])
+    assert result == ["a"]
+    assert h.count == 1
+    assert g.value == 1

@@ -42,3 +42,19 @@ def test_stop_execution():
 
     result = exec.run()
     assert result == {"a": None}
+
+
+def test_topological_sort_order() -> None:
+    exec = DAGExecutor()
+    exec.add_task(Task(name="a", func=lambda: None))
+    exec.add_task(Task(name="b", func=lambda: None, dependencies=["a"]))
+    exec.add_task(Task(name="c", func=lambda: None, dependencies=["b"]))
+
+    assert exec._topological_sort() == ["a", "b", "c"]
+
+
+def test_add_task_duplicate() -> None:
+    exec = DAGExecutor()
+    exec.add_task(Task(name="a", func=lambda: None))
+    with pytest.raises(ValueError):
+        exec.add_task(Task(name="a", func=lambda: None))

@@ -30,23 +30,23 @@ import types
 sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 sys.modules.setdefault("structlog", types.ModuleType("structlog"))
 
-from ume.grpc_service import UMEServicer, serve
+from ume.grpc_service import UMEServicer, serve, main
 
 
 class DummyEngine:
-    def __init__(self, result=None):
-        self.result = result or []
+    def __init__(self, result: list[dict[str, object]] | None = None) -> None:
+        self.result: list[dict[str, object]] = result or []
 
-    def execute_cypher(self, query: str):
+    def execute_cypher(self, query: str) -> list[dict[str, object]]:
         return self.result
 
 
 class DummyStore:
-    def __init__(self, ids=None):
-        self.ids = ids or []
-        self.queries = []
+    def __init__(self, ids: list[str] | None = None) -> None:
+        self.ids: list[str] = ids or []
+        self.queries: list[tuple[list[float], int]] = []
 
-    def query(self, vector, k=5):
+    def query(self, vector: list[float], k: int = 5) -> list[str]:
         self.queries.append((list(vector), k))
         return self.ids
 
@@ -88,10 +88,10 @@ def test_serve(monkeypatch):
     created: dict[str, object] = {}
 
     class DummyServer:
-        def __init__(self):
-            self.ports = []
+        def __init__(self) -> None:
+            self.ports: list[str] = []
 
-        def add_insecure_port(self, addr):
+        def add_insecure_port(self, addr: str) -> None:
             self.ports.append(addr)
 
     server = DummyServer()
@@ -106,3 +106,59 @@ def test_serve(monkeypatch):
     assert result is server
     assert server.ports == ["[::]:123"]
     assert isinstance(created["servicer"], UMEServicer)
+
+
+def test_stream_cypher() -> None:
+    engine = DummyEngine([{"x": 1}, {"y": 2}])
+    svc = UMEServicer(engine, DummyStore())  # type: ignore[arg-type]
+    req = ume_pb2.CypherQuery(cypher="MATCH n RETURN n")
+    res = asyncio.run(
+        collect_async(svc.StreamCypher(req, None))
+    )
+    assert [dict(r.record) for r in res] == [{"x": 1}, {"y": 2}]
+
+
+from typing import Any, AsyncIterator, List
+
+
+async def collect_async(gen: AsyncIterator[Any]) -> List[Any]:
+    result: List[Any] = []
+    async for item in gen:
+        result.append(item)
+    return result
+
+
+def test_main(monkeypatch):
+    called: dict[str, bool] = {}
+    monkeypatch.setattr("ume.grpc_service.configure_logging", lambda: called.setdefault("log", True))
+
+    class DummyQE:
+        @staticmethod
+        def from_credentials(*args, **kwargs):
+            called["qe"] = True
+            return "qe"
+
+    monkeypatch.setattr("ume.grpc_service.Neo4jQueryEngine", DummyQE)
+
+    class DummyStore2:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            called["store"] = True
+
+    monkeypatch.setattr("ume.grpc_service.VectorStore", DummyStore2)
+
+    class DummyServer:
+        async def start(self) -> None:
+            called["start"] = True
+
+        async def wait_for_termination(self) -> None:
+            called["wait"] = True
+
+    monkeypatch.setattr("ume.grpc_service.serve", lambda qe, store, port=50051: DummyServer())
+
+    asyncio.run(main())
+
+    assert called["log"]
+    assert called["qe"]
+    assert called["store"]
+    assert called["start"]
+    assert called["wait"]
