@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import json
+import os
 import shlex
 import time  # Added for timestamp in event creation
 from cmd import Cmd
+import argparse
 from ume import (
     parse_event,
     apply_event_to_graph,
@@ -10,10 +12,10 @@ from ume import (
     snapshot_graph_to_file,
 )
 from ume import (
-    MockGraph,
     ProcessingError,
     EventError,
     IGraphAdapter,
+    get_adapter,
 )  # Added IGraphAdapter for type hint
 
 # It's good practice to handle potential import errors if ume is not installed,
@@ -25,9 +27,10 @@ class UMEPrompt(Cmd):
     intro = "Welcome to UME CLI. Type help or ? to list commands.\n"
     prompt = "ume> "
 
-    def __init__(self):
+    def __init__(self, adapter_name: str | None = None):
         super().__init__()
-        self.graph: IGraphAdapter = MockGraph()  # Use interface type hint
+        name = adapter_name or os.getenv("UME_GRAPH_ADAPTER", "mock")
+        self.graph: IGraphAdapter = get_adapter(name)
         self.current_timestamp = int(
             time.time()
         )  # For consistent timestamps in a session if needed, or increment
@@ -279,5 +282,16 @@ class UMEPrompt(Cmd):
     #    Cmd.do_help(self, arg)
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser(description="UME CLI")
+    parser.add_argument(
+        "--adapter",
+        choices=["mock", "neo4j", "lancedb"],
+        help="Graph adapter to use",
+    )
+    args = parser.parse_args()
+    UMEPrompt(adapter_name=args.adapter).cmdloop()
+
+
 if __name__ == "__main__":
-    UMEPrompt().cmdloop()
+    main()
