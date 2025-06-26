@@ -43,6 +43,10 @@ jobs:
           poetry run pytest --cov=src/ume --cov-report=xml --cov-report=term-missing tests/
           # Generates term-missing report for console and xml for potential external tools
 
+      - name: Type check with MyPy
+        run: |
+          poetry run mypy --config-file pyproject.toml src/ume
+
       - name: Lint with Ruff
         run: |
           poetry run ruff check src tests

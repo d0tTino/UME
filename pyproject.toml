@@ -18,6 +18,10 @@ mypy = "*"
 pytest = "*"
 pytest-cov = "*"
 
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
 

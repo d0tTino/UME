@@ -169,7 +169,7 @@ class MockGraph(IGraphAdapter):
         if not self.node_exists(node_id):
             raise ProcessingError(f"Node '{node_id}' not found.")
 
-        connected_nodes = []
+        connected_nodes: List[str] = []
         for src, target, lbl in self._edges:
             if src == node_id:
                 if edge_label is None or lbl == edge_label:
@@ -199,5 +199,7 @@ class MockGraph(IGraphAdapter):
             "edges" maps to a list of all edges, where each edge is a tuple
             (source_node_id, target_node_id, label).
         """
-        node_copies = {k: v.copy() for k, v in self._nodes.items()}
+        node_copies: Dict[str, Dict[str, Any]] = {
+            k: v.copy() for k, v in self._nodes.items()
+        }
         return {"nodes": node_copies, "edges": list(self._edges)}

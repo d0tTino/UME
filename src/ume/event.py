@@ -66,7 +66,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
         EventError: If required fields are missing or have incorrect types for the given event_type.
     """
     # Basic presence and type checks for common fields
-    missing_base_fields = []
+    missing_base_fields: list[str] = []
     if "event_type" not in data:
         missing_base_fields.append("event_type")
     if "timestamp" not in data:
@@ -76,24 +76,24 @@ def parse_event(data: Dict[str, Any]) -> Event:
             f"Missing required event fields: {', '.join(missing_base_fields)}"
         )
 
-    event_type = data["event_type"]
+    event_type: str = data["event_type"]
     if not isinstance(event_type, str):
         raise EventError(
             f"Invalid type for 'event_type': expected str, got {type(event_type).__name__}"
         )
 
-    timestamp = data["timestamp"]
+    timestamp: int = data["timestamp"]
     if not isinstance(timestamp, int):
         raise EventError(
             f"Invalid type for 'timestamp': expected int, got {type(timestamp).__name__}"
         )
 
     # Get potential values, to be validated by type-specific logic or used if optional
-    node_id_val = data.get("node_id")
-    target_node_id_val = data.get("target_node_id")
-    label_val = data.get("label")
+    node_id_val: Optional[str] = data.get("node_id")
+    target_node_id_val: Optional[str] = data.get("target_node_id")
+    label_val: Optional[str] = data.get("label")
     # Default payload to {} if not present; specific event types might require it later
-    payload_val = data.get("payload", {})
+    payload_val: Dict[str, Any] = data.get("payload", {})
 
     if event_type in ["CREATE_NODE", "UPDATE_NODE_ATTRIBUTES"]:
         if "node_id" not in data:  # Must be present in data
