@@ -21,6 +21,10 @@ VECTOR_INDEX_SIZE = Gauge(
     "ume_vector_index_size",
     "Number of vectors stored in the VectorStore",
 )
+STALE_VECTOR_WARNINGS = Counter(
+    "ume_stale_vector_warning_total",
+    "Number of times stale vectors exceeded threshold",
+)
 
 # Reliability metrics
 RESPONSE_CONFIDENCE = Histogram(
