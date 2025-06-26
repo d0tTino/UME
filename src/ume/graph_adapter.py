@@ -163,6 +163,24 @@ class IGraphAdapter(ABC):
         pass
 
     @abstractmethod
+    def add_edges_bulk(self, edges: list[tuple[str, str, str]]) -> None:
+        """Adds multiple edges in one call.
+
+        Each edge is provided as a ``(source_node_id, target_node_id, label)`` tuple.
+
+        Implementations should ensure the same validations as :meth:`add_edge`
+        for every edge in the collection.
+
+        Args:
+            edges: A list of edge tuples to add.
+
+        Raises:
+            ProcessingError (or similar): If any edge would fail the
+                individual :meth:`add_edge` checks.
+        """
+        pass
+
+    @abstractmethod
     def get_all_edges(self) -> list[tuple[str, str, str]]:
         """
         Retrieves a list of all edges currently in the graph.

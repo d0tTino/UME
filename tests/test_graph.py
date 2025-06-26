@@ -217,6 +217,25 @@ def test_add_edge_both_nodes_missing_raises_error(graph: MockGraph):
         graph.add_edge("nodeS_missing", "nodeT_missing", "IS_RELATED_TO")
 
 
+# --- add_edges_bulk tests ---
+def test_add_edges_bulk_success(graph: MockGraph):
+    """Add multiple edges in one call."""
+    graph.add_node("a", {})
+    graph.add_node("b", {})
+    graph.add_node("c", {})
+    edges = [("a", "b", "L1"), ("b", "c", "L2")]
+    graph.add_edges_bulk(edges)
+    assert set(graph.get_all_edges()) == set(edges)
+
+
+def test_add_edges_bulk_missing_node_raises_error(graph: MockGraph):
+    """Expect ProcessingError if any edge references a missing node."""
+    graph.add_node("a", {})
+    edges = [("a", "missing", "L1")]
+    with pytest.raises(ProcessingError):
+        graph.add_edges_bulk(edges)
+
+
 # --- get_all_edges tests (New) ---
 def test_get_all_edges_empty_graph(graph: MockGraph):
     """Test get_all_edges on a graph with no edges (and no nodes)."""

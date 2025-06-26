@@ -42,9 +42,8 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
     graph.add_node("c", {})  # Node with empty attributes
 
     # Add some edges
-    graph.add_edge("a", "b", "RELATES_TO")
-    graph.add_edge("b", "c", "LINKS_TO")
     expected_edges = [("a", "b", "RELATES_TO"), ("b", "c", "LINKS_TO")]
+    graph.add_edges_bulk(expected_edges)
 
     # Get the dump
     dumped_data = graph.dump()
@@ -208,8 +207,8 @@ def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
     attrs2 = {"name": "Node 2", "active": True}
     original_graph.add_node("n1", attrs1)
     original_graph.add_node("n2", attrs2)
-    original_graph.add_edge("n1", "n2", "CONNECTS_TO")
     expected_edges = [("n1", "n2", "CONNECTS_TO")]
+    original_graph.add_edges_bulk(expected_edges)
 
     snapshot_file = tmp_path / "populated_graph_to_load.json"
     snapshot_graph_to_file(original_graph, snapshot_file)
