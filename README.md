@@ -327,6 +327,18 @@ PYTHONPATH=src pytest
 
 ```
 
+Create a `.env` file in the project root before starting any services. Copy the
+template from [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) and set a
+non-default `UME_AUDIT_SIGNING_KEY` or UME will refuse to start:
+
+```bash
+# .env
+UME_AUDIT_SIGNING_KEY=my-ume-key
+```
+
+See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
+settings.
+
 ### 2. Start Redpanda (Kafka) via Docker
 The `docker/docker-compose.yml` file spins up the broker. From the repository
 root you can start it with:
