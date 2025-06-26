@@ -109,6 +109,11 @@ class MockGraph(IGraphAdapter):
             )
         self._edges.append((source_node_id, target_node_id, label))
 
+    def add_edges_bulk(self, edges: list[tuple[str, str, str]]) -> None:
+        """Add multiple edges sequentially using :meth:`add_edge`."""
+        for source, target, label in edges:
+            self.add_edge(source, target, label)
+
     def get_all_edges(self) -> List[Tuple[str, str, str]]:
         """
         Retrieves a list of all edges currently in the graph.

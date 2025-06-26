@@ -126,6 +126,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> MockGraph:
                     f"(source, target, label) must be strings."
                 )
             loaded_edges.append(tuple(edge_data))  # Convert to tuple for consistency
-        graph._edges = loaded_edges  # Direct assignment after validation
+        if loaded_edges:
+            graph.add_edges_bulk(loaded_edges)
 
     return graph
