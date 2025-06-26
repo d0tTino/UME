@@ -3,7 +3,7 @@ from pydantic import Extra
 from typing import Any
 
 
-class Settings(BaseSettings):  # type: ignore[misc]
+class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
     )
@@ -62,6 +62,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # Remote OPA configuration
     OPA_URL: str | None = None
     OPA_TOKEN: str | None = None
+
+    # OpenTelemetry
+    UME_OTLP_ENDPOINT: str | None = None
 
     # LLM Ferry
     LLM_FERRY_API_URL: str = "https://example.com/api"

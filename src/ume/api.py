@@ -18,6 +18,8 @@ from fastapi_limiter.depends import RateLimiter
 
 from .config import settings
 from .logging_utils import configure_logging
+from .tracing import configure_tracing, is_tracing_enabled
+from opentelemetry import trace
 from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import JSONResponse, Response
@@ -44,6 +46,7 @@ POLICY_DIR = Path(__file__).with_name("plugins") / "alignment" / "policies"
 
 
 configure_logging()
+configure_tracing()
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -55,6 +58,11 @@ app = FastAPI(
     version="0.1.0",
     description="HTTP API for the Universal Memory Engine.",
 )
+
+if is_tracing_enabled():
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=trace.get_tracer_provider())
 
 
 class _MemoryRedis:
