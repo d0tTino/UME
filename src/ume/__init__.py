@@ -10,6 +10,7 @@ from .auto_snapshot import (
     enable_snapshot_autosave_and_restore,
 )
 from .retention import start_retention_scheduler, stop_retention_scheduler
+from .memory_aging import start_memory_aging_scheduler, stop_memory_aging_scheduler
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .plugins.alignment import PolicyViolationError
@@ -92,6 +93,8 @@ __all__ = [
     "disable_periodic_snapshot",
     "start_retention_scheduler",
     "stop_retention_scheduler",
+    "start_memory_aging_scheduler",
+    "stop_memory_aging_scheduler",
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",
