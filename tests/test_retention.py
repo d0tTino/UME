@@ -14,7 +14,13 @@ import time
 
 from ume.config import settings
 from ume.persistent_graph import PersistentGraph
-from ume.retention import start_retention_scheduler, stop_retention_scheduler
+from ume.retention import (
+    start_retention_scheduler,
+    stop_retention_scheduler,
+    start_vector_age_scheduler,
+    stop_vector_age_scheduler,
+)
+from ume.metrics import STALE_VECTOR_WARNINGS
 
 
 def test_retention_scheduler_purges_records(monkeypatch) -> None:
@@ -69,3 +75,19 @@ def test_retention_scheduler_continues_after_error(monkeypatch: pytest.MonkeyPat
     stop()
     stop_retention_scheduler()
     assert len(calls) > 1
+
+
+def test_vector_age_scheduler_warns(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = int(time.time())
+    store = types.SimpleNamespace(
+        get_vector_timestamps=lambda: {"old": now - 100, "new": now}
+    )
+    monkeypatch.setattr(settings, "UME_VECTOR_MAX_AGE_DAYS", 0)
+    STALE_VECTOR_WARNINGS._value.set(0)  # type: ignore[attr-defined]
+    thread, stop = start_vector_age_scheduler(
+        store, interval_seconds=0.05, warn_threshold=0
+    )
+    time.sleep(0.1)
+    stop()
+    stop_vector_age_scheduler()
+    assert STALE_VECTOR_WARNINGS._value.get() > 0
