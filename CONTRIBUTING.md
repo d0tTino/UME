@@ -51,6 +51,16 @@ If you find a bug or have an idea for a new feature, please check our issue trac
   pre-commit run --all-files
   ```
 
+The pre-commit configuration includes a `detect-secrets` hook to prevent
+accidentally committing credentials. Generate or update the baseline with:
+```bash
+detect-secrets scan > .secrets.baseline
+```
+To scan specific files manually you can run:
+```bash
+pre-commit run detect-secrets --files path/to/file
+```
+
 ### Pull Requests
 
  - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR. Coverage for the `ume` package must remain above 80%, verified with:
@@ -76,8 +86,10 @@ Please refer to the `README.md` for instructions on setting up your development 
    ```
 2. Install pre-commit hooks:
    ```bash
-   pre-commit install
-   ```
+ pre-commit install
+  ```
+   This installs the `detect-secrets` hook along with other checks.
+   If you update `.secrets.baseline`, commit the refreshed file so CI uses the latest baseline.
 3. Create a feature branch and implement your changes.
 4. Before committing, run the checks locally:
    ```bash

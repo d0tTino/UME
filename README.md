@@ -216,6 +216,10 @@ checks as CI, execute:)
 ```bash
 pre-commit run --all-files
 ```
+(Optional) regenerate the detect-secrets baseline with:
+```bash
+detect-secrets scan > .secrets.baseline
+```
 (Note: `poetry install` by default installs dev dependencies unless `--no-dev` is specified. However, explicitly mentioning `--with dev` can be clearer for users who might have installed with `--no-dev` previously).
 
 To determine if your changes require running tests and linters, execute:
