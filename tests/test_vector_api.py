@@ -104,3 +104,10 @@ def test_benchmark_endpoint():
     assert res.status_code == 200
     data = res.json()
     assert "build_time" in data and "avg_query_latency" in data
+
+
+def test_benchmark_requires_authentication() -> None:
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    client = TestClient(app)
+    res = client.get("/vectors/benchmark")
+    assert res.status_code == 401

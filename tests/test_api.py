@@ -161,6 +161,41 @@ def test_metrics_summary() -> None:
     assert "average_request_latency" in data
 
 
+def test_metrics_summary_with_rate_limit() -> None:
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    with TestClient(app) as client:
+        token = _token(client)
+        for _ in range(2):
+            client.get(
+                "/analytics/path/stream",
+                params={"source": "a", "target": "b"},
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "X-Forwarded-For": "127.0.0.1",
+                },
+            )
+        res_limit = client.get(
+            "/analytics/path/stream",
+            params={"source": "a", "target": "b"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Forwarded-For": "127.0.0.1",
+            },
+        )
+        assert res_limit.status_code == 429
+
+        res = client.get(
+            "/metrics/summary",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Forwarded-For": "127.0.0.1",
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["request_count_by_status"].get("429", 0) >= 1
+
+
 def test_dashboard_endpoints() -> None:
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
@@ -182,7 +217,7 @@ def test_dashboard_endpoints() -> None:
     assert isinstance(res_events.json(), list)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize(  # type: ignore[misc]
     "method,path,body,params",
     [
         ("post", "/analytics/shortest_path", {"source": "a", "target": "b"}, None),
@@ -205,6 +240,7 @@ def test_dashboard_endpoints() -> None:
         ("get", "/metrics/summary", None, None),
         ("get", "/dashboard/stats", None, None),
         ("get", "/dashboard/recent_events", None, None),
+        ("get", "/vectors/benchmark", None, None),
     ],
 )
 def test_endpoints_require_authentication(
