@@ -7,6 +7,7 @@ from .event import Event, parse_event, EventError
 from .graph import MockGraph
 from .graph_adapter import IGraphAdapter
 from .processing import apply_event_to_graph, ProcessingError
+from .policy import RegoPolicyMiddleware
 from .snapshot import (
     snapshot_graph_to_file,
     load_graph_from_file,
@@ -21,6 +22,7 @@ __all__ = [
     "IGraphAdapter",
     "apply_event_to_graph",
     "ProcessingError",
+    "RegoPolicyMiddleware",
     "snapshot_graph_to_file",
     "load_graph_from_file",  # Add this
     "SnapshotError",  # Add this

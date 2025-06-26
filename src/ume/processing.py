@@ -1,6 +1,11 @@
 # src/ume/processing.py
+# Use IGraphAdapter
+from __future__ import annotations
+from typing import Optional
+
 from .event import Event
-from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
+from .graph_adapter import IGraphAdapter
+from .policy import PolicyEvaluationError, RegoPolicyMiddleware
 # MockGraph import removed as it's no longer directly used for type hinting here
 
 
@@ -10,7 +15,11 @@ class ProcessingError(ValueError):
     pass
 
 
-def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
+def apply_event_to_graph(
+    event: Event,
+    graph: IGraphAdapter,
+    policy: Optional[RegoPolicyMiddleware] = None,
+) -> None:
     """
     Applies an event to a graph, modifying the graph based on event type and payload.
 
@@ -39,6 +48,16 @@ def apply_event_to_graph(event: Event, graph: IGraphAdapter) -> None:
                          Also raised by graph adapter methods for graph consistency issues
                          (e.g., node already exists for CREATE_NODE, node not found for UPDATE_NODE_ATTRIBUTES/CREATE_EDGE).
     """
+    if policy is not None:
+        try:
+            allowed = policy.allows(event, graph)
+        except PolicyEvaluationError as exc:  # noqa: PERF203
+            raise ProcessingError(str(exc)) from exc
+        if not allowed:
+            raise ProcessingError(
+                f"Event {event.event_type} blocked by policy"
+            )
+
     if event.event_type == "CREATE_NODE":
         node_id = event.payload.get("node_id")
         if not node_id:
