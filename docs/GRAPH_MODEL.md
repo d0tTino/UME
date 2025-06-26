@@ -130,6 +130,16 @@ The API runs a background task that calls this method once per day. The
 retention window defaults to 30 days and can be configured via the
 `UME_GRAPH_RETENTION_DAYS` environment variable.
 
+## Memory aging
+
+A separate scheduler periodically moves old events from the episodic graph into
+the semantic store. Facts are preserved while the episodic layer stays small.
+Embeddings associated with aged nodes are also checked for expiration and
+removed from the vector index to keep retrieval‑augmented generation fresh.
+Call :func:`ume.start_memory_aging_scheduler` with paired episodic and
+semantic memory objects to enable the process. Pass ``vector_age_seconds=None``
+to disable vector pruning.
+
 ## Schema Upgrades
 
 ### Migrating from version 1.0.0 to 2.0.0

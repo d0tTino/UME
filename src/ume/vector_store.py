@@ -50,7 +50,8 @@ class VectorStore:
                 os.makedirs(dirpath, exist_ok=True)
         self.id_to_idx: Dict[str, int] = {}
         self.idx_to_id: List[str] = []
-        self.id_to_ts: Dict[str, int] = {}
+        self.vector_ts: Dict[str, int] = {}
+
         self.gpu_resources = None
         self.use_gpu = use_gpu if use_gpu is not None else settings.UME_VECTOR_USE_GPU
         self.dim = dim
@@ -169,9 +170,47 @@ class VectorStore:
                 self.index.add(arr)
                 self.id_to_idx[item_id] = len(self.idx_to_id)
                 self.idx_to_id.append(item_id)
-            self.id_to_ts[item_id] = int(time.time())
+            self.vector_ts[item_id] = int(time.time())
+
         if persist and self.path:
             self.save(self.path)
+
+    def delete(self, item_id: str) -> None:
+        """Remove a vector from the store if present."""
+        with self.lock:
+            idx = self.id_to_idx.pop(item_id, None)
+            if idx is None:
+                self.vector_ts.pop(item_id, None)
+                return
+            del self.idx_to_id[idx]
+            self.vector_ts.pop(item_id, None)
+            self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
+            if hasattr(self.index, "vectors"):
+                vectors = [self.index.vectors[i] for i in range(self.index.ntotal) if i != idx]
+                self.index = faiss.IndexFlatL2(self.dim)
+                if vectors:
+                    self.index.add(np.asarray(vectors))
+            else:
+                try:
+                    cpu_index = faiss.index_gpu_to_cpu(self.index)
+                except AttributeError:
+                    cpu_index = self.index
+                vectors = [cpu_index.reconstruct(i) for i in range(cpu_index.ntotal) if i != idx]
+                new_index = faiss.IndexFlatL2(self.dim)
+                if vectors:
+                    new_index.add(np.asarray(vectors))
+                cpu_index = new_index
+                if self.use_gpu and self.gpu_resources is not None:
+                    self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, cpu_index)
+                else:
+                    self.index = cpu_index
+
+    def expire_vectors(self, max_age_seconds: int) -> None:
+        """Delete vectors older than ``max_age_seconds``."""
+        cutoff = int(time.time()) - max_age_seconds
+        expired = [vid for vid, ts in self.vector_ts.items() if ts < cutoff]
+        for vid in expired:
+            self.delete(vid)
 
     def save(self, path: str | None = None) -> None:  # pragma: no cover - filesystem
         """Persist the FAISS index and metadata to ``path``."""
@@ -185,9 +224,8 @@ class VectorStore:
                 cpu_index = self.index
             faiss.write_index(cpu_index, path)
             with open(path + ".json", "w", encoding="utf-8") as f:
-                json.dump(self.idx_to_id, f)
-            with open(path + ".ts.json", "w", encoding="utf-8") as f:
-                json.dump(self.id_to_ts, f)
+                json.dump({"ids": self.idx_to_id, "ts": self.vector_ts}, f)
+
 
     def load(self, path: str | None = None) -> None:  # pragma: no cover - filesystem
         """Load a FAISS index and metadata from ``path``."""
@@ -198,16 +236,17 @@ class VectorStore:
             self.index = faiss.read_index(path)
             try:
                 with open(path + ".json", "r", encoding="utf-8") as f:
-                    self.idx_to_id = json.load(f)
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        self.idx_to_id = data
+                        self.vector_ts = {i: int(time.time()) for i in data}
+                    else:
+                        self.idx_to_id = data.get("ids", [])
+                        self.vector_ts = {k: int(v) for k, v in data.get("ts", {}).items()}
             except FileNotFoundError:
                 self.idx_to_id = []
-            try:
-                with open(path + ".ts.json", "r", encoding="utf-8") as f:
-                    self.id_to_ts = json.load(f)
-            except FileNotFoundError:
-                # default to current time for loaded vectors
-                now = int(time.time())
-                self.id_to_ts = {vid: now for vid in self.idx_to_id}
+                self.vector_ts = {}
+
             self.id_to_idx = {v: i for i, v in enumerate(self.idx_to_id)}
             self.dim = self.index.d
             if self.use_gpu:
