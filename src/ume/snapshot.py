@@ -22,8 +22,8 @@ def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> 
     """
     Snapshots the given MockGraph's current state to a JSON file.
 
-    The snapshot will include the data returned by graph.dump(), which
-    currently consists of nodes. The JSON file is pretty-printed with an
+    The snapshot will include the data returned by ``graph.dump()``, which
+    contains both nodes and edges. The JSON file is pretty-printed with an
     indent of 2 spaces.
 
     Args:
@@ -35,7 +35,7 @@ def snapshot_graph_to_file(graph: MockGraph, path: Union[str, pathlib.Path]) -> 
         IOError: If an error occurs during file writing.
         TypeError: If the data from graph.dump() is not JSON serializable.
     """
-    dumped_data = graph.dump()  # This currently returns {"nodes": ...}
+    dumped_data = graph.dump()  # Returns {"nodes": ..., "edges": [...]}
     with open(path, "w", encoding="utf-8") as f:
         json.dump(dumped_data, f, indent=2)
 

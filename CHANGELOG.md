@@ -83,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   Initial support for `CREATE_NODE` and `UPDATE_NODE_ATTRIBUTES` event types.
     *   `ProcessingError` custom exception for event application issues.
 -   **Snapshotting:**
-    -   `MockGraph.dump()` method to export graph state (nodes only currently).
+    -   `MockGraph.dump()` method to export graph state (nodes and edges).
     -   `snapshot_graph_to_file` function to save graph dump to a JSON file (`src/ume/snapshot.py`).
     -   `load_graph_from_file` function to restore graph state from a JSON snapshot (`src/ume/snapshot.py`).
     -   `SnapshotError` custom exception for snapshot loading issues.
