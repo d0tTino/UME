@@ -7,6 +7,7 @@ from .vector_store import VectorStore, create_vector_store as _create_vector_sto
 from .memory import EpisodicMemory, SemanticMemory
 
 from .graph_adapter import IGraphAdapter
+from .tracing import TracingGraphAdapter, is_tracing_enabled
 
 
 def create_graph_adapter(
@@ -15,7 +16,9 @@ def create_graph_adapter(
     role: str | None = None,
 ) -> IGraphAdapter:
     """Create the default :class:`IGraphAdapter` using configuration settings."""
-    base = PersistentGraph(db_path or settings.UME_DB_PATH)
+    base: IGraphAdapter = PersistentGraph(db_path or settings.UME_DB_PATH)
+    if is_tracing_enabled():
+        base = TracingGraphAdapter(base)
     role = role if role is not None else settings.UME_ROLE
     if role:
         return RoleBasedGraphAdapter(base, role=role)

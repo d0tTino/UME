@@ -64,3 +64,23 @@ Here are a few Prometheus queries you can use when building graphs:
 
 You can combine these metrics in Grafana to visualize API performance and index
 growth over time.
+
+## Distributed Tracing with OpenTelemetry
+
+Set the `UME_OTLP_ENDPOINT` environment variable to enable trace export via OTLP.
+When configured, UME will emit spans for HTTP endpoints and graph operations.
+You can point this endpoint at an OpenTelemetry Collector or any backend that
+accepts OTLP over HTTP.
+
+Example collector service in `docker-compose.yml`:
+
+```yaml
+  collector:
+    image: otel/opentelemetry-collector-contrib
+    ports:
+      - "4318:4318"
+```
+
+Configure the collector to forward traces to Jaeger, Tempo, or another tracing
+backend. With the collector running and `UME_OTLP_ENDPOINT=http://localhost:4318`,
+traces will include spans for API calls and key graph operations.
