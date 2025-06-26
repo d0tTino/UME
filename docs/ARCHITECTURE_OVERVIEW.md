@@ -115,3 +115,18 @@ flowchart TD
 
 All core APIs are exposed over gRPC, enabling efficient streaming queries from
 external agents and services.
+
+## Agent Message Format
+
+Worker output is wrapped in a small JSON envelope before being processed by
+reflection and critic agents:
+
+```json
+{
+  "content": "string",
+  "meta": {"optional": "metadata"}
+}
+```
+
+The `ReflectionAgent` can modify this envelope (for example to filter
+hallucinated text) before the `Critic` scores the final `content`.

@@ -39,3 +39,20 @@ def create_episodic_memory(
 def create_semantic_memory(db_path: str | None = None) -> SemanticMemory:
     """Instantiate :class:`SemanticMemory` using configuration defaults."""
     return SemanticMemory(db_path or settings.UME_DB_PATH)
+
+
+def create_tiered_memory(
+    *,
+    episodic_db: str | None = None,
+    semantic_db: str | None = None,
+    log_path: str | None = None,
+) -> tuple[EpisodicMemory, SemanticMemory]:
+    """Create paired episodic and semantic memory instances.
+
+    The returned objects can be passed to
+    :func:`ume.start_memory_aging_scheduler` to automatically migrate events
+    from the episodic layer to long-term storage.
+    """
+    episodic = create_episodic_memory(episodic_db, log_path=log_path)
+    semantic = create_semantic_memory(semantic_db)
+    return episodic, semantic

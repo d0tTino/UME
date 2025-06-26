@@ -1,11 +1,30 @@
 # ruff: noqa: E402
 import pytest
+import time
+from pathlib import Path
 
 faiss = pytest.importorskip("faiss")
 if not hasattr(faiss, "IndexFlatL2"):
     pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
-from ume.vector_store import VectorStore
+import importlib.util
+import sys
+import types
+
+root = Path(__file__).resolve().parents[1]
+package = types.ModuleType("ume")
+package.__path__ = [str(root / "src" / "ume")]
+sys.modules["ume"] = package
+
+spec = importlib.util.spec_from_file_location(
+    "ume.vector_store",
+    root / "src" / "ume" / "vector_store.py",
+)
+assert spec and spec.loader
+module = importlib.util.module_from_spec(spec)
+sys.modules["ume.vector_store"] = module
+spec.loader.exec_module(module)
+VectorStore = module.VectorStore
 
 
 def test_add_dimension_mismatch():

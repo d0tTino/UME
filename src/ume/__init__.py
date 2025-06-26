@@ -10,6 +10,7 @@ from .auto_snapshot import (
     enable_snapshot_autosave_and_restore,
 )
 from .retention import start_retention_scheduler, stop_retention_scheduler
+from .memory_aging import start_memory_aging_scheduler, stop_memory_aging_scheduler
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .plugins.alignment import PolicyViolationError
@@ -49,7 +50,14 @@ else:  # pragma: no cover - optional dependency
 
 from .llm_ferry import LLMFerry
 from .dag_executor import DAGExecutor, Task
-from .agent_orchestrator import AgentOrchestrator, Supervisor, Critic, AgentTask
+from .agent_orchestrator import (
+    AgentOrchestrator,
+    Supervisor,
+    Critic,
+    AgentTask,
+    MessageEnvelope,
+    ReflectionAgent,
+)
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 from .reliability import score_text, filter_low_confidence
@@ -92,6 +100,8 @@ __all__ = [
     "disable_periodic_snapshot",
     "start_retention_scheduler",
     "stop_retention_scheduler",
+    "start_memory_aging_scheduler",
+    "stop_memory_aging_scheduler",
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",
@@ -121,6 +131,8 @@ __all__ = [
     "AgentOrchestrator",
     "Supervisor",
     "Critic",
+    "MessageEnvelope",
+    "ReflectionAgent",
     "Task",
     "DAGExecutor",
     "DAGService",
