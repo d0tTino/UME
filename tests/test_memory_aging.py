@@ -1,14 +1,19 @@
 # mypy: ignore-errors
-import sqlite3
-import time
-
-import pytest
-
 from ume.memory import EpisodicMemory, SemanticMemory
 from ume.memory_aging import (
     start_memory_aging_scheduler,
     stop_memory_aging_scheduler,
 )
+
+import sqlite3
+import time
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def fast_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Speed up tests by removing sleep delays."""
+    monkeypatch.setattr(time, "sleep", lambda _: None)
 
 
 def test_memory_aging_moves_old_events(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -32,9 +37,9 @@ def test_memory_aging_moves_old_events(monkeypatch: pytest.MonkeyPatch) -> None:
         episodic,
         semantic,
         event_age_seconds=0,
-        interval_seconds=0.05,
+        interval_seconds=0.01,
     )
-    time.sleep(0.1)
+    time.sleep(0.02)
     stop_memory_aging_scheduler()
 
     assert not episodic.graph.node_exists("old")

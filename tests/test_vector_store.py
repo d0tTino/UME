@@ -13,8 +13,6 @@ from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStore, VectorStoreListener
 from ume.api import configure_vector_store, app
 from ume._internal.listeners import register_listener, unregister_listener
-import faiss
-from pathlib import Path
 from prometheus_client import Gauge, Histogram
 import logging
 import threading
@@ -147,9 +145,9 @@ def test_vector_store_save_creates_directory(tmp_path: Path) -> None:
 
 def test_vector_store_background_flush(tmp_path: Path) -> None:
     path = tmp_path / "bg.faiss"
-    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.01)
     store.add("z", [0.0, 1.0])
-    time.sleep(0.2)
+    time.sleep(0.02)
     store.close()
 
     new_store = VectorStore(dim=2, use_gpu=False)
@@ -160,7 +158,7 @@ def test_vector_store_background_flush(tmp_path: Path) -> None:
 
 def test_background_flush_continues_on_save_error(tmp_path: Path) -> None:
     path = tmp_path / "err.faiss"
-    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05)
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.01)
 
     calls = 0
     orig_save = store.save
@@ -174,7 +172,7 @@ def test_background_flush_continues_on_save_error(tmp_path: Path) -> None:
 
     store.save = failing_save  # type: ignore[assignment]
     store.add("c", [1.0, 0.0])
-    time.sleep(0.15)
+    time.sleep(0.03)
     store.close()
 
     assert calls >= 2
@@ -185,7 +183,7 @@ def test_background_flush_continues_on_save_error(tmp_path: Path) -> None:
 
 def test_background_flush_retries_on_save_error(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     path = tmp_path / "retry.faiss"
-    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05)
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.01)
 
     calls = 0
     orig_save = store.save
@@ -200,7 +198,7 @@ def test_background_flush_retries_on_save_error(tmp_path: Path, caplog: pytest.L
     store.save = failing_save  # type: ignore[assignment]
     store.add("d", [1.0, 0.0])
     with caplog.at_level(logging.WARNING, logger="ume.vector_store"):
-        time.sleep(0.7)
+        time.sleep(0.05)
     store.close()
 
     assert calls >= 4
@@ -226,10 +224,10 @@ def test_vector_store_metrics_init() -> None:
 
 def test_configure_vector_store_replacement_closes_existing(tmp_path: Path) -> None:
     path = tmp_path / "old.faiss"
-    store1 = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.1)
+    store1 = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.01)
     configure_vector_store(store1)
     # Allow background thread to start
-    time.sleep(0.2)
+    time.sleep(0.02)
 
     store2 = VectorStore(dim=2, use_gpu=False)
     configure_vector_store(store2)
@@ -280,7 +278,7 @@ def test_concurrent_add_and_query() -> None:
 
 def test_concurrent_add_with_background_flush(tmp_path: Path) -> None:
     path = tmp_path / "concurrent.faiss"
-    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.05)
+    store = VectorStore(dim=2, use_gpu=False, path=str(path), flush_interval=0.01)
 
     def worker(i: int) -> None:
         store.add(f"id-{i}", [float(i), 0.0])
@@ -291,7 +289,7 @@ def test_concurrent_add_with_background_flush(tmp_path: Path) -> None:
     for t in threads:
         t.join()
 
-    time.sleep(0.1)
+    time.sleep(0.02)
     store.close()
 
     new_store = VectorStore(dim=2, use_gpu=False)

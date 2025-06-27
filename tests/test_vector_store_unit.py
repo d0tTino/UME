@@ -1,6 +1,5 @@
 # ruff: noqa: E402
 import pytest
-import time
 from pathlib import Path
 
 faiss = pytest.importorskip("faiss")
@@ -24,7 +23,11 @@ assert spec and spec.loader
 module = importlib.util.module_from_spec(spec)
 sys.modules["ume.vector_store"] = module
 spec.loader.exec_module(module)
+package.vector_store = module  # type: ignore[attr-defined]
 VectorStore = module.VectorStore
+
+# Remove the placeholder package so other tests import the real module
+sys.modules.pop("ume")
 
 
 def test_add_dimension_mismatch():

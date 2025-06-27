@@ -94,11 +94,13 @@ def test_serve(monkeypatch):
         def add_insecure_port(self, addr: str) -> None:
             self.ports.append(addr)
 
+        def add_generic_rpc_handlers(self, handlers: object) -> None:  # pragma: no cover - simple stub
+            pass
+
     server = DummyServer()
     monkeypatch.setattr(grpc.aio, "server", lambda: server)
     monkeypatch.setattr(
-        ume_pb2_grpc,
-        "add_UMEServicer_to_server",
+        "ume.grpc_service.ume_pb2_grpc.add_UMEServicer_to_server",
         lambda servicer, srv: created.setdefault("servicer", servicer),
     )
 
