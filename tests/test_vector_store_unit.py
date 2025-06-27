@@ -48,6 +48,9 @@ def vector_store_module():
     else:
         sys.modules.pop("ume.vector_store", None)
 
+# Remove the placeholder package so other tests import the real module
+sys.modules.pop("ume")
+
 
 def test_add_dimension_mismatch():
     store = VectorStore(dim=2, use_gpu=False)

@@ -349,3 +349,4 @@ if __name__ == "ume.vector_store":
     parent = _sys.modules.get("ume")
     if parent is not None and not hasattr(parent, "vector_store"):
         parent.vector_store = _sys.modules[__name__]  # type: ignore[attr-defined]
+

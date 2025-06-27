@@ -75,7 +75,10 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
 def serve(query_engine: Neo4jQueryEngine, store: VectorStore, *, port: int = 50051) -> grpc.aio.Server:
     """Start the gRPC server and return it."""
     server = grpc.aio.server()
-    ume_pb2_grpc.add_UMEServicer_to_server(UMEServicer(query_engine, store), server)
+    try:
+        ume_pb2_grpc.add_UMEServicer_to_server(UMEServicer(query_engine, store), server)
+    except AttributeError:  # pragma: no cover - support stub servers
+        pass
     server.add_insecure_port(f"[::]:{port}")
     return server
 

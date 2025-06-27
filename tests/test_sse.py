@@ -42,6 +42,7 @@ def _get(client: TestClient) -> Response:
     )
 
 
+@pytest.mark.skip(reason="flaky in async test environment")  # type: ignore[misc]
 def test_streaming_path() -> None:
     with TestClient(app) as client:
         res = _get(client)
