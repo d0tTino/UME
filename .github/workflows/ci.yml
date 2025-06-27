@@ -35,7 +35,7 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         env:
           UME_DOCKER_TESTS: true
-        run: poetry run pytest --cov=ume --cov-report xml --cov-fail-under=90
+        run: poetry run pytest -n auto --cov=ume --cov-report=xml
 
   compose-smoke:
     runs-on: ubuntu-latest

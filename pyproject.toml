@@ -50,6 +50,7 @@ ruff = "*"
 mypy = "*"
 pytest = "*"
 pytest-cov = "*"
+pytest-xdist = "*"
 redis = "*"
 fastapi-limiter = "*"
 
