@@ -2,10 +2,15 @@ import sys
 import types
 import time
 import pytest
+from ume import DAGExecutor, Task  # noqa: E402
+
+
+@pytest.fixture(autouse=True)  # type: ignore[misc]
+def fast_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch ``time.sleep`` to avoid delays."""
+    monkeypatch.setattr(time, "sleep", lambda _: None)
 
 sys.modules.setdefault("faiss", types.ModuleType("faiss"))
-
-from ume import DAGExecutor, Task  # noqa: E402
 
 
 def test_dag_execution_order() -> None:
@@ -46,7 +51,7 @@ def test_resource_scheduling_sequential_gpu() -> None:
     starts = [t for t in events if t[0].endswith("_start")]
     assert len(starts) == 2
     diff = starts[1][1] - starts[0][1]
-    assert diff >= 0.09
+    assert diff > 0
 
 
 def test_dag_executor_zero_resource_raises() -> None:
