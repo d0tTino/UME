@@ -19,7 +19,11 @@ from fastapi_limiter.depends import RateLimiter
 from .config import settings
 from .logging_utils import configure_logging
 from .tracing import configure_tracing, is_tracing_enabled
-from opentelemetry import trace
+
+try:  # pragma: no cover - optional dependency
+    from opentelemetry import trace
+except Exception:  # pragma: no cover - allow tests without opentelemetry installed
+    trace = None
 from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import JSONResponse, Response
@@ -59,7 +63,7 @@ app = FastAPI(
     description="HTTP API for the Universal Memory Engine.",
 )
 
-if is_tracing_enabled():
+if is_tracing_enabled() and trace is not None:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
     FastAPIInstrumentor.instrument_app(app, tracer_provider=trace.get_tracer_provider())

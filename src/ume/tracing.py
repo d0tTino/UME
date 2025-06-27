@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, List, ContextManager
 
-from contextlib import nullcontext
+from contextlib import nullcontext, AbstractContextManager
 
 try:  # pragma: no cover - optional dependency
     from opentelemetry import trace
@@ -10,27 +10,35 @@ try:  # pragma: no cover - optional dependency
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-except Exception:  # pragma: no cover - package may be missing
+    _tracing_available = True
+except Exception:  # pragma: no cover - allow tests without opentelemetry installed
     trace = None
+    Resource = None
+    TracerProvider = None
+    BatchSpanProcessor = None
+    OTLPSpanExporter = None
+    _tracing_available = False
+
 
 from .config import settings
 from .graph_adapter import IGraphAdapter
 
-if trace is None:
-    class _DummyTracer:
-        def start_as_current_span(self, *_args: Any, **_kwargs: Any) -> ContextManager[Any]:
-            return nullcontext()
 
-    tracer = _DummyTracer()
-else:
-    tracer = trace.get_tracer("ume")
+class _DummyTracer:
+    def start_as_current_span(self, _name: str) -> AbstractContextManager[Any]:
+        return nullcontext()
+
+
+tracer = trace.get_tracer("ume") if _tracing_available else _DummyTracer()
+
 _enabled = False
 
 
 def configure_tracing(endpoint: str | None = None) -> None:
     """Configure OpenTelemetry tracing if an endpoint is provided."""
     global _enabled
-    if trace is None:
+    if not _tracing_available:
+
         return
     endpoint = endpoint or settings.UME_OTLP_ENDPOINT
     if not endpoint:

@@ -35,19 +35,21 @@ def _token(client: TestClient) -> str:
 
 
 def _get(client: TestClient) -> Response:
-    return client.get(
+    return client.stream(
+        "GET",
         "/analytics/path/stream",
         params={"source": "a", "target": "b"},
         headers={"Authorization": f"Bearer {_token(client)}"},
     )
 
 
-@pytest.mark.skip(reason="flaky in async test environment")  # type: ignore[misc]
+@pytest.mark.skip(reason="Flaky in CI")  # type: ignore[misc]
+
 def test_streaming_path() -> None:
     with TestClient(app) as client:
-        res = _get(client)
-        assert res.status_code == 200
-        data = [line for line in res.iter_lines() if line.startswith("data:")]
+        with _get(client) as res:
+            assert res.status_code == 200
+            data = [line for line in res.iter_lines() if line.startswith("data:")]
         assert data == ["data: a", "data: b"]
 
 
