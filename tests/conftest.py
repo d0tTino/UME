@@ -4,6 +4,9 @@ import sys
 from pathlib import Path
 import os
 
+# Force pure-Python protobuf implementation for compatibility with Python 3.12
+os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+
 try:
     from testcontainers.core.container import DockerContainer
     from testcontainers.neo4j import Neo4jContainer
@@ -37,19 +40,19 @@ def redpanda_service():
     if not _docker_enabled():
         pytest.skip("Docker-based tests disabled")
     container = DockerContainer("docker.redpanda.com/redpandadata/redpanda:latest")
-    container.with_exposed_ports(9092)
+    container.with_exposed_ports(9092)  # type: ignore[no-untyped-call]
     container.with_command(
         "redpanda start --smp 1 --overprovisioned --node-id 0 --check=false "
         "--kafka-addr PLAINTEXT://0.0.0.0:9092 "
         "--advertise-kafka-addr PLAINTEXT://127.0.0.1:9092"
     )
     try:
-        container.start()
+        container.start()  # type: ignore[no-untyped-call]
     except Exception as exc:  # pragma: no cover - environment issues
         pytest.skip(f"Redpanda not available: {exc}")
     broker = f"{container.get_container_host_ip()}:{container.get_exposed_port(9092)}"
     yield {"bootstrap_servers": broker}
-    container.stop()
+    container.stop()  # type: ignore[no-untyped-call]
 
 
 @pytest.fixture(scope="session")
@@ -58,9 +61,9 @@ def neo4j_service():
     if not _docker_enabled():
         pytest.skip("Docker-based tests disabled")
     container = Neo4jContainer("neo4j:5")
-    container.with_env("NEO4J_AUTH", "neo4j/test")
+    container.with_env("NEO4J_AUTH", "neo4j/test")  # type: ignore[no-untyped-call]
     try:
-        container.start()
+        container.start()  # type: ignore[no-untyped-call]
     except Exception as exc:  # pragma: no cover - environment issues
         pytest.skip(f"Neo4j not available: {exc}")
     yield {
@@ -68,5 +71,5 @@ def neo4j_service():
         "user": "neo4j",
         "password": "test",
     }
-    container.stop()
+    container.stop()  # type: ignore[no-untyped-call]
 

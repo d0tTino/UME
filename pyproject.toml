@@ -26,7 +26,7 @@ fastapi = ">=0.110,<1"
 jsonschema = "*"
 faust-streaming = "*"
 faiss-cpu = "*"
-protobuf = "*"
+protobuf = ">=6,<7"
 pydantic = ">=2"
 pydantic-settings = ">=2"
 presidio-analyzer = "^2.2.358"
@@ -40,6 +40,9 @@ fastapi-limiter = "*"
 sse-starlette = "*"
 python-multipart = "*"
 httpx = "*"
+opentelemetry-api = "*"
+opentelemetry-sdk = "*"
+opentelemetry-exporter-otlp = "*"
 
 
 [tool.poetry.group.dev.dependencies]

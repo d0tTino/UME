@@ -292,7 +292,7 @@ class VectorStore:
     def get_vector_timestamps(self) -> Dict[str, int]:
         """Return mapping of item IDs to their last update timestamp."""
         with self.lock:
-            return dict(self.id_to_ts)
+            return dict(self.vector_ts)
 
 
 class VectorStoreListener(GraphListener):
@@ -342,3 +342,10 @@ def create_default_store() -> VectorStore:  # pragma: no cover - trivial wrapper
 # ``create_vector_store`` used to be exported. Provide an alias so older imports
 # continue to work without modification.
 create_vector_store = create_default_store
+
+# Ensure ``ume.vector_store`` is set when imported standalone
+if __name__ == "ume.vector_store":
+    import sys as _sys
+    parent = _sys.modules.get("ume")
+    if parent is not None and not hasattr(parent, "vector_store"):
+        parent.vector_store = _sys.modules[__name__]  # type: ignore[attr-defined]
