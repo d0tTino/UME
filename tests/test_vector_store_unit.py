@@ -1,6 +1,5 @@
 # ruff: noqa: E402
 import pytest
-import time
 from pathlib import Path
 
 faiss = pytest.importorskip("faiss")
@@ -24,6 +23,7 @@ assert spec and spec.loader
 module = importlib.util.module_from_spec(spec)
 sys.modules["ume.vector_store"] = module
 spec.loader.exec_module(module)
+setattr(package, "vector_store", module)
 VectorStore = module.VectorStore
 
 

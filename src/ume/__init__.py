@@ -12,8 +12,9 @@ def _make_stub(name: str) -> types.ModuleType:
     return stub
 
 try:  # Expose config for tests as early as possible
-    from .config import Settings  # noqa: E402
     config = importlib.import_module(".config", __name__)
+    Settings = config.Settings
+    setattr(sys.modules[__name__], "config", config)
 except Exception:  # pragma: no cover - allow import without environment setup
     stub = _make_stub("ume.config")
     sys.modules["ume.config"] = stub
@@ -26,7 +27,12 @@ except Exception:  # pragma: no cover - allow import without environment setup
         UME_VECTOR_DIM=0,
         UME_VECTOR_USE_GPU=False,
     )
+    class _StubSettings:
+        pass
+    Settings = _StubSettings
+    stub.Settings = _StubSettings  # type: ignore[attr-defined]
     config = stub
+    setattr(sys.modules[__name__], "config", stub)
 
 
 from .event import Event, EventType, parse_event, EventError
