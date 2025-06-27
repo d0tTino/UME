@@ -343,8 +343,10 @@ def create_default_store() -> VectorStore:  # pragma: no cover - trivial wrapper
 # continue to work without modification.
 create_vector_store = create_default_store
 
-# Ensure this module is available as an attribute of the top-level package
-import sys as _sys  # noqa: E402
-_parent = __name__.split(".")[0]
-if _parent in _sys.modules:
-    setattr(_sys.modules[_parent], "vector_store", _sys.modules[__name__])
+# Ensure ``ume.vector_store`` is set when imported standalone
+if __name__ == "ume.vector_store":
+    import sys as _sys
+    parent = _sys.modules.get("ume")
+    if parent is not None and not hasattr(parent, "vector_store"):
+        parent.vector_store = _sys.modules[__name__]  # type: ignore[attr-defined]
+

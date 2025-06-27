@@ -9,22 +9,44 @@ if not hasattr(faiss, "IndexFlatL2"):
 import importlib.util
 import sys
 import types
+from typing import Any, Type
 
 root = Path(__file__).resolve().parents[1]
-package = types.ModuleType("ume")
-package.__path__ = [str(root / "src" / "ume")]
-sys.modules["ume"] = package
+VectorStore: Type[Any]
 
-spec = importlib.util.spec_from_file_location(
-    "ume.vector_store",
-    root / "src" / "ume" / "vector_store.py",
-)
-assert spec and spec.loader
-module = importlib.util.module_from_spec(spec)
-sys.modules["ume.vector_store"] = module
-spec.loader.exec_module(module)
-package.vector_store = module  # type: ignore[attr-defined]
-VectorStore = module.VectorStore
+
+@pytest.fixture(scope="module", autouse=True)
+def vector_store_module():
+    orig_ume = sys.modules.get("ume")
+    orig_vs = sys.modules.get("ume.vector_store")
+
+    package = types.ModuleType("ume")
+    package.__path__ = [str(root / "src" / "ume")]
+    sys.modules["ume"] = package
+
+    spec = importlib.util.spec_from_file_location(
+        "ume.vector_store",
+        root / "src" / "ume" / "vector_store.py",
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["ume.vector_store"] = module
+    spec.loader.exec_module(module)
+    package.vector_store = module  # type: ignore[attr-defined]
+    global VectorStore
+    VectorStore = module.VectorStore
+
+    yield
+
+    if orig_ume is not None:
+        sys.modules["ume"] = orig_ume
+    else:
+        sys.modules.pop("ume", None)
+
+    if orig_vs is not None:
+        sys.modules["ume.vector_store"] = orig_vs
+    else:
+        sys.modules.pop("ume.vector_store", None)
 
 # Remove the placeholder package so other tests import the real module
 sys.modules.pop("ume")
