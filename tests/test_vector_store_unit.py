@@ -2,6 +2,7 @@
 import importlib.util
 import sys
 import types
+
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ def vector_store_cls():
     package = types.ModuleType("ume")
     package.__path__ = [str(root / "src" / "ume")]
     sys.modules["ume"] = package
+
     spec = importlib.util.spec_from_file_location(
         "ume.vector_store",
         root / "src" / "ume" / "vector_store.py",
@@ -28,6 +30,7 @@ def vector_store_cls():
     module = importlib.util.module_from_spec(spec)
     sys.modules["ume.vector_store"] = module
     spec.loader.exec_module(module)
+
     setattr(package, "vector_store", module)
     try:
         yield module.VectorStore
@@ -44,6 +47,7 @@ def vector_store_cls():
 
 def test_add_dimension_mismatch(vector_store_cls):
     store = vector_store_cls(dim=2, use_gpu=False)
+
     with pytest.raises(ValueError):
         store.add("a", [1.0, 2.0, 3.0])
 

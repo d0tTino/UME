@@ -196,6 +196,8 @@ __all__ = [
     "DEFAULT_SCHEMA_MANAGER",
     "PolicyViolationError",
     "Settings",
+    "config",
+    "vector_store",
     "log_audit_entry",
     "get_audit_entries",
     "ssl_config",
@@ -229,4 +231,34 @@ __all__ = [
     "ResourceScheduler",
     "ScheduledTask",
 
+    # Submodules
+    "audit",
+    "config",
+    "persistent_graph",
+    "plugins",
+    "grpc_service",
+    "vector_store",
+    "api",
+
 ]
+
+# Lazily import selected submodules on first access to avoid import-time side
+# effects when environment variables are not yet configured.
+_KNOWN_SUBMODULES = {
+    "audit",
+    "config",
+    "persistent_graph",
+    "plugins",
+    "grpc_service",
+    "vector_store",
+    "api",
+}
+
+def __getattr__(name: str) -> object:  # pragma: no cover - thin wrapper
+    if name in _KNOWN_SUBMODULES:
+        from importlib import import_module
+
+        module = import_module(f"{__name__}.{name}")
+        globals()[name] = module
+        return module
+    raise AttributeError(name)

@@ -342,3 +342,11 @@ def create_default_store() -> VectorStore:  # pragma: no cover - trivial wrapper
 # ``create_vector_store`` used to be exported. Provide an alias so older imports
 # continue to work without modification.
 create_vector_store = create_default_store
+
+# Ensure ``ume.vector_store`` is set when imported standalone
+if __name__ == "ume.vector_store":
+    import sys as _sys
+    parent = _sys.modules.get("ume")
+    if parent is not None and not hasattr(parent, "vector_store"):
+        parent.vector_store = _sys.modules[__name__]  # type: ignore[attr-defined]
+

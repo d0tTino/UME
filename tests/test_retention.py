@@ -43,8 +43,8 @@ def test_retention_scheduler_purges_records(monkeypatch) -> None:
         graph.conn.execute("UPDATE edges SET created_at=?", (old_ts,))
 
     monkeypatch.setattr(settings, "UME_GRAPH_RETENTION_DAYS", 0)
-    start_retention_scheduler(graph, interval_seconds=0.05)
-    time.sleep(0.1)
+    start_retention_scheduler(graph, interval_seconds=0.01)
+    time.sleep(0.02)
     stop_retention_scheduler()
 
     assert not graph.node_exists("old")
@@ -54,8 +54,8 @@ def test_retention_scheduler_purges_records(monkeypatch) -> None:
 
 def test_retention_scheduler_reuses_thread(monkeypatch: pytest.MonkeyPatch) -> None:
     graph = types.SimpleNamespace(purge_old_records=lambda *a, **k: None)
-    thread1, stop1 = start_retention_scheduler(graph, interval_seconds=0.1)
-    thread2, stop2 = start_retention_scheduler(graph, interval_seconds=0.1)
+    thread1, stop1 = start_retention_scheduler(graph, interval_seconds=0.01)
+    thread2, stop2 = start_retention_scheduler(graph, interval_seconds=0.01)
     try:
         assert thread1 is thread2
     finally:
@@ -70,8 +70,8 @@ def test_retention_scheduler_continues_after_error(monkeypatch: pytest.MonkeyPat
         raise RuntimeError("fail")
     graph = types.SimpleNamespace(purge_old_records=purge)
     monkeypatch.setattr(settings, "UME_GRAPH_RETENTION_DAYS", 0)
-    thread, stop = start_retention_scheduler(graph, interval_seconds=0.05)
-    time.sleep(0.12)
+    thread, stop = start_retention_scheduler(graph, interval_seconds=0.01)
+    time.sleep(0.03)
     stop()
     stop_retention_scheduler()
     assert len(calls) > 1
@@ -85,9 +85,9 @@ def test_vector_age_scheduler_warns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "UME_VECTOR_MAX_AGE_DAYS", 0)
     STALE_VECTOR_WARNINGS._value.set(0)  # type: ignore[attr-defined]
     thread, stop = start_vector_age_scheduler(
-        store, interval_seconds=0.05, warn_threshold=0
+        store, interval_seconds=0.01, warn_threshold=0
     )
-    time.sleep(0.1)
+    time.sleep(0.02)
     stop()
     stop_vector_age_scheduler()
     assert STALE_VECTOR_WARNINGS._value.get() > 0

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, ContextManager
 
 from contextlib import nullcontext, AbstractContextManager
 
@@ -19,6 +19,7 @@ except Exception:  # pragma: no cover - allow tests without opentelemetry instal
     OTLPSpanExporter = None
     _tracing_available = False
 
+
 from .config import settings
 from .graph_adapter import IGraphAdapter
 
@@ -29,6 +30,7 @@ class _DummyTracer:
 
 
 tracer = trace.get_tracer("ume") if _tracing_available else _DummyTracer()
+
 _enabled = False
 
 
@@ -36,6 +38,7 @@ def configure_tracing(endpoint: str | None = None) -> None:
     """Configure OpenTelemetry tracing if an endpoint is provided."""
     global _enabled
     if not _tracing_available:
+
         return
     endpoint = endpoint or settings.UME_OTLP_ENDPOINT
     if not endpoint:

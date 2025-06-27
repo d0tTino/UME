@@ -7,6 +7,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ume import MockGraph
 from ume.config import settings
+from sse_starlette.sse import AppStatus
+import anyio
 import time
 import pytest
 
@@ -20,6 +22,8 @@ def setup_module(_: object) -> None:
     g.add_edge("a", "b", "L")
     object.__setattr__(settings, "UME_API_TOKEN", "")
     configure_graph(g)
+    AppStatus.should_exit = False
+    AppStatus.should_exit_event = anyio.Event()
 
 
 def _token(client: TestClient) -> str:
@@ -40,6 +44,7 @@ def _get(client: TestClient) -> Response:
 
 
 @pytest.mark.skip(reason="Flaky in CI")  # type: ignore[misc]
+
 def test_streaming_path() -> None:
     with TestClient(app) as client:
         with _get(client) as res:
@@ -68,3 +73,8 @@ def test_backpressure() -> None:
         time.sleep(0.05)
         second = next(it)
         assert second == "data: b"
+
+
+def teardown_module(_: object) -> None:
+    AppStatus.should_exit_event = None
+    AppStatus.should_exit = False
