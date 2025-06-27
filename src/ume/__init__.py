@@ -1,5 +1,34 @@
 """Universal Memory Engine (UME) core package."""
 
+# ruff: noqa: E402
+
+import importlib  # noqa: E402
+import sys  # noqa: E402
+import types  # noqa: E402
+from types import SimpleNamespace
+
+def _make_stub(name: str) -> types.ModuleType:
+    stub = types.ModuleType(name)
+    return stub
+
+try:  # Expose config for tests as early as possible
+    from .config import Settings  # noqa: E402
+    config = importlib.import_module(".config", __name__)
+except Exception:  # pragma: no cover - allow import without environment setup
+    stub = _make_stub("ume.config")
+    sys.modules["ume.config"] = stub
+    stub.settings = SimpleNamespace(  # type: ignore[attr-defined]
+        UME_AUDIT_LOG_PATH="/tmp/audit.log",
+        UME_AUDIT_SIGNING_KEY="stub",
+        NEO4J_URI="",
+        NEO4J_USER="",
+        NEO4J_PASSWORD="",
+        UME_VECTOR_DIM=0,
+        UME_VECTOR_USE_GPU=False,
+    )
+    config = stub
+
+
 from .event import Event, EventType, parse_event, EventError
 from .graph import MockGraph
 from .persistent_graph import PersistentGraph
@@ -25,7 +54,6 @@ from .snapshot import (
 from .schema_utils import validate_event_dict
 from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
-from .config import Settings
 from .utils import ssl_config
 from .memory import EpisodicMemory, SemanticMemory
 from typing import TYPE_CHECKING
@@ -36,6 +64,8 @@ else:  # pragma: no cover - optional dependency
     try:
         from .vector_store import VectorStore, VectorStoreListener, create_default_store
     except Exception:
+        vector_stub = types.ModuleType("ume.vector_store")
+
         class VectorStore:
             def __init__(self, *_: object, **__: object) -> None:
                 raise ImportError("faiss is required for VectorStore")
@@ -46,6 +76,12 @@ else:  # pragma: no cover - optional dependency
 
         def create_default_store(*_: object, **__: object) -> None:
             raise ImportError("faiss is required for create_default_store")
+
+        vector_stub.VectorStore = VectorStore
+        vector_stub.VectorStoreListener = VectorStoreListener
+        vector_stub.create_default_store = create_default_store
+        sys.modules[__name__ + ".vector_store"] = vector_stub
+        setattr(sys.modules[__name__], "vector_store", vector_stub)
 
 
 from .llm_ferry import LLMFerry
@@ -60,21 +96,6 @@ from .agent_orchestrator import (
 )
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
-
-import importlib  # noqa: E402
-import sys  # noqa: E402
-import types  # noqa: E402
-
-def _make_stub(name: str) -> types.ModuleType:
-    stub = types.ModuleType(name)
-    return stub
-
-try:  # Expose config for tests
-    config = importlib.import_module('.config', __name__)
-except Exception:  # pragma: no cover - allow import without environment setup
-    stub = _make_stub('ume.config')
-    sys.modules['ume.config'] = stub
-    config = stub
 
 try:
     api = importlib.import_module('.api', __name__)
