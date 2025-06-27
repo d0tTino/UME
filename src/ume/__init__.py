@@ -3,6 +3,7 @@
 # ruff: noqa: E402
 
 import importlib  # noqa: E402
+import os  # noqa: E402
 import sys  # noqa: E402
 import types  # noqa: E402
 from types import SimpleNamespace
@@ -11,6 +12,7 @@ def _make_stub(name: str) -> types.ModuleType:
     stub = types.ModuleType(name)
     return stub
 
+os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "stub")
 try:  # Expose config for tests as early as possible
     config = importlib.import_module(".config", __name__)
     Settings = config.Settings
@@ -19,13 +21,51 @@ except Exception:  # pragma: no cover - allow import without environment setup
     stub = _make_stub("ume.config")
     sys.modules["ume.config"] = stub
     stub.settings = SimpleNamespace(  # type: ignore[attr-defined]
+        UME_DB_PATH="ume_graph.db",
+        UME_SNAPSHOT_PATH="ume_snapshot.json",
         UME_AUDIT_LOG_PATH="/tmp/audit.log",
         UME_AUDIT_SIGNING_KEY="stub",
-        NEO4J_URI="",
-        NEO4J_USER="",
-        NEO4J_PASSWORD="",
+        UME_AGENT_ID="SYSTEM",
+        UME_EMBED_MODEL="all-MiniLM-L6-v2",
+        UME_CLI_DB="ume_graph.db",
+        UME_ROLE=None,
+        UME_API_ROLE=None,
+        UME_RATE_LIMIT_REDIS=None,
+        UME_LOG_LEVEL="INFO",
+        UME_LOG_JSON=False,
+        UME_GRAPH_RETENTION_DAYS=30,
+        UME_RELIABILITY_THRESHOLD=0.5,
+        WATCH_PATHS=["."],
+        DAG_RESOURCES={"cpu": 1, "io": 1},
         UME_VECTOR_DIM=0,
+        UME_VECTOR_INDEX="vectors.faiss",
         UME_VECTOR_USE_GPU=False,
+        UME_VECTOR_GPU_MEM_MB=256,
+        UME_VECTOR_MAX_AGE_DAYS=90,
+        NEO4J_URI="bolt://localhost:7687",
+        NEO4J_USER="neo4j",
+        NEO4J_PASSWORD="password",  # pragma: allowlist secret
+        KAFKA_BOOTSTRAP_SERVERS="localhost:9092",
+        KAFKA_RAW_EVENTS_TOPIC="ume-raw-events",
+        KAFKA_CLEAN_EVENTS_TOPIC="ume-clean-events",
+        KAFKA_QUARANTINE_TOPIC="ume-quarantine-events",
+        KAFKA_EDGE_TOPIC="ume_edges",
+        KAFKA_NODE_TOPIC="ume_nodes",
+        KAFKA_GROUP_ID="ume_client_group",
+        KAFKA_PRIVACY_AGENT_GROUP_ID="ume-privacy-agent-group",
+        KAFKA_PRODUCER_BATCH_SIZE=10,
+        UME_OAUTH_USERNAME="ume",
+        UME_OAUTH_PASSWORD="password",  # pragma: allowlist secret
+        UME_OAUTH_ROLE="AnalyticsAgent",
+        UME_OAUTH_TTL=3600,
+        UME_API_TOKEN=None,
+        OPA_URL=None,
+        OPA_TOKEN=None,
+        UME_OTLP_ENDPOINT=None,
+        LLM_FERRY_API_URL="https://example.com/api",
+        LLM_FERRY_API_KEY="",
+        TWITTER_BEARER_TOKEN=None,
+        ANGEL_BRIDGE_LOOKBACK_HOURS=24,
     )
     class _StubSettings:
         pass
