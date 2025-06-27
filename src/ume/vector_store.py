@@ -292,7 +292,7 @@ class VectorStore:
     def get_vector_timestamps(self) -> Dict[str, int]:
         """Return mapping of item IDs to their last update timestamp."""
         with self.lock:
-            return dict(self.id_to_ts)
+            return dict(self.vector_ts)
 
 
 class VectorStoreListener(GraphListener):

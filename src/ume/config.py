@@ -3,7 +3,7 @@ from pydantic import Extra
 from typing import Any
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):  # type: ignore[misc]
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
     )

@@ -60,8 +60,28 @@ from .agent_orchestrator import (
 )
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
-from .reliability import score_text, filter_low_confidence
-from ._internal.listeners import register_listener
+
+import importlib  # noqa: E402
+import sys  # noqa: E402
+import types  # noqa: E402
+
+def _make_stub(name: str) -> types.ModuleType:
+    stub = types.ModuleType(name)
+    return stub
+
+try:  # Expose config for tests
+    config = importlib.import_module('.config', __name__)
+except Exception:  # pragma: no cover - allow import without environment setup
+    stub = _make_stub('ume.config')
+    sys.modules['ume.config'] = stub
+    config = stub
+
+try:
+    api = importlib.import_module('.api', __name__)
+except Exception:
+    api = None  # type: ignore[assignment]
+from .reliability import score_text, filter_low_confidence  # noqa: E402
+from ._internal.listeners import register_listener  # noqa: E402
 
 try:  # Optional dependency
     from .embedding import generate_embedding

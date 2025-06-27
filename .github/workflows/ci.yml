@@ -6,11 +6,10 @@ on:
   pull_request:
 
 jobs:
-  test-and-lint:
+  lint-and-install:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
+    outputs:
+      run: ${{ steps.changes.outputs.run }}
     steps:
       - uses: actions/checkout@v4
       - name: Decide whether to run CI
@@ -19,27 +18,49 @@ jobs:
           python scripts/ci_should_run.py
           status=$?
           if [ "$status" = 0 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-poetry
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        if: steps.changes.outputs.run == 'true'
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry install --no-interaction --no-ansi --with dev
+          python-version: '3.12'
+          run: ${{ steps.changes.outputs.run }}
       - name: Run pre-commit
         if: steps.changes.outputs.run == 'true'
         run: poetry run pre-commit run --all-files --show-diff-on-failure --color always
-      - name: Run tests with coverage
-        if: steps.changes.outputs.run == 'true'
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: lint-and-install
+    if: needs.lint-and-install.outputs.run == 'true'
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run unit tests with coverage
+        run: poetry run pytest --cov=ume --cov-report xml --cov-fail-under=90 -m "not integration"
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: lint-and-install
+    if: needs.lint-and-install.outputs.run == 'true'
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run integration tests
         env:
           UME_DOCKER_TESTS: true
-        run: poetry run pytest --cov=ume --cov-report xml --cov-fail-under=90
+        run: poetry run pytest -m integration
 
   compose-smoke:
     runs-on: ubuntu-latest
-    needs: test-and-lint
+    needs: [unit-tests, integration-tests]
     steps:
       - uses: actions/checkout@v4
       - name: Start stack
