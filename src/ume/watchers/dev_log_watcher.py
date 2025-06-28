@@ -9,7 +9,7 @@ from typing import Iterable
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers import Observer
 
-from confluent_kafka import Producer
+from confluent_kafka import Producer, KafkaException
 
 from ume.config import settings
 from ume.event import Event, EventType
@@ -43,10 +43,13 @@ class DevLogHandler(FileSystemEventHandler):
             "target_node_id": evt.target_node_id,
             "label": evt.label,
         }
-        self.producer.produce(
-            settings.KAFKA_RAW_EVENTS_TOPIC,
-            json.dumps(data).encode("utf-8"),
-        )
+        try:
+            self.producer.produce(
+                settings.KAFKA_RAW_EVENTS_TOPIC,
+                json.dumps(data).encode("utf-8"),
+            )
+        except KafkaException as exc:  # pragma: no cover - logging only
+            logger.error("Failed to produce dev log event: %s", exc)
 
 
 def run_watcher(paths: Iterable[str]) -> None:
