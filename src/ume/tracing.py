@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, List, ContextManager
+from typing import Any, Dict, Optional, List
 
 from contextlib import nullcontext, AbstractContextManager
 

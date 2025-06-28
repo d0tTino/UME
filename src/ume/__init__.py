@@ -101,7 +101,7 @@ from .schema_utils import validate_event_dict
 from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .utils import ssl_config
-from .memory import EpisodicMemory, SemanticMemory
+from .memory import EpisodicMemory, SemanticMemory, ColdMemory
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
@@ -207,6 +207,7 @@ __all__ = [
 
     "EpisodicMemory",
     "SemanticMemory",
+    "ColdMemory",
 
     "LLMFerry",
 

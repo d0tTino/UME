@@ -11,6 +11,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # UME Core
     UME_DB_PATH: str = "ume_graph.db"
     UME_SNAPSHOT_PATH: str = "ume_snapshot.json"
+    UME_COLD_DB_PATH: str = "ume_cold.db"
+    UME_COLD_SNAPSHOT_PATH: str = "ume_cold_snapshot.json"
+    UME_COLD_EVENT_AGE_DAYS: int = 180
     UME_AUDIT_LOG_PATH: str = "audit.log"
     UME_AUDIT_SIGNING_KEY: str = "default-key"
     UME_AGENT_ID: str = "SYSTEM"
@@ -62,6 +65,8 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # Remote OPA configuration
     OPA_URL: str | None = None
     OPA_TOKEN: str | None = None
+
+    REGO_POLICY_PATHS: str | None = None
 
     # OpenTelemetry
     UME_OTLP_ENDPOINT: str | None = None

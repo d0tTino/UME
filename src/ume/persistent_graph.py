@@ -12,9 +12,12 @@ from .graph_algorithms import GraphAlgorithmsMixin
 class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
     """SQLite-backed persistent graph implementation."""
 
-    def __init__(self, db_path: str | None = None) -> None:
+    def __init__(self, db_path: str | None = None, *, check_same_thread: bool | None = None) -> None:
         self.db_path = db_path or settings.UME_DB_PATH
-        self.conn = sqlite3.connect(self.db_path)
+        if check_same_thread is None:
+            self.conn = sqlite3.connect(self.db_path)
+        else:
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=check_same_thread)
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
 
@@ -63,12 +66,14 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
     def close(self) -> None:
         self.conn.close()
 
-    def add_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
+    def add_node(
+        self, node_id: str, attributes: Dict[str, Any], *, created_at: int | None = None
+    ) -> None:
         try:
             with self.conn:
                 self.conn.execute(
                     "INSERT INTO nodes(id, attributes, created_at) VALUES(?, ?, ?)",
-                    (node_id, json.dumps(attributes), int(time.time())),
+                    (node_id, json.dumps(attributes), created_at or int(time.time())),
                 )
         except sqlite3.IntegrityError:
             raise ProcessingError(f"Node '{node_id}' already exists.")
@@ -109,7 +114,14 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
         cur = self.conn.execute("SELECT id FROM nodes WHERE redacted=0")
         return [row["id"] for row in cur.fetchall()]
 
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        *,
+        created_at: int | None = None,
+    ) -> None:
         if not self.node_exists(source_node_id) or not self.node_exists(target_node_id):
             raise ProcessingError(
                 f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
@@ -118,7 +130,12 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
             with self.conn:
                 self.conn.execute(
                     "INSERT INTO edges(source, target, label, created_at) VALUES(?, ?, ?, ?)",
-                    (source_node_id, target_node_id, label, int(time.time())),
+                    (
+                        source_node_id,
+                        target_node_id,
+                        label,
+                        created_at or int(time.time()),
+                    ),
                 )
         except sqlite3.IntegrityError:
             raise ProcessingError(

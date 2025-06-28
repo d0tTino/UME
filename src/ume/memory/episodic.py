@@ -22,7 +22,7 @@ class EpisodicMemory:
         *,
         flush_interval: float | None = None,
     ) -> None:
-        self.graph = PersistentGraph(db_path or ":memory:")
+        self.graph = PersistentGraph(db_path or ":memory:", check_same_thread=False)
         self.log_path = Path(log_path) if log_path else None
         self._buffer: List[Event] = []
         self._flush_interval = flush_interval

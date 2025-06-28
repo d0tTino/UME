@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 import importlib.util
+import os
 import sys
 from pathlib import Path
 from typing import Generator, List
@@ -43,6 +44,12 @@ sys.modules.setdefault(
 )
 
 root = Path(__file__).resolve().parents[1]
+os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "test-key")
+old_ume = sys.modules.get("ume")
+old_api = sys.modules.get("ume.api")
+old_metrics = sys.modules.get("ume.metrics")
+old_graph = sys.modules.get("ume.graph")
+old_config = sys.modules.get("ume.config")
 package = types.ModuleType("ume")
 package.__path__ = [str(root / "src" / "ume")]
 sys.modules["ume"] = package
@@ -88,6 +95,27 @@ config_module = importlib.util.module_from_spec(spec_config)
 sys.modules["ume.config"] = config_module
 spec_config.loader.exec_module(config_module)
 settings = config_module.settings
+
+if old_ume is not None:
+    sys.modules["ume"] = old_ume
+else:
+    sys.modules.pop("ume", None)
+if old_api is not None:
+    sys.modules["ume.api"] = old_api
+else:
+    sys.modules.pop("ume.api", None)
+if old_metrics is not None:
+    sys.modules["ume.metrics"] = old_metrics
+else:
+    sys.modules.pop("ume.metrics", None)
+if old_graph is not None:
+    sys.modules["ume.graph"] = old_graph
+else:
+    sys.modules.pop("ume.graph", None)
+if old_config is not None:
+    sys.modules["ume.config"] = old_config
+else:
+    sys.modules.pop("ume.config", None)
 
 
 def setup_module(_: object) -> None:
