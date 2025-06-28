@@ -13,6 +13,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_SNAPSHOT_PATH: str = "ume_snapshot.json"
     UME_AUDIT_LOG_PATH: str = "audit.log"
     UME_AUDIT_SIGNING_KEY: str = "default-key"
+    UME_CONSENT_LEDGER_PATH: str = "consent_ledger.db"
     UME_AGENT_ID: str = "SYSTEM"
     UME_EMBED_MODEL: str = "all-MiniLM-L6-v2"
     UME_CLI_DB: str = "ume_graph.db"
@@ -25,6 +26,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_RELIABILITY_THRESHOLD: float = 0.5
     WATCH_PATHS: list[str] = ["."]
     DAG_RESOURCES: dict[str, int] = {"cpu": 1, "io": 1}
+    UME_VALUE_STORE_PATH: str | None = None
 
     # Vector store
     UME_VECTOR_DIM: int = 1536

@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover - allow import without environment setup
         UME_SNAPSHOT_PATH="ume_snapshot.json",
         UME_AUDIT_LOG_PATH="/tmp/audit.log",
         UME_AUDIT_SIGNING_KEY="stub",
+        UME_CONSENT_LEDGER_PATH="consent_ledger.db",
         UME_AGENT_ID="SYSTEM",
         UME_EMBED_MODEL="all-MiniLM-L6-v2",
         UME_CLI_DB="ume_graph.db",
@@ -37,6 +38,7 @@ except Exception:  # pragma: no cover - allow import without environment setup
         UME_RELIABILITY_THRESHOLD=0.5,
         WATCH_PATHS=["."],
         DAG_RESOURCES={"cpu": 1, "io": 1},
+        UME_VALUE_STORE_PATH=None,
         UME_VECTOR_DIM=0,
         UME_VECTOR_INDEX="vectors.faiss",
         UME_VECTOR_USE_GPU=False,
@@ -140,6 +142,7 @@ from .agent_orchestrator import (
     ReflectionAgent,
 )
 from .message_bus import MessageEnvelope
+
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 
@@ -223,6 +226,7 @@ __all__ = [
     "Overseer",
     "MessageEnvelope",
     "ReflectionAgent",
+    "ValueOverseer",
     "Task",
     "DAGExecutor",
     "DAGService",

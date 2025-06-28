@@ -613,6 +613,41 @@ def pii_redactions(_: str = Depends(get_current_role)) -> Dict[str, int]:
     return {"redacted": _redaction_count()}
 
 
+class Recommendation(BaseModel):
+    id: str
+    action: str
+
+
+RECOMMENDATIONS: list[Recommendation] = [
+    Recommendation(id="rec1", action="Upgrade vector index"),
+    Recommendation(id="rec2", action="Review new node attributes"),
+]
+
+FEEDBACK: dict[str, list[str]] = defaultdict(list)
+
+
+@app.get("/recommendations")
+def get_recommendations(
+    _: str = Depends(get_current_role),
+) -> list[Recommendation]:
+    """Return overseer recommended actions."""
+    return RECOMMENDATIONS
+
+
+class RecommendationFeedback(BaseModel):
+    id: str
+    feedback: str
+
+
+@app.post("/recommendations/feedback")
+def submit_feedback(
+    req: RecommendationFeedback, _: str = Depends(get_current_role)
+) -> Dict[str, str]:
+    """Record user feedback for a recommendation."""
+    FEEDBACK[req.id].append(req.feedback)
+    return {"status": "ok"}
+
+
 def _resolve_policy_path(name: str) -> Path:
     """Return absolute path for policy ``name`` within :data:`POLICY_DIR`."""
     path = Path(name)
