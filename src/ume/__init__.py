@@ -137,9 +137,9 @@ from .agent_orchestrator import (
     Supervisor,
     Critic,
     AgentTask,
-    MessageEnvelope,
     ReflectionAgent,
 )
+from .message_bus import MessageEnvelope
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 
@@ -220,6 +220,7 @@ __all__ = [
     "AgentOrchestrator",
     "Supervisor",
     "Critic",
+    "Overseer",
     "MessageEnvelope",
     "ReflectionAgent",
     "Task",

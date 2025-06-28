@@ -4,7 +4,21 @@ import importlib.util
 from pathlib import Path
 import sys
 
-module_path = Path(__file__).resolve().parents[1] / "src" / "ume" / "agent_orchestrator.py"
+base = Path(__file__).resolve().parents[1] / "src" / "ume"
+
+# Load MessageEnvelope without importing the full package to avoid optional
+# dependencies required by ``ume.__init__`` during test collection.
+envelope_path = base / "message_bus.py"
+envelope_spec = importlib.util.spec_from_file_location(
+    "ume.message_bus", envelope_path
+)
+assert envelope_spec and envelope_spec.loader
+envelope_module = importlib.util.module_from_spec(envelope_spec)
+sys.modules[envelope_spec.name] = envelope_module
+envelope_spec.loader.exec_module(envelope_module)
+MessageEnvelope = envelope_module.MessageEnvelope  # type: ignore[attr-defined]
+
+module_path = base / "agent_orchestrator.py"
 spec = importlib.util.spec_from_file_location("ume.agent_orchestrator", module_path)
 assert spec and spec.loader
 module = importlib.util.module_from_spec(spec)
@@ -14,7 +28,6 @@ AgentOrchestrator = module.AgentOrchestrator  # type: ignore[attr-defined]
 Supervisor = module.Supervisor  # type: ignore[attr-defined]
 Critic = module.Critic  # type: ignore[attr-defined]
 AgentTask = module.AgentTask  # type: ignore[attr-defined]
-MessageEnvelope = module.MessageEnvelope  # type: ignore[attr-defined]
 ReflectionAgent = module.ReflectionAgent  # type: ignore[attr-defined]
 
 
@@ -86,4 +99,42 @@ def test_reflection_filters_hallucinations() -> None:
     scores = asyncio.run(orchestrator.execute_objective("t"))
 
     assert scores == {"worker": 0.0}
+
+
+class DummyOverseer(module.Overseer):
+    def __init__(self):
+        self.seen: MessageEnvelope | None = None
+
+    def hallucination_check(self, message: MessageEnvelope, *, task=None, agent_id=None):
+        self.seen = message
+        if message.content == "bad":
+            return MessageEnvelope(content="")
+        return message
+
+
+def test_overseer_intervenes() -> None:
+    orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic(), FilteringReflection(), DummyOverseer())
+
+    async def worker(task: AgentTask) -> str:
+        return "bad"
+
+    orchestrator.register_worker("worker", worker)
+    scores = asyncio.run(orchestrator.execute_objective("t"))
+
+    assert scores == {"worker": 0.0}
+
+
+def test_envelope_wrapping() -> None:
+    overseer = DummyOverseer()
+    orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic(), None, overseer)
+
+    async def worker(task: AgentTask) -> str:
+        return "ok"
+
+    orchestrator.register_worker("w", worker)
+    scores = asyncio.run(orchestrator.execute_objective("t"))
+
+    assert scores == {"w": 1.0}
+    assert overseer.seen is not None
+    assert overseer.seen.jsonrpc == "2.0"
 
