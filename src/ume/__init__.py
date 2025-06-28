@@ -38,6 +38,7 @@ except Exception:  # pragma: no cover - allow import without environment setup
         UME_RELIABILITY_THRESHOLD=0.5,
         WATCH_PATHS=["."],
         DAG_RESOURCES={"cpu": 1, "io": 1},
+        UME_VALUE_STORE_PATH=None,
         UME_VECTOR_DIM=0,
         UME_VECTOR_INDEX="vectors.faiss",
         UME_VECTOR_USE_GPU=False,
@@ -141,6 +142,7 @@ from .agent_orchestrator import (
     MessageEnvelope,
     ReflectionAgent,
 )
+from .value_overseer import ValueOverseer
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 
@@ -223,6 +225,7 @@ __all__ = [
     "Critic",
     "MessageEnvelope",
     "ReflectionAgent",
+    "ValueOverseer",
     "Task",
     "DAGExecutor",
     "DAGService",
