@@ -72,5 +72,9 @@ def test_rego_policy_denies_event(monkeypatch):
 
     privacy_agent.run_privacy_agent()
 
+    quarantine = [
+        val for topic, val in producer.produced if topic == privacy_agent.QUARANTINE_TOPIC
+    ]
+    assert len(quarantine) == 1
     assert not any(topic == privacy_agent.CLEAN_TOPIC for topic, _ in producer.produced)
     assert producer.flush_calls == 1

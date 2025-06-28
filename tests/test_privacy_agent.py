@@ -209,3 +209,57 @@ def test_privacy_agent_audit_log_written(tmp_path, monkeypatch):
     assert entries
     assert entries[-1]["user_id"] == "tester"
     assert "payload_redacted" in str(entries[-1]["reason"])
+
+
+def test_invalid_json_goes_to_quarantine(privacy_agent, monkeypatch):
+    msg = FakeMessage(b"{")
+
+    consumer = FakeConsumer([msg])
+    producer = FakeProducer()
+
+    monkeypatch.setattr(privacy_agent, "Consumer", lambda conf: consumer)
+    monkeypatch.setattr(privacy_agent, "Producer", lambda conf: producer)
+    monkeypatch.setattr(privacy_agent, "log_audit_entry", lambda *a, **k: None)
+    monkeypatch.setattr(privacy_agent.settings, "KAFKA_PRODUCER_BATCH_SIZE", 1)
+    monkeypatch.setattr(privacy_agent, "BATCH_SIZE", 1)
+
+    privacy_agent.run_privacy_agent()
+
+    assert producer.produced == [(privacy_agent.QUARANTINE_TOPIC, b"{")]
+
+
+def test_policy_violation_goes_to_quarantine(privacy_agent, monkeypatch):
+    payload = {"node_id": "n1"}
+    event = {
+        "event_type": "CREATE_NODE",
+        "timestamp": 1,
+        "node_id": "n1",
+        "payload": payload,
+    }
+    msg = FakeMessage(json.dumps(event).encode("utf-8"))
+
+    consumer = FakeConsumer([msg])
+    producer = FakeProducer()
+
+    class RejectPlugin:
+        def validate(self, event):  # pragma: no cover - simple stub
+            raise privacy_agent.PolicyViolationError("denied")
+
+    monkeypatch.setattr(privacy_agent, "load_plugins", lambda: None)
+    monkeypatch.setattr(privacy_agent, "get_plugins", lambda: [RejectPlugin()])
+    monkeypatch.setattr(privacy_agent, "Consumer", lambda conf: consumer)
+    monkeypatch.setattr(privacy_agent, "Producer", lambda conf: producer)
+    monkeypatch.setattr(privacy_agent, "log_audit_entry", lambda *a, **k: None)
+    monkeypatch.setattr(privacy_agent.settings, "KAFKA_PRODUCER_BATCH_SIZE", 1)
+    monkeypatch.setattr(privacy_agent, "BATCH_SIZE", 1)
+
+    privacy_agent.run_privacy_agent()
+
+    quarantine = [
+        val for topic, val in producer.produced if topic == privacy_agent.QUARANTINE_TOPIC
+    ]
+    assert len(quarantine) == 1
+    data = json.loads(quarantine[0].decode("utf-8"))
+    assert data["error"] == "denied"
+    assert data["event"]["node_id"] == "n1"
+    assert not any(topic == privacy_agent.CLEAN_TOPIC for topic, _ in producer.produced)
