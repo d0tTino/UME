@@ -130,3 +130,10 @@ reflection and critic agents:
 
 The `ReflectionAgent` can modify this envelope (for example to filter
 hallucinated text) before the `Critic` scores the final `content`.
+
+## Dashboard Recommendations
+
+The web dashboard now includes a view showing the overseer's recommended
+actions. Data is fetched from the `/recommendations` endpoint and each
+item can be accepted or rejected. User feedback is stored for future
+analysis and helps refine subsequent suggestions.
