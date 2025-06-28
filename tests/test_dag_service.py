@@ -1,3 +1,15 @@
+# ruff: noqa: E402
+import sys
+import types
+from pathlib import Path
+
+# Avoid executing ume/__init__.py which imports optional dependencies.
+pkg_root = Path(__file__).resolve().parents[1] / "src" / "ume"
+if "ume" not in sys.modules:
+    stub = types.ModuleType("ume")
+    stub.__path__ = [str(pkg_root)]
+    sys.modules["ume"] = stub
+
 from ume.dag_service import DAGService
 from ume.dag_executor import Task
 import pytest
@@ -46,3 +58,30 @@ def test_dag_service_stop_cancels_pending_tasks() -> None:
     started.wait(0.1)
     service.stop()
     assert ran == ["slow"]
+
+
+def test_dag_service_start_idempotent() -> None:
+    service = DAGService([Task(name="t", func=lambda: None)])
+    service.start()
+    first = service._thread
+    service.start()
+    second = service._thread
+    service.stop()
+    assert first is second
+
+
+def test_dag_service_stop_without_start() -> None:
+    service = DAGService([])
+    service.stop()
+
+
+def test_dag_service_task_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail() -> None:
+        raise RuntimeError("boom")
+
+    service = DAGService([Task(name="t", func=fail)])
+    service.start()
+    assert service._thread is not None
+    service._thread.join()
+    assert not service._thread.is_alive()
+    service.stop()
