@@ -264,3 +264,53 @@ def test_parse_s3_invalid(path: str) -> None:
 
     with pytest.raises(ValueError):
         _parse_s3(path)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "s3://bucket/",
+        "s3:///key",
+        "s3://",
+    ],
+)
+def test_write_lines_invalid_s3_path(monkeypatch, path: str) -> None:
+    """_write_lines should validate S3 path format before using boto3."""
+    import sys
+    import types
+    import importlib.util
+    from pathlib import Path
+
+    dummy_boto3 = types.SimpleNamespace(
+        client=lambda name: pytest.fail("boto3 client should not be called")
+    )
+    dummy_exceptions = types.SimpleNamespace(
+        BotoCoreError=Exception, ClientError=Exception
+    )
+    monkeypatch.setitem(sys.modules, "boto3", dummy_boto3)
+    monkeypatch.setitem(sys.modules, "botocore.exceptions", dummy_exceptions)
+
+    # Load ume.config manually to satisfy relative import
+    config_spec = importlib.util.spec_from_file_location(
+        "ume.config", Path("src/ume/config.py")
+    )
+    config_mod = importlib.util.module_from_spec(config_spec)
+    sys.modules["ume.config"] = config_mod
+    assert config_spec.loader is not None
+    config_spec.loader.exec_module(config_mod)
+
+    # Create a minimal package for ume
+    pkg = types.ModuleType("ume")
+    pkg.__path__ = [str(Path("src/ume"))]
+    sys.modules["ume"] = pkg
+
+    spec = importlib.util.spec_from_file_location(
+        "ume.audit", Path("src/ume/audit.py")
+    )
+    audit = importlib.util.module_from_spec(spec)
+    sys.modules["ume.audit"] = audit
+    assert spec.loader is not None
+    spec.loader.exec_module(audit)
+
+    with pytest.raises(ValueError):
+        audit._write_lines(path, ["x"])
