@@ -17,6 +17,7 @@ from ..config import settings
 from ..schema_utils import validate_event_dict
 from ..audit import log_audit_entry
 from ..event import parse_event, EventError
+from ..consent_ledger import consent_ledger
 from ..plugins.alignment import load_plugins, get_plugins, PolicyViolationError
 
 
@@ -102,6 +103,14 @@ def run_privacy_agent() -> None:
                 logger.error("Failed to parse event: %s", exc)
                 continue
 
+            payload = event.payload if isinstance(event.payload, dict) else {}
+            user_id = payload.get("user_id")
+            scope = payload.get("scope")
+            has_consent = False
+            if user_id and scope:
+                has_consent = consent_ledger.has_consent(str(user_id), str(scope))
+            setattr(event, "consent", has_consent)
+
             try:
                 for plugin in get_plugins():
                     plugin.validate(event)
@@ -113,8 +122,10 @@ def run_privacy_agent() -> None:
             redacted_payload, was_redacted = redact_event_payload(original_payload)
             data["payload"] = redacted_payload
 
+            dest_topic = CLEAN_TOPIC if has_consent else QUARANTINE_TOPIC
+
             try:
-                producer.produce(CLEAN_TOPIC, value=json.dumps(data).encode("utf-8"))
+                producer.produce(dest_topic, value=json.dumps(data).encode("utf-8"))
                 pending += 1
             except KafkaException as exc:
                 logger.error("Failed to produce sanitized event: %s", exc)

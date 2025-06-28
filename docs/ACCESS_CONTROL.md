@@ -51,3 +51,18 @@ UME_ROLE=UserService ume-cli new_node UserProfile.123 '{}'
 ```
 
 Without the `UserService` role the command raises `AccessDeniedError`.
+
+## User Consent Ledger
+
+The privacy agent checks user consent before forwarding sanitized events.
+Consent records are stored in a lightweight SQLite ledger located at
+`UME_CONSENT_LEDGER_PATH` (default `consent_ledger.db`). Each entry records the
+`user_id`, the consent `scope`, and the time consent was granted.
+
+When processing events the privacy agent looks for `user_id` and `scope` fields
+in the event payload. If no matching consent entry is found, the sanitized event
+is published to the quarantine topic instead of the clean events topic. Rego
+policies can reference this status via the `input.consent` value.
+
+Consent can be granted or revoked programmatically using the
+`ConsentLedger` class from `ume.consent_ledger`.
