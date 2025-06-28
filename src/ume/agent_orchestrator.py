@@ -5,6 +5,10 @@ import asyncio
 from collections import defaultdict
 from typing import Callable, Any, Dict, List, Awaitable
 
+from .audit import log_audit_entry
+from .config import settings
+from .value_overseer import ValueOverseer
+
 from .persistent_graph import PersistentGraph
 
 
@@ -72,10 +76,12 @@ class AgentOrchestrator:
         supervisor: Supervisor | None = None,
         critic: Critic | None = None,
         reflection: ReflectionAgent | None = None,
+        overseer: ValueOverseer | None = None,
     ) -> None:
         self.supervisor = supervisor or Supervisor()
         self.critic = critic or Critic()
         self.reflection = reflection or ReflectionAgent()
+        self.overseer = overseer or ValueOverseer()
         self._workers: Dict[str, Callable[[AgentTask], Awaitable[Any]]] = {}
 
     def register_worker(
@@ -87,6 +93,14 @@ class AgentOrchestrator:
     async def execute_objective(self, objective: str) -> Dict[str, float]:
         """Plan tasks for the objective and execute them across workers."""
         tasks = self.supervisor.plan(objective)
+        allowed_tasks: list[AgentTask] = []
+        for task in tasks:
+            if self.overseer.is_allowed(task):
+                allowed_tasks.append(task)
+            else:
+                user_id = settings.UME_AGENT_ID
+                log_audit_entry(user_id, f"blocked_task {task.payload}")
+        tasks = allowed_tasks
 
         async def _run(
             worker: Callable[[AgentTask], Awaitable[Any]],
