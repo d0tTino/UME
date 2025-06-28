@@ -81,7 +81,7 @@ def test_invalid_json_skips_message(monkeypatch):
     producer = FakeProducer()
     setup_agent(monkeypatch, consumer, producer)
     privacy_agent.run_privacy_agent()
-    assert producer.produced == []
+    assert producer.produced == [(privacy_agent.QUARANTINE_TOPIC,)]
 
 
 def test_validation_error_skips_message(monkeypatch):
@@ -92,4 +92,4 @@ def test_validation_error_skips_message(monkeypatch):
     monkeypatch.setattr(privacy_agent, "validate_event_dict", lambda data: (_ for _ in ()).throw(privacy_agent.ValidationError("bad")))
     setup_agent(monkeypatch, consumer, producer)
     privacy_agent.run_privacy_agent()
-    assert producer.produced == []
+    assert producer.produced == [(privacy_agent.QUARANTINE_TOPIC,)]

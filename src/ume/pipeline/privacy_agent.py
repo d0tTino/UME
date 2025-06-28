@@ -90,17 +90,28 @@ def run_privacy_agent() -> None:
                     logger.error("Kafka error: %s", msg.error())
                 continue
 
+            raw_bytes = msg.value()
             try:
-                data = json.loads(msg.value().decode("utf-8"))
+                data = json.loads(raw_bytes.decode("utf-8"))
                 validate_event_dict(data)
             except (json.JSONDecodeError, ValidationError) as exc:
                 logger.error("Invalid event received: %s", exc)
+                try:
+                    producer.produce(QUARANTINE_TOPIC, value=raw_bytes)
+                    pending += 1
+                except KafkaException as exc2:
+                    logger.error("Failed to produce quarantine event: %s", exc2)
                 continue
 
             try:
                 event = parse_event(data)
             except EventError as exc:
                 logger.error("Failed to parse event: %s", exc)
+                try:
+                    producer.produce(QUARANTINE_TOPIC, value=raw_bytes)
+                    pending += 1
+                except KafkaException as exc2:
+                    logger.error("Failed to produce quarantine event: %s", exc2)
                 continue
 
             payload = event.payload if isinstance(event.payload, dict) else {}
@@ -116,6 +127,16 @@ def run_privacy_agent() -> None:
                     plugin.validate(event)
             except PolicyViolationError as exc:
                 logger.warning("Event rejected by policy: %s", exc)
+                try:
+                    producer.produce(
+                        QUARANTINE_TOPIC,
+                        value=json.dumps({"error": str(exc), "event": data}).encode(
+                            "utf-8"
+                        ),
+                    )
+                    pending += 1
+                except KafkaException as exc2:
+                    logger.error("Failed to produce quarantine event: %s", exc2)
                 continue
 
             original_payload = data.get("payload", {})
