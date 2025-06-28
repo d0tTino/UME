@@ -10,6 +10,7 @@ from .config import settings
 from .value_overseer import ValueOverseer
 
 from .persistent_graph import PersistentGraph
+from .message_bus import MessageEnvelope
 
 
 @dataclass
@@ -53,12 +54,17 @@ class Critic:
         return score
 
 
-@dataclass
-class MessageEnvelope:
-    """Envelope used for agent communication."""
+class Overseer:
+    """Monitor worker outputs for hallucinations."""
 
-    content: str
-    meta: Dict[str, Any] | None = None
+    def hallucination_check(
+        self,
+        message: MessageEnvelope,
+        *,
+        task: AgentTask | None = None,
+        agent_id: str | None = None,
+    ) -> MessageEnvelope:  # pragma: no cover - default passthrough
+        return message
 
 
 class ReflectionAgent:
@@ -76,12 +82,14 @@ class AgentOrchestrator:
         supervisor: Supervisor | None = None,
         critic: Critic | None = None,
         reflection: ReflectionAgent | None = None,
-        overseer: ValueOverseer | None = None,
+        overseer: Overseer | None = None,
+
     ) -> None:
         self.supervisor = supervisor or Supervisor()
         self.critic = critic or Critic()
         self.reflection = reflection or ReflectionAgent()
-        self.overseer = overseer or ValueOverseer()
+        self.overseer = overseer or Overseer()
+
         self._workers: Dict[str, Callable[[AgentTask], Awaitable[Any]]] = {}
 
     def register_worker(
@@ -110,7 +118,10 @@ class AgentOrchestrator:
             result = await worker(task)
             if not isinstance(result, MessageEnvelope):
                 result = MessageEnvelope(content=str(result))
-            reviewed = self.reflection.review(result)
+            checked = self.overseer.hallucination_check(
+                result, task=task, agent_id=agent_id
+            )
+            reviewed = self.reflection.review(checked)
             return agent_id, self.critic.score(
                 reviewed.content, task=task, agent_id=agent_id
             )
