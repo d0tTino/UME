@@ -1,11 +1,12 @@
 # mypy: ignore-errors
-from ume.memory import EpisodicMemory, SemanticMemory
+from ume.memory import EpisodicMemory, SemanticMemory, ColdMemory
+from ume.config import settings
+from ume.metrics import STALE_VECTOR_WARNINGS
 from ume.memory_aging import (
     start_memory_aging_scheduler,
     stop_memory_aging_scheduler,
 )
 
-import sqlite3
 import time
 import pytest
 
@@ -17,13 +18,6 @@ def fast_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_memory_aging_moves_old_events(monkeypatch: pytest.MonkeyPatch) -> None:
-    orig_connect = sqlite3.connect
-
-    def _connect(*a, **kw):  # type: ignore[no-redef]
-        return orig_connect(*a, check_same_thread=False, **kw)
-
-    monkeypatch.setattr(sqlite3, "connect", _connect)  # type: ignore[arg-type]
-
     episodic = EpisodicMemory(db_path=":memory:")
     semantic = SemanticMemory(db_path=":memory:")
     episodic.graph.add_node("old", {"text": "hi"})
@@ -36,8 +30,11 @@ def test_memory_aging_moves_old_events(monkeypatch: pytest.MonkeyPatch) -> None:
     start_memory_aging_scheduler(
         episodic,
         semantic,
+        cold=None,
         event_age_seconds=0,
+        cold_age_seconds=None,
         interval_seconds=0.01,
+        vector_check_interval=0.01,
     )
     time.sleep(0.02)
     stop_memory_aging_scheduler()
@@ -55,3 +52,65 @@ def test_vector_store_expire_vectors() -> None:
     store.vector_ts["x"] = int(time.time()) - 10
     store.expire_vectors(5)
     assert store.query([0.0, 1.0], k=1) == []
+
+
+def test_cold_memory_migration(monkeypatch: pytest.MonkeyPatch) -> None:
+    episodic = EpisodicMemory(db_path=":memory:")
+    semantic = SemanticMemory(db_path=":memory:")
+    cold = ColdMemory(db_path=":memory:")
+
+    episodic.graph.add_node("cold", {"text": "bye"})
+    old_ts = int(time.time()) - 10
+    with episodic.graph.conn:
+        episodic.graph.conn.execute(
+            "UPDATE nodes SET created_at=? WHERE id='cold'",
+            (old_ts,),
+        )
+
+    start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=cold,
+        event_age_seconds=0,
+        cold_age_seconds=0,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+    time.sleep(0.02)
+    stop_memory_aging_scheduler()
+
+    assert cold.get_item("cold") == {"text": "bye"}
+    assert not semantic.get_fact("cold")
+
+
+def test_vector_freshness_audit(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = int(time.time())
+
+    class DummyStore:
+        def expire_vectors(self, *_: object) -> None:
+            pass
+
+        def get_vector_timestamps(self) -> dict[str, int]:
+            return {"old": now - 100}
+
+    store = DummyStore()
+    episodic = EpisodicMemory(db_path=":memory:")
+    semantic = SemanticMemory(db_path=":memory:")
+
+    monkeypatch.setattr(settings, "UME_VECTOR_MAX_AGE_DAYS", 0, raising=False)
+    STALE_VECTOR_WARNINGS._value.set(0)  # type: ignore[attr-defined]
+
+    start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        vector_store=store,
+        event_age_seconds=0,
+        vector_age_seconds=0,
+        interval_seconds=0.01,
+        vector_check_interval=0.0,
+    )
+    time.sleep(0.02)
+    stop_memory_aging_scheduler()
+
+    assert STALE_VECTOR_WARNINGS._value.get() > 0  # type: ignore[attr-defined]

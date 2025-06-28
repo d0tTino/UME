@@ -2,13 +2,19 @@ import importlib.util
 from pathlib import Path
 import sys
 import types
+import os
 
 import pytest
 
 root = Path(__file__).resolve().parents[1] / "src" / "ume"
+os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "test-key")
+old_ume = sys.modules.get("ume")
 package = types.ModuleType("ume")
 package.__path__ = [str(root)]
 sys.modules["ume"] = package
+old_alignment = sys.modules.get("ume.plugins.alignment")
+old_vector_store = sys.modules.get("ume.vector_store")
+old_tracing = sys.modules.get("ume.tracing")
 
 spec = importlib.util.spec_from_file_location("ume.rbac_adapter", root / "rbac_adapter.py")
 assert spec and spec.loader
@@ -43,6 +49,24 @@ tracing_stub.TracingGraphAdapter = _DummyTracing  # type: ignore[attr-defined]
 tracing_stub.is_tracing_enabled = lambda: False  # type: ignore[attr-defined]
 sys.modules["ume.tracing"] = tracing_stub
 spec.loader.exec_module(factories)
+
+if old_alignment is not None:
+    sys.modules["ume.plugins.alignment"] = old_alignment
+else:
+    sys.modules.pop("ume.plugins.alignment", None)
+if old_vector_store is not None:
+    sys.modules["ume.vector_store"] = old_vector_store
+else:
+    sys.modules.pop("ume.vector_store", None)
+if old_tracing is not None:
+    sys.modules["ume.tracing"] = old_tracing
+else:
+    sys.modules.pop("ume.tracing", None)
+
+if old_ume is not None:
+    sys.modules["ume"] = old_ume
+else:
+    sys.modules.pop("ume", None)
 
 
 class DummyGraph:

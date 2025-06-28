@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 from ume.api import app, configure_graph
 from ume.graph import MockGraph
 from ume.config import settings
-import pytest
 
 
 def setup_module(_: object) -> None:
