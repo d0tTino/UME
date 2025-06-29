@@ -37,6 +37,9 @@ def test_run_watcher_produces_event(tmp_path: Path, monkeypatch: MonkeyPatch) ->
         def produce(self, topic: str, data: bytes) -> None:
             messages.append(data)
 
+        def flush(self) -> None:
+            pass
+
     class DummyObserver:
         def __init__(self) -> None:
             self.scheduled: list[str] = []

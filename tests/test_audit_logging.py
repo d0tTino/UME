@@ -285,3 +285,4 @@ def test_write_lines_creates_directory(tmp_path):
 
     assert path.exists()
     assert _read_lines(str(path)) == ["entry1"]
+

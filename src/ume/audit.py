@@ -80,6 +80,10 @@ def _write_lines(path: str, lines: List[str]) -> None:
                 "boto3 is required to write to S3 paths but is not installed"
             )
         bucket, key = _parse_s3(path)
+        if not bucket or not key:
+            raise ValueError(
+                f"Invalid S3 path: '{path}'. Expected format 's3://bucket/key'."
+            )
         s3 = boto3.client("s3")
         try:
             s3.put_object(Bucket=bucket, Key=key, Body=data.encode())
