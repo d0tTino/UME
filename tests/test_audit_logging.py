@@ -4,6 +4,17 @@ import os
 os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "test-key")
 import pytest
 
+# Skip heavy optional dependencies if they aren't installed
+for _mod in (
+    "httpx",
+    "yaml",
+    "neo4j",
+    "numpy",
+    "prometheus_client",
+    "pydantic_settings",
+):
+    pytest.importorskip(_mod)
+
 
 def test_audit_entry_on_policy_violation(tmp_path, monkeypatch):
     monkeypatch.setenv("UME_AUDIT_LOG_PATH", str(tmp_path / "audit.log"))
@@ -264,3 +275,14 @@ def test_parse_s3_invalid(path: str) -> None:
 
     with pytest.raises(ValueError):
         _parse_s3(path)
+
+
+def test_write_lines_creates_directory(tmp_path):
+    from ume.audit import _write_lines, _read_lines
+
+    path = tmp_path / "subdir" / "audit.log"
+    _write_lines(str(path), ["entry1"])
+
+    assert path.exists()
+    assert _read_lines(str(path)) == ["entry1"]
+

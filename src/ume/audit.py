@@ -4,6 +4,7 @@ import time
 import hmac
 import hashlib
 import logging
+import os
 from typing import List, Dict
 
 try:
@@ -79,6 +80,10 @@ def _write_lines(path: str, lines: List[str]) -> None:
                 "boto3 is required to write to S3 paths but is not installed"
             )
         bucket, key = _parse_s3(path)
+        if not bucket or not key:
+            raise ValueError(
+                f"Invalid S3 path: '{path}'. Expected format 's3://bucket/key'."
+            )
         s3 = boto3.client("s3")
         try:
             s3.put_object(Bucket=bucket, Key=key, Body=data.encode())
@@ -94,6 +99,9 @@ def _write_lines(path: str, lines: List[str]) -> None:
             raise RuntimeError(f"Failed to write audit log to {path}") from exc
     else:
         try:
+            dir_path = os.path.dirname(path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(data)
         except OSError as exc:

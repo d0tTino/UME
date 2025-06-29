@@ -124,6 +124,7 @@ def run_privacy_agent() -> None:
                 has_consent = True
             object.__setattr__(event, "consent", has_consent)
 
+
             try:
                 for plugin in get_plugins():
                     plugin.validate(event)
@@ -145,7 +146,7 @@ def run_privacy_agent() -> None:
             redacted_payload, was_redacted = redact_event_payload(original_payload)
             data["payload"] = redacted_payload
 
-            dest_topic = CLEAN_TOPIC if has_consent else QUARANTINE_TOPIC
+            dest_topic = CLEAN_TOPIC if (has_consent or not (user_id and scope)) else QUARANTINE_TOPIC
 
             try:
                 producer.produce(dest_topic, value=json.dumps(data).encode("utf-8"))

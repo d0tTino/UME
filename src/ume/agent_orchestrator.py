@@ -56,6 +56,10 @@ class Critic:
 class Overseer:
     """Monitor worker outputs for hallucinations."""
 
+    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - default passthrough
+        """Return ``True`` if the task is permitted."""
+        return True
+
     def hallucination_check(
         self,
         message: MessageEnvelope,
@@ -67,6 +71,7 @@ class Overseer:
 
     def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
         """Return ``True`` for all tasks by default."""
+
         return True
 
 
@@ -85,13 +90,13 @@ class AgentOrchestrator:
         supervisor: Supervisor | None = None,
         critic: Critic | None = None,
         reflection: ReflectionAgent | None = None,
-        overseer: Overseer | None = None,
+        overseer: ValueOverseer | None = None,
 
     ) -> None:
         self.supervisor = supervisor or Supervisor()
         self.critic = critic or Critic()
         self.reflection = reflection or ReflectionAgent()
-        self.overseer = overseer or Overseer()
+        self.overseer = overseer or ValueOverseer()
 
         self._workers: Dict[str, Callable[[AgentTask], Awaitable[Any]]] = {}
 
