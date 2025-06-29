@@ -17,7 +17,7 @@ from ume.event import Event, EventType
 logger = logging.getLogger(__name__)
 
 
-class DevLogHandler(FileSystemEventHandler):
+class DevLogHandler(FileSystemEventHandler):  # type: ignore[misc]
     """Handle file modifications by publishing events to Kafka."""
 
     def __init__(self, producer: Producer) -> None:

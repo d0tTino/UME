@@ -82,5 +82,7 @@ if RegoInterpreter is not None:
         register_plugin(RegoPolicyEngine(policy_paths, opa_client=client))
     else:
         if policy_paths is None:
-            policy_paths = Path(__file__).with_name("policies")
-        register_plugin(RegoPolicyEngine(policy_paths))
+            default_path = Path(__file__).with_name("policies")
+            register_plugin(RegoPolicyEngine(default_path))
+        else:
+            register_plugin(RegoPolicyEngine(policy_paths))

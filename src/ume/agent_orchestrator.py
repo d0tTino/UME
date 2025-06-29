@@ -7,7 +7,6 @@ from typing import Callable, Any, Dict, List, Awaitable
 
 from .audit import log_audit_entry
 from .config import settings
-from .value_overseer import ValueOverseer
 
 from .persistent_graph import PersistentGraph
 from .message_bus import MessageEnvelope
@@ -65,6 +64,10 @@ class Overseer:
         agent_id: str | None = None,
     ) -> MessageEnvelope:  # pragma: no cover - default passthrough
         return message
+
+    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
+        """Return ``True`` for all tasks by default."""
+        return True
 
 
 class ReflectionAgent:
