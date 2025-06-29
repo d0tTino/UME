@@ -4,6 +4,7 @@ import time
 import hmac
 import hashlib
 import logging
+import os
 from typing import List, Dict
 
 try:
@@ -98,6 +99,9 @@ def _write_lines(path: str, lines: List[str]) -> None:
             raise RuntimeError(f"Failed to write audit log to {path}") from exc
     else:
         try:
+            dir_path = os.path.dirname(path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(data)
         except OSError as exc:

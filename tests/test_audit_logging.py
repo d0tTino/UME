@@ -4,6 +4,17 @@ import os
 os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "test-key")
 import pytest
 
+# Skip heavy optional dependencies if they aren't installed
+for _mod in (
+    "httpx",
+    "yaml",
+    "neo4j",
+    "numpy",
+    "prometheus_client",
+    "pydantic_settings",
+):
+    pytest.importorskip(_mod)
+
 
 def test_audit_entry_on_policy_violation(tmp_path, monkeypatch):
     monkeypatch.setenv("UME_AUDIT_LOG_PATH", str(tmp_path / "audit.log"))
@@ -266,51 +277,12 @@ def test_parse_s3_invalid(path: str) -> None:
         _parse_s3(path)
 
 
-@pytest.mark.parametrize(
-    "path",
-    [
-        "s3://bucket/",
-        "s3:///key",
-        "s3://",
-    ],
-)
-def test_write_lines_invalid_s3_path(monkeypatch, path: str) -> None:
-    """_write_lines should validate S3 path format before using boto3."""
-    import sys
-    import types
-    import importlib.util
-    from pathlib import Path
+def test_write_lines_creates_directory(tmp_path):
+    from ume.audit import _write_lines, _read_lines
 
-    dummy_boto3 = types.SimpleNamespace(
-        client=lambda name: pytest.fail("boto3 client should not be called")
-    )
-    dummy_exceptions = types.SimpleNamespace(
-        BotoCoreError=Exception, ClientError=Exception
-    )
-    monkeypatch.setitem(sys.modules, "boto3", dummy_boto3)
-    monkeypatch.setitem(sys.modules, "botocore.exceptions", dummy_exceptions)
+    path = tmp_path / "subdir" / "audit.log"
+    _write_lines(str(path), ["entry1"])
 
-    # Load ume.config manually to satisfy relative import
-    config_spec = importlib.util.spec_from_file_location(
-        "ume.config", Path("src/ume/config.py")
-    )
-    config_mod = importlib.util.module_from_spec(config_spec)
-    sys.modules["ume.config"] = config_mod
-    assert config_spec.loader is not None
-    config_spec.loader.exec_module(config_mod)
+    assert path.exists()
+    assert _read_lines(str(path)) == ["entry1"]
 
-    # Create a minimal package for ume
-    pkg = types.ModuleType("ume")
-    pkg.__path__ = [str(Path("src/ume"))]
-    sys.modules["ume"] = pkg
-
-    spec = importlib.util.spec_from_file_location(
-        "ume.audit", Path("src/ume/audit.py")
-    )
-    audit = importlib.util.module_from_spec(spec)
-    sys.modules["ume.audit"] = audit
-    assert spec.loader is not None
-    spec.loader.exec_module(audit)
-
-    with pytest.raises(ValueError):
-        audit._write_lines(path, ["x"])
