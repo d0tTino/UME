@@ -7,6 +7,7 @@ from .config import settings
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .agent_orchestrator import AgentTask
+    from .message_bus import MessageEnvelope
 
 
 class ValueOverseer:
@@ -40,3 +41,12 @@ class ValueOverseer:
             if forbidden in task.payload:
                 return False
         return True
+
+    def hallucination_check(
+        self,
+        message: MessageEnvelope,
+        *,
+        task: AgentTask | None = None,
+        agent_id: str | None = None,
+    ) -> MessageEnvelope:  # pragma: no cover - default passthrough
+        return message
