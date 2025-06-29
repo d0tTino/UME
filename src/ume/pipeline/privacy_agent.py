@@ -117,9 +117,12 @@ def run_privacy_agent() -> None:
             payload = event.payload if isinstance(event.payload, dict) else {}
             user_id = payload.get("user_id")
             scope = payload.get("scope")
-            has_consent = False
             if user_id and scope:
                 has_consent = consent_ledger.has_consent(str(user_id), str(scope))
+            else:
+                # Treat events without explicit consent info as allowed
+                has_consent = True
+            object.__setattr__(event, "consent", has_consent)
 
 
             try:

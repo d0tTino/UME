@@ -69,8 +69,9 @@ class Overseer:
     ) -> MessageEnvelope:  # pragma: no cover - default passthrough
         return message
 
-    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - default passthrough
-        """Return whether the given task should be executed."""
+    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
+        """Return ``True`` for all tasks by default."""
+
         return True
 
 

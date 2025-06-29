@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import logging
 import httpx
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ class TweetBot:
     """Simple interface for sending tweets."""
 
     def __init__(self, api_url: str | None = None, bearer_token: str | None = None) -> None:
-        self.api_url = api_url or os.getenv("TWITTER_API_URL", DEFAULT_TWEET_URL)
+        self.api_url = cast(str, api_url or os.getenv("TWITTER_API_URL", DEFAULT_TWEET_URL))
         self.bearer_token = bearer_token or os.getenv("TWITTER_BEARER_TOKEN")
 
     def send_tweet(self, text: str) -> bool:
