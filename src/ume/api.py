@@ -37,6 +37,7 @@ from pydantic import BaseModel
 
 from .analytics import shortest_path
 from .reliability import filter_low_confidence
+from .document_guru import reformat_document
 from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
@@ -476,8 +477,21 @@ def api_upload_document(
 ) -> Dict[str, Any]:
     """Upload a document for Document Guru."""
     node_id = f"doc:{uuid4()}"
-    graph.add_node(node_id, {"content": req.content, "timestamp": int(time.time())})
+    cleaned = reformat_document(req.content)
+    graph.add_node(node_id, {"content": cleaned, "timestamp": int(time.time())})
     return {"id": node_id}
+
+
+@app.get("/documents/{document_id}")
+def api_get_document(
+    document_id: str,
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    """Return a previously uploaded document."""
+    doc = graph.get_node(document_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"id": document_id, "content": doc.get("content", "")}
 
 
 class VectorAddRequest(BaseModel):

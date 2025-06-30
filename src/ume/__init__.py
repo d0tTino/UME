@@ -39,7 +39,6 @@ except Exception:  # pragma: no cover - allow import without environment setup
         UME_LOG_JSON=False,
         UME_GRAPH_RETENTION_DAYS=30,
         UME_RELIABILITY_THRESHOLD=0.5,
-        UME_COLD_EVENT_AGE_DAYS=180,
         WATCH_PATHS=["."],
         DAG_RESOURCES={"cpu": 1, "io": 1},
         UME_VALUE_STORE_PATH=None,
@@ -84,7 +83,19 @@ except Exception:  # pragma: no cover - allow import without environment setup
 from .event import Event, EventType, parse_event, EventError
 from .graph import MockGraph
 from .persistent_graph import PersistentGraph
-from .neo4j_graph import Neo4jGraph
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - used for type hints only
+    from .neo4j_graph import Neo4jGraph
+else:  # pragma: no cover - optional dependency
+    try:
+        from .neo4j_graph import Neo4jGraph
+    except Exception:
+        class Neo4jGraph:
+            """Placeholder when neo4j dependencies are missing."""
+
+            def __init__(self, *_: object, **__: object) -> None:
+                raise ImportError("neo4j is required for Neo4jGraph")
 from .auto_snapshot import (
     enable_periodic_snapshot,
     disable_periodic_snapshot,
