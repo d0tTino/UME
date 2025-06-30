@@ -1,9 +1,22 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from ume.api import app, configure_graph
-from ume import MockGraph
+import importlib.util
+import sys
+import types
+from ume.graph import MockGraph
 from ume.config import settings
+
+spec = importlib.util.spec_from_file_location("ume.api", "src/ume/api.py")
+api = importlib.util.module_from_spec(spec)
+sys.modules["ume.api"] = api
+if "neo4j" not in sys.modules:
+    neo4j_stub = types.SimpleNamespace(GraphDatabase=object, Driver=object)
+    sys.modules["neo4j"] = neo4j_stub
+spec.loader.exec_module(api)
+
+app = api.app
+configure_graph = api.configure_graph
 
 
 @pytest.fixture
