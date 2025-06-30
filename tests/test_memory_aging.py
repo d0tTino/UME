@@ -114,3 +114,56 @@ def test_vector_freshness_audit(monkeypatch: pytest.MonkeyPatch) -> None:
     stop_memory_aging_scheduler()
 
     assert STALE_VECTOR_WARNINGS._value.get() > 0  # type: ignore[attr-defined]
+
+
+def test_scheduler_singleton_and_cleanup() -> None:
+    """Scheduler start calls reuse the thread and cleanup works."""
+    episodic = EpisodicMemory(db_path=":memory:")
+    semantic = SemanticMemory(db_path=":memory:")
+
+    thread1, _ = start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    thread2, _ = start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+
+    assert thread1 is thread2
+    assert thread1.is_alive()
+
+    stop_memory_aging_scheduler()
+    assert not thread1.is_alive()
+
+    import ume.memory_aging as aging
+
+    assert aging._thread is None
+    assert aging._stop_event is None
+
+    thread3, _ = start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    assert thread3 is not thread1
+
+    stop_memory_aging_scheduler()
+    assert not thread3.is_alive()
