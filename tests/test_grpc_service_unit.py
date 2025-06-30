@@ -30,7 +30,58 @@ import types
 sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 sys.modules.setdefault("structlog", types.ModuleType("structlog"))
 
-from ume.grpc_service import UMEServicer, serve, main
+# Load ume.grpc_service without importing the rest of the package.
+root = Path(__file__).resolve().parents[1]
+package = types.ModuleType("ume")
+package.__path__ = [str(root / "src" / "ume")]
+sys.modules["ume"] = package
+
+stub_query = types.ModuleType("ume.query")
+class StubQE: ...
+stub_query.Neo4jQueryEngine = StubQE
+sys.modules["ume.query"] = stub_query
+
+stub_store = types.ModuleType("ume.vector_store")
+class StubVS: ...
+stub_store.VectorStore = StubVS
+sys.modules["ume.vector_store"] = stub_store
+
+stub_audit = types.ModuleType("ume.audit")
+def dummy_entries():
+    return []
+stub_audit.get_audit_entries = dummy_entries
+sys.modules["ume.audit"] = stub_audit
+
+stub_config = types.ModuleType("ume.config")
+class DummySettings:
+    NEO4J_URI = ""
+    NEO4J_USER = ""
+    NEO4J_PASSWORD = ""
+    UME_VECTOR_DIM = 3
+    UME_VECTOR_USE_GPU = False
+settings = DummySettings()
+stub_config.settings = settings
+sys.modules["ume.config"] = stub_config
+
+stub_log = types.ModuleType("ume.logging_utils")
+def configure_logging():
+    pass
+stub_log.configure_logging = configure_logging
+sys.modules["ume.logging_utils"] = stub_log
+
+spec = importlib.util.spec_from_file_location(
+    "ume.grpc_service", root / "src" / "ume" / "grpc_service.py"
+)
+assert spec and spec.loader
+grpc_service = importlib.util.module_from_spec(spec)
+sys.modules["ume.grpc_service"] = grpc_service
+spec.loader.exec_module(grpc_service)
+
+setattr(package, "grpc_service", grpc_service)
+
+UMEServicer = grpc_service.UMEServicer
+serve = grpc_service.serve
+main = grpc_service.main
 
 
 class DummyEngine:
@@ -164,3 +215,45 @@ def test_main(monkeypatch):
     assert called["store"]
     assert called["start"]
     assert called["wait"]
+
+from unittest.mock import MagicMock
+
+
+def test_run_cypher_with_mock():
+    qe = MagicMock()
+    qe.execute_cypher.return_value = [{"a": 1}]
+    svc = UMEServicer(qe, MagicMock())  # type: ignore[arg-type]
+    req = ume_pb2.CypherQuery(cypher="MATCH n RETURN n")
+    res = asyncio.run(svc.RunCypher(req, None))
+    assert [dict(r) for r in res.records] == [{"a": 1}]
+    qe.execute_cypher.assert_called_once_with("MATCH n RETURN n")
+
+
+def test_search_vectors_with_mock():
+    store = MagicMock()
+    store.query.return_value = ["x", "y"]
+    svc = UMEServicer(MagicMock(), store)  # type: ignore[arg-type]
+    req = ume_pb2.VectorSearchRequest(vector=[1.0, 2.0], k=2)
+    res = asyncio.run(svc.SearchVectors(req, None))
+    assert list(res.ids) == ["x", "y"]
+    store.query.assert_called_once_with([1.0, 2.0], k=2)
+
+
+def test_get_audit_entries_with_mock(monkeypatch):
+    qe = MagicMock()
+    store = MagicMock()
+    svc = UMEServicer(qe, store)  # type: ignore[arg-type]
+    monkeypatch.setattr(
+        "ume.grpc_service.get_audit_entries",
+        lambda: [
+            {"timestamp": 1, "user_id": "u1", "reason": "r1", "signature": "s1"},
+            {"timestamp": 2, "user_id": "u2", "reason": "r2", "signature": "s2"},
+        ],
+    )
+    req = ume_pb2.AuditRequest(limit=1)
+    res = asyncio.run(svc.GetAuditEntries(req, None))
+    assert len(res.entries) == 1
+    entry = res.entries[0]
+    assert entry.user_id == "u2"
+    qe.execute_cypher.assert_not_called()
+    store.query.assert_not_called()
