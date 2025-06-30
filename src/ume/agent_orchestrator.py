@@ -10,6 +10,7 @@ from .config import settings
 
 from .persistent_graph import PersistentGraph
 from .message_bus import MessageEnvelope
+from .value_overseer import ValueOverseer
 
 
 @dataclass
@@ -68,11 +69,6 @@ class Overseer:
         agent_id: str | None = None,
     ) -> MessageEnvelope:  # pragma: no cover - default passthrough
         return message
-
-    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
-        """Return ``True`` for all tasks by default."""
-
-        return True
 
 
 class ReflectionAgent:
