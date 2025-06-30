@@ -52,9 +52,9 @@ def test_execution_cycle() -> None:
     orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic())
     executed: list[str] = []
 
-    async def worker(task: AgentTask) -> str:
-        executed.append(task.payload)
-        return "ok"
+    async def worker(msg: dict) -> dict:
+        executed.append(msg["content"])
+        return MessageEnvelope(content="ok").to_dict()
 
     orchestrator.register_worker("worker1", worker)
     scores = asyncio.run(orchestrator.execute_objective("test-task"))
@@ -74,8 +74,8 @@ def test_scoring_persists_across_workers() -> None:
     critic = Critic(graph)
     orchestrator = AgentOrchestrator(Supervisor(), critic)
 
-    async def worker(task: AgentTask) -> str:
-        return "done"
+    async def worker(msg: dict) -> dict:
+        return MessageEnvelope(content="done").to_dict()
 
     orchestrator.register_worker("a", worker)
     orchestrator.register_worker("b", worker)
@@ -92,8 +92,8 @@ def test_scoring_persists_across_workers() -> None:
 def test_reflection_filters_hallucinations() -> None:
     orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic(), FilteringReflection())
 
-    async def worker(task: AgentTask) -> MessageEnvelope:
-        return MessageEnvelope(content="123")
+    async def worker(msg: dict) -> dict:
+        return MessageEnvelope(content="123").to_dict()
 
     orchestrator.register_worker("worker", worker)
     scores = asyncio.run(orchestrator.execute_objective("t"))
@@ -115,8 +115,8 @@ class DummyOverseer(module.Overseer):
 def test_overseer_intervenes() -> None:
     orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic(), FilteringReflection(), DummyOverseer())
 
-    async def worker(task: AgentTask) -> str:
-        return "bad"
+    async def worker(msg: dict) -> dict:
+        return MessageEnvelope(content="bad").to_dict()
 
     orchestrator.register_worker("worker", worker)
     scores = asyncio.run(orchestrator.execute_objective("t"))
@@ -128,8 +128,8 @@ def test_envelope_wrapping() -> None:
     overseer = DummyOverseer()
     orchestrator = AgentOrchestrator(DummySupervisor(), DummyCritic(), None, overseer)
 
-    async def worker(task: AgentTask) -> str:
-        return "ok"
+    async def worker(msg: dict) -> dict:
+        return MessageEnvelope(content="ok").to_dict()
 
     orchestrator.register_worker("w", worker)
     scores = asyncio.run(orchestrator.execute_objective("t"))
@@ -137,4 +137,54 @@ def test_envelope_wrapping() -> None:
     assert scores == {"w": 1.0}
     assert overseer.seen is not None
     assert overseer.seen.jsonrpc == "2.0"
+
+
+class FlaggingOverseer(module.Overseer):
+    def hallucination_check(self, message: MessageEnvelope, *, task=None, agent_id=None):
+        if message.content == "bad":
+            meta = message.meta or {}
+            meta["hallucination"] = True
+            message.meta = meta
+        return message
+
+
+class FlakyWorker:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def __call__(self, msg: dict) -> dict:
+        self.calls += 1
+        if self.calls == 1:
+            return MessageEnvelope(content="bad").to_dict()
+        return MessageEnvelope(content="ok").to_dict()
+
+
+def test_overseer_retry_reduces_hallucination() -> None:
+    worker = FlakyWorker()
+    orchestrator = AgentOrchestrator(
+        DummySupervisor(),
+        DummyCritic(),
+        FilteringReflection(),
+        FlaggingOverseer(),
+        max_retries=1,
+    )
+    orchestrator.register_worker("worker", worker)
+    scores = asyncio.run(orchestrator.execute_objective("t"))
+    assert worker.calls == 2
+    assert scores == {"worker": 1.0}
+
+
+def test_overseer_no_retry_hallucination() -> None:
+    worker = FlakyWorker()
+    orchestrator = AgentOrchestrator(
+        DummySupervisor(),
+        DummyCritic(),
+        FilteringReflection(),
+        FlaggingOverseer(),
+        max_retries=0,
+    )
+    orchestrator.register_worker("worker", worker)
+    scores = asyncio.run(orchestrator.execute_objective("t"))
+    assert worker.calls == 1
+    assert scores == {"worker": 0.0}
 
