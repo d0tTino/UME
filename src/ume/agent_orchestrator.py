@@ -16,6 +16,7 @@ except Exception:  # pragma: no cover - fallback when optional deps missing
     ValueOverseer = None  # type: ignore[assignment]
 
 
+
 @dataclass
 class AgentTask:
     """Simple representation of a unit of work."""
@@ -68,11 +69,6 @@ class Overseer:
         agent_id: str | None = None,
     ) -> MessageEnvelope:  # pragma: no cover - default passthrough
         return message
-
-    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
-        """Return ``True`` for all tasks by default."""
-
-        return True
 
 
 if ValueOverseer is None:  # pragma: no cover - fallback when optional deps missing
