@@ -2,10 +2,7 @@
 from ume.memory import EpisodicMemory, SemanticMemory, ColdMemory
 from ume.config import settings
 from ume.metrics import STALE_VECTOR_WARNINGS
-from ume.memory_aging import (
-    start_memory_aging_scheduler,
-    stop_memory_aging_scheduler,
-)
+from ume.memory.tiered import TieredMemoryManager
 
 import time
 import pytest
@@ -27,17 +24,17 @@ def test_memory_aging_moves_old_events(monkeypatch: pytest.MonkeyPatch) -> None:
             "UPDATE nodes SET created_at=? WHERE id='old'", (old_ts,)
         )
 
-    start_memory_aging_scheduler(
+    mgr = TieredMemoryManager(
         episodic,
         semantic,
         cold=None,
         event_age_seconds=0,
         cold_age_seconds=None,
-        interval_seconds=0.01,
         vector_check_interval=0.01,
     )
+    mgr.start(interval_seconds=0.01)
     time.sleep(0.02)
-    stop_memory_aging_scheduler()
+    mgr.stop()
 
     assert not episodic.graph.node_exists("old")
     assert semantic.get_fact("old") == {"text": "hi"}
@@ -67,17 +64,17 @@ def test_cold_memory_migration(monkeypatch: pytest.MonkeyPatch) -> None:
             (old_ts,),
         )
 
-    start_memory_aging_scheduler(
+    mgr = TieredMemoryManager(
         episodic,
         semantic,
         cold=cold,
         event_age_seconds=0,
         cold_age_seconds=0,
-        interval_seconds=0.01,
         vector_check_interval=0.01,
     )
+    mgr.start(interval_seconds=0.01)
     time.sleep(0.02)
-    stop_memory_aging_scheduler()
+    mgr.stop()
 
     assert cold.get_item("cold") == {"text": "bye"}
     assert not semantic.get_fact("cold")
@@ -100,17 +97,17 @@ def test_vector_freshness_audit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "UME_VECTOR_MAX_AGE_DAYS", 0, raising=False)
     STALE_VECTOR_WARNINGS._value.set(0)  # type: ignore[attr-defined]
 
-    start_memory_aging_scheduler(
+    mgr = TieredMemoryManager(
         episodic,
         semantic,
         cold=None,
         vector_store=store,
         event_age_seconds=0,
         vector_age_seconds=0,
-        interval_seconds=0.01,
         vector_check_interval=0.0,
     )
+    mgr.start(interval_seconds=0.01)
     time.sleep(0.02)
-    stop_memory_aging_scheduler()
+    mgr.stop()
 
     assert STALE_VECTOR_WARNINGS._value.get() > 0  # type: ignore[attr-defined]
