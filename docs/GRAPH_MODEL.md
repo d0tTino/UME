@@ -140,6 +140,8 @@ freshness is audited against the ``UME_VECTOR_MAX_AGE_DAYS`` threshold.
 Instantiate ``TieredMemoryManager`` with the memory instances and call
 ``start()`` to run the process in the background. Pass ``vector_age_seconds=None``
 to disable vector pruning.
+Use :func:`ume.start_vector_age_scheduler` to audit existing vectors and
+record the ``ume_stale_vector_count`` metric.
 
 ## Schema Upgrades
 

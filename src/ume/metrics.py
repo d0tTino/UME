@@ -25,6 +25,10 @@ STALE_VECTOR_WARNINGS = Counter(
     "ume_stale_vector_warning_total",
     "Number of times stale vectors exceeded threshold",
 )
+STALE_VECTOR_COUNT = Gauge(
+    "ume_stale_vector_count",
+    "Current number of vectors exceeding the freshness limit",
+)
 
 # Reliability metrics
 RESPONSE_CONFIDENCE = Histogram(

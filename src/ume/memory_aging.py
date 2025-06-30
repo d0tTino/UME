@@ -7,12 +7,14 @@ from collections.abc import Callable
 from .memory import EpisodicMemory, SemanticMemory, ColdMemory
 from .vector_store import VectorStore
 from .config import settings
-from .metrics import STALE_VECTOR_WARNINGS
+from .metrics import STALE_VECTOR_WARNINGS, STALE_VECTOR_COUNT
 
 logger = logging.getLogger(__name__)
 
 _thread: threading.Thread | None = None
 _stop_event: threading.Event | None = None
+_vector_thread: threading.Thread | None = None
+_vector_stop: threading.Event | None = None
 
 
 def start_memory_aging_scheduler(
@@ -125,6 +127,73 @@ def start_memory_aging_scheduler(
         thread.join()
 
     return thread, stop
+
+
+def _check_stale_vectors(
+    store: VectorStore,
+    *,
+    warn_threshold: int,
+    log: bool,
+) -> None:
+    now = int(time.time())
+    max_age = settings.UME_VECTOR_MAX_AGE_DAYS * 86400
+    timestamps = store.get_vector_timestamps()
+    stale = [vid for vid, ts in timestamps.items() if now - ts > max_age]
+    STALE_VECTOR_COUNT.set(len(stale))
+    if len(stale) > warn_threshold:
+        STALE_VECTOR_WARNINGS.inc()
+        if log:
+            logger.warning("%s stale vectors detected", len(stale))
+
+
+def start_vector_age_scheduler(
+    store: VectorStore,
+    *,
+    interval_seconds: float = 24 * 3600,
+    warn_threshold: int = 0,
+    log: bool = False,
+) -> tuple[threading.Thread, Callable[[], None]]:
+    """Periodically check vector age and record metrics."""
+    global _vector_thread, _vector_stop
+
+    if _vector_thread and _vector_thread.is_alive():
+        return _vector_thread, lambda: None
+
+    stop_event = threading.Event()
+
+    def _run() -> None:
+        while not stop_event.wait(interval_seconds):
+            try:
+                _check_stale_vectors(
+                    store,
+                    warn_threshold=warn_threshold,
+                    log=log,
+                )
+            except Exception:  # pragma: no cover - log and continue
+                logger.exception("Failed to check vector age")
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    _vector_thread = thread
+    _vector_stop = stop_event
+
+    def stop() -> None:
+        stop_event.set()
+        thread.join()
+
+    return thread, stop
+
+
+def stop_vector_age_scheduler() -> None:
+    """Stop the vector age scheduler if running."""
+    global _vector_thread, _vector_stop
+    if _vector_stop is not None:
+        _vector_stop.set()
+    if _vector_thread is not None:
+        _vector_thread.join()
+    _vector_thread = None
+    _vector_stop = None
 
 
 def stop_memory_aging_scheduler() -> None:
