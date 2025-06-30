@@ -1,5 +1,6 @@
 from .episodic import EpisodicMemory
 from .semantic import SemanticMemory
 from .cold import ColdMemory
+from .tiered import TieredMemoryManager
 
-__all__ = ["EpisodicMemory", "SemanticMemory", "ColdMemory"]
+__all__ = ["EpisodicMemory", "SemanticMemory", "ColdMemory", "TieredMemoryManager"]

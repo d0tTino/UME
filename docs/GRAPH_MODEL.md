@@ -132,12 +132,13 @@ retention window defaults to 30 days and can be configured via the
 
 ## Memory aging
 
-A separate scheduler periodically moves old events from the episodic graph into
-the semantic store. Facts are preserved while the episodic layer stays small.
-Embeddings associated with aged nodes are also checked for expiration and
-removed from the vector index to keep retrieval‑augmented generation fresh.
-Call :func:`ume.start_memory_aging_scheduler` with paired episodic and
-semantic memory objects to enable the process. Pass ``vector_age_seconds=None``
+The :class:`ume.memory.TieredMemoryManager` orchestrates data movement across
+the episodic, semantic and optional cold layers. During each aging cycle old
+events migrate from episodic into semantic memory and very old entries can be
+archived in cold storage. Embeddings are expired based on age and their
+freshness is audited against the ``UME_VECTOR_MAX_AGE_DAYS`` threshold.
+Instantiate ``TieredMemoryManager`` with the memory instances and call
+``start()`` to run the process in the background. Pass ``vector_age_seconds=None``
 to disable vector pruning.
 
 ## Schema Upgrades
