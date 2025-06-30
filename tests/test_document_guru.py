@@ -39,9 +39,15 @@ def test_upload_document(client_and_graph):
     token = _token(client)
     res = client.post(
         "/documents",
-        json={"content": "doc"},
+        json={"content": "  line1  \n\n line2 "},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     doc_id = res.json()["id"]
-    assert g.get_node(doc_id)["content"] == "doc"
+    assert g.get_node(doc_id)["content"] == "line1\nline2"
+
+    res = client.get(
+        f"/documents/{doc_id}", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res.status_code == 200
+    assert res.json()["content"] == "line1\nline2"

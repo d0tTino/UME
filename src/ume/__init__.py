@@ -39,7 +39,6 @@ except Exception:  # pragma: no cover - allow import without environment setup
         UME_LOG_JSON=False,
         UME_GRAPH_RETENTION_DAYS=30,
         UME_RELIABILITY_THRESHOLD=0.5,
-        UME_COLD_EVENT_AGE_DAYS=180,
         WATCH_PATHS=["."],
         DAG_RESOURCES={"cpu": 1, "io": 1},
         UME_VALUE_STORE_PATH=None,
