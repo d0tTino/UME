@@ -10,7 +10,11 @@ from .config import settings
 
 from .persistent_graph import PersistentGraph
 from .message_bus import MessageEnvelope
-from .value_overseer import ValueOverseer
+try:  # pragma: no cover - value_overseer may have optional deps
+    from .value_overseer import ValueOverseer
+except Exception:  # pragma: no cover - fallback when optional deps missing
+    ValueOverseer = None  # type: ignore[assignment]
+
 
 
 @dataclass
@@ -57,10 +61,6 @@ class Critic:
 class Overseer:
     """Monitor worker outputs for hallucinations."""
 
-    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - default passthrough
-        """Return ``True`` if the task is permitted."""
-        return True
-
     def hallucination_check(
         self,
         message: MessageEnvelope,
@@ -69,6 +69,11 @@ class Overseer:
         agent_id: str | None = None,
     ) -> MessageEnvelope:  # pragma: no cover - default passthrough
         return message
+
+
+if ValueOverseer is None:  # pragma: no cover - fallback when optional deps missing
+    class ValueOverseer(Overseer):
+        pass
 
 
 class ReflectionAgent:
