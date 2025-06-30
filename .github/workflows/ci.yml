@@ -27,6 +27,19 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: poetry run pre-commit run --all-files --show-diff-on-failure --color always
 
+      - name: Set up Node.js
+        if: steps.changes.outputs.run == 'true'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install frontend dependencies and build
+        if: steps.changes.outputs.run == 'true'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
   unit-tests:
     runs-on: ubuntu-latest
     needs: lint-and-install

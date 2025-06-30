@@ -57,6 +57,10 @@ class Critic:
 class Overseer:
     """Monitor worker outputs for hallucinations."""
 
+    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
+        """Return ``True`` for all tasks by default."""
+        return True
+
     def hallucination_check(
         self,
         message: MessageEnvelope,
@@ -65,7 +69,6 @@ class Overseer:
         agent_id: str | None = None,
     ) -> MessageEnvelope:  # pragma: no cover - default passthrough
         return message
-
 
 
 class ReflectionAgent:
