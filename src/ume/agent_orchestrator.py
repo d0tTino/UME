@@ -10,11 +10,7 @@ from .config import settings
 
 from .persistent_graph import PersistentGraph
 from .message_bus import MessageEnvelope
-try:  # pragma: no cover - value_overseer may have optional deps
-    from .value_overseer import ValueOverseer
-except Exception:  # pragma: no cover - fallback when optional deps missing
-    ValueOverseer = None  # type: ignore[assignment]
-
+from .value_overseer import ValueOverseer
 
 
 @dataclass
@@ -71,10 +67,6 @@ class Overseer:
         return message
 
 
-if ValueOverseer is None:  # pragma: no cover - fallback when optional deps missing
-    class ValueOverseer(Overseer):
-        pass
-
 
 class ReflectionAgent:
     """Optional agent that can post-process worker output."""
@@ -92,17 +84,19 @@ class AgentOrchestrator:
         critic: Critic | None = None,
         reflection: ReflectionAgent | None = None,
         overseer: ValueOverseer | None = None,
+        max_retries: int | None = None,
 
     ) -> None:
         self.supervisor = supervisor or Supervisor()
         self.critic = critic or Critic()
         self.reflection = reflection or ReflectionAgent()
         self.overseer = overseer or ValueOverseer()
+        self.max_retries = max_retries or 0
 
-        self._workers: Dict[str, Callable[[AgentTask], Awaitable[Any]]] = {}
+        self._workers: Dict[str, Callable[[Dict[str, Any]], Awaitable[Any]]] = {}
 
     def register_worker(
-        self, agent_id: str, handler: Callable[[AgentTask], Awaitable[Any]]
+        self, agent_id: str, handler: Callable[[Dict[str, Any]], Awaitable[Any]]
     ) -> None:
         """Register a worker that can execute tasks."""
         self._workers[agent_id] = handler
@@ -120,20 +114,31 @@ class AgentOrchestrator:
         tasks = allowed_tasks
 
         async def _run(
-            worker: Callable[[AgentTask], Awaitable[Any]],
+            worker: Callable[[Dict[str, Any]], Awaitable[Any]],
             agent_id: str,
             task: AgentTask,
         ) -> tuple[str, float]:
-            result = await worker(task)
-            if not isinstance(result, MessageEnvelope):
-                result = MessageEnvelope(content=str(result))
-            checked = self.overseer.hallucination_check(
-                result, task=task, agent_id=agent_id
-            )
-            reviewed = self.reflection.review(checked)
-            return agent_id, self.critic.score(
-                reviewed.content, task=task, agent_id=agent_id
-            )
+            envelope = MessageEnvelope(content=task.payload, id=task.id)
+            attempts = 0
+            while True:
+                result = await worker(envelope.to_dict())
+                if isinstance(result, MessageEnvelope):
+                    resp = result
+                elif isinstance(result, dict):
+                    resp = MessageEnvelope.from_dict(result)
+                else:
+                    resp = MessageEnvelope(content=str(result))
+                checked = self.overseer.hallucination_check(
+                    resp, task=task, agent_id=agent_id
+                )
+                if checked.meta and checked.meta.get("hallucination"):
+                    attempts += 1
+                    if attempts <= self.max_retries:
+                        continue
+                reviewed = self.reflection.review(checked)
+                return agent_id, self.critic.score(
+                    reviewed.content, task=task, agent_id=agent_id
+                )
 
         coros = [
             _run(worker, agent_id, task)

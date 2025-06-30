@@ -23,3 +23,14 @@ class MessageEnvelope:
             "content": self.content,
             "meta": self.meta or {},
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MessageEnvelope":
+        """Create a :class:`MessageEnvelope` instance from ``data``."""
+        return cls(
+            content=str(data.get("content", "")),
+            id=data.get("id"),
+            jsonrpc=str(data.get("jsonrpc", "2.0")),
+            ovon=str(data.get("ovon", "0.1")),
+            meta=data.get("meta"),
+        )
