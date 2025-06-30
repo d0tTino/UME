@@ -139,6 +139,8 @@ removed from the vector index to keep retrieval‑augmented generation fresh.
 Call :func:`ume.start_memory_aging_scheduler` with paired episodic and
 semantic memory objects to enable the process. Pass ``vector_age_seconds=None``
 to disable vector pruning.
+Use :func:`ume.start_vector_age_scheduler` to audit existing vectors and
+record the ``ume_stale_vector_count`` metric.
 
 ## Schema Upgrades
 
