@@ -14,7 +14,7 @@ class ConsentLedger:
     def __init__(self, db_path: str | None = None) -> None:
         self.db_path = db_path or settings.UME_CONSENT_LEDGER_PATH
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._create_table()
 
     def _create_table(self) -> None:
@@ -53,6 +53,12 @@ class ConsentLedger:
             (user_id, scope),
         )
         return cur.fetchone() is not None
+
+    def list_consents(self) -> list[tuple[str, str, int]]:
+        """Return all stored consent entries."""
+        cur = self.conn.execute("SELECT user_id, scope, timestamp FROM consent")
+        rows = cur.fetchall()
+        return [(str(u), str(s), int(t)) for u, s, t in rows]
 
     def close(self) -> None:
         self.conn.close()

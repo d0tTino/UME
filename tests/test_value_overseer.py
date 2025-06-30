@@ -9,7 +9,7 @@ from pathlib import Path
 def load_modules():
     base = Path(__file__).resolve().parents[1] / "src" / "ume"
     modules = {}
-    for name in ["config", "audit", "value_overseer", "agent_orchestrator"]:
+    for name in ["config", "audit", "value_overseer", "agent_orchestrator", "message_bus"]:
         full = f"ume.{name}"
         sys.modules.pop(full, None)
         spec = importlib.util.spec_from_file_location(full, base / f"{name}.py")
@@ -45,15 +45,15 @@ def setup_env(tmp_path, blocked):
 def test_disallowed_task_blocks_execution(tmp_path):
     mods = setup_env(tmp_path, ["bad"])
     AgentOrchestrator = mods["agent_orchestrator"].AgentOrchestrator
-    AgentTask = mods["agent_orchestrator"].AgentTask
+    MessageEnvelope = mods["message_bus"].MessageEnvelope
     get_audit_entries = mods["audit"].get_audit_entries
 
     orchestrator = AgentOrchestrator(DummySupervisor(mods))
     executed = []
 
-    async def worker(task: AgentTask) -> str:
-        executed.append(task.payload)
-        return "ok"
+    async def worker(msg: dict) -> dict:
+        executed.append(msg["content"])
+        return MessageEnvelope(content="ok").to_dict()
 
     orchestrator.register_worker("w", worker)
     asyncio.run(orchestrator.execute_objective("bad"))
@@ -67,15 +67,15 @@ def test_disallowed_task_blocks_execution(tmp_path):
 def test_allowed_task_runs(tmp_path):
     mods = setup_env(tmp_path, ["bad"])
     AgentOrchestrator = mods["agent_orchestrator"].AgentOrchestrator
-    AgentTask = mods["agent_orchestrator"].AgentTask
+    MessageEnvelope = mods["message_bus"].MessageEnvelope
     get_audit_entries = mods["audit"].get_audit_entries
 
     orchestrator = AgentOrchestrator(DummySupervisor(mods))
     executed = []
 
-    async def worker(task: AgentTask) -> str:
-        executed.append(task.payload)
-        return "ok"
+    async def worker(msg: dict) -> dict:
+        executed.append(msg["content"])
+        return MessageEnvelope(content="ok").to_dict()
 
     orchestrator.register_worker("w", worker)
     asyncio.run(orchestrator.execute_objective("good"))
