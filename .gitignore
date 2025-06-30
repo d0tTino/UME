@@ -169,6 +169,8 @@ cython_debug/
 
 # Ruff stuff:
 .ruff_cache/
+frontend/node_modules/
+frontend/package-lock.json
 
 # PyPI configuration file
 .pypirc

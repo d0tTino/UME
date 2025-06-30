@@ -42,6 +42,7 @@ from .audit import get_audit_entries
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
+from .consent_ledger import consent_ledger
 from . import VectorStore, create_default_store
 
 logger = logging.getLogger(__name__)
@@ -299,6 +300,17 @@ class DocumentUploadRequest(BaseModel):
 
 class PolicySource(BaseModel):
     content: str
+
+
+class ConsentEntry(BaseModel):
+    user_id: str
+    scope: str
+    timestamp: int
+
+
+class ConsentRequest(BaseModel):
+    user_id: str
+    scope: str
 
 
 @app.post("/analytics/shortest_path")
@@ -737,4 +749,27 @@ def validate_policy(req: PolicySource, _: str = Depends(get_current_role)) -> Di
         interp.add_module("policy.rego", req.content)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "ok"}
+
+
+@app.get("/consent", response_model=list[ConsentEntry])
+def list_consents(_: str = Depends(get_current_role)) -> list[ConsentEntry]:
+    """Return all consent ledger entries."""
+    entries = consent_ledger.list_consents()
+    return [
+        ConsentEntry(user_id=u, scope=s, timestamp=t) for u, s, t in entries
+    ]
+
+
+@app.post("/consent")
+def add_consent(req: ConsentRequest, _: str = Depends(get_current_role)) -> Dict[str, str]:
+    """Record consent for a user and scope."""
+    consent_ledger.give_consent(req.user_id, req.scope)
+    return {"status": "ok"}
+
+
+@app.delete("/consent")
+def remove_consent(user_id: str, scope: str, _: str = Depends(get_current_role)) -> Dict[str, str]:
+    """Revoke consent for a user and scope."""
+    consent_ledger.revoke_consent(user_id, scope)
     return {"status": "ok"}
