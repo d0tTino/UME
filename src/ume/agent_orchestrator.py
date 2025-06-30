@@ -10,6 +10,7 @@ from .config import settings
 
 from .persistent_graph import PersistentGraph
 from .message_bus import MessageEnvelope
+from .value_overseer import ValueOverseer
 
 
 @dataclass
@@ -56,8 +57,8 @@ class Critic:
 class Overseer:
     """Monitor worker outputs for hallucinations."""
 
-    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - default passthrough
-        """Return ``True`` if the task is permitted."""
+    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
+        """Return ``True`` for all tasks by default."""
         return True
 
     def hallucination_check(
@@ -68,11 +69,6 @@ class Overseer:
         agent_id: str | None = None,
     ) -> MessageEnvelope:  # pragma: no cover - default passthrough
         return message
-
-    def is_allowed(self, task: AgentTask) -> bool:  # pragma: no cover - passthrough
-        """Return ``True`` for all tasks by default."""
-
-        return True
 
 
 class ReflectionAgent:
