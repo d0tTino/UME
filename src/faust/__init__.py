@@ -1,4 +1,6 @@
 # mypy: ignore-errors
+"""Lightweight stub of the Faust stream processing library used for tests."""
+
 from __future__ import annotations
 from typing import Any, Callable
 
