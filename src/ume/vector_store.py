@@ -175,6 +175,46 @@ class VectorStore:
         if persist and self.path:
             self.save(self.path)
 
+    def add_many(self, vectors: Dict[str, List[float]], *, persist: bool = False) -> None:
+        """Add multiple vectors in a single operation."""
+        if not vectors:
+            return
+
+        ids = []
+        arr_list = []
+        updates: list[tuple[str, List[float]]] = []
+
+        for vid, vec in vectors.items():
+            if vid in self.id_to_idx:
+                updates.append((vid, vec))
+            else:
+                ids.append(vid)
+                arr_list.append(vec)
+
+        for vid, vec in updates:
+            self.add(vid, vec)
+
+        if arr_list:
+            arr = np.asarray(arr_list, dtype="float32")
+            if arr.shape[1] != self.dim:
+                raise ValueError(
+                    f"Expected vector of dimension {self.dim}, got {arr.shape[1]}"
+                )
+            with self.lock:
+                start_idx = len(self.idx_to_id)
+                id_range = np.arange(start_idx, start_idx + len(arr_list))
+                try:
+                    self.index.add_with_ids(arr, id_range)
+                except Exception:  # pragma: no cover - index may not support ids
+                    self.index.add(arr)
+                for vid, idx in zip(ids, id_range):
+                    self.id_to_idx[vid] = int(idx)
+                    self.idx_to_id.append(vid)
+                    self.vector_ts[vid] = int(time.time())
+
+        if persist and self.path:
+            self.save(self.path)
+
     def delete(self, item_id: str) -> None:
         """Remove a vector from the store if present."""
         with self.lock:

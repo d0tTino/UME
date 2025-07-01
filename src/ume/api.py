@@ -520,7 +520,7 @@ def api_add_vector(
     """Store an embedding vector for later similarity search."""
     if len(req.vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
-    store.add(req.id, req.vector)
+    store.add_many({req.id: req.vector})
     return {"status": "ok"}
 
 

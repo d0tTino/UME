@@ -305,3 +305,15 @@ def test_context_manager_stops_flush_thread(tmp_path: Path) -> None:
         assert thread is not None and thread.is_alive()
     assert thread is not None and not thread.is_alive()
 
+
+def test_add_many() -> None:
+    store = VectorStore(dim=2, use_gpu=False)
+    store.add_many({"a": [1.0, 0.0], "b": [0.0, 1.0]})
+    assert set(store.query([1.0, 0.0], k=2)) == {"a", "b"}
+
+
+def test_add_many_dimension_mismatch() -> None:
+    store = VectorStore(dim=2, use_gpu=False)
+    with pytest.raises(ValueError):
+        store.add_many({"a": [1.0]})
+
