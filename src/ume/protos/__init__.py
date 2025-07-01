@@ -1,3 +1,5 @@
+"""Versioned protocol buffer modules for UME events."""
+
 from . import graph_v1_pb2, graph_v2_pb2
 
 PROTO_MAP = {

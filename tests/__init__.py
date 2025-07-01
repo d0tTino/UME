@@ -1,4 +1,6 @@
 # This file makes the tests directory a Python package.
+"""Test package initialization and environment configuration."""
+
 import os
 
 # Ensure config validation passes when tests import ume.config
