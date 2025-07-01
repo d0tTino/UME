@@ -481,6 +481,16 @@ class UMEPrompt(Cmd):
         else:
             print("MirrorMaker not running.")
 
+    def do_reload_policies(self, arg):
+        """reload_policies
+        Reload alignment policy plugins."""
+        import importlib
+        from ume.plugins import alignment
+
+        importlib.reload(alignment)
+        alignment.reload_plugins()
+        print("Policies reloaded.")
+
 
     def do_watch(self, arg):
         """watch [path1,path2,...]
