@@ -34,6 +34,17 @@ sys.modules.setdefault("structlog", types.ModuleType("structlog"))
 root = Path(__file__).resolve().parents[1]
 package = types.ModuleType("ume")
 package.__path__ = [str(root / "src" / "ume")]
+old_modules = {
+    name: sys.modules.get(name)
+    for name in (
+        "ume",
+        "ume.query",
+        "ume.vector_store",
+        "ume.audit",
+        "ume.config",
+        "ume.logging_utils",
+    )
+}
 sys.modules["ume"] = package
 
 stub_query = types.ModuleType("ume.query")
@@ -76,6 +87,12 @@ assert spec and spec.loader
 grpc_service = importlib.util.module_from_spec(spec)
 sys.modules["ume.grpc_service"] = grpc_service
 spec.loader.exec_module(grpc_service)
+
+for name, mod in old_modules.items():
+    if mod is not None:
+        sys.modules[name] = mod
+    else:
+        sys.modules.pop(name, None)
 
 setattr(package, "grpc_service", grpc_service)
 

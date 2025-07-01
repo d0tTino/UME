@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Awaitable, Callable, Dict, List, cast, AsyncGenerator
-import asyncio
+from typing import Any, Awaitable, Callable, Dict, List, cast
 from collections import defaultdict
-from pathlib import Path
 
 try:  # pragma: no cover - optional dependency
     import redis
 except Exception:  # pragma: no cover - allow tests without redis installed
     redis = None
 from fastapi_limiter import FastAPILimiter
-from fastapi_limiter.depends import RateLimiter
 
 from .config import settings
 from .logging_utils import configure_logging
@@ -25,39 +22,36 @@ try:  # pragma: no cover - optional dependency
 except Exception:  # pragma: no cover - allow tests without opentelemetry installed
     trace = None
 from uuid import uuid4
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile, File
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
-from sse_starlette.sse import EventSourceResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from pydantic import BaseModel
 
-from .analytics import shortest_path
-from .reliability import filter_low_confidence
-from .document_guru import reformat_document
 from .audit import get_audit_entries
-from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
+from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter
-from .query import Neo4jQueryEngine
-from .consent_ledger import consent_ledger
 from . import VectorStore, create_default_store
+from .api_deps import (
+    POLICY_DIR,  # noqa: F401 re-exported for tests
+    TOKENS,
+    configure_graph,  # noqa: F401 re-exported for tests
+    configure_vector_store,  # noqa: F401 re-exported for tests
+    get_current_role,
+    get_graph,
+    get_vector_store,
+)
+from .graph_routes import router as graph_router
+from .vector_routes import router as vector_router
+from .policy_routes import router as policy_router
 
 logger = logging.getLogger(__name__)
 
-# Directory containing local Rego policy files
-POLICY_DIR = Path(__file__).with_name("plugins") / "alignment" / "policies"
-
-
 configure_logging()
 configure_tracing()
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-# map token -> (role, expiry)
-TOKENS: Dict[str, tuple[str, float]] = {}
 
 app = FastAPI(
     title="UME API",
@@ -69,6 +63,10 @@ if is_tracing_enabled() and trace is not None:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
     FastAPIInstrumentor.instrument_app(app, tracer_provider=trace.get_tracer_provider())
+
+app.include_router(graph_router)
+app.include_router(vector_router)
+app.include_router(policy_router)
 
 
 class _MemoryRedis:
@@ -152,31 +150,6 @@ except ImportError:  # pragma: no cover - optional dependency
     app.state.vector_store = None
 
 
-def configure_graph(graph: IGraphAdapter) -> None:
-    """Set ``app.state.graph`` applying RBAC if ``settings.UME_API_ROLE`` is defined."""
-    role = settings.UME_API_ROLE
-    if role:
-        graph = RoleBasedGraphAdapter(graph, role=role)
-    app.state.graph = graph
-    if settings.UME_API_TOKEN:
-        expires_at = time.time() + settings.UME_OAUTH_TTL
-        TOKENS[settings.UME_API_TOKEN] = (settings.UME_OAUTH_ROLE, expires_at)
-
-
-def configure_vector_store(store: VectorStore) -> None:
-    """Inject a :class:`VectorStore` instance into the application state.
-
-    If an existing store is configured and it exposes a ``close`` method it will
-    be closed prior to assigning the new store. This ensures background flush
-    threads are properly shut down.
-    """
-    existing = getattr(app.state, "vector_store", None)
-    if existing is not None and hasattr(existing, "close"):
-        try:
-            existing.close()
-        except Exception as exc:  # pragma: no cover - unexpected failure
-            logger.exception("Failed to close existing vector store", exc_info=exc)
-    app.state.vector_store = store
 
 
 @app.exception_handler(AccessDeniedError)
@@ -204,357 +177,9 @@ def issue_token(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenRespon
     raise HTTPException(status_code=400, detail="Invalid credentials")
 
 
-def get_current_role(token: str = Depends(oauth2_scheme)) -> str:
-    if token == settings.UME_API_TOKEN:
-        return settings.UME_API_ROLE or ""
-    entry = TOKENS.get(token)
-    if entry is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    role, expiry = entry
-    if expiry < time.time():
-        TOKENS.pop(token, None)
-        raise HTTPException(status_code=401, detail="Token expired")
-    return role
 
 
-def require_token(_: str = Depends(oauth2_scheme)) -> None:
-    """Dependency that ensures a bearer token is provided."""
-    return None
 
-
-def get_query_engine() -> Neo4jQueryEngine:
-    engine = app.state.query_engine
-    if engine is None:
-        raise HTTPException(status_code=500, detail="Query engine not configured")
-    return engine
-
-
-def get_graph(role: str = Depends(get_current_role)) -> IGraphAdapter:
-    graph = app.state.graph
-    if graph is None:
-        raise HTTPException(status_code=500, detail="Graph not configured")
-    if role:
-        return RoleBasedGraphAdapter(graph, role=role)
-    return graph
-
-
-def get_vector_store() -> VectorStore:
-    store = app.state.vector_store
-    if store is None:
-        raise HTTPException(status_code=500, detail="Vector store not configured")
-    return store
-
-
-@app.get("/query")
-def run_cypher(
-    cypher: str,
-    _: str = Depends(get_current_role),
-    engine: Neo4jQueryEngine = Depends(get_query_engine),
-) -> List[Dict[str, Any]]:
-    """Execute an arbitrary Cypher query and return the result set."""
-    return engine.execute_cypher(cypher)
-
-
-class ShortestPathRequest(BaseModel):
-    source: str
-    target: str
-
-
-class PathRequest(BaseModel):
-    source: str
-    target: str
-    max_depth: int | None = None
-    edge_label: str | None = None
-    since_timestamp: int | None = None
-
-
-class SubgraphRequest(BaseModel):
-    start: str
-    depth: int
-    edge_label: str | None = None
-    since_timestamp: int | None = None
-
-
-class NodeCreateRequest(BaseModel):
-    id: str
-    attributes: Dict[str, Any] | None = None
-
-
-class NodeUpdateRequest(BaseModel):
-    attributes: Dict[str, Any]
-
-
-class EdgeCreateRequest(BaseModel):
-    source: str
-    target: str
-    label: str
-
-
-class TweetCreateRequest(BaseModel):
-    text: str
-
-
-class DocumentUploadRequest(BaseModel):
-    content: str
-
-
-class PolicySource(BaseModel):
-    content: str
-
-
-class ConsentEntry(BaseModel):
-    user_id: str
-    scope: str
-    timestamp: int
-
-
-class ConsentRequest(BaseModel):
-    user_id: str
-    scope: str
-
-
-@app.post("/analytics/shortest_path")
-def api_shortest_path(
-    req: ShortestPathRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Return the shortest path between two nodes."""
-    path = shortest_path(graph, req.source, req.target)
-    filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
-    return {"path": filtered}
-
-
-@app.post("/analytics/path")
-def api_constrained_path(
-    req: PathRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Find a path subject to optional depth or label constraints."""
-    raw_path = graph.constrained_path(
-        req.source,
-        req.target,
-        req.max_depth,
-        req.edge_label,
-        req.since_timestamp,
-    )
-    threshold = settings.UME_RELIABILITY_THRESHOLD
-    nodes = filter_low_confidence(raw_path, threshold)
-    return {"path": nodes}
-
-
-@app.get("/analytics/path/stream")
-async def api_constrained_path_stream(
-    source: str = Query(...),
-    target: str = Query(...),
-    max_depth: int | None = Query(None),
-    edge_label: str | None = Query(None),
-    since_timestamp: int | None = Query(None),
-    _: str = Depends(get_current_role),
-    graph: IGraphAdapter = Depends(get_graph),
-    __: None = Depends(RateLimiter(times=2, seconds=1)),
-) -> EventSourceResponse:
-    """Stream path nodes one by one as an SSE feed."""
-
-    async def _gen() -> AsyncGenerator[dict[str, str], None]:
-        path = graph.constrained_path(
-            source, target, max_depth, edge_label, since_timestamp
-        )
-        filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
-        for node in filtered:
-            yield {"data": node}
-            await asyncio.sleep(0)
-
-    return EventSourceResponse(_gen())
-
-
-@app.post("/analytics/subgraph")
-def api_subgraph(
-    req: SubgraphRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Extract a subgraph starting from ``start`` to the given ``depth``."""
-    sg = graph.extract_subgraph(
-        req.start,
-        req.depth,
-        req.edge_label,
-        req.since_timestamp,
-    )
-    threshold = settings.UME_RELIABILITY_THRESHOLD
-    nodes = filter_low_confidence(sg.get("nodes", {}).keys(), threshold)
-    sg["nodes"] = {n: sg["nodes"][n] for n in nodes}
-    sg["edges"] = [
-        e
-        for e in sg.get("edges", [])
-        if len(filter_low_confidence(e, threshold)) == len(e)
-        and e[0] in sg["nodes"]
-        and e[1] in sg["nodes"]
-    ]
-    return sg
-
-
-@app.post("/redact/node/{node_id}")
-def api_redact_node(
-    node_id: str,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Redact (delete) a node by its ID."""
-    graph.redact_node(node_id)
-    return {"status": "ok"}
-
-
-class RedactEdgeRequest(BaseModel):
-    source: str
-    target: str
-    label: str
-
-
-@app.post("/redact/edge")
-def api_redact_edge(
-    req: RedactEdgeRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Redact an edge between two nodes."""
-    graph.redact_edge(req.source, req.target, req.label)
-    return {"status": "ok"}
-
-
-@app.post("/nodes")
-def api_create_node(
-    req: NodeCreateRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Create a node with optional attributes."""
-    graph.add_node(req.id, req.attributes or {})
-    return {"status": "ok"}
-
-
-@app.patch("/nodes/{node_id}")
-def api_update_node(
-    node_id: str,
-    req: NodeUpdateRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Update attributes of an existing node."""
-    graph.update_node(node_id, req.attributes)
-    return {"status": "ok"}
-
-
-@app.delete("/nodes/{node_id}")
-def api_delete_node(
-    node_id: str,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Remove a node from the graph."""
-    graph.redact_node(node_id)
-    return {"status": "ok"}
-
-
-@app.post("/edges")
-def api_create_edge(
-    req: EdgeCreateRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Create an edge between two nodes."""
-    graph.add_edge(req.source, req.target, req.label)
-    return {"status": "ok"}
-
-
-@app.delete("/edges/{source}/{target}/{label}")
-def api_delete_edge(
-    source: str,
-    target: str,
-    label: str,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Delete an edge identified by source, target and label."""
-    graph.delete_edge(source, target, label)
-    return {"status": "ok"}
-
-
-@app.post("/tweets")
-def api_post_tweet(
-    req: TweetCreateRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Create a tweet node used by the Tweet-bot."""
-    node_id = f"tweet:{uuid4()}"
-    graph.add_node(node_id, {"text": req.text, "timestamp": int(time.time())})
-    return {"id": node_id}
-
-
-@app.post("/documents")
-def api_upload_document(
-    req: DocumentUploadRequest,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Upload a document for Document Guru."""
-    node_id = f"doc:{uuid4()}"
-    cleaned = reformat_document(req.content)
-    graph.add_node(node_id, {"content": cleaned, "timestamp": int(time.time())})
-    return {"id": node_id}
-
-
-@app.get("/documents/{document_id}")
-def api_get_document(
-    document_id: str,
-    graph: IGraphAdapter = Depends(get_graph),
-) -> Dict[str, Any]:
-    """Return a previously uploaded document."""
-    doc = graph.get_node(document_id)
-    if doc is None:
-        raise HTTPException(status_code=404, detail="Document not found")
-    return {"id": document_id, "content": doc.get("content", "")}
-
-
-class VectorAddRequest(BaseModel):
-    id: str
-    vector: List[float]
-
-
-@app.post("/vectors")
-def api_add_vector(
-    req: VectorAddRequest,
-    _: str = Depends(get_current_role),
-    store: VectorStore = Depends(get_vector_store),
-) -> Dict[str, Any]:
-    """Store an embedding vector for later similarity search."""
-    if len(req.vector) != store.dim:
-        raise HTTPException(status_code=400, detail="Invalid vector dimension")
-    store.add(req.id, req.vector)
-    return {"status": "ok"}
-
-
-@app.get("/vectors/search")
-def api_search_vectors(
-    vector: List[float] = Query(...),
-    k: int = 5,
-    _: str = Depends(get_current_role),
-    store: VectorStore = Depends(get_vector_store),
-) -> Dict[str, Any]:
-    """Find the IDs of the ``k`` nearest vectors to ``vector``."""
-    if len(vector) != store.dim:
-        raise HTTPException(status_code=400, detail="Invalid vector dimension")
-    ids = store.query(vector, k=k)
-    return {"ids": ids}
-
-
-@app.get("/vectors/benchmark")
-def api_benchmark_vectors(
-    use_gpu: bool = Query(False),
-    num_vectors: int = 1000,
-    num_queries: int = 100,
-    _: str = Depends(get_current_role),
-    store: VectorStore = Depends(get_vector_store),
-) -> Dict[str, Any]:
-    """Run a synthetic benchmark against the vector store."""
-    from .benchmarks import benchmark_vector_store
-
-    return benchmark_vector_store(
-        use_gpu,
-        dim=store.dim,
-        num_vectors=num_vectors,
-        num_queries=num_queries,
-    )
 
 
 @app.get("/metrics")
@@ -674,102 +299,3 @@ def submit_feedback(
     return {"status": "ok"}
 
 
-def _resolve_policy_path(name: str) -> Path:
-    """Return absolute path for policy ``name`` within :data:`POLICY_DIR`."""
-    path = Path(name)
-    if path.is_absolute() or ".." in path.parts:
-        raise HTTPException(status_code=400, detail="Invalid policy path")
-    return (POLICY_DIR / path).resolve()
-
-
-@app.get("/policies")
-def list_policies(_: str = Depends(get_current_role)) -> Dict[str, List[str]]:
-    """List all available Rego policy files."""
-    files = [p.relative_to(POLICY_DIR).as_posix() for p in POLICY_DIR.rglob("*.rego")]
-    return {"policies": sorted(files)}
-
-
-@app.post("/policies/{name:path}")
-async def add_policy(
-    name: str,
-    file: UploadFile = File(...),
-    _: str = Depends(get_current_role),
-) -> Dict[str, str]:
-    """Upload a Rego policy file under ``name``."""
-    path = _resolve_policy_path(name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    content = await file.read()
-    with path.open("wb") as f:
-        f.write(content)
-    return {"status": "ok"}
-
-
-@app.delete("/policies/{name:path}")
-def delete_policy(name: str, _: str = Depends(get_current_role)) -> Dict[str, str]:
-    """Delete a policy file."""
-    path = _resolve_policy_path(name)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Policy not found")
-    path.unlink()
-    return {"status": "ok"}
-
-
-@app.get("/policies/{name:path}")
-def get_policy(name: str, _: str = Depends(get_current_role)) -> Response:
-    """Return the raw contents of a policy file."""
-    path = _resolve_policy_path(name)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Policy not found")
-    return Response(path.read_text(encoding="utf-8"), media_type="text/plain")
-
-
-@app.put("/policies/{name:path}")
-async def update_policy(
-    name: str, file: UploadFile = File(...), _: str = Depends(get_current_role)
-) -> Dict[str, str]:
-    """Replace an existing policy file."""
-    path = _resolve_policy_path(name)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Policy not found")
-    content = await file.read()
-    with path.open("wb") as f:
-        f.write(content)
-    return {"status": "ok"}
-
-
-@app.post("/policies/validate")
-def validate_policy(req: PolicySource, _: str = Depends(get_current_role)) -> Dict[str, str]:
-    """Validate Rego policy text using regopy if available."""
-    try:
-        from regopy import Interpreter as RegoInterpreter  # type: ignore
-    except Exception as exc:  # pragma: no cover - optional dependency
-        raise HTTPException(status_code=500, detail="Rego support not installed") from exc
-    interp = RegoInterpreter()
-    try:
-        interp.add_module("policy.rego", req.content)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"status": "ok"}
-
-
-@app.get("/consent", response_model=list[ConsentEntry])
-def list_consents(_: str = Depends(get_current_role)) -> list[ConsentEntry]:
-    """Return all consent ledger entries."""
-    entries = consent_ledger.list_consents()
-    return [
-        ConsentEntry(user_id=u, scope=s, timestamp=t) for u, s, t in entries
-    ]
-
-
-@app.post("/consent")
-def add_consent(req: ConsentRequest, _: str = Depends(get_current_role)) -> Dict[str, str]:
-    """Record consent for a user and scope."""
-    consent_ledger.give_consent(req.user_id, req.scope)
-    return {"status": "ok"}
-
-
-@app.delete("/consent")
-def remove_consent(user_id: str, scope: str, _: str = Depends(get_current_role)) -> Dict[str, str]:
-    """Revoke consent for a user and scope."""
-    consent_ledger.revoke_consent(user_id, scope)
-    return {"status": "ok"}
