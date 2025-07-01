@@ -44,6 +44,7 @@ from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
 from .consent_ledger import consent_ledger
 from . import VectorStore, create_default_store
+from .plugins import alignment
 
 logger = logging.getLogger(__name__)
 
@@ -689,6 +690,16 @@ def list_policies(_: str = Depends(get_current_role)) -> Dict[str, List[str]]:
     return {"policies": sorted(files)}
 
 
+@app.post("/policies/reload")
+def reload_policies(_: str = Depends(get_current_role)) -> Dict[str, str]:
+    """Reload alignment policy plugins."""
+    import importlib
+
+    importlib.reload(alignment)
+    alignment.reload_plugins()
+    return {"status": "ok"}
+
+
 @app.post("/policies/{name:path}")
 async def add_policy(
     name: str,
@@ -750,6 +761,8 @@ def validate_policy(req: PolicySource, _: str = Depends(get_current_role)) -> Di
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"status": "ok"}
+
+
 
 
 @app.get("/consent", response_model=list[ConsentEntry])
