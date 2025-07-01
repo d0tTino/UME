@@ -1,4 +1,6 @@
 # mypy: ignore-errors
+"""Minimal testcontainers implementation for Docker-based tests."""
+
 from __future__ import annotations
 
 class DockerContainer:

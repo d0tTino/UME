@@ -1,4 +1,6 @@
 # mypy: ignore-errors
+"""Stubbed Presidio analyzer for detecting simple PII in tests."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
