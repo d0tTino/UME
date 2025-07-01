@@ -17,8 +17,21 @@ class DummyQE:
 
 
 class DummyStore:
+    def __init__(self):
+        self.queries = []
+        self.ids = ["x", "y"]
+
     def query(self, vector, k=5):
-        return []
+        self.queries.append((list(vector), k))
+        return self.ids
+
+
+store = DummyStore()
+
+AUDIT_ENTRIES = [
+    {"timestamp": 1, "user_id": "u1", "reason": "r1", "signature": "s1"},
+    {"timestamp": 2, "user_id": "u2", "reason": "r2", "signature": "s2"},
+]
 
 
 class TestServicer(ume_pb2_grpc.UMEServicer):
@@ -27,6 +40,25 @@ class TestServicer(ume_pb2_grpc.UMEServicer):
             struct = ume_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
             struct.update(rec)
             yield ume_pb2.CypherRecord(record=struct)  # type: ignore[attr-defined]
+
+    async def SearchVectors(self, request, context):
+        ids = store.query(list(request.vector), k=request.k or 5)
+        return ume_pb2.VectorSearchResponse(ids=ids)
+
+    async def GetAuditEntries(self, request, context):
+        limit = request.limit or len(AUDIT_ENTRIES)
+        selected = list(reversed(AUDIT_ENTRIES[-limit:]))
+        return ume_pb2.AuditResponse(
+            entries=[
+                ume_pb2.AuditEntry(
+                    timestamp=e["timestamp"],
+                    user_id=e["user_id"],
+                    reason=e["reason"],
+                    signature=e["signature"],
+                )
+                for e in selected
+            ]
+        )
 
 
 async def _run_server(port_holder: list[int]):
@@ -46,6 +78,20 @@ async def _run_test(port: int):
         assert results == [{"n": 1}, {"n": 2}]
 
 
+async def _run_search_test(port: int):
+    store.queries.clear()
+    async with AsyncUMEClient(f"localhost:{port}") as client:
+        ids = await client.search_vectors([1.0, 2.0], k=2)
+        assert ids == ["x", "y"]
+        assert store.queries == [([1.0, 2.0], 2)]
+
+
+async def _run_audit_test(port: int):
+    async with AsyncUMEClient(f"localhost:{port}") as client:
+        entries = await client.get_audit_entries(limit=1)
+        assert entries == [AUDIT_ENTRIES[-1]]
+
+
 def test_stream_cypher():
     port_holder: list[int] = []
 
@@ -54,6 +100,40 @@ def test_stream_cypher():
         while not port_holder:
             await asyncio.sleep(0.01)
         await _run_test(port_holder[0])
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+
+
+def test_search_vectors_async():
+    port_holder: list[int] = []
+
+    async def runner():
+        server_task = asyncio.create_task(_run_server(port_holder))
+        while not port_holder:
+            await asyncio.sleep(0.01)
+        await _run_search_test(port_holder[0])
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+
+
+def test_get_audit_entries_async():
+    port_holder: list[int] = []
+
+    async def runner():
+        server_task = asyncio.create_task(_run_server(port_holder))
+        while not port_holder:
+            await asyncio.sleep(0.01)
+        await _run_audit_test(port_holder[0])
         server_task.cancel()
         try:
             await server_task
