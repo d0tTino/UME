@@ -3,6 +3,7 @@ from ume.memory import EpisodicMemory, SemanticMemory, ColdMemory
 from ume.config import settings
 from ume.metrics import STALE_VECTOR_WARNINGS
 from ume.memory.tiered import TieredMemoryManager
+from ume.memory_aging import start_memory_aging_scheduler, stop_memory_aging_scheduler
 
 import time
 import pytest
