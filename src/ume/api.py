@@ -144,11 +144,10 @@ async def metrics_middleware(
 app.state.query_engine = cast(Any, None)
 app.state.graph = cast(Any, None)
 try:
-    app.state.vector_store = cast(Any, create_default_store())
+    app.state.vector_store = cast(Any, create_vector_store())
 except ImportError:  # pragma: no cover - optional dependency
     logger.warning("Vector store dependencies missing; continuing without one")
     app.state.vector_store = None
-
 
 
 
@@ -175,12 +174,7 @@ def issue_token(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenRespon
         TOKENS[token] = (settings.UME_OAUTH_ROLE, expires_at)
         return TokenResponse(access_token=token)
     raise HTTPException(status_code=400, detail="Invalid credentials")
-
-
-
-
-
-
+    
 
 @app.get("/metrics")
 def metrics_endpoint(_: str = Depends(get_current_role)) -> Response:
@@ -297,5 +291,4 @@ def submit_feedback(
     """Record user feedback for a recommendation."""
     FEEDBACK[req.id].append(req.feedback)
     return {"status": "ok"}
-
 

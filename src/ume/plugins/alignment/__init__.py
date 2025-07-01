@@ -5,7 +5,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Callable, cast
 import importlib
+import importlib.util
 import pkgutil
+import sys
 
 from ...event import Event
 from ...audit import log_audit_entry
@@ -60,8 +62,22 @@ def get_plugins() -> List[AlignmentPlugin]:
 def load_plugins() -> None:
     """Import all modules in this package so they can register plugins."""
     package = __name__
+    importlib.invalidate_caches()
     for _, modname, _ in pkgutil.iter_modules(__path__):
         importlib.import_module(f"{package}.{modname}")
+
+
+def reload_plugins() -> None:
+    """Clear and reload all plugin modules."""
+    _plugins.clear()
+    package = __name__
+    importlib.invalidate_caches()
+    for _, modname, _ in pkgutil.iter_modules(__path__):
+        fullname = f"{package}.{modname}"
+        if fullname in sys.modules:
+            importlib.reload(sys.modules[fullname])
+        else:
+            importlib.import_module(fullname)
 
 
 # Load plugins on import

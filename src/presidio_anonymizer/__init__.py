@@ -1,4 +1,6 @@
 # mypy: ignore-errors
+"""Small stub of Presidio's anonymizer used in tests."""
+
 from __future__ import annotations
 import json
 

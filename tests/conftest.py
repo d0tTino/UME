@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import types
 from pathlib import Path
 import os
 
@@ -18,6 +19,43 @@ import pytest
 
 # Ensure the src directory is importable when UME isn't installed
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+# Stub optional dependencies so importing ume modules doesn't fail when they
+# aren't installed. Tests that rely on these packages will provide their own
+# implementations.
+sys.modules.setdefault("httpx", types.ModuleType("httpx"))
+yaml_stub = types.ModuleType("yaml")
+yaml_stub.safe_load = lambda _: {}
+sys.modules.setdefault("yaml", yaml_stub)
+prom_stub = types.ModuleType("prometheus_client")
+class _DummyMetric:  # pragma: no cover - simple stub
+    def __init__(self, *_: object, **__: object) -> None:
+        pass
+
+    def labels(self, *_: object, **__: object) -> "_DummyMetric":
+        return self
+
+    def inc(self, *_: object, **__: object) -> None:
+        pass
+
+    def observe(self, *_: object, **__: object) -> None:
+        pass
+
+prom_stub.Counter = _DummyMetric  # type: ignore[attr-defined]
+prom_stub.Histogram = _DummyMetric  # type: ignore[attr-defined]
+prom_stub.Gauge = _DummyMetric  # type: ignore[attr-defined]
+sys.modules.setdefault("prometheus_client", prom_stub)
+sys.modules.setdefault("numpy", types.ModuleType("numpy"))
+jsonschema_stub = types.ModuleType("jsonschema")
+class _ValidationError(Exception):
+    pass
+
+def _validate(*_: object, **__: object) -> None:
+    return None
+
+jsonschema_stub.validate = _validate  # type: ignore[attr-defined]
+jsonschema_stub.ValidationError = _ValidationError  # type: ignore[attr-defined]
+sys.modules.setdefault("jsonschema", jsonschema_stub)
 
 try:
     from ume.pipeline import privacy_agent as privacy_agent_module
