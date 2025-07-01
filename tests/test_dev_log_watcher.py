@@ -71,7 +71,7 @@ def test_run_watcher_produces_event(tmp_path: Path, monkeypatch: MonkeyPatch) ->
     monkeypatch.setattr(dev_log_watcher, "Producer", lambda *_, **__: Producer())
     monkeypatch.setattr(dev_log_watcher, "Observer", lambda: observer)
 
-    dev_log_watcher.run_watcher([str(tmp_path)])
+    dev_log_watcher.run_watcher([str(tmp_path)], runtime=0)
 
     assert observer.scheduled == [str(tmp_path)]
     assert messages
