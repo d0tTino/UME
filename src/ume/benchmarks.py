@@ -28,8 +28,7 @@ def benchmark_vector_store(
     vectors = np.random.random((num_vectors, dim)).astype("float32")
 
     start = time.perf_counter()
-    for i, vec in enumerate(vectors):
-        store.add(f"v{i}", vec.tolist())
+    store.add_many({f"v{i}": vec.tolist() for i, vec in enumerate(vectors)})
     build_time = time.perf_counter() - start
 
     queries = np.random.random((num_queries, dim)).astype("float32")
