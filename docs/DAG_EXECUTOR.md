@@ -7,11 +7,12 @@ callable to run, optional dependencies, and the resource it consumes.
 ```python
 from dataclasses import dataclass, field
 from typing import Callable, Any, List
+import threading
 
 @dataclass
 class Task:
     name: str
-    func: Callable[[], Any]
+    func: Callable[[threading.Event], Any]
     dependencies: List[str] = field(default_factory=list)
     resource: str = "cpu"
 ```

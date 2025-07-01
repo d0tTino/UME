@@ -1,6 +1,7 @@
 import sys
 import types
 import time
+import threading
 import pytest
 from ume import DAGExecutor, Task  # noqa: E402
 
@@ -16,13 +17,13 @@ sys.modules.setdefault("faiss", types.ModuleType("faiss"))
 def test_dag_execution_order() -> None:
     order: list[str] = []
 
-    def a() -> None:
+    def a(_e: threading.Event) -> None:
         order.append("a")
 
-    def b() -> None:
+    def b(_e: threading.Event) -> None:
         order.append("b")
 
-    def c() -> None:
+    def c(_e: threading.Event) -> None:
         order.append("c")
 
     exec = DAGExecutor()
@@ -38,7 +39,7 @@ def test_resource_scheduling_sequential_gpu() -> None:
     events: list[tuple[str, float]] = []
 
     def make(name: str, delay: float, resource: str) -> Task:
-        def _f() -> None:
+        def _f(stop_event: threading.Event) -> None:
             events.append((name + "_start", time.perf_counter()))
             time.sleep(delay)
             events.append((name + "_end", time.perf_counter()))
@@ -69,9 +70,9 @@ def test_public_imports() -> None:
 def test_run_raises_on_task_error() -> None:
     exec = DAGExecutor()
 
-    exec.add_task(Task(name="ok", func=lambda: None))
+    exec.add_task(Task(name="ok", func=lambda _e: None))
 
-    def boom() -> None:
+    def boom(_e: threading.Event) -> None:
         raise RuntimeError("boom")
 
     exec.add_task(Task(name="bad", func=boom))

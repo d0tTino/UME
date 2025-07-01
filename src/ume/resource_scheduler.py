@@ -9,7 +9,7 @@ from typing import Callable, Iterable, Any
 class ScheduledTask:
     """Simple task with an associated resource."""
 
-    func: Callable[[], Any]
+    func: Callable[[threading.Event], Any]
     resource: str = "cpu"
 
 
@@ -45,4 +45,6 @@ class ResourceScheduler:
             except KeyError as exc:
                 raise ValueError(f"Unknown resource {task.resource}") from exc
             with sem:
-                task.func()
+                task.func(self._stop_event)
+            if self._stop_event.is_set():
+                break

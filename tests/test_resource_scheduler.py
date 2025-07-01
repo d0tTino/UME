@@ -7,14 +7,15 @@ from ume.resource_scheduler import ResourceScheduler, ScheduledTask
 @pytest.fixture(autouse=True)  # type: ignore[misc]
 def fast_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
     """Patch ``time.sleep`` to avoid delays in tests."""
-    monkeypatch.setattr(time, "sleep", lambda _: None)
+    orig_sleep = time.sleep
+    monkeypatch.setattr(time, "sleep", lambda t: orig_sleep(min(t, 0.001)))
 
 def test_scheduler_limits_concurrency() -> None:
     sched = ResourceScheduler(resources={"gpu": 1})
     events: list[tuple[str, float]] = []
 
     def make(name: str) -> ScheduledTask:
-        def _task() -> None:
+        def _task(stop_event: threading.Event) -> None:
             events.append((f"{name}_start", time.perf_counter()))
             time.sleep(0.1)
             events.append((f"{name}_end", time.perf_counter()))
@@ -29,7 +30,7 @@ def test_scheduler_limits_concurrency() -> None:
 def test_scheduler_unknown_resource_raises() -> None:
     sched = ResourceScheduler(resources={"cpu": 1})
     with pytest.raises(ValueError):
-        sched.run([ScheduledTask(func=lambda: None, resource="gpu")])
+        sched.run([ScheduledTask(func=lambda _e: None, resource="gpu")])
 
 
 def test_scheduler_stop() -> None:
@@ -37,12 +38,15 @@ def test_scheduler_stop() -> None:
     ran: list[str] = []
     started = threading.Event()
 
-    def slow() -> None:
+    def slow(stop_event: threading.Event) -> None:
         started.set()
-        time.sleep(0.2)
+        for _ in range(20):
+            if stop_event.is_set():
+                return
+            time.sleep(0.01)
         ran.append("slow")
 
-    def fast() -> None:
+    def fast(_stop_event: threading.Event) -> None:
         ran.append("fast")
 
     tasks = [ScheduledTask(func=slow), ScheduledTask(func=fast)]
@@ -51,5 +55,4 @@ def test_scheduler_stop() -> None:
     started.wait(0.05)
     sched.stop()
     t.join()
-    pytest.xfail("stop() cannot interrupt already running tasks")
-    assert ran == ["slow"]
+    assert ran == []
