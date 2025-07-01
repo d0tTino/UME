@@ -309,6 +309,8 @@ class VectorStore:
         try:
             if not self.idx_to_id:
                 return []
+            if k <= 0:
+                raise ValueError("k must be a positive integer")
             if (
                 not isinstance(vector, Iterable)
                 or isinstance(vector, (str, bytes))
