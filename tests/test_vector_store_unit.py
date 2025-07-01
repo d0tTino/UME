@@ -11,6 +11,10 @@ faiss = pytest.importorskip("faiss")
 if not hasattr(faiss, "IndexFlatL2"):
     pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
+pytest.importorskip(
+    "prometheus_client", reason="prometheus_client is required for metrics"
+)
+
 root = Path(__file__).resolve().parents[1]
 
 
@@ -99,3 +103,22 @@ def test_query_records_metrics(vector_store_cls):
     assert result == ["a"]
     assert h.count == 1
     assert g.value == 1
+
+
+@pytest.mark.parametrize("k", [0, -1])
+def test_query_invalid_k(vector_store_cls, k: int) -> None:
+    store = vector_store_cls(dim=2, use_gpu=False)
+    store.add("a", [1.0, 0.0])
+
+    with pytest.raises(ValueError):
+        store.query([1.0, 0.0], k=k)
+
+
+def test_query_respects_k(vector_store_cls) -> None:
+    store = vector_store_cls(dim=2, use_gpu=False)
+    store.add("a", [1.0, 0.0])
+    store.add("b", [0.0, 1.0])
+
+    assert store.query([1.0, 0.0], k=1) == ["a"]
+    res = store.query([1.0, 0.0], k=2)
+    assert set(res) == {"a", "b"}
