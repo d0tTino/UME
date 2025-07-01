@@ -162,6 +162,12 @@ from .agent_orchestrator import (
     ReflectionAgent,
 )
 from .message_bus import MessageEnvelope
+from .resources import (
+    create_graph,
+    create_vector_store,
+    graph_factory,
+    vector_store_factory,
+)
 
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
@@ -229,6 +235,10 @@ __all__ = [
     "VectorStore",
     "VectorStoreListener",
     "create_default_store",
+    "create_graph",
+    "create_vector_store",
+    "graph_factory",
+    "vector_store_factory",
 
     "EpisodicMemory",
     "SemanticMemory",
@@ -279,6 +289,7 @@ _KNOWN_SUBMODULES = {
     "plugins",
     "grpc_service",
     "vector_store",
+    "resources",
     "api",
 }
 

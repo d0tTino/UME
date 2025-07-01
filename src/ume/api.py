@@ -43,8 +43,9 @@ from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
 from .consent_ledger import consent_ledger
-from . import VectorStore, create_default_store
-from .plugins import alignment
+from . import VectorStore
+from .resources import create_vector_store
+
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ async def metrics_middleware(
 app.state.query_engine = cast(Any, None)
 app.state.graph = cast(Any, None)
 try:
-    app.state.vector_store = cast(Any, create_default_store())
+    app.state.vector_store = cast(Any, create_vector_store())
 except ImportError:  # pragma: no cover - optional dependency
     logger.warning("Vector store dependencies missing; continuing without one")
     app.state.vector_store = None

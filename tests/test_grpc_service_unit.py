@@ -27,6 +27,17 @@ sys.modules["ume_pb2_grpc"] = ume_pb2_grpc
 
 
 import types
+
+# Preserve existing modules so they can be restored after import
+_old_modules = {name: sys.modules.get(name) for name in (
+    "ume",
+    "ume.query",
+    "ume.vector_store",
+    "ume.audit",
+    "ume.config",
+    "ume.logging_utils",
+)}
+
 sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 sys.modules.setdefault("structlog", types.ModuleType("structlog"))
 
@@ -82,6 +93,12 @@ setattr(package, "grpc_service", grpc_service)
 UMEServicer = grpc_service.UMEServicer
 serve = grpc_service.serve
 main = grpc_service.main
+
+for name, mod in _old_modules.items():
+    if mod is not None:
+        sys.modules[name] = mod
+    else:
+        sys.modules.pop(name, None)
 
 
 class DummyEngine:
@@ -217,6 +234,24 @@ def test_main(monkeypatch):
     assert called["wait"]
 
 from unittest.mock import MagicMock
+
+
+def teardown_module(module: object) -> None:
+    """Remove stub modules injected during import."""
+    for name in (
+        "ume.grpc_service",
+        "ume.query",
+        "ume.vector_store",
+        "ume.audit",
+        "ume.config",
+        "ume.logging_utils",
+        "ume",
+        "ume_client.ume_pb2",
+        "ume_client.ume_pb2_grpc",
+        "ume_pb2",
+        "ume_pb2_grpc",
+    ):
+        sys.modules.pop(name, None)
 
 
 def test_run_cypher_with_mock():
