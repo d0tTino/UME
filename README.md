@@ -192,8 +192,8 @@ from ume import ResourceScheduler, ScheduledTask
 
 sched = ResourceScheduler(resources={"gpu": 1})
 sched.run([
-    ScheduledTask(func=lambda: do_gpu_work(), resource="gpu"),
-    ScheduledTask(func=lambda: more_gpu_work(), resource="gpu"),
+    ScheduledTask(func=lambda e: do_gpu_work(), resource="gpu"),
+    ScheduledTask(func=lambda e: more_gpu_work(), resource="gpu"),
 ])
 ```
 

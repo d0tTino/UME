@@ -10,7 +10,7 @@ class Task:
     """A unit of work in the DAG."""
 
     name: str
-    func: Callable[[], Any]
+    func: Callable[[threading.Event], Any]
     dependencies: List[str] = field(default_factory=list)
     resource: str = "cpu"
 
@@ -86,7 +86,7 @@ class DAGExecutor:
                 ) -> None:
                     try:
                         with sem_lock:
-                            results[n] = t.func()
+                            results[n] = t.func(self._stop_event)
                     except Exception as exc:
                         exceptions.append(exc)
 
