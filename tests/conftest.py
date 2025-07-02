@@ -23,7 +23,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 # Stub optional dependencies so importing ume modules doesn't fail when they
 # aren't installed. Tests that rely on these packages will provide their own
 # implementations.
-sys.modules.setdefault("httpx", types.ModuleType("httpx"))
+try:
+    import httpx  # noqa: F401
+except Exception:  # pragma: no cover - optional dep may be missing
+    sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
 sys.modules.setdefault("yaml", yaml_stub)
@@ -44,8 +47,14 @@ class _DummyMetric:  # pragma: no cover - simple stub
 prom_stub.Counter = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Histogram = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Gauge = _DummyMetric  # type: ignore[attr-defined]
-sys.modules.setdefault("prometheus_client", prom_stub)
-sys.modules.setdefault("numpy", types.ModuleType("numpy"))
+try:
+    import prometheus_client  # noqa: F401
+except Exception:  # pragma: no cover - optional dep may be missing
+    sys.modules.setdefault("prometheus_client", prom_stub)
+try:
+    import numpy as _np  # noqa: F401
+except Exception:  # pragma: no cover - optional dep may be missing
+    sys.modules.setdefault("numpy", types.ModuleType("numpy"))
 jsonschema_stub = types.ModuleType("jsonschema")
 class _ValidationError(Exception):
     pass

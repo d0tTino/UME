@@ -3,6 +3,7 @@ from typing import Any, cast
 from fastapi.testclient import TestClient
 
 from ume.api import app
+from ume.recommendation_feedback import feedback_store
 from ume.config import settings
 
 
@@ -27,13 +28,25 @@ def test_get_recommendations() -> None:
     assert data and "id" in data[0]
 
 
-def test_feedback() -> None:
+def test_feedback_accept_reject() -> None:
     client = TestClient(app)
     token = _token(client)
     res = client.post(
-        "/recommendations/feedback",
-        json={"id": "rec1", "feedback": "accepted"},
+        "/feedback/accept",
+        json={"id": "rec1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
+
+    res = client.post(
+        "/feedback/reject",
+        json={"id": "rec2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json()["status"] == "ok"
+
+    entries = {(i, s) for i, s, _ in feedback_store.list_feedback()}
+    assert ("rec1", "accepted") in entries
+    assert ("rec2", "rejected") in entries
