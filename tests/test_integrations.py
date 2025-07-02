@@ -31,3 +31,11 @@ def test_letta_wrapper_forwards() -> None:
         assert recall.called
         assert result == {"id": 1}
         assert dict(recall.calls.last.request.url.params) == {"id": "1"}
+
+
+def test_wrapper_batch_endpoint() -> None:
+    client = LangGraph(base_url="http://ume")
+    with respx.mock(assert_all_called=True) as mock:
+        batch = mock.post("http://ume/events/batch").mock(return_value=httpx.Response(200))
+        client.send_events([{"foo": "a"}, {"foo": "b"}])
+        assert batch.called
