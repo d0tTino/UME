@@ -442,6 +442,20 @@ Tokens expire after `UME_OAUTH_TTL` seconds (default 3600).
 The only unauthenticated route is `/metrics`, which exposes Prometheus metrics.
 See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for a sample `.env` file.
 
+### Posting Events
+
+Events can be sent directly to the API using the `/events` endpoint. The JSON
+body must follow the schema expected by `ume.parse_event`.
+
+```bash
+curl -X POST http://localhost:8000/events \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {"node_id": "n1", "attributes": {"name": "demo"}}}'
+```
+
+The event is validated and immediately applied to the configured graph adapter.
+
 ## Configuration Templates
 
 Sample configuration files for common environments are provided in

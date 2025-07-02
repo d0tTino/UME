@@ -5,7 +5,7 @@ import time
 from typing import Any, AsyncGenerator, Dict, List
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from fastapi_limiter.depends import RateLimiter
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -16,6 +16,8 @@ from .document_guru import reformat_document
 from .reliability import filter_low_confidence
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
+from .event import parse_event, EventError
+from .processing import apply_event_to_graph, ProcessingError
 
 # import shared API dependencies
 from . import api_deps as deps
@@ -267,4 +269,19 @@ def api_get_document(
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"id": document_id, "content": doc.get("content", "")}
+
+
+@router.post("/events")
+def api_post_event(
+    data: Dict[str, Any] = Body(...),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+    _: None = Depends(deps.require_token),
+) -> Dict[str, Any]:
+    """Validate and apply an event to the graph."""
+    try:
+        event = parse_event(data)
+        apply_event_to_graph(event, graph)
+    except (EventError, ProcessingError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"status": "ok"}
 
