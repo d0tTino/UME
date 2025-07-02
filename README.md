@@ -344,9 +344,15 @@ UME_AUDIT_SIGNING_KEY=my-ume-key
 See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
 settings.
 
-### 2. Start Redpanda (Kafka) via Docker
-The `docker/docker-compose.yml` file spins up the broker. You can launch the
-stack directly using the CLI:
+### 2. Start the Docker Stack
+The `docker/docker-compose.yml` file now starts Redpanda, the privacy agent **and the API service**.
+Running the stack exposes ready-to-use memory endpoints on `http://localhost:8000`.
+First-time users can spin up the demo stack in one command:
+```bash
+git clone https://github.com/d0tTino/universal-memory-engine.git \
+  && cd universal-memory-engine/docker && docker compose up
+```
+You can also launch everything with the CLI:
 ```bash
 ume-cli up
 ```
