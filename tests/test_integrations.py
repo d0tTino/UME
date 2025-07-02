@@ -11,21 +11,23 @@ def test_langgraph_wrapper_forwards() -> None:
     client = LangGraph(base_url="http://ume", api_key="token")
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
-        recall = mock.post("http://ume/recall").mock(return_value=httpx.Response(200, json={"ok": True}))
+        recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"ok": True}))
         client.send_events([{"foo": "bar"}])
         result = client.recall({"node_id": "n1"})
         assert evt.called
         assert recall.called
         assert result == {"ok": True}
+        assert dict(recall.calls.last.request.url.params) == {"node_id": "n1"}
 
 
 def test_letta_wrapper_forwards() -> None:
     client = Letta(base_url="http://ume")
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
-        recall = mock.post("http://ume/recall").mock(return_value=httpx.Response(200, json={"id": 1}))
+        recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"id": 1}))
         client.send_events([{"foo": 1}])
         result = client.recall({"id": 1})
         assert evt.called
         assert recall.called
         assert result == {"id": 1}
+        assert dict(recall.calls.last.request.url.params) == {"id": "1"}
