@@ -47,6 +47,14 @@ Create an edge.
 ### DELETE `/edges/{source}/{target}/{label}`
 Delete an edge.
 
+### POST `/snapshot/save`
+Write the entire graph state to a JSON file.
+- **Body**: `{"path": "file.json"}`
+
+### POST `/snapshot/load`
+Replace the current graph with the contents of a snapshot file.
+- **Body**: `{"path": "file.json"}`
+
 ### GET `/policies`
 List available Rego policy files.
 

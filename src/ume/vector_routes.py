@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 from . import api_deps as deps
 from .vector_store import VectorStore
+from .graph_adapter import IGraphAdapter
+from .embedding import generate_embedding
 
 router = APIRouter()
 
@@ -41,6 +43,32 @@ def api_search_vectors(
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
     ids = store.query(vector, k=k)
     return {"ids": ids}
+
+
+@router.get("/recall")
+def api_recall(
+    query: str | None = Query(None),
+    vector: List[float] | None = Query(None),
+    k: int = 5,
+    _: str = Depends(deps.get_current_role),
+    store: VectorStore = Depends(deps.get_vector_store),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+) -> Dict[str, Any]:
+    """Return attributes for the ``k`` nearest nodes to ``query`` or ``vector``."""
+    if query is None and vector is None:
+        raise HTTPException(status_code=400, detail="query or vector required")
+    if vector is None and query is not None:
+        vector = generate_embedding(query)
+    assert vector is not None
+    if len(vector) != store.dim:
+        raise HTTPException(status_code=400, detail="Invalid vector dimension")
+    ids = store.query(vector, k=k)
+    nodes = []
+    for node_id in ids:
+        attrs = graph.get_node(node_id)
+        if attrs is not None:
+            nodes.append({"id": node_id, "attributes": attrs})
+    return {"nodes": nodes}
 
 
 @router.get("/vectors/benchmark")

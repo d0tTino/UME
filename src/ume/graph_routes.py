@@ -15,6 +15,7 @@ from .config import settings
 from .document_guru import reformat_document
 from .reliability import filter_low_confidence
 from .graph_adapter import IGraphAdapter
+from .snapshot import load_graph_into_existing, snapshot_graph_to_file
 from .query import Neo4jQueryEngine
 
 # import shared API dependencies
@@ -70,6 +71,10 @@ class TweetCreateRequest(BaseModel):
 
 class DocumentUploadRequest(BaseModel):
     content: str
+
+
+class SnapshotPathRequest(BaseModel):
+    path: str
 
 
 @router.get("/query")
@@ -267,4 +272,36 @@ def api_get_document(
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"id": document_id, "content": doc.get("content", "")}
+
+
+def _require_analytics_role(role: str) -> None:
+    if role != "AnalyticsAgent":
+        raise HTTPException(
+            status_code=403,
+            detail="Only the 'AnalyticsAgent' role may perform this operation",
+        )
+
+
+@router.post("/snapshot/save")
+def api_snapshot_save(
+    req: SnapshotPathRequest,
+    role: str = Depends(deps.get_current_role),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+) -> Dict[str, str]:
+    """Persist the current graph state to ``req.path``."""
+    _require_analytics_role(role)
+    snapshot_graph_to_file(graph, req.path)
+    return {"status": "ok"}
+
+
+@router.post("/snapshot/load")
+def api_snapshot_load(
+    req: SnapshotPathRequest,
+    role: str = Depends(deps.get_current_role),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+) -> Dict[str, str]:
+    """Load graph state from ``req.path`` into the existing graph."""
+    _require_analytics_role(role)
+    load_graph_into_existing(graph, req.path)
+    return {"status": "ok"}
 

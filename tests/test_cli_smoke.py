@@ -16,7 +16,10 @@ CLI_SCRIPT_PATH = os.path.abspath(
 
 # Helper function to run CLI commands
 def run_cli_commands(
-    commands: list[str], cli_args: list[str] | None = None, timeout: int = 5
+    commands: list[str],
+    cli_args: list[str] | None = None,
+    timeout: int = 5,
+    env: dict[str, str] | None = None,
 ) -> tuple[str, str, int]:
     """
     Runs the UME CLI as a subprocess and feeds it a list of commands.
@@ -30,16 +33,18 @@ def run_cli_commands(
         A tuple (stdout, stderr, returncode) from the CLI process. If the CLI
         exits with a non-zero status, the test fails.
     """
-    env = os.environ.copy()
-    env["UME_DB_PATH"] = ":memory:"
-    env["UME_CLI_DB"] = ":memory:"
+    proc_env = os.environ.copy()
+    proc_env["UME_DB_PATH"] = ":memory:"
+    proc_env["UME_CLI_DB"] = ":memory:"
     # Remove coverage-related environment variables that may interfere with
     # subprocess execution. These are added by pytest-cov when running tests
     # with coverage enabled and cause warnings on stderr which break the CLI
     # smoke tests' expectations.
-    for key in list(env.keys()):
+    for key in list(proc_env.keys()):
         if key.startswith("COV_CORE_") or key.startswith("COVERAGE_"):
-            env.pop(key, None)
+            proc_env.pop(key, None)
+    if env:
+        proc_env.update(env)
     process = subprocess.Popen(
         [sys.executable, CLI_SCRIPT_PATH] + (cli_args or []),
         stdin=subprocess.PIPE,
@@ -47,7 +52,7 @@ def run_cli_commands(
         stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",  # Be explicit about encoding
-        env=env,
+        env=proc_env,
     )
     # Join commands with newlines and ensure a final newline for the last command
     # and to trigger EOF for cmdloop if 'exit' is not the last command.
@@ -247,3 +252,46 @@ def test_cli_benchmark_vectors():
     stdout, stderr, rc = run_cli_commands(["benchmark_vectors --num-vectors 10 --num-queries 2", "exit"])
     assert "Avg build time" in stdout
     assert rc == 0
+
+
+def test_cli_new_node_invalid_json() -> None:
+    stdout, stderr, rc = run_cli_commands(["new_node bad '{not_json}'", "exit"])
+    assert "Error:" in stdout
+    assert rc == 0
+
+
+def test_cli_sync_without_peer() -> None:
+    stdout, _, rc = run_cli_commands(["sync", "exit"])
+    assert "Peer cluster not configured" in stdout
+    assert rc == 0
+
+
+def test_cli_set_peer_and_sync_calls_replicator(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib
+    import ume_cli as cli
+    import ume.config as cfg
+    import ume.federation as federation
+
+    importlib.reload(cfg)
+    importlib.reload(cli)
+
+    called: list[str] = []
+
+    class DummyReplicator:
+        def __init__(self, _settings: object, peer: str) -> None:
+            called.append(f"peer={peer}")
+
+        def replicate_once(self) -> None:
+            called.append("replicate_once")
+
+        def stop(self) -> None:
+            called.append("stop")
+
+    monkeypatch.setattr(federation, "ClusterReplicator", DummyReplicator)
+    prompt = cli.UMEPrompt()
+    prompt.do_set_peer("foo:9092")
+    prompt.do_sync("")
+
+    assert "peer=foo:9092" in called
+    assert "replicate_once" in called
+    assert "stop" in called
