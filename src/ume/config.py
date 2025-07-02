@@ -3,6 +3,9 @@ from pydantic import Extra
 from typing import Any
 
 
+DEFAULT_AUDIT_SIGNING_KEY = "default-key"
+
+
 class Settings(BaseSettings):  # type: ignore[misc]
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
@@ -15,7 +18,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_COLD_SNAPSHOT_PATH: str = "ume_cold_snapshot.json"
     UME_COLD_EVENT_AGE_DAYS: int = 180
     UME_AUDIT_LOG_PATH: str = "audit.log"
-    UME_AUDIT_SIGNING_KEY: str = "default-key"
+    UME_AUDIT_SIGNING_KEY: str = DEFAULT_AUDIT_SIGNING_KEY
     UME_CONSENT_LEDGER_PATH: str = "consent_ledger.db"
     UME_FEEDBACK_DB_PATH: str = "feedback.db"
     UME_AGENT_ID: str = "SYSTEM"
@@ -86,7 +89,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     def model_post_init(self, __context: Any) -> None:  # noqa: D401
         """Validate settings after initialization."""
-        if self.UME_AUDIT_SIGNING_KEY == "default-key":
+        if self.UME_AUDIT_SIGNING_KEY == DEFAULT_AUDIT_SIGNING_KEY:
             raise ValueError("UME_AUDIT_SIGNING_KEY must be set to a non-default value")
 
 
