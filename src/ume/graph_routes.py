@@ -15,7 +15,6 @@ from .config import settings
 from .document_guru import reformat_document
 from .reliability import filter_low_confidence
 from .graph_adapter import IGraphAdapter
-from .snapshot import load_graph_into_existing, snapshot_graph_to_file
 from .query import Neo4jQueryEngine
 from .event import parse_event, EventError
 from .processing import apply_event_to_graph, ProcessingError
@@ -175,6 +174,23 @@ def api_redact_node(
 ) -> Dict[str, Any]:
     """Redact (delete) a node by its ID."""
     graph.redact_node(node_id)
+    return {"status": "ok"}
+
+
+@router.post("/events/batch")
+def api_post_events_batch(
+    events: List[Dict[str, Any]] = Body(...),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+    _: None = Depends(deps.require_token),
+) -> Dict[str, Any]:
+    """Apply multiple events sequentially to the graph."""
+    try:
+        for data in events:
+            event = parse_event(data)
+            apply_event_to_graph(event, graph)
+    except (EventError, ProcessingError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     return {"status": "ok"}
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Iterable, Mapping, Any
+from types import TracebackType
 
 import httpx
 
@@ -15,11 +16,14 @@ class LangGraph:
 
     def send_events(self, events: Iterable[Mapping[str, Any]]) -> None:
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-        self._client.post(f"{self.base_url}/events", json=list(events), headers=headers)
+        for evt in events:
+            self._client.post(f"{self.base_url}/events", json=evt, headers=headers)
 
     def recall(self, payload: Mapping[str, Any]) -> Any:
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-        resp = self._client.post(f"{self.base_url}/recall", json=payload, headers=headers)
+        resp = self._client.get(
+            f"{self.base_url}/recall", params=payload, headers=headers
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -29,5 +33,10 @@ class LangGraph:
     def __enter__(self) -> "LangGraph":
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         self.close()
