@@ -15,6 +15,7 @@ from .config import settings
 from .document_guru import reformat_document
 from .reliability import filter_low_confidence
 from .graph_adapter import IGraphAdapter
+from .snapshot import load_graph_into_existing, snapshot_graph_to_file
 from .query import Neo4jQueryEngine
 from .event import parse_event, EventError
 from .processing import apply_event_to_graph, ProcessingError
@@ -72,6 +73,10 @@ class TweetCreateRequest(BaseModel):
 
 class DocumentUploadRequest(BaseModel):
     content: str
+
+
+class SnapshotPathRequest(BaseModel):
+    path: str
 
 
 @router.get("/query")
@@ -283,5 +288,6 @@ def api_post_event(
         apply_event_to_graph(event, graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
     return {"status": "ok"}
 

@@ -165,3 +165,35 @@ def test_scheduler_singleton_and_cleanup() -> None:
 
     stop_memory_aging_scheduler()
     assert not thread3.is_alive()
+
+
+def test_scheduler_restarts_with_new_options() -> None:
+    """Starting with new options stops the old thread."""
+    episodic = EpisodicMemory(db_path=":memory:")
+    semantic = SemanticMemory(db_path=":memory:")
+
+    thread1, _ = start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    thread2, _ = start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=1,
+        cold_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    assert thread1 is not thread2
+    assert not thread1.is_alive()
+
+    stop_memory_aging_scheduler()
+    assert not thread2.is_alive()

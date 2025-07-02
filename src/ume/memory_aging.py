@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
+from typing import Any
 
 from .memory import EpisodicMemory, SemanticMemory, ColdMemory
 from .vector_store import VectorStore
@@ -13,8 +14,10 @@ logger = logging.getLogger(__name__)
 
 _thread: threading.Thread | None = None
 _stop_event: threading.Event | None = None
+_thread_params: tuple[Any, ...] | None = None
 _vector_thread: threading.Thread | None = None
 _vector_stop: threading.Event | None = None
+_vector_params: tuple[Any, ...] | None = None
 
 
 def start_memory_aging_scheduler(
@@ -38,10 +41,24 @@ def start_memory_aging_scheduler(
 
     Pass ``vector_age_seconds=None`` to skip vector expiration checks.
     """
-    global _thread, _stop_event
+    global _thread, _stop_event, _thread_params
+
+    params = (
+        episodic,
+        semantic,
+        cold,
+        vector_store,
+        event_age_seconds,
+        cold_age_seconds,
+        vector_age_seconds,
+        interval_seconds,
+        vector_check_interval,
+    )
 
     if _thread and _thread.is_alive():
-        return _thread, lambda: None
+        if params == _thread_params:
+            return _thread, lambda: None
+        stop_memory_aging_scheduler()
 
     stop_event = threading.Event()
     last_vector_check = 0.0
@@ -121,6 +138,7 @@ def start_memory_aging_scheduler(
 
     _thread = thread
     _stop_event = stop_event
+    _thread_params = params
 
     def stop() -> None:
         stop_event.set()
@@ -154,10 +172,14 @@ def start_vector_age_scheduler(
     log: bool = False,
 ) -> tuple[threading.Thread, Callable[[], None]]:
     """Periodically check vector age and record metrics."""
-    global _vector_thread, _vector_stop
+    global _vector_thread, _vector_stop, _vector_params
+
+    params = (store, interval_seconds, warn_threshold, log)
 
     if _vector_thread and _vector_thread.is_alive():
-        return _vector_thread, lambda: None
+        if params == _vector_params:
+            return _vector_thread, lambda: None
+        stop_vector_age_scheduler()
 
     stop_event = threading.Event()
 
@@ -177,6 +199,7 @@ def start_vector_age_scheduler(
 
     _vector_thread = thread
     _vector_stop = stop_event
+    _vector_params = params
 
     def stop() -> None:
         stop_event.set()
@@ -187,18 +210,19 @@ def start_vector_age_scheduler(
 
 def stop_vector_age_scheduler() -> None:
     """Stop the vector age scheduler if running."""
-    global _vector_thread, _vector_stop
+    global _vector_thread, _vector_stop, _vector_params
     if _vector_stop is not None:
         _vector_stop.set()
     if _vector_thread is not None:
         _vector_thread.join()
     _vector_thread = None
     _vector_stop = None
+    _vector_params = None
 
 
 def stop_memory_aging_scheduler() -> None:
     """Stop the memory aging scheduler if running."""
-    global _thread, _stop_event
+    global _thread, _stop_event, _thread_params
 
     if _stop_event is not None:
         _stop_event.set()
@@ -206,3 +230,4 @@ def stop_memory_aging_scheduler() -> None:
         _thread.join()
     _thread = None
     _stop_event = None
+    _thread_params = None

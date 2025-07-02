@@ -408,6 +408,20 @@ You can also search the vector store with either UI:
 poetry run python frontend/app.py --username ume --password password search "1,0,0" --k 3
 ```
 
+### 9. Integration Notebooks
+
+Simple wrappers for [LangGraph](https://github.com/langchain-ai/langgraph) and
+[Letta](https://github.com/stratusphd/letta) forward events to the UME API. They
+are installed with the optional `integrations` extras:
+
+```bash
+pip install ume[integrations]
+```
+
+See [`examples/langgraph_integration.ipynb`](examples/langgraph_integration.ipynb)
+and [`examples/letta_integration.ipynb`](examples/letta_integration.ipynb) for
+usage.
+
 ### Building and Deploying the Frontend
 
 The React dashboard in `frontend/` is fully static and does not require a build
