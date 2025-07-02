@@ -87,6 +87,40 @@ Return basic graph and vector index statistics.
 Return recent audit log entries, newest first.
 - **Query parameters**: optional `limit` (default `10`).
 
+### POST `/events`
+Validate and apply an event to the graph.
+- **Body fields**: must conform to `ume.parse_event` including `event_type`,
+  `timestamp`, and any type-specific keys like `node_id`, `target_node_id`,
+  `label`, and `payload`.
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/events \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"event_type":"CREATE_NODE","timestamp":1,"node_id":"n1","payload":{"node_id":"n1"}}'
+```
+
+### GET `/recall`
+Return attributes for the `k` nearest nodes to `query` or `vector`.
+- **Query parameters**: `query` text, or repeated `vector` values forming the
+  query vector; optional `k` (default `5`).
+
+Example using a text query:
+
+```bash
+curl -X GET -H "Authorization: Bearer <token>" \
+  'http://localhost:8000/recall?query=hello&k=2'
+```
+
+Example using a vector:
+
+```bash
+curl -X GET -H "Authorization: Bearer <token>" \
+  'http://localhost:8000/recall?vector=0.1&vector=0.2&k=2'
+```
+
 ## API Documentation
 
 To explore the API interactively, run the FastAPI server and open the Swagger UI:
