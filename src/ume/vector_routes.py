@@ -48,6 +48,7 @@ def api_benchmark_vectors(
     use_gpu: bool = Query(False),
     num_vectors: int = 1000,
     num_queries: int = 100,
+    runs: int = 1,
     _: str = Depends(deps.get_current_role),
     store: VectorStore = Depends(deps.get_vector_store),
 ) -> Dict[str, Any]:
@@ -59,5 +60,6 @@ def api_benchmark_vectors(
         dim=store.dim,
         num_vectors=num_vectors,
         num_queries=num_queries,
+        runs=runs,
     )
 

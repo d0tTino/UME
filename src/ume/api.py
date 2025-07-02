@@ -28,6 +28,7 @@ from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 
 from .rbac_adapter import AccessDeniedError
 from . import create_vector_store
+
 from .api_deps import (
     POLICY_DIR,  # noqa: F401 re-exported for tests
     TOKENS,  # noqa: F401 re-exported for tests
@@ -42,6 +43,7 @@ from .metrics_routes import router as metrics_router
 from .dashboard_routes import router as dashboard_router
 from .pii_routes import router as pii_router
 from .recommendations_routes import router as recommendations_router
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,7 @@ app.include_router(metrics_router)
 app.include_router(dashboard_router)
 app.include_router(pii_router)
 app.include_router(recommendations_router)
+
 
 
 class _MemoryRedis:
@@ -156,4 +159,5 @@ async def access_denied_handler(
     request: Request, exc: AccessDeniedError
 ) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
+
 

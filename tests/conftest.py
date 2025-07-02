@@ -28,6 +28,7 @@ import importlib.util
 if importlib.util.find_spec("httpx") is None:
     sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 
+
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
 if importlib.util.find_spec("yaml") is None:
@@ -50,10 +51,12 @@ class _DummyMetric:  # pragma: no cover - simple stub
 prom_stub.Counter = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Histogram = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Gauge = _DummyMetric  # type: ignore[attr-defined]
+
 if importlib.util.find_spec("prometheus_client") is None:
     sys.modules.setdefault("prometheus_client", prom_stub)
 
 if importlib.util.find_spec("numpy") is None:
+
     sys.modules.setdefault("numpy", types.ModuleType("numpy"))
 jsonschema_stub = types.ModuleType("jsonschema")
 class _ValidationError(Exception):

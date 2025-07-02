@@ -103,7 +103,7 @@ def test_benchmark_endpoint():
     )
     assert res.status_code == 200
     data = res.json()
-    assert "build_time" in data and "avg_query_latency" in data
+    assert "avg_build_time" in data and "avg_query_latency" in data
 
 
 def test_benchmark_requires_authentication() -> None:
