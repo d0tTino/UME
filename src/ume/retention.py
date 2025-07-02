@@ -17,12 +17,18 @@ _vector_stop: threading.Event | None = None
 
 
 class _SupportsPurge(Protocol):
+    """Graph-like object able to purge old records."""
+
     def purge_old_records(self, max_age_seconds: int) -> None:
+        """Remove items older than ``max_age_seconds`` from the graph."""
         ...
 
 
 class _SupportsVectorAge(Protocol):
+    """Vector store with introspection of embedding timestamps."""
+
     def get_vector_timestamps(self) -> dict[str, int]:
+        """Return mapping of vector IDs to their creation timestamps."""
         ...
 
 
@@ -97,6 +103,8 @@ def start_vector_age_scheduler(
     warn_threshold: int = 0,
     log: bool = False,
 ) -> tuple[threading.Thread, Callable[[], None]]:
+    """Run ``_check_stale_vectors`` periodically in a background thread."""
+
     global _vector_thread, _vector_stop
 
     if _vector_thread and _vector_thread.is_alive():
@@ -125,6 +133,8 @@ def start_vector_age_scheduler(
 
 
 def stop_vector_age_scheduler() -> None:
+    """Terminate the vector age scheduler if it is running."""
+
     global _vector_thread, _vector_stop
     if _vector_stop is not None:
         _vector_stop.set()
