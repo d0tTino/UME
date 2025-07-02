@@ -84,6 +84,8 @@ except Exception:  # pragma: no cover - allow import without environment setup
 from .event import Event, EventType, parse_event, EventError
 from .graph import MockGraph
 from .persistent_graph import PersistentGraph
+from .postgres_graph import PostgresGraph
+from .redis_graph_adapter import RedisGraphAdapter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
@@ -200,6 +202,8 @@ __all__ = [
     "EventError",
     "MockGraph",
     "PersistentGraph",
+    "PostgresGraph",
+    "RedisGraphAdapter",
     "Neo4jGraph",
     "IGraphAdapter",
     "RoleBasedGraphAdapter",
