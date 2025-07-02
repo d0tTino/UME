@@ -34,7 +34,7 @@ from pydantic import BaseModel
 from .audit import get_audit_entries
 from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter
-from . import VectorStore, create_default_store
+from . import VectorStore, create_vector_store
 from .api_deps import (
     POLICY_DIR,  # noqa: F401 re-exported for tests
     TOKENS,
