@@ -111,3 +111,67 @@ def test_benchmark_requires_authentication() -> None:
     client = TestClient(app)
     res = client.get("/vectors/benchmark")
     assert res.status_code == 401
+
+
+def test_recall_by_query(monkeypatch) -> None:
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+
+    graph = MockGraph()
+    graph.add_node("a", {"val": 1})
+    graph.add_node("b", {"val": 2})
+    configure_graph(graph)
+    store = app.state.vector_store
+    store.add("a", [1.0, 0.0])
+    store.add("b", [0.0, 1.0])
+
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda q: [1.0, 0.0])
+    client = TestClient(app)
+    token = client.post(
+        "/auth/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    ).json()["access_token"]
+    res = client.get(
+        "/recall",
+        params={"query": "foo", "k": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data == {"nodes": [{"id": "a", "attributes": {"val": 1}}]}
+
+
+def test_recall_invalid_dimension() -> None:
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+
+    graph = MockGraph()
+    graph.add_node("a", {})
+    configure_graph(graph)
+    client = TestClient(app)
+    token = client.post(
+        "/auth/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    ).json()["access_token"]
+    res = client.get(
+        "/recall",
+        params=[("vector", 0.0)],
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
+    assert res.json()["detail"] == "Invalid vector dimension"
+
+
+def test_recall_unauthorized() -> None:
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+
+    graph = MockGraph()
+    graph.add_node("a", {})
+    configure_graph(graph)
+    client = TestClient(app)
+    res = client.get("/recall", params={"vector": [0.0, 1.0]})
+    assert res.status_code == 401
