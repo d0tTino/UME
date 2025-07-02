@@ -345,8 +345,16 @@ See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
 settings.
 
 ### 2. Start Redpanda (Kafka) via Docker
-The `docker/docker-compose.yml` file spins up the broker. From the repository
-root you can start it with:
+The `docker/docker-compose.yml` file spins up the broker. You can launch the
+stack directly using the CLI:
+```bash
+ume-cli up
+```
+To stop all containers run:
+```bash
+ume-cli down
+```
+If you prefer to call Docker Compose manually:
 ```bash
 cd docker && docker compose up -d
 ```
