@@ -241,6 +241,7 @@ def test_dashboard_endpoints() -> None:
         ("get", "/dashboard/stats", None, None),
         ("get", "/dashboard/recent_events", None, None),
         ("get", "/vectors/benchmark", None, None),
+        ("get", "/recall", None, [("query", "test")]),
     ],
 )
 def test_endpoints_require_authentication(

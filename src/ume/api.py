@@ -27,8 +27,9 @@ from fastapi.responses import JSONResponse, Response
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 
 from .rbac_adapter import AccessDeniedError
-from .graph_adapter import IGraphAdapter
-from . import VectorStore, create_vector_store
+from .graph_adapter import IGraphAdapter  # noqa: F401
+from . import VectorStore  # noqa: F401
+from . import create_vector_store
 
 from .api_deps import (
     POLICY_DIR,  # noqa: F401 re-exported for tests
