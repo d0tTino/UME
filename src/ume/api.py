@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Awaitable, Callable, Dict, List, cast
+from typing import Any, Awaitable, Callable, cast
 from collections import defaultdict
 
 try:  # pragma: no cover - optional dependency
@@ -21,32 +21,27 @@ try:  # pragma: no cover - optional dependency
     from opentelemetry import trace
 except Exception:  # pragma: no cover - allow tests without opentelemetry installed
     trace = None
-from uuid import uuid4
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
-from fastapi.security import OAuth2PasswordRequestForm
-
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
-from pydantic import BaseModel
 
-from .audit import get_audit_entries
 from .rbac_adapter import AccessDeniedError
-from .graph_adapter import IGraphAdapter
-from . import VectorStore, create_default_store
+from . import create_vector_store
 from .api_deps import (
     POLICY_DIR,  # noqa: F401 re-exported for tests
-    TOKENS,
+    TOKENS,  # noqa: F401 re-exported for tests
     configure_graph,  # noqa: F401 re-exported for tests
     configure_vector_store,  # noqa: F401 re-exported for tests
-    get_current_role,
-    get_graph,
-    get_vector_store,
 )
 from .graph_routes import router as graph_router
 from .vector_routes import router as vector_router
 from .policy_routes import router as policy_router
+from .auth_routes import router as auth_router
+from .metrics_routes import router as metrics_router
+from .dashboard_routes import router as dashboard_router
+from .pii_routes import router as pii_router
+from .recommendations_routes import router as recommendations_router
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +62,11 @@ if is_tracing_enabled() and trace is not None:
 app.include_router(graph_router)
 app.include_router(vector_router)
 app.include_router(policy_router)
+app.include_router(auth_router)
+app.include_router(metrics_router)
+app.include_router(dashboard_router)
+app.include_router(pii_router)
+app.include_router(recommendations_router)
 
 
 class _MemoryRedis:
@@ -156,139 +156,4 @@ async def access_denied_handler(
     request: Request, exc: AccessDeniedError
 ) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-@app.post("/token")
-def issue_token(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
-    if (
-        form_data.username == settings.UME_OAUTH_USERNAME
-        and form_data.password == settings.UME_OAUTH_PASSWORD
-    ):
-        token = str(uuid4())
-        expires_at = time.time() + settings.UME_OAUTH_TTL
-        TOKENS[token] = (settings.UME_OAUTH_ROLE, expires_at)
-        return TokenResponse(access_token=token)
-    raise HTTPException(status_code=400, detail="Invalid credentials")
-    
-
-@app.get("/metrics")
-def metrics_endpoint(_: str = Depends(get_current_role)) -> Response:
-    """Expose Prometheus metrics."""
-    data = generate_latest()
-    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
-
-
-@app.get("/metrics/summary")
-def metrics_summary(
-    _: str = Depends(get_current_role),
-    store: VectorStore = Depends(get_vector_store),
-) -> Dict[str, Any]:
-    """Return a summary of core Prometheus metrics."""
-    total_requests = 0.0
-    by_status: Dict[str, float] = {}
-    for metric in REQUEST_COUNT.collect():
-        for s in metric.samples:
-            if s.name.endswith("_total"):
-                status = s.labels.get("status", "unknown")
-                total_requests += s.value
-                by_status[status] = by_status.get(status, 0) + s.value
-
-    latency_sum = 0.0
-    latency_count = 0.0
-    for metric in REQUEST_LATENCY.collect():
-        for s in metric.samples:
-            if s.name.endswith("_sum"):
-                latency_sum += s.value
-            elif s.name.endswith("_count"):
-                latency_count += s.value
-    avg_latency = latency_sum / latency_count if latency_count else 0.0
-
-    index_size = len(getattr(store, "idx_to_id", []))
-    return {
-        "total_requests": int(total_requests),
-        "request_count_by_status": {k: int(v) for k, v in by_status.items()},
-        "average_request_latency": avg_latency,
-        "vector_index_size": index_size,
-    }
-
-
-@app.get("/dashboard/stats")
-def dashboard_stats(
-    _: str = Depends(get_current_role),
-    graph: IGraphAdapter = Depends(get_graph),
-    store: VectorStore = Depends(get_vector_store),
-) -> Dict[str, Any]:
-    """Return basic graph and vector index statistics for the dashboard."""
-    node_count = len(graph.get_all_node_ids())
-    edge_count = len(graph.get_all_edges())
-    index_size = len(getattr(store, "idx_to_id", []))
-    return {
-        "node_count": node_count,
-        "edge_count": edge_count,
-        "vector_index_size": index_size,
-    }
-
-
-@app.get("/dashboard/recent_events")
-def dashboard_recent_events(
-    limit: int = 10,
-    _: str = Depends(get_current_role),
-) -> List[Dict[str, Any]]:
-    """Return recent audit log entries for the dashboard, newest first."""
-    entries = get_audit_entries()
-    return list(reversed(entries[-limit:]))
-
-
-def _redaction_count() -> int:
-    """Return the number of payload redactions recorded in the audit log."""
-    entries = get_audit_entries()
-    return sum(
-        1 for e in entries if "payload_redacted" in str(e.get("reason", ""))
-    )
-
-
-@app.get("/pii/redactions")
-def pii_redactions(_: str = Depends(get_current_role)) -> Dict[str, int]:
-    """Return the total count of redacted payloads."""
-    return {"redacted": _redaction_count()}
-
-
-class Recommendation(BaseModel):
-    id: str
-    action: str
-
-
-RECOMMENDATIONS: list[Recommendation] = [
-    Recommendation(id="rec1", action="Upgrade vector index"),
-    Recommendation(id="rec2", action="Review new node attributes"),
-]
-
-FEEDBACK: dict[str, list[str]] = defaultdict(list)
-
-
-@app.get("/recommendations")
-def get_recommendations(
-    _: str = Depends(get_current_role),
-) -> list[Recommendation]:
-    """Return overseer recommended actions."""
-    return RECOMMENDATIONS
-
-
-class RecommendationFeedback(BaseModel):
-    id: str
-    feedback: str
-
-
-@app.post("/recommendations/feedback")
-def submit_feedback(
-    req: RecommendationFeedback, _: str = Depends(get_current_role)
-) -> Dict[str, str]:
-    """Record user feedback for a recommendation."""
-    FEEDBACK[req.id].append(req.feedback)
-    return {"status": "ok"}
 

@@ -172,10 +172,8 @@ from .resources import (
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 
-try:
-    api = importlib.import_module('.api', __name__)
-except Exception:
-    api = None  # type: ignore[assignment]
+# Import the API lazily via __getattr__ to avoid circular imports during
+# initialization. The ``api`` module will be loaded on first attribute access.
 from .reliability import score_text, filter_low_confidence  # noqa: E402
 from ._internal.listeners import register_listener  # noqa: E402
 

@@ -23,10 +23,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 # Stub optional dependencies so importing ume modules doesn't fail when they
 # aren't installed. Tests that rely on these packages will provide their own
 # implementations.
-sys.modules.setdefault("httpx", types.ModuleType("httpx"))
+import importlib.util
+
+if importlib.util.find_spec("httpx") is None:
+    sys.modules.setdefault("httpx", types.ModuleType("httpx"))
+
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
-sys.modules.setdefault("yaml", yaml_stub)
+if importlib.util.find_spec("yaml") is None:
+    sys.modules.setdefault("yaml", yaml_stub)
+
 prom_stub = types.ModuleType("prometheus_client")
 class _DummyMetric:  # pragma: no cover - simple stub
     def __init__(self, *_: object, **__: object) -> None:
@@ -44,8 +50,11 @@ class _DummyMetric:  # pragma: no cover - simple stub
 prom_stub.Counter = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Histogram = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Gauge = _DummyMetric  # type: ignore[attr-defined]
-sys.modules.setdefault("prometheus_client", prom_stub)
-sys.modules.setdefault("numpy", types.ModuleType("numpy"))
+if importlib.util.find_spec("prometheus_client") is None:
+    sys.modules.setdefault("prometheus_client", prom_stub)
+
+if importlib.util.find_spec("numpy") is None:
+    sys.modules.setdefault("numpy", types.ModuleType("numpy"))
 jsonschema_stub = types.ModuleType("jsonschema")
 class _ValidationError(Exception):
     pass

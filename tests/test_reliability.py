@@ -9,7 +9,7 @@ from ume.config import settings
 
 def _token(client: TestClient) -> str:
     res = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     )
     token = res.json()["access_token"]
