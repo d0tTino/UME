@@ -12,14 +12,15 @@ export default function Recommendations({ token }) {
       .then((data) => setRecs(data));
   }, [token]);
 
-  const sendFeedback = async (id, feedback) => {
-    await fetch('/recommendations/feedback', {
+  const sendFeedback = async (id, accepted) => {
+    const url = accepted ? '/feedback/accept' : '/feedback/reject';
+    await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + token,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ id, feedback }),
+      body: JSON.stringify({ id }),
     });
   };
 
@@ -31,13 +32,13 @@ export default function Recommendations({ token }) {
           <li key={r.id}>
             {r.action}
             <button
-              onClick={() => sendFeedback(r.id, 'accepted')}
+              onClick={() => sendFeedback(r.id, true)}
               style={{ marginLeft: '4px' }}
             >
               Accept
             </button>
             <button
-              onClick={() => sendFeedback(r.id, 'rejected')}
+              onClick={() => sendFeedback(r.id, false)}
               style={{ marginLeft: '4px' }}
             >
               Reject

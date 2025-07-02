@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 try:  # use real httpx if available for API tests
     import httpx as _real_httpx  # noqa: F401
 except Exception:  # pragma: no cover - httpx optional in many tests
+
     sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
@@ -55,6 +56,7 @@ except Exception:  # pragma: no cover - optional for most tests
 try:  # use real numpy if available for vector benchmark tests
     import numpy as _real_numpy  # noqa: F401
 except Exception:  # pragma: no cover - numpy optional for most tests
+
     sys.modules.setdefault("numpy", types.ModuleType("numpy"))
 jsonschema_stub = types.ModuleType("jsonschema")
 class _ValidationError(Exception):
