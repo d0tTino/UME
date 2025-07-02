@@ -21,8 +21,8 @@ def test_benchmark_vector_store_structure():
     res = benchmarks.benchmark_vector_store(
         use_gpu=False, dim=2, num_vectors=10, num_queries=5
     )
-    assert set(res.keys()) == {"build_time", "avg_query_latency"}
-    assert isinstance(res["build_time"], float)
+    assert set(res.keys()) == {"avg_build_time", "avg_query_latency"}
+    assert isinstance(res["avg_build_time"], float)
     assert isinstance(res["avg_query_latency"], float)
 
 
@@ -39,5 +39,5 @@ def test_run_benchmarks_csv(tmp_path):
     assert len(results) == 2
     with csv_path.open() as f:
         header = next(csv.reader(f))
-        assert header == ["run", "build_time", "avg_query_latency"]
+        assert header == ["run", "avg_build_time", "avg_query_latency"]
 

@@ -245,5 +245,5 @@ def test_cli_benchmark_vectors():
     if not hasattr(faiss, "IndexFlatL2"):
         pytest.skip("faiss is missing required functionality")
     stdout, stderr, rc = run_cli_commands(["benchmark_vectors --num-vectors 10 --num-queries 2", "exit"])
-    assert "Index build time" in stdout
+    assert "Avg build time" in stdout
     assert rc == 0
