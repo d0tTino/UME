@@ -69,10 +69,19 @@ def run_watcher(paths: Iterable[str], runtime: float | None = None) -> None:
     producer = Producer({"bootstrap.servers": settings.KAFKA_BOOTSTRAP_SERVERS})
     observer = Observer()
     handler = DevLogHandler(producer)
+    watched_paths: list[str] = []
     for p in paths:
-        observer.schedule(handler, str(Path(p)), recursive=True)
+        path = Path(p)
+        if not path.exists():
+            logger.warning("Path %s does not exist, skipping", path)
+            continue
+        observer.schedule(handler, str(path), recursive=True)
+        watched_paths.append(str(path))
+    if not watched_paths:
+        logger.warning("No existing paths to watch; exiting")
+        return
     observer.start()
-    logger.info("Watching %s", list(paths))
+    logger.info("Watching %s", watched_paths)
 
     should_stop = False
 
