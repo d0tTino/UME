@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import types
+import importlib
 from pathlib import Path
 import os
 
@@ -23,8 +24,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 # Stub optional dependencies so importing ume modules doesn't fail when they
 # aren't installed. Tests that rely on these packages will provide their own
 # implementations.
-import importlib.util
-
 if importlib.util.find_spec("httpx") is None:
     sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 
@@ -56,8 +55,8 @@ if importlib.util.find_spec("prometheus_client") is None:
     sys.modules.setdefault("prometheus_client", prom_stub)
 
 if importlib.util.find_spec("numpy") is None:
-
     sys.modules.setdefault("numpy", types.ModuleType("numpy"))
+
 jsonschema_stub = types.ModuleType("jsonschema")
 class _ValidationError(Exception):
     pass
@@ -67,7 +66,31 @@ def _validate(*_: object, **__: object) -> None:
 
 jsonschema_stub.validate = _validate  # type: ignore[attr-defined]
 jsonschema_stub.ValidationError = _ValidationError  # type: ignore[attr-defined]
-sys.modules.setdefault("jsonschema", jsonschema_stub)
+if importlib.util.find_spec("jsonschema") is None:
+    sys.modules.setdefault("jsonschema", jsonschema_stub)
+
+# Additional optional packages used in some modules. These are large or
+# platform-specific dependencies that aren't needed for most unit tests, so we
+# provide lightweight stubs when they aren't installed.
+_OPTIONAL_PACKAGES = [
+    "confluent_kafka",
+    "structlog",
+    "neo4j",
+]
+
+for _package in _OPTIONAL_PACKAGES:
+    if importlib.util.find_spec(_package) is None:
+        module = types.ModuleType(_package)
+        if _package == "confluent_kafka":
+            class _Dummy:
+                pass
+
+            module.Consumer = _Dummy
+            module.Producer = _Dummy
+            module.KafkaError = _Dummy
+            module.KafkaException = Exception
+            module.Message = _Dummy
+        sys.modules.setdefault(_package, module)
 
 try:
     from ume.pipeline import privacy_agent as privacy_agent_module

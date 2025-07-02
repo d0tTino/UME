@@ -63,6 +63,8 @@ def dummy_create() -> DummyVS:
 
 package.VectorStore = DummyVS  # type: ignore[attr-defined]
 package.create_vector_store = dummy_create  # type: ignore[attr-defined]
+package.create_default_store = dummy_create  # type: ignore[attr-defined]
+
 spec_api = importlib.util.spec_from_file_location("ume.api", root / "src" / "ume" / "api.py")
 assert spec_api and spec_api.loader
 api_module = importlib.util.module_from_spec(spec_api)
