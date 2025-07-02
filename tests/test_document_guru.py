@@ -29,7 +29,7 @@ def client_and_graph():
 
 def _token(client: TestClient) -> str:
     return client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
 

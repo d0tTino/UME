@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 POLICY_DIR = Path(__file__).with_name("plugins") / "alignment" / "policies"
 
 # OAuth2 configuration and issued tokens
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 TOKENS: Dict[str, tuple[str, float]] = {}
 
 

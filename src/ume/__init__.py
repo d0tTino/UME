@@ -29,6 +29,7 @@ except Exception:  # pragma: no cover - allow import without environment setup
         UME_AUDIT_LOG_PATH="/tmp/audit.log",
         UME_AUDIT_SIGNING_KEY="stub",
         UME_CONSENT_LEDGER_PATH="consent_ledger.db",
+        UME_FEEDBACK_DB_PATH="feedback.db",
         UME_AGENT_ID="SYSTEM",
         UME_EMBED_MODEL="all-MiniLM-L6-v2",
         UME_CLI_DB="ume_graph.db",
@@ -172,10 +173,8 @@ from .resources import (
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 
-try:
-    api = importlib.import_module('.api', __name__)
-except Exception:
-    api = None  # type: ignore[assignment]
+# Import the API lazily via __getattr__ to avoid circular imports during
+# initialization. The ``api`` module will be loaded on first attribute access.
 from .reliability import score_text, filter_low_confidence  # noqa: E402
 from ._internal.listeners import register_listener  # noqa: E402
 
@@ -287,6 +286,7 @@ _KNOWN_SUBMODULES = {
     "plugins",
     "grpc_service",
     "vector_store",
+    "recommendation_feedback",
     "resources",
     "api",
 }

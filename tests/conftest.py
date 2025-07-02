@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 if importlib.util.find_spec("httpx") is None:
     sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 
+
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
 if importlib.util.find_spec("yaml") is None:
@@ -49,6 +50,7 @@ class _DummyMetric:  # pragma: no cover - simple stub
 prom_stub.Counter = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Histogram = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Gauge = _DummyMetric  # type: ignore[attr-defined]
+
 if importlib.util.find_spec("prometheus_client") is None:
     sys.modules.setdefault("prometheus_client", prom_stub)
 

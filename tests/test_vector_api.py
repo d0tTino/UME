@@ -17,7 +17,7 @@ def test_add_vector_authorized() -> None:
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.post(
@@ -33,7 +33,7 @@ def test_add_vector_invalid_dimension() -> None:
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.post(
@@ -60,7 +60,7 @@ def test_search_vectors() -> None:
     store.add("b", [1, 0])
     store.add("c", [2, 0])
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.get(
@@ -78,7 +78,7 @@ def test_search_vectors_invalid_dimension() -> None:
     store = app.state.vector_store
     store.add("a", [0, 0])
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.get(
@@ -94,7 +94,7 @@ def test_benchmark_endpoint():
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.get(
@@ -103,7 +103,7 @@ def test_benchmark_endpoint():
     )
     assert res.status_code == 200
     data = res.json()
-    assert "build_time" in data and "avg_query_latency" in data
+    assert "avg_build_time" in data and "avg_query_latency" in data
 
 
 def test_benchmark_requires_authentication() -> None:

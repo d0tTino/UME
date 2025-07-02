@@ -367,6 +367,7 @@ class UMEPrompt(Cmd):
         parser.add_argument("--gpu", action="store_true")
         parser.add_argument("--num-vectors", type=int, default=1000)
         parser.add_argument("--num-queries", type=int, default=100)
+        parser.add_argument("--runs", type=int, default=1)
         try:
             opts = parser.parse_args(shlex.split(arg))
         except SystemExit:
@@ -376,9 +377,10 @@ class UMEPrompt(Cmd):
             dim=settings.UME_VECTOR_DIM,
             num_vectors=opts.num_vectors,
             num_queries=opts.num_queries,
+            runs=opts.runs,
         )
         print(
-            f"Index build time: {result['build_time']:.2f}s, "
+            f"Avg build time: {result['avg_build_time']:.2f}s, "
             f"Avg query latency: {result['avg_query_latency']*1000:.3f}ms"
         )
 
