@@ -3,7 +3,6 @@
 # ruff: noqa: E402
 
 import importlib  # noqa: E402
-import os  # noqa: E402
 import sys  # noqa: E402
 import types  # noqa: E402
 from types import SimpleNamespace
@@ -12,12 +11,11 @@ def _make_stub(name: str) -> types.ModuleType:
     stub = types.ModuleType(name)
     return stub
 
-os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "stub")
 try:  # Expose config for tests as early as possible
     config = importlib.import_module(".config", __name__)
     Settings = config.Settings
     setattr(sys.modules[__name__], "config", config)
-except Exception:  # pragma: no cover - allow import without environment setup
+except ImportError:  # pragma: no cover - allow import without environment setup
     stub = _make_stub("ume.config")
     sys.modules["ume.config"] = stub
     stub.settings = SimpleNamespace(  # type: ignore[attr-defined]

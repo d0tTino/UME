@@ -306,6 +306,7 @@ evaluates them using the built-in `RegoPolicyEngine`. Policies should define
 - Python **3.10** or newer
 - Poetry (https://python-poetry.org)
 - Docker & Docker Compose
+- A non-default `UME_AUDIT_SIGNING_KEY` environment variable
 - See [docs/WINDOWS_QUICKSTART.md](docs/WINDOWS_QUICKSTART.md) for Windows-specific instructions
 
 ### 1. Install Python Dependencies
