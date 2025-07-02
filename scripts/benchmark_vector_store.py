@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--dim", type=int, default=DEF_DIM, help="Vector dimension")
     parser.add_argument("--num-vectors", type=int, default=DEF_NUM_VECTORS, help="Number of vectors")
     parser.add_argument("--num-queries", type=int, default=DEF_QUERIES, help="Number of queries")
+    parser.add_argument("--runs", type=int, default=1, help="Number of runs")
     args = parser.parse_args()
 
     if args.use_gpu and not hasattr(faiss, "StandardGpuResources"):
@@ -30,10 +31,11 @@ def main() -> None:
         dim=args.dim,
         num_vectors=args.num_vectors,
         num_queries=args.num_queries,
+        runs=args.runs,
     )
     mode = "GPU" if args.use_gpu else "CPU"
     print(
-        f"Build time: {result['build_time']:.3f}s\n"
+        f"Average build time: {result['avg_build_time']:.3f}s\n"
         f"Average latency ({mode}): {result['avg_query_latency']:.6f}s per query"
     )
 

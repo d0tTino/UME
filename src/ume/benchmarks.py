@@ -21,23 +21,31 @@ def benchmark_vector_store(
     dim: int = DEF_DIM,
     num_vectors: int = DEF_NUM_VECTORS,
     num_queries: int = DEF_QUERIES,
+    runs: int = 1,
 ) -> Dict[str, float]:
-    """Populate a ``VectorStore`` and measure build time and query latency."""
+    """Populate a ``VectorStore`` and measure average build and query time."""
 
-    store = VectorStore(dim=dim, use_gpu=use_gpu)
-    vectors = np.random.random((num_vectors, dim)).astype("float32")
+    build_times: List[float] = []
+    latencies: List[float] = []
 
-    start = time.perf_counter()
-    store.add_many({f"v{i}": vec.tolist() for i, vec in enumerate(vectors)})
-    build_time = time.perf_counter() - start
+    for _ in range(runs):
+        store = VectorStore(dim=dim, use_gpu=use_gpu)
+        vectors = np.random.random((num_vectors, dim)).astype("float32")
 
-    queries = np.random.random((num_queries, dim)).astype("float32")
-    start = time.perf_counter()
-    for q in queries:
-        store.query(q.tolist(), k=5)
-    avg_latency = (time.perf_counter() - start) / num_queries
+        start = time.perf_counter()
+        store.add_many({f"v{i}": vec.tolist() for i, vec in enumerate(vectors)})
+        build_times.append(time.perf_counter() - start)
 
-    return {"build_time": build_time, "avg_query_latency": avg_latency}
+        queries = np.random.random((num_queries, dim)).astype("float32")
+        start = time.perf_counter()
+        for q in queries:
+            store.query(q.tolist(), k=5)
+        latencies.append((time.perf_counter() - start) / num_queries)
+
+    avg_build_time = sum(build_times) / runs
+    avg_query_latency = sum(latencies) / runs
+
+    return {"avg_build_time": avg_build_time, "avg_query_latency": avg_query_latency}
 
 
 def run_benchmarks(
@@ -54,12 +62,16 @@ def run_benchmarks(
     results: List[Dict[str, float]] = []
     for _ in range(runs):
         res = benchmark_vector_store(
-            use_gpu, dim=dim, num_vectors=num_vectors, num_queries=num_queries
+            use_gpu,
+            dim=dim,
+            num_vectors=num_vectors,
+            num_queries=num_queries,
+            runs=1,
         )
         results.append(res)
 
     if csv_path is not None:
-        fieldnames = ["run", "build_time", "avg_query_latency"]
+        fieldnames = ["run", "avg_build_time", "avg_query_latency"]
         with csv_path.open("w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
@@ -96,12 +108,12 @@ def main(argv: Iterable[str] | None = None) -> None:
 
     for i, res in enumerate(results, 1):
         print(
-            f"Run {i}: build_time={res['build_time']:.3f}s, "
+            f"Run {i}: avg_build_time={res['avg_build_time']:.3f}s, "
             f"avg_query_latency={res['avg_query_latency']*1000:.3f}ms"
         )
 
     if len(results) > 1:
-        avg_build = sum(r["build_time"] for r in results) / len(results)
+        avg_build = sum(r["avg_build_time"] for r in results) / len(results)
         avg_latency = sum(r["avg_query_latency"] for r in results) / len(results)
         print(
             f"Average build_time={avg_build:.3f}s, "
