@@ -176,5 +176,8 @@ frontend/package-lock.json
 .pypirc
 ume_graph.db
 ume_snapshot.json
+.*/feedback.db
+consent_ledger.db
+feedback.db
 .secrets.baseline
 

@@ -34,7 +34,8 @@ from pydantic import BaseModel
 from .audit import get_audit_entries
 from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter
-from . import VectorStore, create_default_store
+from . import VectorStore
+from .resources import create_vector_store
 from .api_deps import (
     POLICY_DIR,  # noqa: F401 re-exported for tests
     TOKENS,
@@ -47,6 +48,8 @@ from .api_deps import (
 from .graph_routes import router as graph_router
 from .vector_routes import router as vector_router
 from .policy_routes import router as policy_router
+from .feedback_routes import router as feedback_router
+from .recommendation_feedback import feedback_store
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +70,7 @@ if is_tracing_enabled() and trace is not None:
 app.include_router(graph_router)
 app.include_router(vector_router)
 app.include_router(policy_router)
+app.include_router(feedback_router)
 
 
 class _MemoryRedis:
@@ -290,5 +294,6 @@ def submit_feedback(
 ) -> Dict[str, str]:
     """Record user feedback for a recommendation."""
     FEEDBACK[req.id].append(req.feedback)
+    feedback_store.record(req.id, req.feedback)
     return {"status": "ok"}
 
