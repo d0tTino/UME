@@ -17,7 +17,7 @@ def client_and_graph():
 def test_create_node_endpoint(client_and_graph):
     client, g = client_and_graph
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.post(
@@ -33,7 +33,7 @@ def test_update_node_endpoint(client_and_graph):
     client, g = client_and_graph
     g.add_node("u1", {"a": 1})
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.patch(
@@ -49,7 +49,7 @@ def test_delete_node_endpoint(client_and_graph):
     client, g = client_and_graph
     g.add_node("d1", {})
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.delete(
@@ -65,7 +65,7 @@ def test_create_edge_endpoint(client_and_graph):
     g.add_node("s1", {})
     g.add_node("t1", {})
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.post(
@@ -83,7 +83,7 @@ def test_delete_edge_endpoint(client_and_graph):
     g.add_node("t2", {})
     g.add_edge("s2", "t2", "L2")
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.delete(

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from . import api_deps as deps
 from .consent_ledger import consent_ledger
+from .plugins import alignment
 
 router = APIRouter()
 
@@ -40,6 +41,14 @@ def list_policies(_: str = Depends(deps.get_current_role)) -> Dict[str, List[str
     """List all available Rego policy files."""
     files = [p.relative_to(deps.POLICY_DIR).as_posix() for p in deps.POLICY_DIR.rglob("*.rego")]
     return {"policies": sorted(files)}
+
+
+
+@router.post("/policies/reload")
+def reload_policies(_: str = Depends(deps.get_current_role)) -> Dict[str, str]:
+    """Reload all alignment policy plugins."""
+    alignment.reload_plugins()
+    return {"status": "ok"}
 
 
 @router.post("/policies/{name:path}")

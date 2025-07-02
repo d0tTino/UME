@@ -30,7 +30,7 @@ def setup_module(_: object) -> None:
 
 def _token(client: TestClient) -> str:
     res = client.post(
-        "/token",
+        "/auth/token",
         data={
             "username": settings.UME_OAUTH_USERNAME,
             "password": settings.UME_OAUTH_PASSWORD,

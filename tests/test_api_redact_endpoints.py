@@ -20,7 +20,7 @@ def client_and_graph():
 def test_redact_node_endpoint(client_and_graph):
     client, g = client_and_graph
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.post(
@@ -34,7 +34,7 @@ def test_redact_node_endpoint(client_and_graph):
 def test_redact_edge_endpoint(client_and_graph):
     client, g = client_and_graph
     token = client.post(
-        "/token",
+        "/auth/token",
         data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
     ).json()["access_token"]
     res = client.post(
