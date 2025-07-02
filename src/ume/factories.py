@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from .config import settings
 from .persistent_graph import PersistentGraph
+from .postgres_graph import PostgresGraph
+from .redis_graph_adapter import RedisGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter
 from .vector_store import VectorStore, create_vector_store as _create_vector_store
 from .memory import EpisodicMemory, SemanticMemory
@@ -16,7 +18,14 @@ def create_graph_adapter(
     role: str | None = None,
 ) -> IGraphAdapter:
     """Create the default :class:`IGraphAdapter` using configuration settings."""
-    base: IGraphAdapter = PersistentGraph(db_path or settings.UME_DB_PATH)
+    backend = settings.UME_GRAPH_BACKEND.lower()
+    base: IGraphAdapter
+    if backend == "postgres":
+        base = PostgresGraph(db_path or settings.UME_DB_PATH)
+    elif backend == "redis":
+        base = RedisGraphAdapter(db_path or settings.UME_DB_PATH)
+    else:
+        base = PersistentGraph(db_path or settings.UME_DB_PATH)
     if is_tracing_enabled():
         base = TracingGraphAdapter(base)
     role = role if role is not None else settings.UME_ROLE

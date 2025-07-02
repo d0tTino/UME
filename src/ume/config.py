@@ -10,6 +10,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     # UME Core
     UME_DB_PATH: str = "ume_graph.db"
+    UME_GRAPH_BACKEND: str = "sqlite"  # sqlite, postgres, or redis
     UME_SNAPSHOT_PATH: str = "ume_snapshot.json"
     UME_COLD_DB_PATH: str = "ume_cold.db"
     UME_COLD_SNAPSHOT_PATH: str = "ume_cold_snapshot.json"

@@ -146,3 +146,41 @@ def neo4j_service():
     }
     container.stop()  # type: ignore[no-untyped-call]
 
+
+@pytest.fixture(scope="session")
+def postgres_service():
+    """Launch a Postgres container for integration tests."""
+    if not _docker_enabled():
+        pytest.skip("Docker-based tests disabled")
+    try:
+        from testcontainers.postgres import PostgresContainer
+    except Exception:  # pragma: no cover - optional dependency missing
+        pytest.skip("Postgres test container not available")
+    container = PostgresContainer("postgres:15-alpine")
+    try:
+        container.start()  # type: ignore[no-untyped-call]
+    except Exception as exc:  # pragma: no cover - environment issues
+        pytest.skip(f"Postgres not available: {exc}")
+    yield {"dsn": container.get_connection_url()}
+    container.stop()  # type: ignore[no-untyped-call]
+
+
+@pytest.fixture(scope="session")
+def redis_service():
+    """Launch a Redis container for integration tests."""
+    if not _docker_enabled():
+        pytest.skip("Docker-based tests disabled")
+    try:
+        from testcontainers.redis import RedisContainer
+    except Exception:  # pragma: no cover - optional dependency missing
+        pytest.skip("Redis test container not available")
+    container = RedisContainer("redis:7-alpine")
+    try:
+        container.start()  # type: ignore[no-untyped-call]
+    except Exception as exc:  # pragma: no cover - environment issues
+        pytest.skip(f"Redis not available: {exc}")
+    port = container.get_exposed_port(6379)  # type: ignore[no-untyped-call]
+    host = container.get_container_host_ip()
+    yield {"url": f"redis://{host}:{port}/0"}
+    container.stop()  # type: ignore[no-untyped-call]
+
