@@ -16,8 +16,17 @@ class LangGraph:
 
     def send_events(self, events: Iterable[Mapping[str, Any]]) -> None:
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-        for evt in events:
-            self._client.post(f"{self.base_url}/events", json=evt, headers=headers)
+        events_list = list(events)
+        if not events_list:
+            return
+        if len(events_list) > 1:
+            self._client.post(
+                f"{self.base_url}/events/batch", json=events_list, headers=headers
+            )
+        else:
+            self._client.post(
+                f"{self.base_url}/events", json=events_list[0], headers=headers
+            )
 
     def recall(self, payload: Mapping[str, Any]) -> Any:
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}

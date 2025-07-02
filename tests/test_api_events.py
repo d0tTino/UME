@@ -88,3 +88,17 @@ def test_post_events_batch(client_and_graph) -> None:
     assert res.status_code == 200
     assert g.get_node("n1") == {"text": "a"}
     assert g.get_node("n2") == {"text": "b"}
+
+
+def test_post_events_batch_invalid(client_and_graph) -> None:
+    client, _ = client_and_graph
+    token = _token(client)
+    events = [
+        {"event_type": "CREATE_NODE", "timestamp": "bad"}
+    ]
+    res = client.post(
+        "/events/batch",
+        json=events,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
