@@ -93,9 +93,9 @@ class VectorStore:
 
     def __del__(self) -> None:  # pragma: no cover - destructor cleanup
         try:
-            self.stop_background_flush()
-        except Exception:
-            logger.exception("Failed to stop background flush on delete")
+            self.close()
+        except Exception:  # pragma: no cover - log and swallow errors
+            logger.exception("Failed to close VectorStore on delete")
 
     def start_background_flush(
         self, interval: float
@@ -299,10 +299,22 @@ class VectorStore:
                     pass
 
     def close(self) -> None:  # pragma: no cover - filesystem
-        """Stop background flush and persist index to disk."""
+        """Stop background flush, persist index, and release GPU memory."""
         self.stop_background_flush()
         if self.path:
             self.save(self.path)
+        if self.use_gpu and self.gpu_resources is not None:
+            try:
+                gpu_index = (
+                    faiss.downcast_index(self.index)
+                    if hasattr(faiss, "downcast_index")
+                    else self.index
+                )
+                self.index = faiss.index_gpu_to_cpu(gpu_index)
+            except AttributeError:
+                # FAISS built without GPU support
+                pass
+            self.gpu_resources = None
 
     def query(self, vector: List[float], k: int = 5) -> List[str]:
         start = time.perf_counter()

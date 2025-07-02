@@ -122,3 +122,17 @@ def test_query_respects_k(vector_store_cls) -> None:
     assert store.query([1.0, 0.0], k=1) == ["a"]
     res = store.query([1.0, 0.0], k=2)
     assert set(res) == {"a", "b"}
+
+
+def test_gpu_resources_released_between_cycles(vector_store_cls):
+    faiss = pytest.importorskip("faiss")
+    if not hasattr(faiss, "StandardGpuResources") or faiss.get_num_gpus() == 0:
+        pytest.skip("faiss compiled without GPU support")
+    before = faiss.get_mem_usage_kb()
+    for _ in range(3):
+        store = vector_store_cls(dim=2, use_gpu=True, path=None)
+        store.add("a", [1.0, 0.0])
+        store.close()
+    after = faiss.get_mem_usage_kb()
+    assert after - before < 2048
+
