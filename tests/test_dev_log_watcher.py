@@ -3,6 +3,7 @@ import json
 import sys
 import types
 from pathlib import Path
+import logging
 from types import SimpleNamespace
 from typing import Any
 
@@ -204,3 +205,85 @@ def test_run_watcher_interrupt_stops_and_flushes(tmp_path: Path, monkeypatch: Mo
     assert producer.flush_calls == 1
     assert observer.stop_calls == 1
     assert observer.join_calls == 2
+
+
+def test_run_watcher_skips_missing_path(tmp_path: Path, monkeypatch: MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    dev_log_watcher = load_dev_log_watcher(monkeypatch)
+
+    class Producer:
+        def __init__(self, *_: Any, **__: Any) -> None:
+            pass
+
+        def produce(self, topic: str, data: bytes) -> None:  # pragma: no cover - not used
+            pass
+
+        def flush(self) -> None:  # pragma: no cover - noop
+            pass
+
+    class DummyObserver:
+        def __init__(self) -> None:
+            self.scheduled: list[str] = []
+
+        def schedule(self, handler: dev_log_watcher.DevLogHandler, path: str, recursive: bool = True) -> None:
+            self.scheduled.append(path)
+
+        def start(self) -> None:  # pragma: no cover - noop for tests
+            pass
+
+        def join(self) -> None:  # pragma: no cover - noop
+            pass
+
+        def stop(self) -> None:  # pragma: no cover - noop
+            pass
+
+    observer = DummyObserver()
+    monkeypatch.setattr(dev_log_watcher, "Producer", lambda *_, **__: Producer())
+    monkeypatch.setattr(dev_log_watcher, "Observer", lambda: observer)
+
+    missing = tmp_path / "missing"
+    caplog.set_level(logging.WARNING)
+    dev_log_watcher.run_watcher([str(missing), str(tmp_path)], runtime=0)
+
+    assert observer.scheduled == [str(tmp_path)]
+    assert any("does not exist" in rec.message for rec in caplog.records)
+
+
+def test_run_watcher_no_valid_paths(tmp_path: Path, monkeypatch: MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    dev_log_watcher = load_dev_log_watcher(monkeypatch)
+
+    class Producer:
+        def __init__(self, *_: Any, **__: Any) -> None:
+            pass
+
+        def produce(self, topic: str, data: bytes) -> None:  # pragma: no cover - not used
+            pass
+
+        def flush(self) -> None:  # pragma: no cover - noop
+            pass
+
+    class DummyObserver:
+        def __init__(self) -> None:
+            self.started = False
+
+        def schedule(self, handler: dev_log_watcher.DevLogHandler, path: str, recursive: bool = True) -> None:
+            pass
+
+        def start(self) -> None:  # pragma: no cover - should not be called
+            self.started = True
+
+        def join(self) -> None:  # pragma: no cover - noop
+            pass
+
+        def stop(self) -> None:  # pragma: no cover - noop
+            pass
+
+    observer = DummyObserver()
+    monkeypatch.setattr(dev_log_watcher, "Producer", lambda *_, **__: Producer())
+    monkeypatch.setattr(dev_log_watcher, "Observer", lambda: observer)
+
+    missing = tmp_path / "missing"
+    caplog.set_level(logging.WARNING)
+    dev_log_watcher.run_watcher([str(missing)], runtime=0)
+
+    assert not observer.started
+    assert any("No existing paths" in rec.message for rec in caplog.records)
