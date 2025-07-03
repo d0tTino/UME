@@ -345,11 +345,16 @@ See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
 settings.
 
 ### 2. Start the Docker Stack
-The `docker/docker-compose.yml` file starts Redpanda along with the privacy agent
-and FastAPI server. From the repository root run:
+The `docker/docker-compose.yml` file starts Redpanda, the privacy agent,
+a FastAPI server, and an optional Neo4j container. From the repository root run:
 
 ```bash
 cd docker && docker compose up -d
+```
+Once `ume-api` is healthy you can access the API on `http://localhost:8000`:
+```bash
+curl "http://localhost:8000/recall?query=demo&k=1"
+curl -X POST http://localhost:8000/events -H 'Content-Type: application/json' -d '{"text": "demo"}'
 ```
 If you want to enable TLS for the broker and API, generate certificates first:
 ```bash
