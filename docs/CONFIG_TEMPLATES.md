@@ -126,5 +126,6 @@ stack:
 4. Inspect logs with `docker compose logs -f ume-api`.
 5. Confirm all services report `healthy` with `docker compose ps`.
 
-6. Stop all containers with `docker compose down` when finished.
+
+7. Stop all containers with `docker compose down` when finished.
 

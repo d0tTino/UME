@@ -89,11 +89,17 @@ Return recent audit log entries, newest first.
 
 ### POST `/events`
 Validate and apply an event to the graph.
-- **Body fields**: must conform to `ume.parse_event` including `event_type`,
-  `timestamp`, and any type-specific keys like `node_id`, `target_node_id`,
-  `label`, and `payload`.
 
-Example:
+**Body Parameters**
+
+- `event_type` – the name of the event, e.g. `CREATE_NODE`
+- `timestamp` – integer timestamp for the event
+- `node_id` – ID of the acting node when applicable
+- `target_node_id` – ID of the target node when applicable
+- `label` – edge label if the event involves an edge
+- `payload` – any additional structured data
+
+Example request:
 
 ```bash
 curl -X POST http://localhost:8000/events \
@@ -103,11 +109,15 @@ curl -X POST http://localhost:8000/events \
 ```
 
 ### GET `/recall`
-Return attributes for the `k` nearest nodes to `query` or `vector`.
-- **Query parameters**: `query` text, or repeated `vector` values forming the
-  query vector; optional `k` (default `5`).
+Retrieve attribute data for the `k` nearest nodes to a query.
 
-Example using a text query:
+**Query Parameters**
+
+- `query` – text used to look up similar vectors (optional)
+- `vector` – repeated float values forming the query vector (optional)
+- `k` – number of results to return (default `5`)
+
+Example text query:
 
 ```bash
 curl -X GET -H "Authorization: Bearer <token>" \
