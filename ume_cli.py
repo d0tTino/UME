@@ -558,9 +558,15 @@ class UMEPrompt(Cmd):
 
 def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
     """Start Docker Compose services and wait until healthy."""
-    subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "-d"], check=True)
+    try:
+        subprocess.run(
+            ["docker", "compose", "-f", str(compose_file), "up", "-d"], check=True
+        )
+    except FileNotFoundError as exc:
+        print("Docker is not installed or not on PATH")
+        raise SystemExit(1) from exc
 
-    required = {"redpanda", "privacy-agent"}
+    required = {"redpanda", "privacy-agent", "ume-api"}
     start = time.time()
     while time.time() - start < timeout:
         out = subprocess.check_output(
@@ -579,11 +585,18 @@ def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
 
     print("Stack running. API docs: http://localhost:8000/docs")
     print("Recall endpoint: http://localhost:8000/recall")
+    print("Graph snapshot endpoints: http://localhost:8000/snapshot")
 
 
 def _compose_down(compose_file: Path = COMPOSE_FILE) -> None:
     """Stop Docker Compose services."""
-    subprocess.run(["docker", "compose", "-f", str(compose_file), "down"], check=True)
+    try:
+        subprocess.run(
+            ["docker", "compose", "-f", str(compose_file), "down"], check=True
+        )
+    except FileNotFoundError as exc:
+        print("Docker is not installed or not on PATH")
+        raise SystemExit(1) from exc
     print("Stack stopped.")
 
 
