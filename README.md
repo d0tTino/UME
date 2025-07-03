@@ -347,6 +347,7 @@ settings.
 ### 2. Start the Docker Stack
 The `docker/docker-compose.yml` file starts Redpanda along with the privacy agent
 and FastAPI server. From the repository root run:
+
 ```bash
 cd docker && docker compose up -d
 ```

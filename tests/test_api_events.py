@@ -61,3 +61,44 @@ def test_post_event_requires_auth(client_and_graph):
     }
     res = client.post("/events", json=event)
     assert res.status_code == 401
+
+
+def test_post_events_batch(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+    events = [
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "n1",
+            "payload": {"node_id": "n1", "attributes": {"text": "a"}},
+        },
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 2,
+            "node_id": "n2",
+            "payload": {"node_id": "n2", "attributes": {"text": "b"}},
+        },
+    ]
+    res = client.post(
+        "/events/batch",
+        json=events,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert g.get_node("n1") == {"text": "a"}
+    assert g.get_node("n2") == {"text": "b"}
+
+
+def test_post_events_batch_invalid(client_and_graph) -> None:
+    client, _ = client_and_graph
+    token = _token(client)
+    events = [
+        {"event_type": "CREATE_NODE", "timestamp": "bad"}
+    ]
+    res = client.post(
+        "/events/batch",
+        json=events,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400

@@ -112,6 +112,7 @@ alongside the privacy agent and FastAPI server. The compose file also defines
 an optional `ume-db` volume that can persist the default SQLite database or be
 repurposed for a Neo4j container if needed. To start the stack:
 
+
 1. Install Docker and Docker Compose.
 2. From the project root run:
    ```bash
@@ -123,5 +124,6 @@ repurposed for a Neo4j container if needed. To start the stack:
 3. Wait until `redpanda` and `ume-api` report `healthy` with `docker compose ps`.
 4. Inspect logs with `docker compose logs -f ume-api`.
 5. Confirm all services report `healthy` with `docker compose ps`.
+
 6. Stop all containers with `docker compose down` when finished.
 

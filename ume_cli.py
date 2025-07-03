@@ -9,6 +9,7 @@ import time  # Added for timestamp in event creation
 import warnings
 from pathlib import Path
 import os
+import subprocess
 
 # Ensure local package import when run directly without installation
 _src_path = Path(__file__).resolve().parent / "src"
@@ -37,6 +38,8 @@ from ume import (  # noqa: E402
 from ume.benchmarks import benchmark_vector_store
 from ume.federation import MirrorMakerDriver
 from ume import DEFAULT_SCHEMA_MANAGER
+
+COMPOSE_FILE = Path(__file__).resolve().parent / "docker" / "docker-compose.yml"
 
 # It's good practice to handle potential import errors if ume is not installed,
 # though for poetry run python ume_cli.py this should be fine.
@@ -553,9 +556,40 @@ class UMEPrompt(Cmd):
     #    Cmd.do_help(self, arg)
 
 
+def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
+    """Start Docker Compose services and wait until healthy."""
+    subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "-d"], check=True)
+
+    required = {"redpanda", "privacy-agent"}
+    start = time.time()
+    while time.time() - start < timeout:
+        out = subprocess.check_output(
+            ["docker", "compose", "-f", str(compose_file), "ps", "--format", "{{.Name}} {{.Health}}"],
+            text=True,
+        )
+        statuses = {
+            name: status
+            for name, status in (line.split(maxsplit=1) for line in out.splitlines() if line.strip())
+        }
+        if all(statuses.get(svc) == "healthy" for svc in required):
+            break
+        time.sleep(5)
+    else:
+        print("Timed out waiting for services to become healthy.")
+
+    print("Stack running. API docs: http://localhost:8000/docs")
+    print("Recall endpoint: http://localhost:8000/recall")
+
+
+def _compose_down(compose_file: Path = COMPOSE_FILE) -> None:
+    """Stop Docker Compose services."""
+    subprocess.run(["docker", "compose", "-f", str(compose_file), "down"], check=True)
+    print("Stack stopped.")
+
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
-    parser = argparse.ArgumentParser(description="UME interactive CLI")
+    parser = argparse.ArgumentParser(description="UME CLI")
     parser.add_argument(
         "--show-warnings",
         action="store_true",
@@ -567,7 +601,18 @@ def main() -> None:
         help="File to log warnings even when they are not displayed",
     )
 
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser("up", help="Start Docker Compose stack")
+    sub.add_parser("down", help="Stop Docker Compose stack")
+
     args = parser.parse_args()
+
+    if args.command == "up":
+        _compose_up()
+        return
+    if args.command == "down":
+        _compose_down()
+        return
 
     configure_logging()
 

@@ -295,3 +295,42 @@ def test_cli_set_peer_and_sync_calls_replicator(monkeypatch: pytest.MonkeyPatch)
     assert "peer=foo:9092" in called
     assert "replicate_once" in called
     assert "stop" in called
+
+
+def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    import importlib
+    import ume_cli as cli
+
+    importlib.reload(cli)
+
+    run_calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = True, **_: object) -> None:
+        run_calls.append(cmd)
+
+    def fake_check_output(cmd: list[str], **_: object) -> str:
+        if "ps" in cmd:
+            return "redpanda healthy\nprivacy-agent healthy\n"
+        return ""
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "up"]
+    cli.main()
+    out_up = capsys.readouterr().out
+    sys.argv = argv
+
+    assert any("up" in " ".join(c) for c in run_calls)
+    assert "http://localhost:8000/docs" in out_up
+
+    run_calls.clear()
+    sys.argv = ["ume-cli", "down"]
+    cli.main()
+    out_down = capsys.readouterr().out
+    sys.argv = argv
+
+    assert any("down" in " ".join(c) for c in run_calls)
+    assert "Stack stopped." in out_down
