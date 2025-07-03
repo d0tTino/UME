@@ -89,7 +89,6 @@ def run_watcher(paths: Iterable[str], runtime: float | None = None) -> None:
         nonlocal should_stop
         logger.info("Stopping watcher due to signal %s", signum)
         should_stop = True
-        observer.stop()
 
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
@@ -102,7 +101,12 @@ def run_watcher(paths: Iterable[str], runtime: float | None = None) -> None:
             time.sleep(1)
     except KeyboardInterrupt:  # pragma: no cover - manual interrupt
         logger.info("Stopping watcher due to keyboard interrupt")
+        observer.join()
     finally:
         observer.stop()
         producer.flush()
-        observer.join()
+        try:
+            observer.join()
+        except KeyboardInterrupt:
+            observer.join()
+            raise

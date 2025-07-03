@@ -47,3 +47,27 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  ume-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile.privacy-agent
+    command: uvicorn ume.api:app --host 0.0.0.0 --port 8000
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      UME_DB_PATH: "/data/ume_graph.db"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ume-db:/data
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f uvicorn || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ume-db:
