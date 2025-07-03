@@ -345,12 +345,18 @@ See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
 settings.
 
 ### 2. Start the Docker Stack
-The `docker/docker-compose.yml` file starts Redpanda along with the privacy agent
-and FastAPI server. From the repository root run:
+The `docker/docker-compose.yml` file now starts Redpanda, the privacy agent,
+and the `ume-api` service. From the repository root run:
 
 ```bash
 cd docker && docker compose up -d
 ```
+First-time users can launch the stack with a single command:
+```bash
+cd docker && docker compose up
+```
+Once `ume-api` reports `healthy`, memory endpoints are live on
+`http://localhost:8000` (try `/query` or `/events`).
 If you want to enable TLS for the broker and API, generate certificates first:
 ```bash
 bash docker/generate-certs.sh

@@ -121,9 +121,14 @@ repurposed for a Neo4j container if needed. To start the stack:
    bash generate-certs.sh
    docker compose up
    ```
+   *First-time users can launch everything in one step with:*
+   ```bash
+   cd docker && docker compose up
+   ```
 3. Wait until `redpanda` and `ume-api` report `healthy` with `docker compose ps`.
-4. Inspect logs with `docker compose logs -f ume-api`.
-5. Confirm all services report `healthy` with `docker compose ps`.
+4. Once healthy, the `ume-api` service exposes ready-to-use memory endpoints on `http://localhost:8000` (e.g. `/query`, `/events`, `/recall`).
+5. Inspect logs with `docker compose logs -f ume-api`.
+6. Confirm all services report `healthy` with `docker compose ps`.
 
-6. Stop all containers with `docker compose down` when finished.
+7. Stop all containers with `docker compose down` when finished.
 
