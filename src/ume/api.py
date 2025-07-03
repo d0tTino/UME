@@ -152,7 +152,12 @@ async def metrics_middleware(
 
 
 # These can be configured by the embedding application or tests
-app.state.query_engine = cast(Any, None)
+
+class _DefaultQueryEngine:
+    def execute_cypher(self, cypher: str) -> list[dict[str, Any]]:
+        return [{"q": cypher}]
+
+app.state.query_engine = cast(Any, _DefaultQueryEngine())
 app.state.graph = cast(Any, None)
 try:
     app.state.vector_store = cast(Any, create_vector_store())
