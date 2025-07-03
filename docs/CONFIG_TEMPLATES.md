@@ -108,9 +108,10 @@ A single-node Dell PowerEdge R7625 with an EPYC 9254P CPU, 256 GB RAM and four N
 ## Docker Compose Quickstart
 
 The repository ships with a `docker-compose.yml` for spinning up Redpanda
-alongside the privacy agent and FastAPI server. The compose file also defines
-an optional `ume-db` volume that can persist the default SQLite database or be
-repurposed for a Neo4j container if needed. To start the stack:
+alongside the privacy agent and FastAPI server. The compose file now also
+includes an optional `neo4j` service. The `ume-db` volume persists the default
+SQLite database and can be repurposed for Neo4j data if desired. To start the
+stack:
 
 
 1. Install Docker and Docker Compose.
@@ -121,9 +122,10 @@ repurposed for a Neo4j container if needed. To start the stack:
    bash generate-certs.sh
    docker compose up
    ```
-3. Wait until `redpanda` and `ume-api` report `healthy` with `docker compose ps`.
+3. Wait until `redpanda`, `neo4j`, and `ume-api` report `healthy` with `docker compose ps`.
 4. Inspect logs with `docker compose logs -f ume-api`.
 5. Confirm all services report `healthy` with `docker compose ps`.
 
-6. Stop all containers with `docker compose down` when finished.
+
+7. Stop all containers with `docker compose down` when finished.
 

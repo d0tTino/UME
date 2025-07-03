@@ -347,6 +347,7 @@ settings.
 ### 2. Start the Docker Stack
 The `ume` CLI can spin up all services for local development. From the repository root run:
 
+
 ```bash
 poetry run python ume_cli.py up
 ```
@@ -356,6 +357,7 @@ The command waits for the services to become healthy and then prints the main UR
 ```
 http://localhost:8000/docs
 http://localhost:8000/recall
+
 ```
 
 If you want to enable TLS for the broker and API, generate certificates first:
