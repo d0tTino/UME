@@ -31,12 +31,6 @@ from .graph_adapter import IGraphAdapter  # noqa: F401
 from . import VectorStore, create_vector_store  # noqa: F401
 
 
-from .api_deps import (
-    POLICY_DIR,  # noqa: F401 re-exported for tests
-    TOKENS,  # noqa: F401 re-exported for tests
-    configure_graph,  # noqa: F401 re-exported for tests
-    configure_vector_store,  # noqa: F401 re-exported for tests
-)
 from .graph_routes import router as graph_router
 from .vector_routes import router as vector_router
 from .policy_routes import router as policy_router
@@ -45,6 +39,16 @@ from .metrics_routes import router as metrics_router
 from .dashboard_routes import router as dashboard_router
 from .pii_routes import router as pii_router
 from .recommendations_routes import router as recommendations_router
+from .feedback_routes import router as feedback_router
+from .snapshot_routes import router as snapshot_router
+from .consent_ledger import consent_ledger  # noqa: F401
+
+from . import api_deps
+
+POLICY_DIR = api_deps.POLICY_DIR  # noqa: F401 re-exported for tests
+TOKENS = api_deps.TOKENS  # noqa: F401 re-exported for tests
+configure_graph = api_deps.configure_graph  # noqa: F401 re-exported for tests
+configure_vector_store = api_deps.configure_vector_store  # noqa: F401 re-exported for tests
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +75,8 @@ app.include_router(metrics_router)
 app.include_router(dashboard_router)
 app.include_router(pii_router)
 app.include_router(recommendations_router)
+app.include_router(feedback_router)
+app.include_router(snapshot_router)
 
 
 

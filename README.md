@@ -345,22 +345,9 @@ See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
 settings.
 
 ### 2. Start the Docker Stack
-The `docker/docker-compose.yml` file now starts Redpanda, the privacy agent **and the API service**.
-Running the stack exposes ready-to-use memory endpoints on `http://localhost:8000`.
-First-time users can spin up the demo stack in one command:
-```bash
-git clone https://github.com/d0tTino/universal-memory-engine.git \
-  && cd universal-memory-engine/docker && docker compose up
-```
-You can also launch everything with the CLI:
-```bash
-ume-cli up
-```
-To stop all containers run:
-```bash
-ume-cli down
-```
-If you prefer to call Docker Compose manually:
+The `docker/docker-compose.yml` file starts Redpanda along with the privacy agent
+and FastAPI server. From the repository root run:
+
 ```bash
 cd docker && docker compose up -d
 ```
@@ -408,12 +395,11 @@ to Culture.ai:
 poetry run python examples/agent_integration.py
 ```
 
-### 8. Start the API and Frontend Demo
-Launch the FastAPI server and interact with it using either the
-web interface or the small CLI demo in `frontend/app.py`:
+### 8. Start the Frontend Demo
+The API now runs on `localhost:8000` via Docker Compose. Interact with it using
+the web interface or the small CLI demo in `frontend/app.py`:
 
 ```bash
-uvicorn ume.api:app --reload
 # open frontend/index.html in your browser (e.g. with `python -m http.server`)
 poetry run python frontend/app.py --username ume --password password query "MATCH (n) RETURN n"
 ```
@@ -484,6 +470,17 @@ curl -X POST http://localhost:8000/events \
 ```
 
 The event is validated and immediately applied to the configured graph adapter.
+
+### Recall Nodes
+Use the `/recall` endpoint to retrieve the nearest nodes for a search query or
+vector:
+
+```bash
+curl "http://localhost:8000/recall?query=demo&k=3" \
+  -H "Authorization: Bearer <token>"
+```
+
+The API returns the matching node attributes ordered by similarity.
 
 ## Configuration Templates
 

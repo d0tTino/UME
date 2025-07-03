@@ -107,9 +107,11 @@ A single-node Dell PowerEdge R7625 with an EPYC 9254P CPU, 256 GB RAM and four N
 
 ## Docker Compose Quickstart
 
-The repository ships with a `docker-compose.yml` for spinning up Redpanda,
-the privacy agent **and the UME API**.  Bringing up the stack exposes the
-memory endpoints under `http://localhost:8000`. To start everything:
+The repository ships with a `docker-compose.yml` for spinning up Redpanda
+alongside the privacy agent and FastAPI server. The compose file also defines
+an optional `ume-db` volume that can persist the default SQLite database or be
+repurposed for a Neo4j container if needed. To start the stack:
+
 
 1. Install Docker and Docker Compose.
 2. From the project root run:
@@ -119,10 +121,9 @@ memory endpoints under `http://localhost:8000`. To start everything:
    bash generate-certs.sh
    docker compose up
    ```
-3. Wait until all services report `healthy` with `docker compose ps`.
-4. Visit `http://localhost:8000/docs` to explore the API. The `/recall` endpoint
-   is immediately available for querying memory.
-5. Inspect logs with `docker compose logs -f privacy-agent` or
-   `docker compose logs -f api`.
+3. Wait until `redpanda` and `ume-api` report `healthy` with `docker compose ps`.
+4. Inspect logs with `docker compose logs -f ume-api`.
+5. Confirm all services report `healthy` with `docker compose ps`.
+
 6. Stop all containers with `docker compose down` when finished.
 

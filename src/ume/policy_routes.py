@@ -30,16 +30,20 @@ class ConsentRequest(BaseModel):
 
 def _resolve_policy_path(name: str) -> Path:
     """Return absolute path for policy ``name`` within :data:`POLICY_DIR`."""
+    from . import api  # Local import to avoid circular dependency
+
     path = Path(name)
     if path.is_absolute() or ".." in path.parts:
         raise HTTPException(status_code=400, detail="Invalid policy path")
-    return (deps.POLICY_DIR / path).resolve()
+    return (api.POLICY_DIR / path).resolve()
 
 
 @router.get("/policies")
 def list_policies(_: str = Depends(deps.get_current_role)) -> Dict[str, List[str]]:
     """List all available Rego policy files."""
-    files = [p.relative_to(deps.POLICY_DIR).as_posix() for p in deps.POLICY_DIR.rglob("*.rego")]
+    from . import api
+
+    files = [p.relative_to(api.POLICY_DIR).as_posix() for p in api.POLICY_DIR.rglob("*.rego")]
     return {"policies": sorted(files)}
 
 

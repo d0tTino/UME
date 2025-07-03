@@ -275,6 +275,7 @@ __all__ = [
     "plugins",
     "grpc_service",
     "vector_store",
+    "embedding",
     "api",
 
 ]
@@ -289,6 +290,7 @@ _KNOWN_SUBMODULES = {
     "grpc_service",
     "vector_store",
     "recommendation_feedback",
+    "embedding",
     "resources",
     "api",
 }
