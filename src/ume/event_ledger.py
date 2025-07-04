@@ -31,10 +31,13 @@ class EventLedger:
 
     def append(self, offset: int, event: Dict[str, Any]) -> None:
         with self.conn:
-            self.conn.execute(
-                "INSERT OR REPLACE INTO events(offset, data) VALUES (?, ?)",
-                (offset, json.dumps(event)),
-            )
+            try:
+                self.conn.execute(
+                    "INSERT INTO events(offset, data) VALUES (?, ?)",
+                    (offset, json.dumps(event)),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ValueError(f"Offset {offset} already exists") from exc
 
     def range(
         self,
