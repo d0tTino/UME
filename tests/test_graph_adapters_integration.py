@@ -37,3 +37,22 @@ def test_redis_graph_crud(redis_service):
     assert graph.get_all_edges() == []
     graph.clear()
     graph.close()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.environ.get("UME_DOCKER_TESTS"), reason="Docker tests disabled")
+def test_redis_graph_scan_iter_large_dataset(redis_service, monkeypatch):
+    graph = RedisGraphAdapter(redis_service["url"])
+    for i in range(1000):
+        graph.add_node(f"n{i}", {})
+
+    def forbid_keys(*_: object, **__: object) -> None:
+        raise AssertionError("keys() should not be called")
+
+    monkeypatch.setattr(graph._client, "keys", forbid_keys)
+
+    node_ids = graph.get_all_node_ids()
+    assert len(node_ids) == 1000
+
+    graph.clear()
+    graph.close()
