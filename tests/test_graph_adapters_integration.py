@@ -3,6 +3,7 @@ import pytest
 
 from ume.postgres_graph import PostgresGraph
 from ume.redis_graph_adapter import RedisGraphAdapter
+import redis
 
 
 @pytest.mark.integration
@@ -56,3 +57,22 @@ def test_redis_graph_scan_iter_large_dataset(redis_service, monkeypatch):
 
     graph.clear()
     graph.close()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.environ.get("UME_DOCKER_TESTS"), reason="Docker tests disabled")
+def test_redis_clear_preserves_unrelated_keys(redis_service):
+    client = redis.from_url(redis_service["url"])
+    client.set("unrelated", "value")
+
+    graph = RedisGraphAdapter(redis_service["url"])
+    graph.add_node("n1", {})
+    graph.clear()
+
+    assert client.get("unrelated") == b"value"
+    assert list(client.scan_iter(f"{RedisGraphAdapter.NODE_PREFIX}*")) == []
+    assert list(client.scan_iter(f"{RedisGraphAdapter.EDGE_PREFIX}*")) == []
+    assert not client.exists(RedisGraphAdapter.REDACTED_NODES_KEY)
+    assert not client.exists(RedisGraphAdapter.REDACTED_EDGES_KEY)
+    client.close()
+
