@@ -21,6 +21,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_AUDIT_LOG_PATH: str = "audit.log"
     UME_AUDIT_SIGNING_KEY: str = DEFAULT_AUDIT_SIGNING_KEY
     UME_CONSENT_LEDGER_PATH: str = "consent_ledger.db"
+    UME_EVENT_LEDGER_PATH: str = "event_ledger.db"
     UME_FEEDBACK_DB_PATH: str = "feedback.db"
     UME_AGENT_ID: str = "SYSTEM"
     UME_EMBED_MODEL: str = "all-MiniLM-L6-v2"

@@ -92,6 +92,13 @@ Incoming events are streamed through Redpanda topics. The Privacy Agent applies
 rules defined in the Policy DSL before forwarding sanitized events to the graph
 adapter layer.
 
+## Event Ledger
+
+Sanitized events are appended to a lightweight ledger along with their
+Redpanda offsets. The ledger can be queried via the `/ledger/events` API and
+used with `PersistentGraph.replay_from_ledger()` to rebuild state from any
+offset.
+
 ## Policy DSL Flow
 
 ```mermaid

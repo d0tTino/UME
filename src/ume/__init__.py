@@ -27,6 +27,7 @@ except ImportError:  # pragma: no cover - allow import without environment setup
         UME_AUDIT_LOG_PATH="/tmp/audit.log",
         UME_AUDIT_SIGNING_KEY="stub",
         UME_CONSENT_LEDGER_PATH="consent_ledger.db",
+        UME_EVENT_LEDGER_PATH="event_ledger.db",
         UME_FEEDBACK_DB_PATH="feedback.db",
         UME_AGENT_ID="SYSTEM",
         UME_EMBED_MODEL="all-MiniLM-L6-v2",

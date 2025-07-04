@@ -1,0 +1,27 @@
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+
+from .event_ledger import event_ledger
+from . import api_deps as deps
+
+router = APIRouter()
+
+
+class LedgerEvent(BaseModel):  # type: ignore[misc]
+    offset: int
+    event: Dict[str, Any]
+
+
+@router.get("/ledger/events", response_model=List[LedgerEvent])  # type: ignore[misc]
+def list_events(
+    start: int = Query(0, ge=0),
+    end: int | None = Query(None, ge=0),
+    limit: int | None = Query(None, ge=1),
+    _: str = Depends(deps.get_current_role),
+) -> List[LedgerEvent]:
+    entries = event_ledger.range(start=start, end=end, limit=limit)
+    return [LedgerEvent(offset=o, event=e) for o, e in entries]

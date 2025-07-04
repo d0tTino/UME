@@ -1,12 +1,15 @@
 import sqlite3
 import json
 import time
-from typing import Dict, Any, Optional, List, Tuple, cast
+from typing import Dict, Any, Optional, List, Tuple, cast, TYPE_CHECKING
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .audit import log_audit_entry
 from .config import settings
 from .graph_algorithms import GraphAlgorithmsMixin
+
+if TYPE_CHECKING:  # pragma: no cover - for type hints only
+    from .event_ledger import EventLedger
 
 
 class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
@@ -275,3 +278,24 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 (cutoff, cutoff),
             )
             self.conn.execute("DELETE FROM nodes WHERE created_at < ?", (cutoff,))
+
+    def replay_from_ledger(
+        self,
+        ledger: "EventLedger",
+        start_offset: int = 0,
+        end_offset: int | None = None,
+    ) -> int:
+        """Replay ledger events starting from ``start_offset``.
+
+        Returns the last processed offset or ``start_offset`` if no events were
+        applied.
+        """
+        last = start_offset
+        from .event import parse_event
+        from .processing import apply_event_to_graph
+
+        for off, data in ledger.range(start=start_offset, end=end_offset):
+            event = parse_event(data)
+            apply_event_to_graph(event, self)
+            last = off
+        return last
