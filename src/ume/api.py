@@ -41,6 +41,7 @@ from .pii_routes import router as pii_router
 from .recommendations_routes import router as recommendations_router
 from .feedback_routes import router as feedback_router
 from .snapshot_routes import router as snapshot_router
+from .ledger_routes import router as ledger_router
 from .consent_ledger import consent_ledger  # noqa: F401
 
 from . import api_deps
@@ -77,6 +78,7 @@ app.include_router(pii_router)
 app.include_router(recommendations_router)
 app.include_router(feedback_router)
 app.include_router(snapshot_router)
+app.include_router(ledger_router)
 
 
 
