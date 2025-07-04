@@ -64,12 +64,18 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
         )
 
     def get_all_node_ids(self) -> List[str]:
-        keys = self._client.keys("node:*")
-        return [k.decode().split(":", 1)[1] for k in keys if not self._client.sismember("redacted_nodes", k.decode().split(":", 1)[1])]
+        """Return all non-redacted node IDs."""
+        return [
+            node_id
+            for k in self._client.scan_iter("node:*")
+            if not self._client.sismember(
+                "redacted_nodes", node_id := k.decode().split(":", 1)[1]
+            )
+        ]
 
     def dump(self) -> Dict[str, Any]:
         nodes: Dict[str, Any] = {}
-        for k in self._client.keys("node:*"):
+        for k in self._client.scan_iter("node:*"):
             node_id = k.decode().split(":", 1)[1]
             if self._client.sismember("redacted_nodes", node_id):
                 continue
