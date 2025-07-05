@@ -35,6 +35,8 @@ vector_stub = types.ModuleType("ume.vector_store")
 class _DummyVS:
     pass
 
+vector_stub.VectorBackend = _DummyVS  # type: ignore[attr-defined]
+vector_stub.FaissBackend = _DummyVS  # type: ignore[attr-defined]
 vector_stub.VectorStore = _DummyVS  # type: ignore[attr-defined]
 def _create_vs() -> _DummyVS:
     return _DummyVS()

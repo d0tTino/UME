@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from ume import VectorStore
+from ume import FaissBackend, ChromaBackend
 from ume.api import app, configure_vector_store
 from ume.config import settings
 
@@ -13,8 +13,13 @@ if not hasattr(faiss, "IndexFlatL2"):
     pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 
-def test_add_vector_authorized() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+@pytest.fixture(params=[FaissBackend, ChromaBackend])
+def store_cls(request):
+    return request.param
+
+
+def test_add_vector_authorized(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     client = TestClient(app)
     token = client.post(
         "/auth/token",
@@ -29,8 +34,8 @@ def test_add_vector_authorized() -> None:
     assert app.state.vector_store.query([0.0, 1.0], k=1) == ["v1"]
 
 
-def test_add_vector_invalid_dimension() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_add_vector_invalid_dimension(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     client = TestClient(app)
     token = client.post(
         "/auth/token",
@@ -45,15 +50,15 @@ def test_add_vector_invalid_dimension() -> None:
     assert res.json()["detail"] == "Invalid vector dimension"
 
 
-def test_add_vector_unauthorized() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_add_vector_unauthorized(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     client = TestClient(app)
     res = client.post("/vectors", json={"id": "v2", "vector": [1.0]})
     assert res.status_code == 401
 
 
-def test_search_vectors() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_search_vectors(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     client = TestClient(app)
     store = app.state.vector_store
     store.add("a", [0, 0])
@@ -72,8 +77,8 @@ def test_search_vectors() -> None:
     assert res.json()["ids"] == ["b", "c"]
 
 
-def test_search_vectors_invalid_dimension() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_search_vectors_invalid_dimension(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     client = TestClient(app)
     store = app.state.vector_store
     store.add("a", [0, 0])
@@ -90,8 +95,8 @@ def test_search_vectors_invalid_dimension() -> None:
     assert res.json()["detail"] == "Invalid vector dimension"
 
 
-def test_benchmark_endpoint():
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_benchmark_endpoint(store_cls):
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     client = TestClient(app)
     token = client.post(
         "/auth/token",
@@ -106,15 +111,15 @@ def test_benchmark_endpoint():
     assert "avg_build_time" in data and "avg_query_latency" in data
 
 
-def test_benchmark_requires_authentication() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_benchmark_requires_authentication(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     client = TestClient(app)
     res = client.get("/vectors/benchmark")
     assert res.status_code == 401
 
 
-def test_recall_by_query(monkeypatch) -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_recall_by_query(monkeypatch, store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     from ume import MockGraph
     from ume.api import configure_graph
 
@@ -142,8 +147,8 @@ def test_recall_by_query(monkeypatch) -> None:
     assert data == {"nodes": [{"id": "a", "attributes": {"val": 1}}]}
 
 
-def test_recall_invalid_dimension() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_recall_invalid_dimension(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     from ume import MockGraph
     from ume.api import configure_graph
 
@@ -164,8 +169,8 @@ def test_recall_invalid_dimension() -> None:
     assert res.json()["detail"] == "Invalid vector dimension"
 
 
-def test_recall_unauthorized() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+def test_recall_unauthorized(store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
     from ume import MockGraph
     from ume.api import configure_graph
 

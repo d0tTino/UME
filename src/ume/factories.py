@@ -5,7 +5,7 @@ from .persistent_graph import PersistentGraph
 from .postgres_graph import PostgresGraph
 from .redis_graph_adapter import RedisGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter
-from .vector_store import VectorStore, create_vector_store as _create_vector_store
+from .vector_store import VectorBackend, create_vector_store as _create_vector_store
 from .memory import EpisodicMemory, SemanticMemory
 
 from .graph_adapter import IGraphAdapter
@@ -36,8 +36,8 @@ def create_graph_adapter(
 
 # Re-export the vector store factory to keep the name consistent
 
-def create_vector_store() -> VectorStore:
-    """Create a :class:`VectorStore` configured from ``ume.config.settings``."""
+def create_vector_store() -> VectorBackend:
+    """Create a vector store configured from ``ume.config.settings``."""
     return _create_vector_store()
 
 

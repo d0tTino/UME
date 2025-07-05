@@ -129,10 +129,24 @@ from .memory import EpisodicMemory, SemanticMemory, ColdMemory
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
-    from .vector_store import VectorStore, VectorStoreListener, create_default_store
+    from .vector_store import (
+        VectorBackend,
+        FaissBackend,
+        ChromaBackend,
+        VectorStore,
+        VectorStoreListener,
+        create_default_store,
+    )
 else:  # pragma: no cover - optional dependency
     try:
-        from .vector_store import VectorStore, VectorStoreListener, create_default_store
+        from .vector_store import (
+            VectorBackend,
+            FaissBackend,
+            ChromaBackend,
+            VectorStore,
+            VectorStoreListener,
+            create_default_store,
+        )
     except Exception:
         vector_stub = types.ModuleType("ume.vector_store")
 
@@ -148,6 +162,9 @@ else:  # pragma: no cover - optional dependency
             raise ImportError("faiss is required for create_default_store")
 
         vector_stub.VectorStore = VectorStore
+        vector_stub.VectorBackend = VectorStore
+        vector_stub.FaissBackend = VectorStore
+        vector_stub.ChromaBackend = VectorStore
         vector_stub.VectorStoreListener = VectorStoreListener
         vector_stub.create_default_store = create_default_store
         sys.modules[__name__ + ".vector_store"] = vector_stub
@@ -234,6 +251,9 @@ __all__ = [
     "log_audit_entry",
     "get_audit_entries",
     "ssl_config",
+    "VectorBackend",
+    "FaissBackend",
+    "ChromaBackend",
     "VectorStore",
     "VectorStoreListener",
     "create_default_store",
