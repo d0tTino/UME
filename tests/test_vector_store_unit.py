@@ -18,8 +18,8 @@ pytest.importorskip(
 root = Path(__file__).resolve().parents[1]
 
 
-@pytest.fixture()
-def vector_store_cls():
+@pytest.fixture(params=["faiss", "chroma"])
+def vector_store_cls(request):
     orig_pkg = sys.modules.get("ume")
     orig_vs = sys.modules.get("ume.vector_store")
     package = types.ModuleType("ume")
@@ -37,7 +37,10 @@ def vector_store_cls():
 
     setattr(package, "vector_store", module)
     try:
-        yield module.VectorStore
+        if request.param == "faiss":
+            yield module.FaissBackend
+        else:
+            yield module.ChromaBackend
     finally:
         if orig_vs is not None:
             sys.modules["ume.vector_store"] = orig_vs
@@ -71,6 +74,8 @@ def test_query_dimension_mismatch(vector_store_cls):
 
 
 def test_init_requires_faiss(monkeypatch, vector_store_cls):
+    if "Chroma" in vector_store_cls.__name__:
+        pytest.skip("faiss not required for ChromaBackend")
     monkeypatch.setattr("ume.vector_store.faiss", None)
     with pytest.raises(ImportError):
         vector_store_cls(dim=2)
@@ -125,6 +130,8 @@ def test_query_respects_k(vector_store_cls) -> None:
 
 
 def test_gpu_resources_released_between_cycles(vector_store_cls):
+    if "Chroma" in vector_store_cls.__name__:
+        pytest.skip("GPU resources test only for FAISS backend")
     faiss = pytest.importorskip("faiss")
     if not hasattr(faiss, "StandardGpuResources") or faiss.get_num_gpus() == 0:
         pytest.skip("faiss compiled without GPU support")
@@ -135,4 +142,17 @@ def test_gpu_resources_released_between_cycles(vector_store_cls):
         store.close()
     after = faiss.get_mem_usage_kb()
     assert after - before < 2048
+
+
+def test_create_default_store_selects_backend(monkeypatch):
+    import importlib
+    monkeypatch.setenv("UME_VECTOR_BACKEND", "chroma")
+    import ume.config as cfg
+    import ume.vector_store as vs
+
+    importlib.reload(cfg)
+    importlib.reload(vs)
+
+    store = vs.create_default_store()
+    assert isinstance(store, vs.ChromaBackend)
 

@@ -4,7 +4,7 @@
 from typing import Callable
 
 from .graph_adapter import IGraphAdapter
-from .vector_store import VectorStore, create_default_store
+from .vector_store import VectorBackend, create_default_store
 from .factories import create_graph_adapter
 
 
@@ -13,7 +13,7 @@ def _default_graph_factory() -> IGraphAdapter:
     return create_graph_adapter()
 
 
-def _default_vector_store_factory() -> VectorStore:
+def _default_vector_store_factory() -> VectorBackend:
     """Return a vector store configured from :class:`~ume.config.Settings`."""
     return create_default_store()
 
@@ -22,7 +22,7 @@ def _default_vector_store_factory() -> VectorStore:
 graph_factory: Callable[[], IGraphAdapter] = _default_graph_factory
 
 #: Callable used to create the active vector store. Tests may override this.
-vector_store_factory: Callable[[], VectorStore] = _default_vector_store_factory
+vector_store_factory: Callable[[], VectorBackend] = _default_vector_store_factory
 
 
 def create_graph() -> IGraphAdapter:
@@ -30,7 +30,7 @@ def create_graph() -> IGraphAdapter:
     return graph_factory()
 
 
-def create_vector_store() -> VectorStore:
+def create_vector_store() -> VectorBackend:
     """Instantiate the configured vector store."""
     return vector_store_factory()
 
