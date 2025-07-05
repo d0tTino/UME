@@ -117,15 +117,10 @@ stack:
 1. Install Docker and Docker Compose.
 2. From the project root run:
    ```bash
-   cd docker
-   # Optional: generate TLS certificates
-   bash generate-certs.sh
-   docker compose up
+   poetry run python ume_cli.py quickstart
    ```
 3. Wait until `redpanda`, `neo4j`, and `ume-api` report `healthy` with `docker compose ps`.
 4. Inspect logs with `docker compose logs -f ume-api`.
 5. Confirm all services report `healthy` with `docker compose ps`.
-
-
-7. Stop all containers with `docker compose down` when finished.
+6. Stop all containers with `docker compose down` when finished.
 

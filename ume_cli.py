@@ -600,6 +600,40 @@ def _compose_down(compose_file: Path = COMPOSE_FILE) -> None:
     print("Stack stopped.")
 
 
+def _ensure_env_file(env_file: Path = Path(".env")) -> None:
+    """Create ``.env`` from ``docs/ENV_EXAMPLE.md`` if missing."""
+    if env_file.exists():
+        return
+    example = Path(__file__).resolve().parent / "docs" / "ENV_EXAMPLE.md"
+    try:
+        lines = example.read_text().splitlines()
+    except FileNotFoundError:
+        return
+    start = None
+    for idx, line in enumerate(lines):
+        if line.strip().startswith("```bash"):
+            start = idx + 1
+            break
+    if start is None:
+        return
+    end = start
+    for idx in range(start, len(lines)):
+        if lines[idx].strip().startswith("```"):
+            end = idx
+            break
+    env_content = "\n".join(lines[start:end]) + "\n"
+    env_file.write_text(env_content)
+    print("Created .env from docs/ENV_EXAMPLE.md")
+
+
+def _quickstart() -> None:
+    """Prepare environment and start the Docker Compose stack."""
+    _ensure_env_file()
+    cert_script = Path(__file__).resolve().parent / "docker" / "generate-certs.sh"
+    subprocess.run(["bash", str(cert_script)], check=True)
+    _compose_up()
+
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
     parser = argparse.ArgumentParser(description="UME CLI")
@@ -617,6 +651,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("up", help="Start Docker Compose stack")
     sub.add_parser("down", help="Stop Docker Compose stack")
+    sub.add_parser("quickstart", help="Create .env, generate certs and start the stack")
 
     args = parser.parse_args()
 
@@ -625,6 +660,9 @@ def main() -> None:
         return
     if args.command == "down":
         _compose_down()
+        return
+    if args.command == "quickstart":
+        _quickstart()
         return
 
     configure_logging()
