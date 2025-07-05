@@ -130,6 +130,26 @@ The API runs a background task that calls this method once per day. The
 retention window defaults to 30 days and can be configured via the
 `UME_GRAPH_RETENTION_DAYS` environment variable.
 
+## Ledger replay
+
+The event ledger stores sanitized events with their original offsets. A graph
+can be reconstructed at any point by replaying these events. The helper
+function ``build_graph_from_ledger`` instantiates a temporary graph and applies
+events up to a specified offset or timestamp:
+
+```python
+from ume.event_ledger import EventLedger
+from ume.persistent_graph import build_graph_from_ledger
+
+ledger = EventLedger("ledger.db")
+graph = build_graph_from_ledger(ledger, end_offset=10)
+# or limit by timestamp
+snapshot = build_graph_from_ledger(ledger, end_timestamp=1_725_000_000)
+```
+
+The `/ledger/replay` API wraps this helper and returns a JSON snapshot of the
+graph state.
+
 ## Memory aging
 
 The :class:`ume.memory.TieredMemoryManager` orchestrates data movement across
