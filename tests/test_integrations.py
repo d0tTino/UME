@@ -3,6 +3,8 @@ import pytest
 
 from integrations.langgraph import LangGraph
 from integrations.letta import Letta
+from integrations.memgpt import MemGPT
+from integrations.supermemory import SuperMemory
 
 respx = pytest.importorskip("respx")
 
@@ -31,6 +33,32 @@ def test_letta_wrapper_forwards() -> None:
         assert recall.called
         assert result == {"id": 1}
         assert dict(recall.calls.last.request.url.params) == {"id": "1"}
+
+
+def test_memgpt_wrapper_forwards() -> None:
+    client = MemGPT(base_url="http://ume")
+    with respx.mock(assert_all_called=True) as mock:
+        evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
+        recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"id": 2}))
+        client.send_events([{"foo": 2}])
+        result = client.recall({"id": 2})
+        assert evt.called
+        assert recall.called
+        assert result == {"id": 2}
+        assert dict(recall.calls.last.request.url.params) == {"id": "2"}
+
+
+def test_supermemory_wrapper_forwards() -> None:
+    client = SuperMemory(base_url="http://ume")
+    with respx.mock(assert_all_called=True) as mock:
+        evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
+        recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"result": 3}))
+        client.send_events([{"foo": 3}])
+        result = client.recall({"result": 3})
+        assert evt.called
+        assert recall.called
+        assert result == {"result": 3}
+        assert dict(recall.calls.last.request.url.params) == {"result": "3"}
 
 
 def test_wrapper_batch_endpoint() -> None:
