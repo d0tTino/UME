@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .vector_store import VectorStore
+from .vector_backends import VectorStore
 from .graph_adapter import IGraphAdapter
 from .embedding import generate_embedding
 

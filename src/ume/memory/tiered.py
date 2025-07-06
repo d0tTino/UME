@@ -8,7 +8,7 @@ from typing import Callable
 
 from ..config import settings
 from ..metrics import STALE_VECTOR_WARNINGS
-from ..vector_store import VectorStore
+from ..vector_backends import VectorStore
 from .episodic import EpisodicMemory
 from .semantic import SemanticMemory
 from .cold import ColdMemory

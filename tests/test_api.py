@@ -9,7 +9,7 @@ if not hasattr(faiss, "IndexFlatL2"):
     pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 from ume.api import app, configure_graph, configure_vector_store
-from ume.vector_store import VectorStore
+from ume.vector_store import FaissBackend
 from ume import MockGraph
 from ume.config import settings
 from pytest import MonkeyPatch, LogCaptureFixture
@@ -143,7 +143,7 @@ def test_metrics_endpoint_authorized() -> None:
 
 
 def test_metrics_summary() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    configure_vector_store(FaissBackend(dim=2, use_gpu=False))
     client = TestClient(app)
     token = _token(client)
     client.get(
@@ -162,7 +162,7 @@ def test_metrics_summary() -> None:
 
 
 def test_metrics_summary_with_rate_limit() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    configure_vector_store(FaissBackend(dim=2, use_gpu=False))
     with TestClient(app) as client:
         token = _token(client)
         for _ in range(2):
@@ -197,7 +197,7 @@ def test_metrics_summary_with_rate_limit() -> None:
 
 
 def test_dashboard_endpoints() -> None:
-    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    configure_vector_store(FaissBackend(dim=2, use_gpu=False))
     client = TestClient(app)
     token = _token(client)
     res_stats = client.get(
