@@ -2,7 +2,7 @@
 parallel = True
 concurrency = multiprocessing
 source =
-    ume.grpc_service
+    ume.grpc_server
     ume.dag_executor
     ume.vector_store
 omit =
@@ -10,7 +10,7 @@ omit =
     */tests/*
     */benchmarks.py
 include =
-    ume.grpc_service
+    ume.grpc_server
     ume.dag_executor
     ume.vector_store
 

@@ -3,17 +3,16 @@
 
 from __future__ import annotations
 
-import asyncio
 import typing
 
 import grpc
 from google.protobuf import struct_pb2
 
-from .query import Neo4jQueryEngine
-from .vector_store import VectorStore
-from .audit import get_audit_entries
-from .config import settings
-from .logging_utils import configure_logging
+from ..query import Neo4jQueryEngine
+from ..vector_store import VectorStore
+from ..audit import get_audit_entries
+from ..config import settings
+from ..logging_utils import configure_logging
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
 
@@ -84,6 +83,7 @@ def serve(query_engine: Neo4jQueryEngine, store: VectorStore, *, port: int = 500
 
 
 async def main() -> None:
+    """Run the gRPC server using default configuration."""
     configure_logging()
     qe = Neo4jQueryEngine.from_credentials(
         settings.NEO4J_URI, settings.NEO4J_USER, settings.NEO4J_PASSWORD
@@ -94,5 +94,4 @@ async def main() -> None:
     await server.wait_for_termination()
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+__all__ = ["UMEServicer", "serve", "main"]
