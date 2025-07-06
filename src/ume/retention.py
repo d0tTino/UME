@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
+from typing import Any
 
 from typing import Protocol
 from .config import settings
@@ -14,6 +15,7 @@ _retention_thread: threading.Thread | None = None
 _stop_event: threading.Event | None = None
 _vector_thread: threading.Thread | None = None
 _vector_stop: threading.Event | None = None
+_vector_params: tuple[Any, ...] | None = None
 
 
 class _SupportsPurge(Protocol):
@@ -105,10 +107,14 @@ def start_vector_age_scheduler(
 ) -> tuple[threading.Thread, Callable[[], None]]:
     """Run ``_check_stale_vectors`` periodically in a background thread."""
 
-    global _vector_thread, _vector_stop
+    global _vector_thread, _vector_stop, _vector_params
+
+    params = (store, interval_seconds, warn_threshold, log)
 
     if _vector_thread and _vector_thread.is_alive():
-        return _vector_thread, lambda: None
+        if params == _vector_params:
+            return _vector_thread, lambda: None
+        stop_vector_age_scheduler()
 
     stop_event = threading.Event()
 
@@ -124,6 +130,7 @@ def start_vector_age_scheduler(
 
     _vector_thread = thread
     _vector_stop = stop_event
+    _vector_params = params
 
     def stop() -> None:
         stop_event.set()
@@ -135,10 +142,11 @@ def start_vector_age_scheduler(
 def stop_vector_age_scheduler() -> None:
     """Terminate the vector age scheduler if it is running."""
 
-    global _vector_thread, _vector_stop
+    global _vector_thread, _vector_stop, _vector_params
     if _vector_stop is not None:
         _vector_stop.set()
     if _vector_thread is not None:
         _vector_thread.join()
     _vector_thread = None
     _vector_stop = None
+    _vector_params = None
