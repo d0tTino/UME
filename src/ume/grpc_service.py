@@ -10,7 +10,7 @@ import grpc
 from google.protobuf import struct_pb2
 
 from .query import Neo4jQueryEngine
-from .vector_store import VectorStore
+from .vector_backends import VectorStore
 from .audit import get_audit_entries
 from .config import settings
 from .logging_utils import configure_logging
@@ -88,7 +88,10 @@ async def main() -> None:
     qe = Neo4jQueryEngine.from_credentials(
         settings.NEO4J_URI, settings.NEO4J_USER, settings.NEO4J_PASSWORD
     )
-    store = VectorStore(dim=settings.UME_VECTOR_DIM, use_gpu=settings.UME_VECTOR_USE_GPU)
+    store = VectorStore(
+        dim=settings.UME_VECTOR_DIM,
+        use_gpu=settings.UME_VECTOR_USE_GPU,
+    )
     server = serve(qe, store, port=50051)
     await server.start()
     await server.wait_for_termination()

@@ -8,7 +8,7 @@ from typing import Dict, Iterable, List
 
 import numpy as np
 
-from .vector_store import VectorStore
+from .vector_backends import FaissBackend
 
 DEF_DIM = 1536
 DEF_NUM_VECTORS = 100_000
@@ -29,7 +29,7 @@ def benchmark_vector_store(
     latencies: List[float] = []
 
     for _ in range(runs):
-        store = VectorStore(dim=dim, use_gpu=use_gpu)
+        store = FaissBackend(dim=dim, use_gpu=use_gpu)
         vectors = np.random.random((num_vectors, dim)).astype("float32")
 
         start = time.perf_counter()

@@ -11,7 +11,7 @@ from ume.event import Event, EventType
 from ume.client import UMEClient
 from ume.config import Settings
 from ume.neo4j_graph import Neo4jGraph
-from ume.vector_store import VectorStore, VectorStoreListener
+from ume.vector_store import FaissBackend, VectorStoreListener
 from ume._internal.listeners import register_listener, unregister_listener
 from ume.processing import apply_event_to_graph
 from ume.pipeline import privacy_agent
@@ -65,7 +65,7 @@ def test_privacy_agent_end_to_end(redpanda_service, neo4j_service, monkeypatch):
     settings = DockerSettings(broker)
     client = UMEClient(settings)
 
-    store = VectorStore(dim=2, use_gpu=False)
+    store = FaissBackend(dim=2, use_gpu=False)
     listener = VectorStoreListener(store)
     register_listener(listener)
 

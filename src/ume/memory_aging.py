@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .memory import EpisodicMemory, SemanticMemory, ColdMemory
-from .vector_store import VectorStore
+from .vector_backends import VectorStore
 from .config import settings
 from .metrics import STALE_VECTOR_WARNINGS, STALE_VECTOR_COUNT
 

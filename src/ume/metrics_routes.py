@@ -8,7 +8,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from .api_deps import get_current_role, get_vector_store
-from .vector_store import VectorStore
+from .vector_backends import VectorStore
 
 router = APIRouter(prefix="/metrics")
 

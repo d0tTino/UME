@@ -43,9 +43,9 @@ def test_memory_aging_moves_old_events(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_vector_store_expire_vectors() -> None:
     pytest.importorskip("faiss")
-    from ume.vector_store import VectorStore
+    from ume.vector_store import FaissBackend
 
-    store = VectorStore(dim=2, use_gpu=False)
+    store = FaissBackend(dim=2, use_gpu=False)
     store.add("x", [0.0, 1.0])
     store.vector_ts["x"] = int(time.time()) - 10
     store.expire_vectors(5)
