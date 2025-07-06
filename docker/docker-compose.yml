@@ -60,7 +60,7 @@ services:
   ume-api:
     build:
       context: ..
-      dockerfile: Dockerfile.privacy-agent
+      dockerfile: docker/Dockerfile.api
     command: uvicorn ume.api:app --host 0.0.0.0 --port 8000
     depends_on:
       redpanda:
