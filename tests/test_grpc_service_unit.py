@@ -41,7 +41,7 @@ _old_modules = {name: sys.modules.get(name) for name in (
 sys.modules.setdefault("httpx", types.ModuleType("httpx"))
 sys.modules.setdefault("structlog", types.ModuleType("structlog"))
 
-# Load ume.grpc_service without importing the rest of the package.
+# Load ume.grpc_server without importing the rest of the package.
 root = Path(__file__).resolve().parents[1]
 package = types.ModuleType("ume")
 package.__path__ = [str(root / "src" / "ume")]
@@ -92,11 +92,11 @@ stub_log.configure_logging = configure_logging
 sys.modules["ume.logging_utils"] = stub_log
 
 spec = importlib.util.spec_from_file_location(
-    "ume.grpc_service", root / "src" / "ume" / "grpc_service.py"
+    "ume.grpc_server", root / "src" / "ume" / "grpc_server" / "__init__.py"
 )
 assert spec and spec.loader
 grpc_service = importlib.util.module_from_spec(spec)
-sys.modules["ume.grpc_service"] = grpc_service
+sys.modules["ume.grpc_server"] = grpc_service
 spec.loader.exec_module(grpc_service)
 
 for name, mod in old_modules.items():
@@ -105,7 +105,7 @@ for name, mod in old_modules.items():
     else:
         sys.modules.pop(name, None)
 
-setattr(package, "grpc_service", grpc_service)
+setattr(package, "grpc_server", grpc_service)
 
 UMEServicer = grpc_service.UMEServicer
 serve = grpc_service.serve
@@ -155,7 +155,7 @@ def test_search_vectors():
 def test_get_audit_entries(monkeypatch):
     svc = UMEServicer(DummyEngine(), DummyStore())  # type: ignore[arg-type]
     monkeypatch.setattr(
-        "ume.grpc_service.get_audit_entries",
+        "ume.grpc_server.get_audit_entries",
         lambda: [
             {"timestamp": 1, "user_id": "u1", "reason": "r1", "signature": "s1"},
             {"timestamp": 2, "user_id": "u2", "reason": "r2", "signature": "s2"},
@@ -185,7 +185,7 @@ def test_serve(monkeypatch):
     server = DummyServer()
     monkeypatch.setattr(grpc.aio, "server", lambda: server)
     monkeypatch.setattr(
-        "ume.grpc_service.ume_pb2_grpc.add_UMEServicer_to_server",
+        "ume.grpc_server.ume_pb2_grpc.add_UMEServicer_to_server",
         lambda servicer, srv: created.setdefault("servicer", servicer),
     )
 
@@ -217,7 +217,7 @@ async def collect_async(gen: AsyncIterator[Any]) -> List[Any]:
 
 def test_main(monkeypatch):
     called: dict[str, bool] = {}
-    monkeypatch.setattr("ume.grpc_service.configure_logging", lambda: called.setdefault("log", True))
+    monkeypatch.setattr("ume.grpc_server.configure_logging", lambda: called.setdefault("log", True))
 
     class DummyQE:
         @staticmethod
@@ -225,13 +225,13 @@ def test_main(monkeypatch):
             called["qe"] = True
             return "qe"
 
-    monkeypatch.setattr("ume.grpc_service.Neo4jQueryEngine", DummyQE)
+    monkeypatch.setattr("ume.grpc_server.Neo4jQueryEngine", DummyQE)
 
     class DummyStore2:
         def __init__(self, *args: object, **kwargs: object) -> None:
             called["store"] = True
 
-    monkeypatch.setattr("ume.grpc_service.VectorStore", DummyStore2)
+    monkeypatch.setattr("ume.grpc_server.VectorStore", DummyStore2)
 
     class DummyServer:
         async def start(self) -> None:
@@ -240,7 +240,7 @@ def test_main(monkeypatch):
         async def wait_for_termination(self) -> None:
             called["wait"] = True
 
-    monkeypatch.setattr("ume.grpc_service.serve", lambda qe, store, port=50051: DummyServer())
+    monkeypatch.setattr("ume.grpc_server.serve", lambda qe, store, port=50051: DummyServer())
 
     asyncio.run(main())
 
@@ -256,7 +256,7 @@ from unittest.mock import MagicMock
 def teardown_module(module: object) -> None:
     """Remove stub modules injected during import."""
     for name in (
-        "ume.grpc_service",
+        "ume.grpc_server",
         "ume.query",
         "ume.vector_store",
         "ume.audit",
@@ -296,7 +296,7 @@ def test_get_audit_entries_with_mock(monkeypatch):
     store = MagicMock()
     svc = UMEServicer(qe, store)  # type: ignore[arg-type]
     monkeypatch.setattr(
-        "ume.grpc_service.get_audit_entries",
+        "ume.grpc_server.get_audit_entries",
         lambda: [
             {"timestamp": 1, "user_id": "u1", "reason": "r1", "signature": "s1"},
             {"timestamp": 2, "user_id": "u2", "reason": "r2", "signature": "s2"},
