@@ -213,7 +213,7 @@ def stop_vector_age_scheduler() -> None:
     global _vector_thread, _vector_stop, _vector_params
     if _vector_stop is not None:
         _vector_stop.set()
-    if _vector_thread is not None:
+    if _vector_thread is not None and _vector_thread.is_alive():
         _vector_thread.join()
     _vector_thread = None
     _vector_stop = None
@@ -224,9 +224,12 @@ def stop_memory_aging_scheduler() -> None:
     """Stop the memory aging scheduler if running."""
     global _thread, _stop_event, _thread_params
 
+    # Ensure any auxiliary schedulers are also terminated
+    stop_vector_age_scheduler()
+
     if _stop_event is not None:
         _stop_event.set()
-    if _thread is not None:
+    if _thread is not None and _thread.is_alive():
         _thread.join()
     _thread = None
     _stop_event = None
