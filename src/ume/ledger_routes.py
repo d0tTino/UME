@@ -12,12 +12,12 @@ from . import api_deps as deps
 router = APIRouter()
 
 
-class LedgerEvent(BaseModel):  # type: ignore[misc]
+class LedgerEvent(BaseModel):
     offset: int
     event: Dict[str, Any]
 
 
-@router.get("/ledger/events", response_model=List[LedgerEvent])  # type: ignore[misc]
+@router.get("/ledger/events", response_model=List[LedgerEvent])
 def list_events(
     start: int = Query(0, ge=0),
     end: int | None = Query(None, ge=0),
@@ -28,7 +28,7 @@ def list_events(
     return [LedgerEvent(offset=o, event=e) for o, e in entries]
 
 
-@router.get("/ledger/replay")  # type: ignore[misc]
+@router.get("/ledger/replay")
 def replay_ledger(
     end_offset: int | None = Query(None, ge=0),
     end_timestamp: int | None = Query(None, ge=0),
