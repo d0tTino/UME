@@ -9,6 +9,7 @@ import time  # Added for timestamp in event creation
 import warnings
 from pathlib import Path
 import os
+import secrets
 import subprocess
 
 # Ensure local package import when run directly without installation
@@ -601,7 +602,11 @@ def _compose_down(compose_file: Path = COMPOSE_FILE) -> None:
 
 
 def _ensure_env_file(env_file: Path = Path(".env")) -> None:
-    """Create ``.env`` from ``docs/ENV_EXAMPLE.md`` if missing."""
+    """Create ``.env`` from ``docs/ENV_EXAMPLE.md`` if missing.
+
+    A random ``UME_AUDIT_SIGNING_KEY`` is inserted so the default key
+    from ``src/ume/config.py`` is never used.
+    """
     if env_file.exists():
         return
     example = Path(__file__).resolve().parent / "docs" / "ENV_EXAMPLE.md"
@@ -621,9 +626,14 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
         if lines[idx].strip().startswith("```"):
             end = idx
             break
-    env_content = "\n".join(lines[start:end]) + "\n"
+    env_lines = lines[start:end]
+    for i, line in enumerate(env_lines):
+        if line.startswith("UME_AUDIT_SIGNING_KEY="):
+            env_lines[i] = f"UME_AUDIT_SIGNING_KEY={secrets.token_hex(32)}"
+            break
+    env_content = "\n".join(env_lines) + "\n"
     env_file.write_text(env_content)
-    print("Created .env from docs/ENV_EXAMPLE.md")
+    print("Created .env from docs/ENV_EXAMPLE.md with random UME_AUDIT_SIGNING_KEY")
 
 
 def _quickstart() -> None:

@@ -336,11 +336,11 @@ Create a `.env` file in the project root before starting any services. Copy the
 template from [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) and set a
 non-default `UME_AUDIT_SIGNING_KEY` or UME will refuse to start. The
 `quickstart` command described below automatically creates this file if it is
-missing:
+missing and inserts a random signing key:
 
 ```bash
 # .env
-UME_AUDIT_SIGNING_KEY=my-ume-key
+UME_AUDIT_SIGNING_KEY=<randomly-generated-key>
 ```
 
 See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
