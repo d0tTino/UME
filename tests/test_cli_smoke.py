@@ -334,3 +334,37 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
 
     assert any("down" in " ".join(c) for c in run_calls)
     assert "Stack stopped." in out_down
+
+
+def test_cli_quickstart_creates_env_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import importlib
+    import ume_cli as cli
+
+    importlib.reload(cli)
+
+    run_calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = True, **_: object) -> None:
+        run_calls.append(cmd)
+
+    def fake_check_output(cmd: list[str], **_: object) -> str:
+        if "ps" in cmd:
+            return "redpanda healthy\nprivacy-agent healthy\nume-api healthy\n"
+        return ""
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "quickstart"]
+    cli.main()
+    sys.argv = argv
+
+    capsys.readouterr()  # flush output
+
+    assert (tmp_path / ".env").is_file()
+    assert any("generate-certs.sh" in " ".join(c) for c in run_calls)
