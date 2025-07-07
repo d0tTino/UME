@@ -601,6 +601,25 @@ def _compose_down(compose_file: Path = COMPOSE_FILE) -> None:
     print("Stack stopped.")
 
 
+def _compose_ps(compose_file: Path = COMPOSE_FILE) -> None:
+    """Print Docker Compose service health info."""
+    try:
+        out = subprocess.check_output(
+            ["docker", "compose", "-f", str(compose_file), "ps", "--format", "{{.Name}} {{.Health}}"],
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        print("Docker is not installed or not on PATH")
+        raise SystemExit(1) from exc
+    if not out.strip():
+        print("No running containers.")
+        return
+    for line in out.splitlines():
+        if line.strip():
+            name, health = line.split(maxsplit=1)
+            print(f"{name}: {health}")
+
+
 def _ensure_env_file(env_file: Path = Path(".env")) -> None:
     """Create ``.env`` from ``docs/ENV_EXAMPLE.md`` if missing.
 
@@ -662,6 +681,7 @@ def main() -> None:
     sub.add_parser("up", help="Start Docker Compose stack")
     sub.add_parser("down", help="Stop Docker Compose stack")
     sub.add_parser("quickstart", help="Create .env, generate certs and start the stack")
+    sub.add_parser("ps", help="Show status and health of Docker Compose services")
 
     args = parser.parse_args()
 
@@ -673,6 +693,9 @@ def main() -> None:
         return
     if args.command == "quickstart":
         _quickstart()
+        return
+    if args.command == "ps":
+        _compose_ps()
         return
 
     configure_logging()

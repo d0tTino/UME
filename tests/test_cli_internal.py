@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import pytest
 
 
 
@@ -48,3 +49,22 @@ def test_umeprompt_commands(tmp_path: Path) -> None:
 
     _setup_warnings(True, str(tmp_path / "warn.log"))
     prompt.do_exit("")
+
+
+def test_compose_ps(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    import importlib
+    import ume_cli as cli
+
+    importlib.reload(cli)
+
+    def fake_check_output(cmd: list[str], **_: object) -> str:
+        assert "ps" in cmd
+        return "api healthy\nagent unhealthy"
+
+    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
+
+    cli._compose_ps()
+
+    out = capsys.readouterr().out
+    assert "api: healthy" in out
+    assert "agent: unhealthy" in out
