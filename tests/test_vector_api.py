@@ -180,3 +180,30 @@ def test_recall_unauthorized(store_cls) -> None:
     client = TestClient(app)
     res = client.get("/recall", params={"vector": [0.0, 1.0]})
     assert res.status_code == 401
+
+
+def test_recall_stream(store_cls, monkeypatch) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+
+    graph = MockGraph()
+    graph.add_node("a", {"val": 1})
+    configure_graph(graph)
+    store = app.state.vector_store
+    store.add("a", [1.0, 0.0])
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda q: [1.0, 0.0])
+    with TestClient(app) as client:
+        token = client.post(
+            "/auth/token",
+            data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+        ).json()["access_token"]
+        with client.stream(
+            "GET",
+            "/recall/stream",
+            params={"query": "foo", "k": 1},
+            headers={"Authorization": f"Bearer {token}"},
+        ) as res:
+            assert res.status_code == 200
+            lines = [line for line in res.iter_lines() if line.startswith("data:")]
+        assert lines
