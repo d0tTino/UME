@@ -7,7 +7,6 @@ readme = "README.md"
 packages = [
     {include = "ume", from = "src"},
     {include = "ume_client", from = "src"},
-    {include = "integrations", from = "src"},
 ]
 
 [tool.poetry.dependencies]

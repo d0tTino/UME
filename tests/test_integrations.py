@@ -1,10 +1,10 @@
 import httpx
 import pytest
 
-from integrations.langgraph import LangGraph
-from integrations.letta import Letta
-from integrations.memgpt import MemGPT
-from integrations.supermemory import SuperMemory
+from ume.integrations.langgraph import LangGraph
+from ume.integrations.letta import Letta
+from ume.integrations.memgpt import MemGPT
+from ume.integrations.supermemory import SuperMemory
 
 respx = pytest.importorskip("respx")
 

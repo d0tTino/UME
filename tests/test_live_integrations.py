@@ -9,8 +9,8 @@ neo4j_mod = sys.modules["neo4j"]
 neo4j_mod.GraphDatabase = getattr(neo4j_mod, "GraphDatabase", object)
 neo4j_mod.Driver = getattr(neo4j_mod, "Driver", object)
 
-from integrations.langgraph import LangGraph
-from integrations.letta import Letta
+from ume.integrations.langgraph import LangGraph
+from ume.integrations.letta import Letta
 from ume.api import app, configure_graph, configure_vector_store
 from ume import MockGraph
 from ume.config import settings
