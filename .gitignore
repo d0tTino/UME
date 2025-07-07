@@ -181,3 +181,6 @@ consent_ledger.db
 feedback.db
 .secrets.baseline
 
+event_ledger.db
+vectors.faiss
+vectors.faiss.json

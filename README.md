@@ -505,6 +505,13 @@ curl "http://localhost:8000/recall?query=demo&k=3" \
 
 The API returns the matching node attributes ordered by similarity.
 
+To stream results as they are found, use `/recall/stream` with an SSE client:
+
+```bash
+curl -N "http://localhost:8000/recall/stream?query=demo&k=3" \
+  -H "Authorization: Bearer <token>"
+```
+
 ## Configuration Templates
 
 Sample configuration files for common environments are provided in

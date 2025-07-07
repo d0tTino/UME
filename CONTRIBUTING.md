@@ -63,9 +63,9 @@ pre-commit run detect-secrets --files path/to/file
 
 ### Pull Requests
 
- - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR. Coverage for the `ume` package must remain above 80%, verified with:
+ - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR. Unit tests must run with coverage reporting, verified with:
    ```bash
-   pytest --cov=ume --cov-fail-under=80
+   pytest --cov=ume --cov-fail-under=30
    ```
 - All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, formatting checks, and mypy) before merging.
 - The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.

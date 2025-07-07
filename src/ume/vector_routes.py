@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+import asyncio
+import json
 from pydantic import BaseModel
 
 from . import api_deps as deps
@@ -69,6 +72,36 @@ def api_recall(
         if attrs is not None:
             nodes.append({"id": node_id, "attributes": attrs})
     return {"nodes": nodes}
+
+
+@router.get("/recall/stream")
+async def api_recall_stream(
+    query: str | None = Query(None),
+    vector: List[float] | None = Query(None),
+    k: int = 5,
+    _: str = Depends(deps.get_current_role),
+    store: VectorStore = Depends(deps.get_vector_store),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+) -> StreamingResponse:
+    """Stream nearest nodes one by one as they are found."""
+    if query is None and vector is None:
+        raise HTTPException(status_code=400, detail="query or vector required")
+    if vector is None and query is not None:
+        vector = generate_embedding(query)
+    assert vector is not None
+    if len(vector) != store.dim:
+        raise HTTPException(status_code=400, detail="Invalid vector dimension")
+
+    async def _gen() -> AsyncGenerator[str, None]:
+        ids = store.query(vector, k=k)
+        for node_id in ids:
+            attrs = graph.get_node(node_id)
+            if attrs is not None:
+                payload = {"id": node_id, "attributes": attrs}
+                yield f"data: {json.dumps(payload)}\n\n"
+            await asyncio.sleep(0)
+
+    return StreamingResponse(_gen(), media_type="text/event-stream")
 
 
 @router.get("/vectors/benchmark")
