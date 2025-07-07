@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Iterable, Mapping, Any
+from typing_extensions import Self
 from types import TracebackType
 
 import httpx
@@ -39,7 +40,7 @@ class LangGraph:
     def close(self) -> None:
         self._client.close()
 
-    def __enter__(self) -> "LangGraph":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
