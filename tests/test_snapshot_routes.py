@@ -37,9 +37,18 @@ neo4j_stub = sys.modules.setdefault("neo4j", type("m", (), {}))
 setattr(neo4j_stub, "GraphDatabase", type("GraphDatabase", (), {}))
 setattr(neo4j_stub, "Driver", type("Driver", (), {}))
 
+import os
+import types
+
+os.environ.setdefault("UME_VECTOR_BACKEND", "faiss")
+sys.modules.setdefault("faiss", types.ModuleType("faiss"))
+
+from ume.config import settings
+object.__setattr__(settings, "UME_VECTOR_BACKEND", "faiss")
+
 from ume.factories import create_graph_adapter
 from ume.api import app, configure_graph
-from ume.config import settings
+from ume.event_ledger import EventLedger
 
 
 def _token(client: TestClient) -> str:
@@ -74,8 +83,10 @@ def test_snapshot_routes_roundtrip(
     if backend == "sqlite":
         import sqlite3
         orig_connect = sqlite3.connect
+
         def _connect(*a, **kw):
-            return orig_connect(*a, check_same_thread=False, **kw)
+            kw.setdefault("check_same_thread", False)
+            return orig_connect(*a, **kw)
         monkeypatch.setattr(sqlite3, "connect", _connect)
     monkeypatch.setenv("UME_GRAPH_BACKEND", backend)
     monkeypatch.setenv("UME_DB_PATH", db_path)
@@ -110,5 +121,92 @@ def test_snapshot_routes_roundtrip(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_load.status_code == 200
+    assert set(fresh.get_all_node_ids()) == {"a", "b"}
+    assert ("a", "b", "L") in fresh.get_all_edges()
+
+
+@pytest.mark.parametrize(
+    "backend,service",
+    [
+        ("sqlite", None),
+        ("postgres", "postgres_service"),
+        ("redis", "redis_service"),
+    ],
+)
+def test_restore_route_builds_graph(
+    tmp_path: Path,
+    backend: str,
+    service: str | None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if service:
+        info = request.getfixturevalue(service)
+        db_path = info["dsn"] if backend == "postgres" else info["url"]
+    else:
+        db_path = str(tmp_path / "graph.db")
+
+    if backend == "sqlite":
+        import sqlite3
+
+        orig_connect = sqlite3.connect
+
+        def _connect(*a, **kw):
+            kw.setdefault("check_same_thread", False)
+            return orig_connect(*a, **kw)
+
+        monkeypatch.setattr(sqlite3, "connect", _connect)
+
+    monkeypatch.setenv("UME_GRAPH_BACKEND", backend)
+    monkeypatch.setenv("UME_DB_PATH", db_path)
+    monkeypatch.setattr(settings, "UME_GRAPH_BACKEND", backend, raising=False)
+    monkeypatch.setattr(settings, "UME_DB_PATH", db_path, raising=False)
+
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    ledger.append(
+        0,
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "a",
+            "payload": {"node_id": "a"},
+        },
+    )
+    ledger.append(
+        1,
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 2,
+            "node_id": "b",
+            "payload": {"node_id": "b"},
+        },
+    )
+    ledger.append(
+        2,
+        {
+            "event_type": "CREATE_EDGE",
+            "timestamp": 3,
+            "node_id": "a",
+            "target_node_id": "b",
+            "label": "L",
+            "payload": {},
+        },
+    )
+    monkeypatch.setattr("ume.snapshot_routes.event_ledger", ledger)
+
+    graph = create_graph_adapter(db_path)
+    configure_graph(graph)
+
+    client = TestClient(app)
+    token = _token(client)
+
+    res = client.post(
+        "/snapshot/restore",
+        json={"path": db_path},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    fresh = create_graph_adapter(db_path)
     assert set(fresh.get_all_node_ids()) == {"a", "b"}
     assert ("a", "b", "L") in fresh.get_all_edges()
