@@ -420,19 +420,31 @@ You can also search the vector store with either UI:
 poetry run python frontend/app.py --username ume --password password search "1,0,0" --k 3
 ```
 
-### 9. Integration Notebooks
+### 9. Integration Wrappers
 
-Simple wrappers for [LangGraph](https://github.com/langchain-ai/langgraph) and
-[Letta](https://github.com/stratusphd/letta) forward events to the UME API. They
-are installed with the optional `integrations` extras:
+Lightweight wrappers in `ume.integrations` forward events from external
+frameworks such as
+[LangGraph](https://github.com/langchain-ai/langgraph) and
+[Letta](https://github.com/stratusphd/letta) to the UME API.
+
+Install them with the optional `integrations` extras:
 
 ```bash
 pip install ume[integrations]
 ```
 
-See [`examples/langgraph_integration.ipynb`](examples/langgraph_integration.ipynb)
-and [`examples/letta_integration.ipynb`](examples/letta_integration.ipynb) for
-usage.
+Basic usage:
+
+```python
+from ume.integrations import LangGraph
+
+client = LangGraph()
+client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+print(client.recall({"node_id": "n1"}))
+```
+
+See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
+[`examples/letta_example.py`](examples/letta_example.py) for minimal scripts.
 
 ### Building and Deploying the Frontend
 
