@@ -9,6 +9,7 @@ if not hasattr(faiss, "IndexFlatL2"):
     pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 from ume.api import app, configure_graph, configure_vector_store
+from ume import api_deps as deps
 from ume.vector_store import VectorStore
 from ume import MockGraph
 from ume.config import settings
@@ -262,12 +263,16 @@ def test_exception_logging_on_query(
     monkeypatch: MonkeyPatch, caplog: LogCaptureFixture
 ) -> None:
     """Exception inside endpoint should be logged with traceback."""
-    client = TestClient(app, raise_server_exceptions=False)
-
     def raise_error(*_: Any, **__: Any) -> None:
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(app.state.query_engine, "execute_cypher", raise_error)
+    # Override the query engine dependency to ensure the error surfaces even if
+    # previous tests replaced ``app.state.query_engine``.
+    app.dependency_overrides[deps.get_query_engine] = lambda: type(
+        "QE", (), {"execute_cypher": raise_error}
+    )()
+
+    client = TestClient(app, raise_server_exceptions=False)
 
     with caplog.at_level("ERROR"):
         res = client.get(
