@@ -37,6 +37,8 @@ class UMEClient:
         group_id = settings.KAFKA_GROUP_ID
         self.producer = Producer({"bootstrap.servers": bootstrap})
         self.use_protobuf = use_protobuf
+        self._pending = 0
+        self._batch_size = settings.KAFKA_PRODUCER_BATCH_SIZE
         self.consumer = Consumer(
             {
                 "bootstrap.servers": bootstrap,
@@ -67,12 +69,17 @@ class UMEClient:
                     schema_version=DEFAULT_VERSION,
                 )
                 setattr(proto_envelope, proto_event[0], proto_event[1])
-                self.producer.produce(self.produce_topic, proto_envelope.SerializeToString())
+                self.producer.produce(
+                    self.produce_topic, proto_envelope.SerializeToString()
+                )
             else:
                 self.producer.produce(
                     self.produce_topic, json.dumps(envelope_dict).encode("utf-8")
                 )
-            self.producer.flush()
+            self._pending += 1
+            if self._pending >= self._batch_size:
+                self.producer.flush()
+                self._pending = 0
         except ValidationError as e:
             logger.error("Event validation failed: %s", e.message)
             raise UMEClientError(f"Event validation failed: {e.message}") from e
@@ -143,7 +150,9 @@ class UMEClient:
     def close(self) -> None:
         """Flush the producer and close the consumer."""
         try:
-            self.producer.flush()
+            if self._pending:
+                self.producer.flush()
+                self._pending = 0
         finally:
             self.consumer.close()
 
