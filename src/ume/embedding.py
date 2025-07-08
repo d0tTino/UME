@@ -16,7 +16,8 @@ else:
                 self.model_name = model_name
 
             def encode(self, text: str) -> list[float]:
-                return [1.0, 0.0] if "apple" in text else [0.9, 0.1]
+                """Return a dummy embedding of the configured dimension."""
+                return [0.0] * settings.UME_VECTOR_DIM
 
 
 SentenceTransformer: type[SentenceTransformerImpl] = SentenceTransformerImpl

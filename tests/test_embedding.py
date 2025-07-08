@@ -19,3 +19,13 @@ def test_generate_embedding(monkeypatch):
     importlib.reload(emb)
     vec = emb.generate_embedding("hello")
     assert vec == [0.0] * 5
+
+
+def test_generate_embedding_default_length(monkeypatch):
+    """Ensure fallback implementation returns correct vector length."""
+    sys.modules.pop("sentence_transformers", None)
+    sys.modules.pop("ume.embedding", None)
+    import ume.embedding as emb
+    importlib.reload(emb)
+    vec = emb.generate_embedding("hello")
+    assert len(vec) == emb.settings.UME_VECTOR_DIM
