@@ -350,9 +350,9 @@ settings.
 ### 2. Start the Docker Stack
 The `ume` CLI can spin up all services for local development. From the repository root run:
 
-
 ```bash
-poetry run python ume_cli.py up
+poetry run python ume_cli.py up --no-confirm
+
 ```
 
 The command generates TLS certificates if needed and waits until the services
@@ -365,7 +365,7 @@ http://localhost:8000/recall
 ```
 Stop the services with:
 ```bash
-poetry run python ume_cli.py down
+poetry run ume-cli down
 ```
 See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 
@@ -458,7 +458,7 @@ See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
 - [MemGPT integration](examples/memgpt_integration.ipynb) – write memory events
   through `MemGPT.send_events()` and access them with `MemGPT.recall()`.
 - [SuperMemory integration](examples/supermemory_integration.ipynb) – log
-  events using `SuperMemory.send_events()` and query them through
+  events using `SuperMemory.send_events()` and retrieve them with
   `SuperMemory.recall()`.
 
 ### Building and Deploying the Frontend
@@ -526,6 +526,19 @@ To stream results as they are found, use `/recall/stream` with an SSE client:
 curl -N "http://localhost:8000/recall/stream?query=demo&k=3" \
   -H "Authorization: Bearer <token>"
 ```
+
+### Retrieve Ledger Events
+The `/ledger/events` endpoint exposes the contents of the event ledger. Use
+`start`, `end`, and `limit` query parameters to control the range of entries
+returned.
+
+```bash
+curl "http://localhost:8000/ledger/events?start=0&end=10&limit=5" \
+  -H "Authorization: Bearer <token>"
+```
+
+The response is a JSON array where each item includes the ``offset`` and the
+original event payload.
 
 ## Configuration Templates
 
@@ -677,6 +690,15 @@ This section outlines the basic programmatic steps to interact with the UME comp
     enable_snapshot_autosave_and_restore(graph_adapter, "ume_snapshot.json")
     ```
 
+    Or run the scheduler from the command line:
+
+    ```bash
+    ume-cli snapshot-schedule --interval 300
+    ```
+
+    This writes updates to the path configured by `UME_SNAPSHOT_PATH` every
+    5 minutes until stopped with `Ctrl+C`.
+
 6.  **Load Graph from Snapshot (Optional):**
     Restore a graph's state from a previously saved snapshot file:
     ```python
@@ -739,12 +761,12 @@ from :class:`ume.config.Settings` and overridden by environment variables at
 runtime.
 
 ```python
-from ume.config import Settings
+from ume.config import load_settings
 from ume.client import UMEClient, UMEClientError
 import time
 
-# Create Settings (environment variables may override defaults)
-settings = Settings()
+# Load Settings (environment variables may override defaults)
+settings = load_settings()
 
 # Connect to the broker and topic defined in Settings
 with UMEClient(settings) as client:

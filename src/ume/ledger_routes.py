@@ -13,6 +13,8 @@ router = APIRouter()
 
 
 class LedgerEvent(BaseModel):
+    """Representation of a single ledger entry."""
+
     offset: int
     event: Dict[str, Any]
 
@@ -24,6 +26,8 @@ def list_events(
     limit: int | None = Query(None, ge=1),
     _: str = Depends(deps.get_current_role),
 ) -> List[LedgerEvent]:
+    """Return ledger events starting at ``start`` up to ``end`` (inclusive)."""
+
     entries = event_ledger.range(start=start, end=end, limit=limit)
     return [LedgerEvent(offset=o, event=e) for o, e in entries]
 

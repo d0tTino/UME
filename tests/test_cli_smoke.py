@@ -3,6 +3,7 @@ import subprocess
 import sys
 import os
 import shlex
+import types
 from pathlib import Path
 import pytest  # For tmp_path if needed later, and general test structure
 
@@ -37,6 +38,7 @@ def run_cli_commands(
     proc_env["UME_DB_PATH"] = ":memory:"
     proc_env["UME_CLI_DB"] = ":memory:"
     proc_env["UME_ROLE"] = "AnalyticsAgent"
+
     # Remove coverage-related environment variables that may interfere with
     # subprocess execution. These are added by pytest-cov when running tests
     # with coverage enabled and cause warnings on stderr which break the CLI
@@ -311,15 +313,17 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
 
     def fake_check_output(cmd: list[str], **_: object) -> str:
         if "ps" in cmd:
-            return "redpanda healthy\nprivacy-agent healthy\n"
+            return "redpanda healthy\nneo4j healthy\nume-api healthy\n"
+
         return ""
 
     monkeypatch.setattr(cli.subprocess, "run", fake_run)
     monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
     monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(cli, "_ensure_env_file", lambda *_: None)
 
     argv = sys.argv[:]
-    sys.argv = ["ume-cli", "up"]
+    sys.argv = ["ume-cli", "up", "--no-confirm"]
     cli.main()
     out_up = capsys.readouterr().out
     sys.argv = argv
@@ -337,6 +341,68 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
     assert "Stack stopped." in out_down
 
 
+def test_cli_up_custom_compose(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Start the stack using a temporary compose file."""
+    import importlib
+    import ume_cli as cli
+
+    importlib.reload(cli)
+
+    compose_file = tmp_path / "docker-compose.yml"
+    compose_file.write_text(
+        "\n".join(
+            [
+                "version: '3'",
+                "services:",
+                "  redpanda:",
+                "    image: foo",
+                "  privacy-agent:",
+                "    image: foo",
+                "  ume-api:",
+                "    image: foo",
+            ]
+        )
+    )
+
+    run_calls: list[list[str]] = []
+    ps_calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = True, **_: object) -> None:
+        run_calls.append(cmd)
+
+    def fake_check_output(cmd: list[str], **_: object) -> str:
+        ps_calls.append(cmd)
+        if "ps" in cmd:
+            return "redpanda healthy\nprivacy-agent healthy\nume-api healthy\n"
+        return ""
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+    orig_compose_up = cli._compose_up
+    monkeypatch.setattr(
+        cli,
+        "_compose_up",
+        lambda compose_file=compose_file, timeout=120: orig_compose_up(
+            compose_file, timeout
+        ),
+    )
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "up"]
+    cli.main()
+    sys.argv = argv
+
+    out = capsys.readouterr().out
+
+    assert any(str(compose_file) in " ".join(c) for c in run_calls)
+    assert any("ps" in c for cmd in ps_calls for c in cmd)
+    assert "http://localhost:8000/docs" in out
+
+
 def test_cli_quickstart_creates_env_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -352,7 +418,7 @@ def test_cli_quickstart_creates_env_file(
 
     def fake_check_output(cmd: list[str], **_: object) -> str:
         if "ps" in cmd:
-            return "redpanda healthy\nprivacy-agent healthy\nume-api healthy\n"
+            return "redpanda healthy\nneo4j healthy\nume-api healthy\n"
         return ""
 
     monkeypatch.chdir(tmp_path)
@@ -361,7 +427,7 @@ def test_cli_quickstart_creates_env_file(
     monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
 
     argv = sys.argv[:]
-    sys.argv = ["ume-cli", "quickstart"]
+    sys.argv = ["ume-cli", "quickstart", "--no-confirm"]
     cli.main()
     sys.argv = argv
 
@@ -369,6 +435,73 @@ def test_cli_quickstart_creates_env_file(
 
     assert (tmp_path / ".env").is_file()
     assert any("generate-certs.sh" in " ".join(c) for c in run_calls)
+
+
+def test_cli_snapshot_schedule(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import importlib
+    import ume.auto_snapshot as auto_snapshot
+
+    # Provide a lightweight stub for the ``ume`` package so ``ume_cli`` can be
+    # imported without pulling in optional heavy dependencies.
+    stub = types.ModuleType("ume")
+    class DummyGraph:
+        def __init__(self, *_: object, **__: object) -> None:
+            pass
+
+    stub.PersistentGraph = DummyGraph
+    stub.RoleBasedGraphAdapter = DummyGraph
+    stub.enable_snapshot_autosave_and_restore = lambda *_, **__: None
+    stub.parse_event = lambda *_: None
+    stub.apply_event_to_graph = lambda *_: None
+    stub.load_graph_into_existing = lambda *_: None
+    stub.snapshot_graph_to_file = lambda *_: None
+    stub.ProcessingError = Exception
+    stub.EventError = Exception
+    stub.SnapshotError = Exception
+    stub.IGraphAdapter = object
+    stub.log_audit_entry = lambda *_: None
+    stub.get_audit_entries = lambda *_: []
+    stub.DEFAULT_SCHEMA_MANAGER = object()
+    bench = types.ModuleType("ume.benchmarks")
+    bench.benchmark_vector_store = lambda *_: None
+    feder = types.ModuleType("ume.federation")
+    feder.MirrorMakerDriver = object  # type: ignore[assignment]
+    sys.modules["ume"] = stub
+    sys.modules["ume.benchmarks"] = bench
+    sys.modules["ume.federation"] = feder
+    sys.modules["ume.auto_snapshot"] = auto_snapshot
+
+    import ume_cli as cli
+    importlib.reload(cli)
+
+    called: dict[str, object] = {}
+
+    class DummyThread:
+        def is_alive(self) -> bool:
+            return False
+
+        def join(self, timeout: float | None = None) -> None:
+            pass
+
+    def fake_enable(graph: object, path: object, interval: int) -> tuple[DummyThread, callable]:
+        called["path"] = str(path)
+        called["interval"] = interval
+
+        return DummyThread(), lambda: None
+
+    monkeypatch.setattr(auto_snapshot, "enable_periodic_snapshot", fake_enable)
+    monkeypatch.setattr(auto_snapshot, "disable_periodic_snapshot", lambda: None)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "snapshot-schedule", "--interval", "1"]
+    cli.main()
+    out = capsys.readouterr().out
+    sys.argv = argv
+
+    assert called["interval"] == 1
+    assert "Snapshots will be written" in out
 
 
 def test_cli_env_file_warning(
