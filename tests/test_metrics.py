@@ -91,7 +91,9 @@ sys.modules["ume.graph"] = graph_module
 spec_graph.loader.exec_module(graph_module)
 MockGraph = graph_module.MockGraph
 
-spec_config = importlib.util.spec_from_file_location("ume.config", root / "src" / "ume" / "config.py")
+spec_config = importlib.util.spec_from_file_location(
+    "ume.config", root / "src" / "ume" / "config" / "__init__.py"
+)
 assert spec_config and spec_config.loader
 config_module = importlib.util.module_from_spec(spec_config)
 sys.modules["ume.config"] = config_module

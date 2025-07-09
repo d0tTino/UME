@@ -14,8 +14,9 @@ from ..vector_store import VectorStore
 from ..audit import get_audit_entries
 from ..config import settings
 from ..logging_utils import configure_logging
-from ..event import parse_event, EventError
-from ..processing import apply_event_to_graph, ProcessingError
+from ..event import EventError
+from ..processing import ProcessingError
+from ..services.ingest import ingest_event
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
 
@@ -137,8 +138,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
                 "target_node_id": meta.target_node_id or None,
                 "label": meta.label or None,
             }
-            event = parse_event(event_dict)
-            apply_event_to_graph(event, self.graph)
+            ingest_event(event_dict, self.graph)
         except (EventError, ProcessingError) as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
 

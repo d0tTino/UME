@@ -667,6 +667,29 @@ def _quickstart(no_confirm: bool = False) -> None:
     _compose_up()
 
 
+def _snapshot_schedule(interval: int) -> None:
+    """Run periodic snapshotting until interrupted."""
+    from ume.auto_snapshot import enable_periodic_snapshot, disable_periodic_snapshot
+
+    graph = PersistentGraph(settings.UME_CLI_DB)
+    thread, stop = enable_periodic_snapshot(
+        graph, settings.UME_SNAPSHOT_PATH, interval
+    )
+    print(
+        f"Snapshots will be written to {settings.UME_SNAPSHOT_PATH} every {interval} seconds."
+    )
+    print("Press Ctrl+C to stop.")
+    try:
+        while thread.is_alive():
+            thread.join(timeout=1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop()
+        disable_periodic_snapshot()
+        print("Snapshot scheduler stopped.")
+
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
     parser = argparse.ArgumentParser(description="UME CLI")
@@ -699,6 +722,7 @@ def main() -> None:
             help="Create .env and certs without prompting",
         )
 
+
     args = parser.parse_args()
 
     if args.command in {"up", "quickstart"}:
@@ -709,6 +733,9 @@ def main() -> None:
         return
     if args.command == "ps":
         _compose_ps()
+        return
+    if args.command == "snapshot-schedule":
+        _snapshot_schedule(args.interval)
         return
 
     configure_logging()

@@ -32,6 +32,44 @@ def test_list_ledger_events(tmp_path, monkeypatch):
     assert data[1]["offset"] == 1
 
 
+def test_list_ledger_events_range_and_limit(tmp_path, monkeypatch):
+    path = str(tmp_path / "ledger.db")
+    ledger = EventLedger(path)
+    for i in range(5):
+        ledger.append(
+            i,
+            {
+                "event_type": "CREATE_NODE",
+                "timestamp": i,
+                "node_id": f"n{i}",
+                "payload": {"node_id": f"n{i}"},
+            },
+        )
+
+    monkeypatch.setattr("ume.ledger_routes.event_ledger", ledger)
+
+    client = TestClient(app)
+    token = _token(client)
+
+    res = client.get(
+        "/ledger/events",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"start": 1, "end": 3},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert [e["offset"] for e in data] == [1, 2, 3]
+
+    res = client.get(
+        "/ledger/events",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"limit": 2},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert [e["offset"] for e in data] == [0, 1]
+
+
 def test_replay_endpoint_sqlite(tmp_path, monkeypatch):
     ledger = EventLedger(str(tmp_path / "ledger.db"))
     ledger.append(0, {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "a", "payload": {"node_id": "a"}})
