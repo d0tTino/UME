@@ -5,6 +5,8 @@ from ume.metrics import STALE_VECTOR_WARNINGS
 from ume.memory.tiered import TieredMemoryManager
 from ume.memory_aging import start_memory_aging_scheduler, stop_memory_aging_scheduler
 
+import threading
+
 import time
 import pytest
 
@@ -238,3 +240,39 @@ def test_start_stop_twice_no_active_threads() -> None:
     assert aging._vector_thread is None
     assert aging._vector_stop is None
     assert aging._vector_params is None
+
+
+def test_start_scheduler_twice_without_leaks() -> None:
+    """Calling start twice reuses the thread without leaving extras."""
+    episodic = EpisodicMemory(db_path=":memory:")
+    semantic = SemanticMemory(db_path=":memory:")
+
+    baseline = threading.active_count()
+
+    thread1, _ = start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    thread2, _ = start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    assert thread1 is thread2
+    assert thread1.is_alive()
+    assert threading.active_count() <= baseline + 1
+
+    stop_memory_aging_scheduler()
+    assert not thread1.is_alive()
+    assert threading.active_count() == baseline
