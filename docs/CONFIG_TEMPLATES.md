@@ -86,6 +86,7 @@ below lists all available variables and their default values.
 | `UME_OAUTH_PASSWORD` | `password` | Password for obtaining OAuth tokens. |
 | `UME_OAUTH_ROLE` | `AnalyticsAgent` | Role assigned to issued tokens. |
 | `UME_OAUTH_TTL` | `3600` | Lifetime of issued tokens in seconds. |
+| `UME_GRPC_TOKEN` | *(unset)* | Bearer token required by the gRPC server. |
 | `UME_LOG_LEVEL` | `INFO` | Logging level used by `configure_logging`. |
 | `UME_LOG_JSON` | `False` | Output logs as JSON lines when set to `True`. |
 | `UME_GRAPH_RETENTION_DAYS` | `30` | Age in days before old nodes/edges are purged. |
