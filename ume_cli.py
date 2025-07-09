@@ -621,38 +621,25 @@ def _compose_ps(compose_file: Path = COMPOSE_FILE) -> None:
 
 
 def _ensure_env_file(env_file: Path = Path(".env")) -> None:
-    """Create ``.env`` from ``docs/ENV_EXAMPLE.md`` if missing.
+    """Create ``.env`` from ``env.example`` if missing.
 
     A random ``UME_AUDIT_SIGNING_KEY`` is inserted so the default key
     from ``src/ume/config.py`` is never used.
     """
     if env_file.exists():
         return
-    example = Path(__file__).resolve().parent / "docs" / "ENV_EXAMPLE.md"
+    example = Path(__file__).resolve().parent / "env.example"
     try:
-        lines = example.read_text().splitlines()
+        env_lines = example.read_text().splitlines()
     except FileNotFoundError:
         return
-    start = None
-    for idx, line in enumerate(lines):
-        if line.strip().startswith("```bash"):
-            start = idx + 1
-            break
-    if start is None:
-        return
-    end = start
-    for idx in range(start, len(lines)):
-        if lines[idx].strip().startswith("```"):
-            end = idx
-            break
-    env_lines = lines[start:end]
     for i, line in enumerate(env_lines):
         if line.startswith("UME_AUDIT_SIGNING_KEY="):
             env_lines[i] = f"UME_AUDIT_SIGNING_KEY={secrets.token_hex(32)}"
             break
     env_content = "\n".join(env_lines) + "\n"
     env_file.write_text(env_content)
-    print("Created .env from docs/ENV_EXAMPLE.md with random UME_AUDIT_SIGNING_KEY")
+    print("Created .env from env.example with random UME_AUDIT_SIGNING_KEY")
 
 
 def _quickstart() -> None:

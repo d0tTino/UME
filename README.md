@@ -334,7 +334,7 @@ PYTHONPATH=src pytest
 ```
 
 Create a `.env` file in the project root before starting any services. Copy the
-template from [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) and set a
+template from [`env.example`](env.example) and set a
 non-default `UME_AUDIT_SIGNING_KEY` or UME will refuse to start. The
 `ume up` command described below automatically creates this file if it is
 missing and inserts a random signing key:
@@ -344,7 +344,7 @@ missing and inserts a random signing key:
 UME_AUDIT_SIGNING_KEY=<randomly-generated-key>
 ```
 
-See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for the full list of available
+See [`env.example`](env.example) for the full list of available
 settings.
 
 ### 2. Start the Docker Stack
@@ -493,7 +493,7 @@ Authorization: Bearer <token>
 Tokens expire after `UME_OAUTH_TTL` seconds (default 3600).
 
 The only unauthenticated route is `/metrics`, which exposes Prometheus metrics.
-See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for a sample `.env` file.
+See [`env.example`](env.example) for a sample `.env` file.
 
 ### Posting Events
 
@@ -543,7 +543,7 @@ UME options. When imported it first loads a `.env` file from the project root if
 present and then applies any matching environment variables, allowing you to
 override the defaults without modifying the code.
 
-See [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) for a minimal `.env` template.
+See [`env.example`](env.example) for a minimal `.env` template.
 
 ## Federated Deployments
 
