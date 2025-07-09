@@ -310,15 +310,16 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
 
     def fake_check_output(cmd: list[str], **_: object) -> str:
         if "ps" in cmd:
-            return "redpanda healthy\nprivacy-agent healthy\n"
+            return "redpanda healthy\nneo4j healthy\nume-api healthy\n"
         return ""
 
     monkeypatch.setattr(cli.subprocess, "run", fake_run)
     monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
     monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(cli, "_ensure_env_file", lambda *_: None)
 
     argv = sys.argv[:]
-    sys.argv = ["ume-cli", "up"]
+    sys.argv = ["ume-cli", "up", "--no-confirm"]
     cli.main()
     out_up = capsys.readouterr().out
     sys.argv = argv
@@ -351,7 +352,7 @@ def test_cli_quickstart_creates_env_file(
 
     def fake_check_output(cmd: list[str], **_: object) -> str:
         if "ps" in cmd:
-            return "redpanda healthy\nprivacy-agent healthy\nume-api healthy\n"
+            return "redpanda healthy\nneo4j healthy\nume-api healthy\n"
         return ""
 
     monkeypatch.chdir(tmp_path)
@@ -360,7 +361,7 @@ def test_cli_quickstart_creates_env_file(
     monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
 
     argv = sys.argv[:]
-    sys.argv = ["ume-cli", "quickstart"]
+    sys.argv = ["ume-cli", "quickstart", "--no-confirm"]
     cli.main()
     sys.argv = argv
 
