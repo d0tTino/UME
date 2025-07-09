@@ -68,3 +68,27 @@ def test_compose_ps(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixtu
     out = capsys.readouterr().out
     assert "api: healthy" in out
     assert "agent: unhealthy" in out
+
+
+def test_up_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib
+    import sys
+    import ume_cli as cli
+
+    importlib.reload(cli)
+
+    calls: list[str] = []
+
+    def fake_compose_up(*_: object, **__: object) -> None:
+        calls.append("up")
+
+    monkeypatch.setattr(cli, "_compose_up", fake_compose_up)
+    monkeypatch.setattr(cli, "_ensure_env_file", lambda: None)
+    monkeypatch.setattr(cli.subprocess, "run", lambda *a, **k: None)
+
+    sys.argv = ["ume_cli.py", "up"]
+    cli.main()
+    sys.argv = ["ume_cli.py", "quickstart"]
+    cli.main()
+
+    assert calls == ["up", "up"]

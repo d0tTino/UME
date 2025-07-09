@@ -678,21 +678,22 @@ def main() -> None:
     )
 
     sub = parser.add_subparsers(dest="command")
-    sub.add_parser("up", help="Start Docker Compose stack")
+    # ``up`` is kept as a short alias for ``quickstart`` for convenience
+    sub.add_parser("up", help="Create .env, generate certs and start the stack")
     sub.add_parser("down", help="Stop Docker Compose stack")
-    sub.add_parser("quickstart", help="Create .env, generate certs and start the stack")
+    sub.add_parser(
+        "quickstart",
+        help="Create .env, generate certs and start the stack (same as 'up')",
+    )
     sub.add_parser("ps", help="Show status and health of Docker Compose services")
 
     args = parser.parse_args()
 
-    if args.command == "up":
-        _compose_up()
+    if args.command in {"up", "quickstart"}:
+        _quickstart()
         return
     if args.command == "down":
         _compose_down()
-        return
-    if args.command == "quickstart":
-        _quickstart()
         return
     if args.command == "ps":
         _compose_ps()

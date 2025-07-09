@@ -335,7 +335,7 @@ PYTHONPATH=src pytest
 Create a `.env` file in the project root before starting any services. Copy the
 template from [`docs/ENV_EXAMPLE.md`](docs/ENV_EXAMPLE.md) and set a
 non-default `UME_AUDIT_SIGNING_KEY` or UME will refuse to start. The
-`quickstart` command described below automatically creates this file if it is
+`ume up` command described below automatically creates this file if it is
 missing and inserts a random signing key:
 
 ```bash
@@ -351,7 +351,7 @@ The `ume` CLI can spin up all services for local development. From the repositor
 
 
 ```bash
-poetry run python ume_cli.py quickstart
+poetry run python ume_cli.py up
 ```
 
 The command generates TLS certificates if needed and waits until the services
