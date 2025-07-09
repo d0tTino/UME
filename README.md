@@ -352,7 +352,7 @@ The `ume` CLI can spin up all services for local development. From the repositor
 
 
 ```bash
-poetry run python ume_cli.py up
+poetry run ume-cli up
 ```
 
 The command generates TLS certificates if needed and waits until the services
@@ -365,7 +365,7 @@ http://localhost:8000/recall
 ```
 Stop the services with:
 ```bash
-poetry run python ume_cli.py down
+poetry run ume-cli down
 ```
 See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 

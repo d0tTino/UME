@@ -150,6 +150,14 @@ snapshot = build_graph_from_ledger(ledger, end_timestamp=1_725_000_000)
 The `/ledger/replay` API wraps this helper and returns a JSON snapshot of the
 graph state.
 
+## Snapshot scheduler
+
+Call :func:`ume.enable_periodic_snapshot` to write the graph to
+``UME_SNAPSHOT_PATH`` at a fixed interval (default 3600 seconds). The function
+returns the background thread and a stop callback. Use
+:func:`ume.enable_snapshot_autosave_and_restore` to restore an existing snapshot
+before scheduling future saves.
+
 ## Memory aging
 
 The :class:`ume.memory.TieredMemoryManager` orchestrates data movement across
