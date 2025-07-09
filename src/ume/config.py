@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Extra
 from typing import Any
+import logging
 
 
 DEFAULT_AUDIT_SIGNING_KEY = "default-key"
@@ -96,7 +97,13 @@ class Settings(BaseSettings):  # type: ignore[misc]
     def model_post_init(self, __context: Any) -> None:  # noqa: D401
         """Validate settings after initialization."""
         if self.UME_AUDIT_SIGNING_KEY == DEFAULT_AUDIT_SIGNING_KEY:
-            raise ValueError("UME_AUDIT_SIGNING_KEY must be set to a non-default value")
+            logging.getLogger(__name__).warning(
+                "Edit the generated .env file to replace the placeholder "
+                "UME_AUDIT_SIGNING_KEY."
+            )
+            raise ValueError(
+                "UME_AUDIT_SIGNING_KEY must be set to a non-default value"
+            )
 
 
 # Create a single, importable instance

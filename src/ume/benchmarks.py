@@ -29,7 +29,7 @@ def benchmark_vector_store(
     latencies: List[float] = []
 
     for _ in range(runs):
-        store = VectorStore(dim=dim, use_gpu=use_gpu)
+        store = VectorStore(dim=dim, use_gpu=use_gpu)  # type: ignore[call-arg]
         vectors = np.random.random((num_vectors, dim)).astype("float32")
 
         start = time.perf_counter()

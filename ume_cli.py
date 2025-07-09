@@ -640,6 +640,11 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
     env_content = "\n".join(env_lines) + "\n"
     env_file.write_text(env_content)
     print("Created .env from env.example with random UME_AUDIT_SIGNING_KEY")
+    if "UME_AUDIT_SIGNING_KEY=default-key" in env_content:
+        print(
+            "WARNING: UME_AUDIT_SIGNING_KEY uses the insecure default key. "
+            "Edit .env and set a unique value."
+        )
 
 
 def _quickstart() -> None:
