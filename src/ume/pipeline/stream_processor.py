@@ -6,10 +6,11 @@ try:
     import faust
     from faust.types import StreamT
 except Exception:  # pragma: no cover - optional dependency missing
-    faust = None  # type: ignore[assignment]
-    StreamT = object  # type: ignore[assignment]
+    faust = None
+    from typing import Any
+    StreamT = Any
 import json
-from typing import Dict
+from typing import Dict, Any, cast
 
 from ume import EventType, parse_event, EventError
 from ..config import settings
@@ -36,7 +37,8 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS):
     edge_topic = app.topic(EDGE_TOPIC, value_type=bytes)
     node_topic = app.topic(NODE_TOPIC, value_type=bytes)
 
-    @app.agent(source_topic)  # type: ignore[misc]
+    agent = cast(Any, app.agent)
+    @agent(source_topic)
     async def _process(stream: StreamT[bytes]) -> None:
         async for raw in stream:
             try:

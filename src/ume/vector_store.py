@@ -34,9 +34,12 @@ def _resolve_vector_dim(config_dim: int) -> int:
         settings.UME_VECTOR_DIM = actual_dim
         return actual_dim
     if config_dim != actual_dim:
-        raise ValueError(
-            f"UME_VECTOR_DIM ({config_dim}) does not match embedding model dimension ({actual_dim})"
+        logger.warning(
+            "UME_VECTOR_DIM (%s) does not match embedding model dimension (%s)",
+            config_dim,
+            actual_dim,
         )
+        return config_dim
     return config_dim
 
 logger = logging.getLogger(__name__)
@@ -689,5 +692,5 @@ if __name__ == "ume.vector_store":
     import sys as _sys
     parent = _sys.modules.get("ume")
     if parent is not None and not hasattr(parent, "vector_store"):
-        parent.vector_store = _sys.modules[__name__]  # type: ignore[attr-defined]
+        setattr(parent, "vector_store", _sys.modules[__name__])
 

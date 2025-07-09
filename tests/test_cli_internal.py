@@ -6,6 +6,7 @@ import pytest
 
 def test_umeprompt_commands(tmp_path: Path) -> None:
     os.environ["UME_CLI_DB"] = ":memory:"
+    os.environ["UME_ROLE"] = "AnalyticsAgent"
     import importlib
     import ume_cli as cli
     import ume.config as cfg
