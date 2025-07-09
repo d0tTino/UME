@@ -310,7 +310,9 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
 
     def fake_check_output(cmd: list[str], **_: object) -> str:
         if "ps" in cmd:
-            return "redpanda healthy\nprivacy-agent healthy\n"
+            return (
+                "redpanda healthy\nprivacy-agent healthy\nume-api healthy\n"
+            )
         return ""
 
     monkeypatch.setattr(cli.subprocess, "run", fake_run)
@@ -334,6 +336,68 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
 
     assert any("down" in " ".join(c) for c in run_calls)
     assert "Stack stopped." in out_down
+
+
+def test_cli_up_custom_compose(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Start the stack using a temporary compose file."""
+    import importlib
+    import ume_cli as cli
+
+    importlib.reload(cli)
+
+    compose_file = tmp_path / "docker-compose.yml"
+    compose_file.write_text(
+        "\n".join(
+            [
+                "version: '3'",
+                "services:",
+                "  redpanda:",
+                "    image: foo",
+                "  privacy-agent:",
+                "    image: foo",
+                "  ume-api:",
+                "    image: foo",
+            ]
+        )
+    )
+
+    run_calls: list[list[str]] = []
+    ps_calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = True, **_: object) -> None:
+        run_calls.append(cmd)
+
+    def fake_check_output(cmd: list[str], **_: object) -> str:
+        ps_calls.append(cmd)
+        if "ps" in cmd:
+            return "redpanda healthy\nprivacy-agent healthy\nume-api healthy\n"
+        return ""
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+    orig_compose_up = cli._compose_up
+    monkeypatch.setattr(
+        cli,
+        "_compose_up",
+        lambda compose_file=compose_file, timeout=120: orig_compose_up(
+            compose_file, timeout
+        ),
+    )
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "up"]
+    cli.main()
+    sys.argv = argv
+
+    out = capsys.readouterr().out
+
+    assert any(str(compose_file) in " ".join(c) for c in run_calls)
+    assert any("ps" in c for cmd in ps_calls for c in cmd)
+    assert "http://localhost:8000/docs" in out
 
 
 def test_cli_quickstart_creates_env_file(
