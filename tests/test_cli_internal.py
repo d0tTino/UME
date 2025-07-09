@@ -84,12 +84,12 @@ def test_up_alias(monkeypatch: pytest.MonkeyPatch) -> None:
         calls.append("up")
 
     monkeypatch.setattr(cli, "_compose_up", fake_compose_up)
-    monkeypatch.setattr(cli, "_ensure_env_file", lambda: None)
+    monkeypatch.setattr(cli, "_ensure_env_file", lambda *_: None)
     monkeypatch.setattr(cli.subprocess, "run", lambda *a, **k: None)
 
-    sys.argv = ["ume_cli.py", "up"]
+    sys.argv = ["ume_cli.py", "up", "--no-confirm"]
     cli.main()
-    sys.argv = ["ume_cli.py", "quickstart"]
+    sys.argv = ["ume_cli.py", "quickstart", "--no-confirm"]
     cli.main()
 
     assert calls == ["up", "up"]

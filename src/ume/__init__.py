@@ -297,6 +297,7 @@ __all__ = [
     "vector_store",
     "embedding",
     "api",
+    "policy",
 
 ]
 
@@ -313,6 +314,7 @@ _KNOWN_SUBMODULES = {
     "embedding",
     "resources",
     "api",
+    "policy",
 }
 
 def __getattr__(name: str) -> object:  # pragma: no cover - thin wrapper

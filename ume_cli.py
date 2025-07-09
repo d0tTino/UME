@@ -567,7 +567,7 @@ def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
         print("Docker is not installed or not on PATH")
         raise SystemExit(1) from exc
 
-    required = {"redpanda", "privacy-agent", "ume-api"}
+    required = {"redpanda", "ume-api", "neo4j"}
     start = time.time()
     while time.time() - start < timeout:
         out = subprocess.check_output(
@@ -647,12 +647,47 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
         )
 
 
-def _quickstart() -> None:
+def _quickstart(no_confirm: bool = False) -> None:
     """Prepare environment and start the Docker Compose stack."""
-    _ensure_env_file()
+    env_file = Path(".env")
+    if not no_confirm and not env_file.exists():
+        resp = input("Create .env from env.example? [y/N]: ")
+        if resp.lower() != "y":
+            print("Aborted.")
+            return
+    _ensure_env_file(env_file)
     cert_script = Path(__file__).resolve().parent / "docker" / "generate-certs.sh"
+    cert_dir = cert_script.parent / "certs"
+    if not no_confirm and not any(cert_dir.glob("*.crt")):
+        resp = input("Generate TLS certificates in docker/certs/? [y/N]: ")
+        if resp.lower() != "y":
+            print("Aborted.")
+            return
     subprocess.run(["bash", str(cert_script)], check=True)
     _compose_up()
+
+
+def _snapshot_schedule(interval: int) -> None:
+    """Run periodic snapshotting until interrupted."""
+    from ume.auto_snapshot import enable_periodic_snapshot, disable_periodic_snapshot
+
+    graph = PersistentGraph(settings.UME_CLI_DB)
+    thread, stop = enable_periodic_snapshot(
+        graph, settings.UME_SNAPSHOT_PATH, interval
+    )
+    print(
+        f"Snapshots will be written to {settings.UME_SNAPSHOT_PATH} every {interval} seconds."
+    )
+    print("Press Ctrl+C to stop.")
+    try:
+        while thread.is_alive():
+            thread.join(timeout=1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop()
+        disable_periodic_snapshot()
+        print("Snapshot scheduler stopped.")
 
 
 def main() -> None:
@@ -671,24 +706,36 @@ def main() -> None:
 
     sub = parser.add_subparsers(dest="command")
     # ``up`` is kept as a short alias for ``quickstart`` for convenience
-    sub.add_parser("up", help="Create .env, generate certs and start the stack")
+    up_parser = sub.add_parser(
+        "up", help="Create .env, generate certs and start the stack"
+    )
     sub.add_parser("down", help="Stop Docker Compose stack")
-    sub.add_parser(
+    quick_parser = sub.add_parser(
         "quickstart",
         help="Create .env, generate certs and start the stack (same as 'up')",
     )
     sub.add_parser("ps", help="Show status and health of Docker Compose services")
+    for p in (up_parser, quick_parser):
+        p.add_argument(
+            "--no-confirm",
+            action="store_true",
+            help="Create .env and certs without prompting",
+        )
+
 
     args = parser.parse_args()
 
     if args.command in {"up", "quickstart"}:
-        _quickstart()
+        _quickstart(getattr(args, "no_confirm", False))
         return
     if args.command == "down":
         _compose_down()
         return
     if args.command == "ps":
         _compose_ps()
+        return
+    if args.command == "snapshot-schedule":
+        _snapshot_schedule(args.interval)
         return
 
     configure_logging()
