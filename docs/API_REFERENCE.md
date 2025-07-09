@@ -55,6 +55,14 @@ Write the entire graph state to a JSON file.
 Replace the current graph with the contents of a snapshot file.
 - **Body**: `{"path": "file.json"}`
 
+### GET `/ledger/events`
+List entries in the event ledger.
+- **Query parameters**: `start` (default `0`), optional `end`, optional `limit`.
+
+### GET `/ledger/replay`
+Return a snapshot of the graph reconstructed from ledger events.
+- **Query parameters**: optional `end_offset`, optional `end_timestamp`.
+
 ### GET `/policies`
 List available Rego policy files.
 
