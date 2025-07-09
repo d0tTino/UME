@@ -752,12 +752,12 @@ from :class:`ume.config.Settings` and overridden by environment variables at
 runtime.
 
 ```python
-from ume.config import Settings
+from ume.config import load_settings
 from ume.client import UMEClient, UMEClientError
 import time
 
-# Create Settings (environment variables may override defaults)
-settings = Settings()
+# Load Settings (environment variables may override defaults)
+settings = load_settings()
 
 # Connect to the broker and topic defined in Settings
 with UMEClient(settings) as client:
