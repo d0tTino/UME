@@ -28,14 +28,38 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         query_engine: Neo4jQueryEngine,
         store: VectorStore,
         graph: typing.Optional[typing.Any] = None,
+        *,
+        api_token: str | None = None,
+        auth_callback: typing.Optional[typing.Callable[[str], bool]] = None,
     ) -> None:
         self.query_engine = query_engine
         self.store = store
         self.graph = graph
+        self.api_token = api_token if api_token is not None else settings.UME_GRPC_TOKEN
+        self.auth_callback = auth_callback
+
+    async def _require_auth(self, context: grpc.aio.ServicerContext) -> None:
+        if self.api_token is None and self.auth_callback is None:
+            return
+        metadata = {k.lower(): v for k, v in context.invocation_metadata()}
+        header = metadata.get("authorization")
+        if not header or not header.lower().startswith("bearer "):
+            await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Missing token")
+            return
+        token = header.split(" ", 1)[1]
+        if self.api_token is not None:
+            if token != self.api_token:
+                await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
+                return
+            return
+        if self.auth_callback is not None and not self.auth_callback(token):
+            await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
+            return
 
     async def RunCypher(
         self, request: ume_pb2.CypherQuery, context: grpc.aio.ServicerContext
     ) -> ume_pb2.CypherResult:
+        await self._require_auth(context)
         records = self.query_engine.execute_cypher(request.cypher)
         result = ume_pb2.CypherResult()
         for rec in records:
@@ -47,6 +71,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
     async def StreamCypher(
         self, request: ume_pb2.CypherQuery, context: grpc.aio.ServicerContext
     ) -> typing.AsyncIterator[ume_pb2.CypherRecord]:
+        await self._require_auth(context)
         records = self.query_engine.execute_cypher(request.cypher)
         for rec in records:
             struct = struct_pb2.Struct()
@@ -58,12 +83,14 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         request: ume_pb2.VectorSearchRequest,
         context: grpc.aio.ServicerContext,
     ) -> ume_pb2.VectorSearchResponse:
+        await self._require_auth(context)
         ids = self.store.query(list(request.vector), k=request.k or 5)
         return ume_pb2.VectorSearchResponse(ids=ids)
 
     async def GetAuditEntries(
         self, request: ume_pb2.AuditRequest, context: grpc.aio.ServicerContext
     ) -> ume_pb2.AuditResponse:
+        await self._require_auth(context)
         entries = get_audit_entries()
         limit = request.limit or len(entries)
         selected = list(reversed(entries[-limit:]))
@@ -82,6 +109,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
     async def PublishEvent(
         self, request: ume_pb2.PublishEventRequest, context: grpc.aio.ServicerContext
     ) -> empty_pb2.Empty:
+        await self._require_auth(context)
         if self.graph is None:
             await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
 
@@ -123,12 +151,21 @@ def serve(
     *,
     port: int = 50051,
     graph: typing.Optional[typing.Any] = None,
+    api_token: str | None = None,
+    auth_callback: typing.Optional[typing.Callable[[str], bool]] = None,
 ) -> grpc.aio.Server:
     """Start the gRPC server and return it."""
     server = grpc.aio.server()
     try:
         ume_pb2_grpc.add_UMEServicer_to_server(
-            UMEServicer(query_engine, store, graph), server
+            UMEServicer(
+                query_engine,
+                store,
+                graph,
+                api_token=api_token,
+                auth_callback=auth_callback,
+            ),
+            server,
         )
     except AttributeError:  # pragma: no cover - support stub servers
         pass
@@ -143,7 +180,12 @@ async def main() -> None:
         settings.NEO4J_URI, settings.NEO4J_USER, settings.NEO4J_PASSWORD
     )
     store = VectorStore(dim=settings.UME_VECTOR_DIM, use_gpu=settings.UME_VECTOR_USE_GPU)
-    server = serve(qe, store, port=50051)
+    server = serve(
+        qe,
+        store,
+        port=50051,
+        api_token=settings.UME_GRPC_TOKEN,
+    )
     await server.start()
     await server.wait_for_termination()
 

@@ -121,7 +121,8 @@ flowchart TD
 ```
 
 All core APIs are exposed over gRPC, enabling efficient streaming queries from
-external agents and services.
+external agents and services. Authentication is handled via a shared bearer
+token configured by the `UME_GRPC_TOKEN` environment variable.
 
 ## Agent Message Format
 

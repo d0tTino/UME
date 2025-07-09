@@ -71,6 +71,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # API token used for test clients and simple auth
     UME_API_TOKEN: str | None = None
 
+    # gRPC authentication token
+    UME_GRPC_TOKEN: str | None = None
+
     # Remote OPA configuration
     OPA_URL: str | None = None
     OPA_TOKEN: str | None = None
