@@ -527,6 +527,19 @@ curl -N "http://localhost:8000/recall/stream?query=demo&k=3" \
   -H "Authorization: Bearer <token>"
 ```
 
+### Retrieve Ledger Events
+The `/ledger/events` endpoint exposes the contents of the event ledger. Use
+`start`, `end`, and `limit` query parameters to control the range of entries
+returned.
+
+```bash
+curl "http://localhost:8000/ledger/events?start=0&end=10&limit=5" \
+  -H "Authorization: Bearer <token>"
+```
+
+The response is a JSON array where each item includes the ``offset`` and the
+original event payload.
+
 ## Configuration Templates
 
 Sample configuration files for common environments are provided in
