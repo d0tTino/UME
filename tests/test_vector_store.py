@@ -11,7 +11,10 @@ if not hasattr(faiss, "IndexFlatL2"):
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ume import Event, EventType, MockGraph, apply_event_to_graph
-from ume.vector_store import FaissBackend, ChromaBackend, VectorStoreListener
+from ume.vector_store import VectorStoreListener
+from ume.vector_backends import get_backend
+
+FaissBackend = get_backend("faiss")
 from ume.api import configure_vector_store, app
 from ume._internal.listeners import register_listener, unregister_listener
 from prometheus_client import Gauge, Histogram
@@ -19,9 +22,9 @@ import logging
 import threading
 
 
-@pytest.fixture(params=[FaissBackend, ChromaBackend])
+@pytest.fixture(params=["faiss", "chroma"])
 def store_cls(request):
-    return request.param
+    return get_backend(request.param)
 
 
 def test_vector_store_add_and_query_cpu(store_cls) -> None:
