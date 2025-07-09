@@ -37,10 +37,8 @@ def run_cli_commands(
     proc_env = os.environ.copy()
     proc_env["UME_DB_PATH"] = ":memory:"
     proc_env["UME_CLI_DB"] = ":memory:"
-    # Override any role from the project's .env so tests run with full
-    # permissions. Otherwise the CLI may start in view-only mode which breaks
-    # expectations around mutating commands.
-    proc_env["UME_ROLE"] = ""
+    proc_env["UME_ROLE"] = "AnalyticsAgent"
+
     # Remove coverage-related environment variables that may interfere with
     # subprocess execution. These are added by pytest-cov when running tests
     # with coverage enabled and cause warnings on stderr which break the CLI

@@ -37,7 +37,11 @@ from ume import (  # noqa: E402
     get_audit_entries,
 )
 from ume.benchmarks import benchmark_vector_store
-from ume.federation import MirrorMakerDriver
+
+try:  # optional dependency for federation features
+    from ume.federation import MirrorMakerDriver
+except Exception:  # pragma: no cover - federation optional
+    MirrorMakerDriver = None  # type: ignore[misc]
 from ume import DEFAULT_SCHEMA_MANAGER
 
 COMPOSE_FILE = Path(__file__).resolve().parent / "docker" / "docker-compose.yml"
