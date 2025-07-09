@@ -1,4 +1,5 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import sys
 
 # ruff: noqa: E402
@@ -210,3 +211,219 @@ def test_restore_route_builds_graph(
     fresh = create_graph_adapter(db_path)
     assert set(fresh.get_all_node_ids()) == {"a", "b"}
     assert ("a", "b", "L") in fresh.get_all_edges()
+
+
+@pytest.mark.parametrize(
+    "backend,service",
+    [
+        ("sqlite", None),
+        ("postgres", "postgres_service"),
+        ("redis", "redis_service"),
+    ],
+)
+def test_save_route_creates_file(
+    tmp_path: Path,
+    backend: str,
+    service: str | None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if service:
+        info = request.getfixturevalue(service)
+        db_path = info["dsn"] if backend == "postgres" else info["url"]
+    else:
+        db_path = str(tmp_path / "graph.db")
+
+    if backend == "sqlite":
+        import sqlite3
+
+        orig_connect = sqlite3.connect
+
+        def _connect(*a, **kw):
+            kw.setdefault("check_same_thread", False)
+            return orig_connect(*a, **kw)
+
+        monkeypatch.setattr(sqlite3, "connect", _connect)
+
+    monkeypatch.setenv("UME_GRAPH_BACKEND", backend)
+    monkeypatch.setenv("UME_DB_PATH", db_path)
+    monkeypatch.setattr(settings, "UME_GRAPH_BACKEND", backend, raising=False)
+    monkeypatch.setattr(settings, "UME_DB_PATH", db_path, raising=False)
+
+    graph = create_graph_adapter(db_path)
+    graph.add_node("a", {"x": 1})
+    configure_graph(graph)
+
+    client = TestClient(app)
+    token = _token(client)
+
+    with TemporaryDirectory() as tmpdir:
+        snapshot = Path(tmpdir) / "snap.json"
+
+        res = client.post(
+            "/snapshot/save",
+            json={"path": str(snapshot)},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200
+        assert snapshot.is_file()
+
+
+@pytest.mark.parametrize(
+    "backend,service",
+    [
+        ("sqlite", None),
+        ("postgres", "postgres_service"),
+        ("redis", "redis_service"),
+    ],
+)
+def test_load_route_restores_graph(
+    tmp_path: Path,
+    backend: str,
+    service: str | None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if service:
+        info = request.getfixturevalue(service)
+        db_path = info["dsn"] if backend == "postgres" else info["url"]
+    else:
+        db_path = str(tmp_path / "graph.db")
+
+    if backend == "sqlite":
+        import sqlite3
+
+        orig_connect = sqlite3.connect
+
+        def _connect(*a, **kw):
+            kw.setdefault("check_same_thread", False)
+            return orig_connect(*a, **kw)
+
+        monkeypatch.setattr(sqlite3, "connect", _connect)
+
+    monkeypatch.setenv("UME_GRAPH_BACKEND", backend)
+    monkeypatch.setenv("UME_DB_PATH", db_path)
+    monkeypatch.setattr(settings, "UME_GRAPH_BACKEND", backend, raising=False)
+    monkeypatch.setattr(settings, "UME_DB_PATH", db_path, raising=False)
+
+    graph = create_graph_adapter(db_path)
+    graph.add_node("a", {"x": 1})
+    graph.add_node("b", {"y": 2})
+    graph.add_edge("a", "b", "L")
+    configure_graph(graph)
+
+    client = TestClient(app)
+    token = _token(client)
+
+    with TemporaryDirectory() as tmpdir:
+        snapshot = Path(tmpdir) / "snap.json"
+
+        res_save = client.post(
+            "/snapshot/save",
+            json={"path": str(snapshot)},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_save.status_code == 200
+
+        graph.clear()
+        fresh = create_graph_adapter(db_path)
+        configure_graph(fresh)
+
+        res_load = client.post(
+            "/snapshot/load",
+            json={"path": str(snapshot)},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_load.status_code == 200
+        assert set(fresh.get_all_node_ids()) == {"a", "b"}
+        assert ("a", "b", "L") in fresh.get_all_edges()
+
+
+@pytest.mark.parametrize(
+    "backend,service",
+    [
+        ("sqlite", None),
+        ("postgres", "postgres_service"),
+        ("redis", "redis_service"),
+    ],
+)
+def test_restore_route_temporarydir(
+    tmp_path: Path,
+    backend: str,
+    service: str | None,
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if service:
+        info = request.getfixturevalue(service)
+        db_path = info["dsn"] if backend == "postgres" else info["url"]
+    else:
+        db_path = str(tmp_path / "graph.db")
+
+    if backend == "sqlite":
+        import sqlite3
+
+        orig_connect = sqlite3.connect
+
+        def _connect(*a, **kw):
+            kw.setdefault("check_same_thread", False)
+            return orig_connect(*a, **kw)
+
+        monkeypatch.setattr(sqlite3, "connect", _connect)
+
+    monkeypatch.setenv("UME_GRAPH_BACKEND", backend)
+    monkeypatch.setenv("UME_DB_PATH", db_path)
+    monkeypatch.setattr(settings, "UME_GRAPH_BACKEND", backend, raising=False)
+    monkeypatch.setattr(settings, "UME_DB_PATH", db_path, raising=False)
+
+    with TemporaryDirectory() as tmpdir:
+        ledger = EventLedger(str(Path(tmpdir) / "ledger.db"))
+
+        ledger.append(
+            0,
+            {
+                "event_type": "CREATE_NODE",
+                "timestamp": 1,
+                "node_id": "a",
+                "payload": {"node_id": "a"},
+            },
+        )
+        ledger.append(
+            1,
+            {
+                "event_type": "CREATE_NODE",
+                "timestamp": 2,
+                "node_id": "b",
+                "payload": {"node_id": "b"},
+            },
+        )
+        ledger.append(
+            2,
+            {
+                "event_type": "CREATE_EDGE",
+                "timestamp": 3,
+                "node_id": "a",
+                "target_node_id": "b",
+                "label": "L",
+                "payload": {},
+            },
+        )
+
+        monkeypatch.setattr("ume.snapshot_routes.event_ledger", ledger)
+
+        graph = create_graph_adapter(db_path)
+        configure_graph(graph)
+
+        client = TestClient(app)
+        token = _token(client)
+
+        res = client.post(
+            "/snapshot/restore",
+            json={"path": db_path},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200
+
+        fresh = create_graph_adapter(db_path)
+        assert set(fresh.get_all_node_ids()) == {"a", "b"}
+        assert ("a", "b", "L") in fresh.get_all_edges()
