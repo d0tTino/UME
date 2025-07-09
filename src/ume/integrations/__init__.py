@@ -1,8 +1,17 @@
 """Integrations for external frameworks."""
 
-from .langgraph import LangGraph
-from .letta import Letta
-from .memgpt import MemGPT
-from .supermemory import SuperMemory
+from .langgraph import LangGraph, AsyncLangGraph
+from .letta import Letta, AsyncLetta
+from .memgpt import MemGPT, AsyncMemGPT
+from .supermemory import SuperMemory, AsyncSuperMemory
 
-__all__ = ["LangGraph", "Letta", "MemGPT", "SuperMemory"]
+__all__ = [
+    "LangGraph",
+    "AsyncLangGraph",
+    "Letta",
+    "AsyncLetta",
+    "MemGPT",
+    "AsyncMemGPT",
+    "SuperMemory",
+    "AsyncSuperMemory",
+]
