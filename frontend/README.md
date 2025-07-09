@@ -18,6 +18,13 @@ npm run dev
 
 The app will be available at <http://localhost:5173>. The development server proxies requests to the running API at `http://localhost:8000`.
 
+Run the frontend unit tests with Vitest (after `npm install` has installed all
+dependencies):
+
+```bash
+npm test
+```
+
 The dashboard shows a counter of how many event payloads have been redacted for PII. It polls the `/pii/redactions` endpoint every second. Clicking a policy name opens an inline editor where you can modify the Rego code, validate it via the API, and save your changes.
 
 ## Building
