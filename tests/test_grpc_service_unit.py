@@ -11,6 +11,12 @@ from pathlib import Path
 # Load generated protobuf modules manually so we can alias them before importing
 # ume_client.
 base = Path(__file__).resolve().parents[1] / "src" / "ume_client"
+spec = importlib.util.spec_from_file_location("events_pb2", base / "events_pb2.py")
+assert spec is not None and spec.loader is not None
+events_pb2 = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(events_pb2)
+sys.modules["events_pb2"] = events_pb2
+
 spec = importlib.util.spec_from_file_location("ume_client.ume_pb2", base / "ume_pb2.py")
 assert spec is not None and spec.loader is not None
 ume_pb2 = importlib.util.module_from_spec(spec)

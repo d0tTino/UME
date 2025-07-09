@@ -2,6 +2,8 @@ syntax = "proto3";
 package ume;
 
 import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+import "events.proto";
 
 message CypherQuery {
   string cypher = 1;
@@ -40,12 +42,17 @@ message AuditResponse {
   repeated AuditEntry entries = 1;
 }
 
+message PublishEventRequest {
+  EventEnvelope envelope = 1;
+}
+
 service UME {
   rpc RunCypher(CypherQuery) returns (CypherResult);
   // Server streaming variant of RunCypher
   rpc StreamCypher(CypherQuery) returns (stream CypherRecord);
   rpc SearchVectors(VectorSearchRequest) returns (VectorSearchResponse);
   rpc GetAuditEntries(AuditRequest) returns (AuditResponse);
+  rpc PublishEvent(PublishEventRequest) returns (google.protobuf.Empty);
 }
 
 message Task {
