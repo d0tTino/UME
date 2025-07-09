@@ -18,10 +18,13 @@ try:  # Expose config for tests as early as possible
 except ImportError:  # pragma: no cover - allow import without environment setup
     stub = _make_stub("ume.config")
     sys.modules["ume.config"] = stub
-    stub.settings = SimpleNamespace(  # type: ignore[attr-defined]
-        UME_DB_PATH="ume_graph.db",
-        UME_SNAPSHOT_PATH="ume_snapshot.json",
-        UME_COLD_DB_PATH="ume_cold.db",
+    setattr(
+        stub,
+        "settings",
+        SimpleNamespace(
+            UME_DB_PATH="ume_graph.db",
+            UME_SNAPSHOT_PATH="ume_snapshot.json",
+            UME_COLD_DB_PATH="ume_cold.db",
         UME_COLD_SNAPSHOT_PATH="ume_cold_snapshot.json",
         UME_COLD_EVENT_AGE_DAYS=180,
         UME_AUDIT_LOG_PATH="/tmp/audit.log",
@@ -72,11 +75,12 @@ except ImportError:  # pragma: no cover - allow import without environment setup
         LLM_FERRY_API_KEY="",
         TWITTER_BEARER_TOKEN=None,
         ANGEL_BRIDGE_LOOKBACK_HOURS=24,
+    ),
     )
     class _StubSettings:
         pass
     Settings = _StubSettings
-    stub.Settings = _StubSettings  # type: ignore[attr-defined]
+    setattr(stub, "Settings", _StubSettings)
     config = stub
     setattr(sys.modules[__name__], "config", stub)
 
