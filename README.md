@@ -350,9 +350,9 @@ settings.
 ### 2. Start the Docker Stack
 The `ume` CLI can spin up all services for local development. From the repository root run:
 
-
 ```bash
-poetry run ume-cli up
+poetry run python ume_cli.py up --no-confirm
+
 ```
 
 The command generates TLS certificates if needed and waits until the services

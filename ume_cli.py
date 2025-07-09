@@ -567,7 +567,7 @@ def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
         print("Docker is not installed or not on PATH")
         raise SystemExit(1) from exc
 
-    required = {"redpanda", "privacy-agent", "ume-api"}
+    required = {"redpanda", "ume-api", "neo4j"}
     start = time.time()
     while time.time() - start < timeout:
         out = subprocess.check_output(
@@ -647,10 +647,22 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
         )
 
 
-def _quickstart() -> None:
+def _quickstart(no_confirm: bool = False) -> None:
     """Prepare environment and start the Docker Compose stack."""
-    _ensure_env_file()
+    env_file = Path(".env")
+    if not no_confirm and not env_file.exists():
+        resp = input("Create .env from env.example? [y/N]: ")
+        if resp.lower() != "y":
+            print("Aborted.")
+            return
+    _ensure_env_file(env_file)
     cert_script = Path(__file__).resolve().parent / "docker" / "generate-certs.sh"
+    cert_dir = cert_script.parent / "certs"
+    if not no_confirm and not any(cert_dir.glob("*.crt")):
+        resp = input("Generate TLS certificates in docker/certs/? [y/N]: ")
+        if resp.lower() != "y":
+            print("Aborted.")
+            return
     subprocess.run(["bash", str(cert_script)], check=True)
     _compose_up()
 
@@ -694,28 +706,27 @@ def main() -> None:
 
     sub = parser.add_subparsers(dest="command")
     # ``up`` is kept as a short alias for ``quickstart`` for convenience
-    sub.add_parser("up", help="Create .env, generate certs and start the stack")
+    up_parser = sub.add_parser(
+        "up", help="Create .env, generate certs and start the stack"
+    )
     sub.add_parser("down", help="Stop Docker Compose stack")
-    sub.add_parser(
+    quick_parser = sub.add_parser(
         "quickstart",
         help="Create .env, generate certs and start the stack (same as 'up')",
     )
     sub.add_parser("ps", help="Show status and health of Docker Compose services")
-    snap = sub.add_parser(
-        "snapshot-schedule",
-        help="Periodically snapshot the CLI graph",
-    )
-    snap.add_argument(
-        "--interval",
-        type=int,
-        default=3600,
-        help="Snapshot interval in seconds",
-    )
+    for p in (up_parser, quick_parser):
+        p.add_argument(
+            "--no-confirm",
+            action="store_true",
+            help="Create .env and certs without prompting",
+        )
+
 
     args = parser.parse_args()
 
     if args.command in {"up", "quickstart"}:
-        _quickstart()
+        _quickstart(getattr(args, "no_confirm", False))
         return
     if args.command == "down":
         _compose_down()
