@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from ume import FaissBackend, ChromaBackend
+from ume.vector_backends import get_backend
 from ume.api import app, configure_vector_store
 from ume.config import settings
 
@@ -13,9 +13,9 @@ if not hasattr(faiss, "IndexFlatL2"):
     pytest.skip("faiss is missing required functionality", allow_module_level=True)
 
 
-@pytest.fixture(params=[FaissBackend, ChromaBackend])
+@pytest.fixture(params=["faiss", "chroma"])
 def store_cls(request):
-    return request.param
+    return get_backend(request.param)
 
 
 def test_add_vector_authorized(store_cls) -> None:

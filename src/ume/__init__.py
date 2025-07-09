@@ -132,22 +132,20 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
     from .vector_store import (
         VectorBackend,
-        FaissBackend,
-        ChromaBackend,
         VectorStore,
         VectorStoreListener,
         create_default_store,
     )
+    from .vector_backends import FaissBackend, ChromaBackend
 else:  # pragma: no cover - optional dependency
     try:
         from .vector_store import (
             VectorBackend,
-            FaissBackend,
-            ChromaBackend,
             VectorStore,
             VectorStoreListener,
             create_default_store,
         )
+        from .vector_backends import FaissBackend, ChromaBackend
     except Exception:
         vector_stub = types.ModuleType("ume.vector_store")
 

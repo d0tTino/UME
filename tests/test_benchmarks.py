@@ -17,7 +17,8 @@ sys.modules[spec.name] = benchmarks
 spec.loader.exec_module(benchmarks)
 
 
-def test_benchmark_vector_store_structure():
+def test_benchmark_vector_store_structure(monkeypatch):
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 0.0])
     res = benchmarks.benchmark_vector_store(
         use_gpu=False, dim=2, num_vectors=10, num_queries=5
     )
@@ -26,7 +27,8 @@ def test_benchmark_vector_store_structure():
     assert isinstance(res["avg_query_latency"], float)
 
 
-def test_run_benchmarks_csv(tmp_path):
+def test_run_benchmarks_csv(tmp_path, monkeypatch):
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 0.0])
     csv_path = tmp_path / "out.csv"
     results = benchmarks.run_benchmarks(
         2,
