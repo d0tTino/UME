@@ -3,6 +3,8 @@ import PiiStatus from './PiiStatus';
 import PolicyEditor from './PolicyEditor';
 import Recommendations from './Recommendations';
 import ConsentLedger from './ConsentLedger';
+import Recall from './Recall';
+import GraphView from './GraphView';
 
 const POLICY_CONTENT = {
   'allow.rego': `package ume
@@ -151,6 +153,8 @@ function App() {
       <PiiStatus token={token} />
       <Recommendations token={token} />
       <ConsentLedger token={token} />
+      <Recall token={token} />
+      <GraphView token={token} />
       <h3>Policies</h3>
       <ul>
         {policies.map((p) => (
