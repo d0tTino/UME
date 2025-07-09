@@ -1,13 +1,18 @@
 """Streaming pipeline utilities."""
 
-try:
-    from .privacy_agent import run_privacy_agent
-except Exception:  # pragma: no cover - optional dependencies may be missing
-    run_privacy_agent = None  # type: ignore[assignment]
+from typing import Callable, Optional
 
 try:
-    from .stream_processor import build_app
+    from .privacy_agent import run_privacy_agent as _run_privacy_agent
 except Exception:  # pragma: no cover - optional dependencies may be missing
-    build_app = None  # type: ignore[assignment]
+    _run_privacy_agent = None
+
+try:
+    from .stream_processor import build_app as _build_app
+except Exception:  # pragma: no cover - optional dependencies may be missing
+    _build_app = None
+
+run_privacy_agent: Optional[Callable[[], None]] = _run_privacy_agent
+build_app: Optional[Callable[..., object]] = _build_app
 
 __all__ = ["run_privacy_agent", "build_app"]
