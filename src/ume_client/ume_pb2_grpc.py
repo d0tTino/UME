@@ -3,9 +3,10 @@
 import grpc
 import warnings
 
-from . import ume_pb2 as ume__pb2
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+import ume_pb2 as ume__pb2
 
-GRPC_GENERATED_VERSION = '1.73.0'
+GRPC_GENERATED_VERSION = '1.73.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -54,6 +55,11 @@ class UMEStub(object):
                 request_serializer=ume__pb2.AuditRequest.SerializeToString,
                 response_deserializer=ume__pb2.AuditResponse.FromString,
                 _registered_method=True)
+        self.PublishEvent = channel.unary_unary(
+                '/ume.UME/PublishEvent',
+                request_serializer=ume__pb2.PublishEventRequest.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                _registered_method=True)
 
 
 class UMEServicer(object):
@@ -84,6 +90,12 @@ class UMEServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PublishEvent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_UMEServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -106,6 +118,11 @@ def add_UMEServicer_to_server(servicer, server):
                     servicer.GetAuditEntries,
                     request_deserializer=ume__pb2.AuditRequest.FromString,
                     response_serializer=ume__pb2.AuditResponse.SerializeToString,
+            ),
+            'PublishEvent': grpc.unary_unary_rpc_method_handler(
+                    servicer.PublishEvent,
+                    request_deserializer=ume__pb2.PublishEventRequest.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -216,6 +233,33 @@ class UME(object):
             '/ume.UME/GetAuditEntries',
             ume__pb2.AuditRequest.SerializeToString,
             ume__pb2.AuditResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PublishEvent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.UME/PublishEvent',
+            ume__pb2.PublishEventRequest.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,
             insecure,

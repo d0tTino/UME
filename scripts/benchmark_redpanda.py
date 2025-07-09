@@ -79,7 +79,7 @@ def main() -> None:
     for _ in range(args.num_events):
         evt = Event(
             event_type="benchmark",
-            timestamp=time.perf_counter(),
+            timestamp=int(time.time()),
             payload={"payload": "x"},
             source="benchmark",
         )

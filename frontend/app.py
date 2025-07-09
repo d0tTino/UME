@@ -10,7 +10,9 @@ def fetch_token(api_url: str, username: str, password: str) -> str:
         f"{api_url}/token", data={"username": username, "password": password}
     )
     resp.raise_for_status()
-    return resp.json()["access_token"]
+    data = resp.json()
+    access = data.get("access_token")
+    return str(access)
 
 
 

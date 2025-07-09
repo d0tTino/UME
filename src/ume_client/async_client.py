@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import grpc
 
-from . import ume_pb2, ume_pb2_grpc
+from . import ume_pb2, ume_pb2_grpc, events_pb2
 
 
 class AsyncUMEClient:
@@ -41,6 +41,10 @@ class AsyncUMEClient:
             }
             for e in response.entries
         ]
+
+    async def publish_event(self, envelope: events_pb2.EventEnvelope) -> None:
+        request = ume_pb2.PublishEventRequest(envelope=envelope)
+        await self._stub.PublishEvent(request)
 
     async def close(self) -> None:
         await self._channel.close()

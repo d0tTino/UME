@@ -6,13 +6,16 @@ from __future__ import annotations
 import typing
 
 import grpc
-from google.protobuf import struct_pb2
+from google.protobuf import struct_pb2, empty_pb2
+from google.protobuf.json_format import MessageToDict
 
 from ..query import Neo4jQueryEngine
 from ..vector_store import VectorStore
 from ..audit import get_audit_entries
 from ..config import settings
 from ..logging_utils import configure_logging
+from ..event import parse_event, EventError
+from ..processing import apply_event_to_graph, ProcessingError
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
 
@@ -20,9 +23,15 @@ from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
 class UMEServicer(ume_pb2_grpc.UMEServicer):
     """Implementation of the UME gRPC service."""
 
-    def __init__(self, query_engine: Neo4jQueryEngine, store: VectorStore) -> None:
+    def __init__(
+        self,
+        query_engine: Neo4jQueryEngine,
+        store: VectorStore,
+        graph: typing.Optional[typing.Any] = None,
+    ) -> None:
         self.query_engine = query_engine
         self.store = store
+        self.graph = graph
 
     async def RunCypher(
         self, request: ume_pb2.CypherQuery, context: grpc.aio.ServicerContext
@@ -70,12 +79,57 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
             ]
         )
 
+    async def PublishEvent(
+        self, request: ume_pb2.PublishEventRequest, context: grpc.aio.ServicerContext
+    ) -> empty_pb2.Empty:
+        if self.graph is None:
+            await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
 
-def serve(query_engine: Neo4jQueryEngine, store: VectorStore, *, port: int = 50051) -> grpc.aio.Server:
+        try:
+            envelope = request.envelope
+            if envelope.HasField("create_node"):
+                meta = envelope.create_node.meta
+            elif envelope.HasField("update_node_attributes"):
+                meta = envelope.update_node_attributes.meta
+            elif envelope.HasField("create_edge"):
+                meta = envelope.create_edge.meta
+            elif envelope.HasField("delete_edge"):
+                meta = envelope.delete_edge.meta
+            else:
+                await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Envelope missing payload")
+                return empty_pb2.Empty()  # Unreachable but satisfies type checkers
+
+            event_dict = {
+                "event_id": meta.event_id,
+                "event_type": meta.event_type,
+                "timestamp": meta.timestamp,
+                "payload": MessageToDict(meta.payload),
+                "source": meta.source or None,
+                "node_id": meta.node_id or None,
+                "target_node_id": meta.target_node_id or None,
+                "label": meta.label or None,
+            }
+            event = parse_event(event_dict)
+            apply_event_to_graph(event, self.graph)
+        except (EventError, ProcessingError) as exc:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
+
+        return empty_pb2.Empty()
+
+
+def serve(
+    query_engine: Neo4jQueryEngine,
+    store: VectorStore,
+    *,
+    port: int = 50051,
+    graph: typing.Optional[typing.Any] = None,
+) -> grpc.aio.Server:
     """Start the gRPC server and return it."""
     server = grpc.aio.server()
     try:
-        ume_pb2_grpc.add_UMEServicer_to_server(UMEServicer(query_engine, store), server)
+        ume_pb2_grpc.add_UMEServicer_to_server(
+            UMEServicer(query_engine, store, graph), server
+        )
     except AttributeError:  # pragma: no cover - support stub servers
         pass
     server.add_insecure_port(f"[::]:{port}")
