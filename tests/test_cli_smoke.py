@@ -36,6 +36,7 @@ def run_cli_commands(
     proc_env = os.environ.copy()
     proc_env["UME_DB_PATH"] = ":memory:"
     proc_env["UME_CLI_DB"] = ":memory:"
+    proc_env["UME_ROLE"] = "AnalyticsAgent"
     # Remove coverage-related environment variables that may interfere with
     # subprocess execution. These are added by pytest-cov when running tests
     # with coverage enabled and cause warnings on stderr which break the CLI

@@ -109,7 +109,7 @@ async def update_policy(
 def validate_policy(req: PolicySource, _: str = Depends(deps.get_current_role)) -> Dict[str, str]:
     """Validate Rego policy text using regopy if available."""
     try:
-        from regopy import Interpreter as RegoInterpreter  # type: ignore
+        from regopy import Interpreter as RegoInterpreter  # type: ignore[import]
     except Exception as exc:  # pragma: no cover - optional dependency
         raise HTTPException(status_code=500, detail="Rego support not installed") from exc
     interp = RegoInterpreter()
