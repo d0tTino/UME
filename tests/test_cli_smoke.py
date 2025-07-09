@@ -3,6 +3,7 @@ import subprocess
 import sys
 import os
 import shlex
+import types
 from pathlib import Path
 import pytest  # For tmp_path if needed later, and general test structure
 
@@ -36,6 +37,10 @@ def run_cli_commands(
     proc_env = os.environ.copy()
     proc_env["UME_DB_PATH"] = ":memory:"
     proc_env["UME_CLI_DB"] = ":memory:"
+    # Override any role from the project's .env so tests run with full
+    # permissions. Otherwise the CLI may start in view-only mode which breaks
+    # expectations around mutating commands.
+    proc_env["UME_ROLE"] = ""
     # Remove coverage-related environment variables that may interfere with
     # subprocess execution. These are added by pytest-cov when running tests
     # with coverage enabled and cause warnings on stderr which break the CLI
@@ -368,6 +373,73 @@ def test_cli_quickstart_creates_env_file(
 
     assert (tmp_path / ".env").is_file()
     assert any("generate-certs.sh" in " ".join(c) for c in run_calls)
+
+
+def test_cli_snapshot_schedule(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import importlib
+    import ume.auto_snapshot as auto_snapshot
+
+    # Provide a lightweight stub for the ``ume`` package so ``ume_cli`` can be
+    # imported without pulling in optional heavy dependencies.
+    stub = types.ModuleType("ume")
+    class DummyGraph:
+        def __init__(self, *_: object, **__: object) -> None:
+            pass
+
+    stub.PersistentGraph = DummyGraph
+    stub.RoleBasedGraphAdapter = DummyGraph
+    stub.enable_snapshot_autosave_and_restore = lambda *_, **__: None
+    stub.parse_event = lambda *_: None
+    stub.apply_event_to_graph = lambda *_: None
+    stub.load_graph_into_existing = lambda *_: None
+    stub.snapshot_graph_to_file = lambda *_: None
+    stub.ProcessingError = Exception
+    stub.EventError = Exception
+    stub.SnapshotError = Exception
+    stub.IGraphAdapter = object
+    stub.log_audit_entry = lambda *_: None
+    stub.get_audit_entries = lambda *_: []
+    stub.DEFAULT_SCHEMA_MANAGER = object()
+    bench = types.ModuleType("ume.benchmarks")
+    bench.benchmark_vector_store = lambda *_: None
+    feder = types.ModuleType("ume.federation")
+    feder.MirrorMakerDriver = object  # type: ignore[assignment]
+    sys.modules["ume"] = stub
+    sys.modules["ume.benchmarks"] = bench
+    sys.modules["ume.federation"] = feder
+    sys.modules["ume.auto_snapshot"] = auto_snapshot
+
+    import ume_cli as cli
+    importlib.reload(cli)
+
+    called: dict[str, object] = {}
+
+    class DummyThread:
+        def is_alive(self) -> bool:
+            return False
+
+        def join(self, timeout: float | None = None) -> None:
+            pass
+
+    def fake_enable(graph: object, path: object, interval: int) -> tuple[DummyThread, callable]:
+        called["path"] = str(path)
+        called["interval"] = interval
+
+        return DummyThread(), lambda: None
+
+    monkeypatch.setattr(auto_snapshot, "enable_periodic_snapshot", fake_enable)
+    monkeypatch.setattr(auto_snapshot, "disable_periodic_snapshot", lambda: None)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "snapshot-schedule", "--interval", "1"]
+    cli.main()
+    out = capsys.readouterr().out
+    sys.argv = argv
+
+    assert called["interval"] == 1
+    assert "Snapshots will be written" in out
 
 
 def test_cli_env_file_warning(
