@@ -34,15 +34,31 @@ if importlib.util.find_spec("yaml") is None:
     sys.modules.setdefault("yaml", yaml_stub)
 
 prom_stub = types.ModuleType("prometheus_client")
+
+
+class _DummyValue:  # pragma: no cover - minimal metric value stub
+    def __init__(self) -> None:
+        self._v = 0
+
+    def set(self, value: int | float) -> None:
+        self._v = value
+
+    def get(self) -> int | float:
+        return self._v
+
+
 class _DummyMetric:  # pragma: no cover - simple stub
     def __init__(self, *_: object, **__: object) -> None:
-        pass
+        self._value = _DummyValue()
 
     def labels(self, *_: object, **__: object) -> "_DummyMetric":
         return self
 
-    def inc(self, *_: object, **__: object) -> None:
-        pass
+    def inc(self, amount: int | float = 1) -> None:
+        self._value.set(self._value.get() + amount)
+
+    def set(self, value: int | float) -> None:
+        self._value.set(value)
 
     def observe(self, *_: object, **__: object) -> None:
         pass
