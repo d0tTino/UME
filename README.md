@@ -17,8 +17,9 @@ The engine is built from a few key components:
   - Define a common interface for manipulating different graph backends.
   - Includes adapters for in-memory, SQLite, and Neo4j storage as well as RBAC wrappers.
 - **Vector Store** (`src/ume/vector_store.py`)
-  - Maintains a FAISS index of node embeddings for similarity search.
-  - Use `create_default_store()` to instantiate one from environment settings.
+  - Maintains a vector index of node embeddings for similarity search.
+  - Use `VectorStore()` or `create_default_store()` to instantiate one from
+    environment settings. The backend is selected via `UME_VECTOR_BACKEND`.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
 
@@ -900,16 +901,17 @@ poetry install --with embedding
 
 ## Vector Store
 
-UME can optionally maintain a FAISS index of node embeddings. Use
-`create_vector_store()` to obtain a store configured from environment
-variables. When a `CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event contains an
-`embedding` field in its attributes, the vector is added to the index via
-`VectorStoreListener`.
+UME can optionally maintain an index of node embeddings. Calling `VectorStore()`
+instantiates the configured backend using environment defaults (equivalent to
+`create_vector_store()`). When a `CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event
+contains an `embedding` field in its attributes, the vector is added to the
+index via `VectorStoreListener`.
 
 Set the following environment variables to configure the store:
 
+- `UME_VECTOR_BACKEND` – `faiss` (default) or `chroma`.
 - `UME_VECTOR_DIM` – dimension of the embedding vectors (default `1536`).
-- `UME_VECTOR_INDEX` – path of the FAISS index file.
+- `UME_VECTOR_INDEX` – path of the index file.
 - `UME_VECTOR_USE_GPU` – set to `true` to build the index on a GPU (requires
   FAISS compiled with GPU support).
 - `UME_VECTOR_GPU_MEM_MB` – temporary memory (in MB) allocated for FAISS GPU
