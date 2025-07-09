@@ -49,3 +49,48 @@ class SuperMemory:
         tb: TracebackType | None,
     ) -> None:
         self.close()
+
+
+class AsyncSuperMemory:
+    """Async wrapper to forward events to a running UME instance."""
+
+    def __init__(self, base_url: str = "http://localhost:8000", api_key: str | None = None) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self._client = httpx.AsyncClient(timeout=5)
+
+    async def send_events(self, events: Iterable[Mapping[str, Any]]) -> None:
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        events_list = list(events)
+        if not events_list:
+            return
+        if len(events_list) > 1:
+            await self._client.post(
+                f"{self.base_url}/events/batch", json=events_list, headers=headers
+            )
+        else:
+            await self._client.post(
+                f"{self.base_url}/events", json=events_list[0], headers=headers
+            )
+
+    async def recall(self, payload: Mapping[str, Any]) -> Any:
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        resp = await self._client.get(
+            f"{self.base_url}/recall", params=payload, headers=headers
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def close(self) -> None:
+        await self._client.aclose()
+
+    async def __aenter__(self) -> "AsyncSuperMemory":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        await self.close()
