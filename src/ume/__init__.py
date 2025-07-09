@@ -42,6 +42,7 @@ except ImportError:  # pragma: no cover - allow import without environment setup
         WATCH_PATHS=["."],
         DAG_RESOURCES={"cpu": 1, "io": 1},
         UME_VALUE_STORE_PATH=None,
+        UME_VECTOR_BACKEND="faiss",
         UME_VECTOR_DIM=0,
         UME_VECTOR_INDEX="vectors.faiss",
         UME_VECTOR_USE_GPU=False,

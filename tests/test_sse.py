@@ -7,10 +7,14 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ume import MockGraph
 from ume.config import settings
-from sse_starlette.sse import AppStatus
+import pytest
+
+try:  # pragma: no cover - optional dependency
+    from sse_starlette.sse import AppStatus
+except ModuleNotFoundError:  # pragma: no cover - skip if package unavailable
+    pytest.skip("sse_starlette is not installed", allow_module_level=True)
 import anyio
 import time
-import pytest
 
 
 

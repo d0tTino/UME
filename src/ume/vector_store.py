@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 from collections.abc import Iterable
 from types import TracebackType
 import numbers
@@ -63,6 +63,10 @@ class VectorBackend:
         raise NotImplementedError
 
     def get_vector_timestamps(self) -> Dict[str, int]:
+        raise NotImplementedError
+
+    def expire_vectors(self, max_age_seconds: int) -> None:
+        """Delete vectors older than ``max_age_seconds``."""
         raise NotImplementedError
 
 
@@ -642,8 +646,25 @@ def create_default_store() -> VectorBackend:  # pragma: no cover - trivial wrapp
 # continue to work without modification.
 create_vector_store = create_default_store
 
-# Backwards compatibility for older imports
-VectorStore = FaissBackend
+
+if TYPE_CHECKING:  # pragma: no cover - used for static typing only
+    from typing import TypeAlias
+
+    VectorStore: TypeAlias = VectorBackend
+else:
+
+    class VectorStore:
+        """Factory for the configured vector store backend."""
+
+        def __new__(cls, *args: Any, **kwargs: Any) -> VectorBackend:
+            backend = settings.UME_VECTOR_BACKEND.lower()
+            if backend == "faiss":
+                store_cls = FaissBackend
+            elif backend == "chroma":
+                store_cls = ChromaBackend
+            else:  # pragma: no cover - invalid configuration
+                raise ValueError(f"Unknown vector backend: {backend}")
+            return store_cls(*args, **kwargs)
 
 # Ensure ``ume.vector_store`` is set when imported standalone
 if __name__ == "ume.vector_store":
