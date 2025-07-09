@@ -21,6 +21,10 @@ import pytest
 # Ensure the src directory is importable when UME isn't installed
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+# Force the vector backend to chroma to avoid faiss dependency during tests
+from ume.config import settings as _settings
+object.__setattr__(_settings, "UME_VECTOR_BACKEND", "chroma")
+
 # Stub optional dependencies so importing ume modules doesn't fail when they
 # aren't installed. Tests that rely on these packages will provide their own
 # implementations.
@@ -92,6 +96,7 @@ _OPTIONAL_PACKAGES = [
     "confluent_kafka",
     "structlog",
     "neo4j",
+    "faiss",
 ]
 
 for _package in _OPTIONAL_PACKAGES:
@@ -106,6 +111,12 @@ for _package in _OPTIONAL_PACKAGES:
             module.KafkaError = _Dummy
             module.KafkaException = Exception
             module.Message = _Dummy
+        if _package == "faiss":
+            # minimal stub just to satisfy import checks in tests
+            module.IndexFlatL2 = object
+        if _package == "neo4j":
+            module.GraphDatabase = object
+            module.Driver = object
         sys.modules.setdefault(_package, module)
 
 try:

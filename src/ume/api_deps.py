@@ -53,6 +53,14 @@ def configure_vector_store(store: VectorStore) -> None:
     app.state.vector_store = store
 
 
+def remove_expired_tokens() -> None:
+    """Delete tokens from ``TOKENS`` that have expired."""
+    now = time.time()
+    expired = [tok for tok, (_, exp) in TOKENS.items() if exp < now]
+    for tok in expired:
+        TOKENS.pop(tok, None)
+
+
 def get_current_role(token: str = Depends(oauth2_scheme)) -> str:
     if token == settings.UME_API_TOKEN:
         return settings.UME_API_ROLE or ""

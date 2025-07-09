@@ -287,3 +287,17 @@ def test_exception_logging_on_query(
         "Unhandled exception while processing request" in rec.getMessage()
         for rec in caplog.records
     )
+
+
+def test_token_cleanup_task(monkeypatch: MonkeyPatch) -> None:
+    from ume import api as api_mod
+
+    monkeypatch.setattr(api_mod, "TOKEN_CLEANUP_INTERVAL", 0.01)
+    monkeypatch.setattr(settings, "UME_OAUTH_TTL", 0.02)
+
+    with TestClient(app) as client:
+        token = _token(client)
+        assert token in deps.TOKENS
+        time.sleep(0.05)
+        assert token not in deps.TOKENS
+

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+import asyncio
 from typing import Any, Awaitable, Callable, cast
 from collections import defaultdict
 
@@ -50,6 +51,11 @@ POLICY_DIR = api_deps.POLICY_DIR  # noqa: F401 re-exported for tests
 TOKENS = api_deps.TOKENS  # noqa: F401 re-exported for tests
 configure_graph = api_deps.configure_graph  # noqa: F401 re-exported for tests
 configure_vector_store = api_deps.configure_vector_store  # noqa: F401 re-exported for tests
+
+# Interval between token cleanup runs in seconds
+TOKEN_CLEANUP_INTERVAL = 60.0
+
+_token_cleanup_task: asyncio.Task | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -120,12 +126,43 @@ async def _init_limiter() -> None:
     await FastAPILimiter.init(redis_client)
 
 
+async def _token_cleanup_loop(interval: float) -> None:
+    """Periodically remove expired entries from ``TOKENS``."""
+    try:
+        while True:
+            await asyncio.sleep(interval)
+            api_deps.remove_expired_tokens()
+    except asyncio.CancelledError:  # pragma: no cover - task cancelled
+        pass
+
+
+@app.on_event("startup")
+async def _start_token_cleanup() -> None:
+    """Launch background task for expired token cleanup."""
+    global _token_cleanup_task
+    interval = min(TOKEN_CLEANUP_INTERVAL, settings.UME_OAUTH_TTL)
+    _token_cleanup_task = asyncio.create_task(_token_cleanup_loop(interval))
+
+
 @app.on_event("shutdown")
 def _close_vector_store() -> None:
     """Ensure the configured vector store is properly closed."""
     store = getattr(app.state, "vector_store", None)
     if store is not None and hasattr(store, "close"):
         store.close()
+
+
+@app.on_event("shutdown")
+async def _stop_token_cleanup() -> None:
+    """Cancel the background token cleanup task if running."""
+    global _token_cleanup_task
+    if _token_cleanup_task is not None:
+        _token_cleanup_task.cancel()
+        try:
+            await _token_cleanup_task
+        except Exception:
+            pass
+        _token_cleanup_task = None
 
 
 @app.middleware("http")
