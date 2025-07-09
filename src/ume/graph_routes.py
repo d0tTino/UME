@@ -16,8 +16,9 @@ from .document_guru import reformat_document
 from .reliability import filter_low_confidence
 from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
-from .event import parse_event, EventError
-from .processing import apply_event_to_graph, ProcessingError
+from .event import EventError
+from .processing import ProcessingError
+from .services.ingest import ingest_event, ingest_events_batch
 
 # import shared API dependencies
 from . import api_deps as deps
@@ -185,9 +186,7 @@ def api_post_events_batch(
 ) -> Dict[str, Any]:
     """Apply multiple events sequentially to the graph."""
     try:
-        for data in events:
-            event = parse_event(data)
-            apply_event_to_graph(event, graph)
+        ingest_events_batch(events, graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -300,8 +299,7 @@ def api_post_event(
 ) -> Dict[str, Any]:
     """Validate and apply an event to the graph."""
     try:
-        event = parse_event(data)
-        apply_event_to_graph(event, graph)
+        ingest_event(data, graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
