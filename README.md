@@ -443,8 +443,22 @@ client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1
 print(client.recall({"node_id": "n1"}))
 ```
 
+
 See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
 [`examples/letta_example.py`](examples/letta_example.py) for minimal scripts.
+
+### Integrations
+
+- [LangGraph integration](examples/langgraph_integration.ipynb) – forward
+  LangGraph events with `LangGraph.send_events()` and retrieve them using
+  `LangGraph.recall()`.
+- [Letta integration](examples/letta_integration.ipynb) – send Letta flow events
+  with `Letta.send_events()` and recall results via `Letta.recall()`.
+- [MemGPT integration](examples/memgpt_integration.ipynb) – write memory events
+  through `MemGPT.send_events()` and access them with `MemGPT.recall()`.
+- [SuperMemory integration](examples/supermemory_integration.ipynb) – log
+  events using `SuperMemory.send_events()` and query them through
+  `SuperMemory.recall()`.
 
 ### Building and Deploying the Frontend
 
