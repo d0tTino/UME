@@ -458,7 +458,7 @@ See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
 - [MemGPT integration](examples/memgpt_integration.ipynb) – write memory events
   through `MemGPT.send_events()` and access them with `MemGPT.recall()`.
 - [SuperMemory integration](examples/supermemory_integration.ipynb) – log
-  events using `SuperMemory.send_events()` and query them through
+  events using `SuperMemory.send_events()` and retrieve them with
   `SuperMemory.recall()`.
 
 ### Building and Deploying the Frontend
