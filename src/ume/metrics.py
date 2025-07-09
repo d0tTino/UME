@@ -1,4 +1,23 @@
-from prometheus_client import Counter, Histogram, Gauge
+try:  # optional dependency
+    from prometheus_client import Counter, Histogram, Gauge
+except Exception:  # pragma: no cover - optional dependency missing
+    class _DummyMetric:
+        def __init__(self, *_: object, **__: object) -> None:
+            pass
+
+        def labels(self, *_: object, **__: object) -> "_DummyMetric":
+            return self
+
+        def inc(self, *_: object, **__: object) -> None:
+            pass
+
+        def observe(self, *_: object, **__: object) -> None:
+            pass
+
+        def set(self, *_: object, **__: object) -> None:
+            pass
+
+    Counter = Histogram = Gauge = _DummyMetric  # type: ignore
 
 # HTTP metrics
 REQUEST_COUNT = Counter(

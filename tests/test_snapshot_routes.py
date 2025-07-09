@@ -1,3 +1,5 @@
+import pytest
+pytest.importorskip("fastapi")
 from pathlib import Path
 import sys
 

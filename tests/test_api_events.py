@@ -1,5 +1,8 @@
 import pytest
+pytest.importorskip("fastapi")
+import pytest
 from fastapi.testclient import TestClient
+pytest.importorskip("fastapi")
 # ruff: noqa: E402
 import sys
 import types

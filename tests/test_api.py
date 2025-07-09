@@ -1,6 +1,9 @@
 # ruff: noqa: E402
+import pytest
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 import pytest
+pytest.importorskip("fastapi")
 from typing import Any
 import time
 

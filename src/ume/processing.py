@@ -6,7 +6,10 @@ from .plugins.alignment import get_plugins
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .graph_schema import load_default_schema
 
-DEFAULT_VERSION = load_default_schema().version
+try:
+    DEFAULT_VERSION = load_default_schema().version
+except Exception:  # pragma: no cover - optional dependency missing
+    DEFAULT_VERSION = "0.0.0"
 
 
 class ProcessingError(ValueError):

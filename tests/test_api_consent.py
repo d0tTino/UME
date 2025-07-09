@@ -1,4 +1,8 @@
+import pytest
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
+import pytest
+pytest.importorskip("fastapi")
 from ume.api import app
 from ume.config import settings
 

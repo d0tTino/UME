@@ -1,5 +1,16 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Extra
+try:  # optional dependency
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+    from pydantic import Extra
+except Exception:  # pragma: no cover - optional dependency missing
+    class BaseSettings:
+        def __init__(self, *_: object, **__: object) -> None:
+            raise ImportError("pydantic-settings is required for configuration")
+
+    class SettingsConfigDict(dict):
+        pass
+
+    class Extra:
+        ignore = "ignore"
 from typing import Any
 import logging
 

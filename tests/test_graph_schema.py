@@ -1,6 +1,7 @@
+# ruff: noqa: E402
 import json
-import yaml
 import pytest
+yaml = pytest.importorskip("yaml")
 from ume.graph_schema import GraphSchema, load_default_schema
 from ume.processing import ProcessingError
 

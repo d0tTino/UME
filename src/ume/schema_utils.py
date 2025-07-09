@@ -7,7 +7,12 @@ from importlib import resources
 from typing import Any, Dict
 from packaging.version import Version, InvalidVersion
 
-from jsonschema import validate, ValidationError
+try:  # optional dependency
+    from jsonschema import validate, ValidationError
+except Exception:  # pragma: no cover - optional dependency missing
+    validate = None  # type: ignore
+    class ValidationError(Exception):
+        pass
 
 
 _ENVELOPE_SCHEMA: Dict[str, Any] | None = None
@@ -48,6 +53,8 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
 def validate_event_dict(event_data: Dict[str, Any]) -> None:
     """Validate a raw event dictionary or envelope against its JSON schema."""
     if "event" in event_data and "schema_version" in event_data:
+        if validate is None:
+            raise ImportError("jsonschema is required for validation")
         validate(instance=event_data, schema=_load_envelope_schema())
         version = event_data["schema_version"]
         try:
@@ -60,4 +67,6 @@ def validate_event_dict(event_data: Dict[str, Any]) -> None:
     if not isinstance(event_type, str):
         raise ValidationError("event_type missing or not a string")
     schema = _load_schema(event_type)
+    if validate is None:
+        raise ImportError("jsonschema is required for validation")
     validate(instance=event_data, schema=schema)

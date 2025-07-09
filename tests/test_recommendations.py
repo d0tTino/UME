@@ -1,3 +1,5 @@
+import pytest
+pytest.importorskip("fastapi")
 from typing import Any, cast
 
 from fastapi.testclient import TestClient

@@ -5,6 +5,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import pytest
 
 pytest.importorskip("sentence_transformers")
+pytest.importorskip("yaml")
 
 from ume import (
     GraphSchemaManager,

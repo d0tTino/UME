@@ -1,3 +1,5 @@
+import pytest
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 from ume.api import app, configure_graph
 from ume.graph import MockGraph

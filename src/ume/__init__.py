@@ -104,13 +104,33 @@ from .auto_snapshot import (
     disable_periodic_snapshot,
     enable_snapshot_autosave_and_restore,
 )
-from .retention import start_retention_scheduler, stop_retention_scheduler
-from .memory_aging import (
-    start_memory_aging_scheduler,
-    stop_memory_aging_scheduler,
-    start_vector_age_scheduler,
-    stop_vector_age_scheduler,
-)
+try:  # Optional dependency
+    from .retention import start_retention_scheduler, stop_retention_scheduler
+except Exception:  # pragma: no cover - optional dependency missing
+    def start_retention_scheduler(*_: object, **__: object) -> None:
+        raise ImportError("prometheus_client is required for retention scheduler")
+
+    def stop_retention_scheduler(*_: object, **__: object) -> None:
+        raise ImportError("prometheus_client is required for retention scheduler")
+try:  # Optional dependency
+    from .memory_aging import (
+        start_memory_aging_scheduler,
+        stop_memory_aging_scheduler,
+        start_vector_age_scheduler,
+        stop_vector_age_scheduler,
+    )
+except Exception:  # pragma: no cover - optional dependency missing
+    def start_memory_aging_scheduler(*_: object, **__: object) -> None:
+        raise ImportError("prometheus_client is required for memory aging scheduler")
+
+    def stop_memory_aging_scheduler(*_: object, **__: object) -> None:
+        raise ImportError("prometheus_client is required for memory aging scheduler")
+
+    def start_vector_age_scheduler(*_: object, **__: object) -> None:
+        raise ImportError("prometheus_client is required for memory aging scheduler")
+
+    def stop_vector_age_scheduler(*_: object, **__: object) -> None:
+        raise ImportError("prometheus_client is required for memory aging scheduler")
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
 from .plugins.alignment import PolicyViolationError
@@ -126,28 +146,37 @@ from .schema_utils import validate_event_dict
 from .graph_schema import GraphSchema, load_default_schema
 from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
 from .utils import ssl_config
-from .memory import EpisodicMemory, SemanticMemory, ColdMemory
+try:  # Optional dependency
+    from .memory import EpisodicMemory, SemanticMemory, ColdMemory
+except Exception:  # pragma: no cover - optional dependency missing
+    class EpisodicMemory:
+        def __init__(self, *_: object, **__: object) -> None:
+            raise ImportError("prometheus_client is required for EpisodicMemory")
+
+    class SemanticMemory(EpisodicMemory):
+        pass
+
+    class ColdMemory(EpisodicMemory):
+        pass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
     from .vector_store import (
         VectorBackend,
-        FaissBackend,
-        ChromaBackend,
         VectorStore,
         VectorStoreListener,
         create_default_store,
     )
+    from .vector_backends import FaissBackend, ChromaBackend
 else:  # pragma: no cover - optional dependency
     try:
         from .vector_store import (
             VectorBackend,
-            FaissBackend,
-            ChromaBackend,
             VectorStore,
             VectorStoreListener,
             create_default_store,
         )
+        from .vector_backends import FaissBackend, ChromaBackend
     except Exception:
         vector_stub = types.ModuleType("ume.vector_store")
 
@@ -172,7 +201,12 @@ else:  # pragma: no cover - optional dependency
         setattr(sys.modules[__name__], "vector_store", vector_stub)
 
 
-from .llm_ferry import LLMFerry
+try:  # Optional dependency
+    from .llm_ferry import LLMFerry
+except Exception:  # pragma: no cover - optional import
+    class LLMFerry:
+        def __init__(self, *_: object, **__: object) -> None:
+            raise ImportError("httpx is required for LLMFerry")
 from .dag_executor import DAGExecutor, Task
 from .agent_orchestrator import (
     AgentOrchestrator,
@@ -182,12 +216,25 @@ from .agent_orchestrator import (
     ReflectionAgent,
 )
 from .message_bus import MessageEnvelope
-from .resources import (
-    create_graph,
-    create_vector_store,
-    graph_factory,
-    vector_store_factory,
-)
+try:  # Optional dependency
+    from .resources import (
+        create_graph,
+        create_vector_store,
+        graph_factory,
+        vector_store_factory,
+    )
+except Exception:  # pragma: no cover - optional dependency missing
+    def create_graph(*_: object, **__: object) -> None:
+        raise ImportError("pydantic-settings is required for create_graph")
+
+    def create_vector_store(*_: object, **__: object) -> None:
+        raise ImportError("pydantic-settings is required for create_vector_store")
+
+    def graph_factory() -> None:
+        raise ImportError("pydantic-settings is required for graph_factory")
+
+    def vector_store_factory() -> None:
+        raise ImportError("pydantic-settings is required for vector_store_factory")
 
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask

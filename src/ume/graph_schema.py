@@ -6,7 +6,10 @@ from dataclasses import dataclass, field
 from importlib import resources
 from typing import Dict
 import json
-import yaml
+try:  # optional dependency
+    import yaml
+except Exception:  # pragma: no cover - optional dependency missing
+    yaml = None  # type: ignore
 
 
 @dataclass
@@ -38,6 +41,8 @@ class GraphSchema:
         """Load schema definitions from a JSON or YAML file."""
         with open(path, "r", encoding="utf-8") as f:
             if path.endswith((".yaml", ".yml")):
+                if yaml is None:
+                    raise ImportError("PyYAML is required to load YAML schemas")
                 data = yaml.safe_load(f)
             else:
                 data = json.load(f)
@@ -80,5 +85,8 @@ def load_default_schema() -> GraphSchema:
     return GraphSchema.load_default()
 
 
-# Load schema on module import for convenience
-DEFAULT_SCHEMA = load_default_schema()
+# Load schema on module import for convenience, but allow optional dependency
+try:
+    DEFAULT_SCHEMA = load_default_schema()
+except Exception:  # pragma: no cover - optional dependency missing
+    DEFAULT_SCHEMA = None  # type: ignore

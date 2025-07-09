@@ -27,11 +27,17 @@ class GraphSchemaManager:
             if name.startswith("graph_schema") and name.endswith(
                 (".yaml", ".yml", ".json")
             ):
-                schema = GraphSchema.load(str(path))
+                try:
+                    schema = GraphSchema.load(str(path))
+                except Exception:  # pragma: no cover - optional dependency missing
+                    continue
                 self._schemas[schema.version] = schema
 
         # Ensure the default schema is always available even if its file name does not follow pattern
-        default_schema = load_default_schema()
+        try:
+            default_schema = load_default_schema()
+        except Exception:  # pragma: no cover - optional dependency missing
+            return
         self._schemas.setdefault(default_schema.version, default_schema)
 
     def _load_available_protos(self) -> None:

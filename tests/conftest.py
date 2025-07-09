@@ -97,6 +97,7 @@ _OPTIONAL_PACKAGES = [
     "structlog",
     "neo4j",
     "faiss",
+    "fastapi_limiter",
 ]
 
 for _package in _OPTIONAL_PACKAGES:
@@ -114,6 +115,12 @@ for _package in _OPTIONAL_PACKAGES:
         if _package == "faiss":
             # minimal stub just to satisfy import checks in tests
             module.IndexFlatL2 = object
+        if _package == "fastapi_limiter":
+            class FastAPILimiter:
+                async def init(self, *args: object, **kwargs: object) -> None:
+                    pass
+
+            module.FastAPILimiter = FastAPILimiter
         if _package == "neo4j":
             module.GraphDatabase = object
             module.Driver = object

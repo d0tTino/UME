@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Mapping
 
-import httpx
+try:  # optional dependency
+    import httpx
+except Exception:  # pragma: no cover - optional dependency missing
+    httpx = None  # type: ignore
 
 from types import TracebackType
 
@@ -17,6 +20,8 @@ class OPAClient:
     """Simple wrapper around the OPA HTTP API."""
 
     def __init__(self, base_url: str | None = None, token: str | None = None) -> None:
+        if httpx is None:
+            raise ImportError("httpx is required for OPAClient")
         resolved_url = base_url or settings.OPA_URL
         if not resolved_url:
             raise ValueError("OPA base URL must be provided")
