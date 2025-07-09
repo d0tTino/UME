@@ -24,6 +24,21 @@ from ._internal.listeners import GraphListener
 from .metrics import VECTOR_INDEX_SIZE, VECTOR_QUERY_LATENCY
 from prometheus_client import Gauge, Histogram
 
+
+def _resolve_vector_dim(config_dim: int) -> int:
+    """Validate or infer the vector dimension."""
+    from .embedding import generate_embedding
+
+    actual_dim = len(generate_embedding("test"))
+    if config_dim == 0:
+        settings.UME_VECTOR_DIM = actual_dim
+        return actual_dim
+    if config_dim != actual_dim:
+        raise ValueError(
+            f"UME_VECTOR_DIM ({config_dim}) does not match embedding model dimension ({actual_dim})"
+        )
+    return config_dim
+
 logger = logging.getLogger(__name__)
 
 
@@ -631,8 +646,9 @@ def create_default_store() -> VectorBackend:  # pragma: no cover - trivial wrapp
         kwargs = {}
     else:
         raise ValueError(f"Unknown vector backend: {backend}")
+    dim = _resolve_vector_dim(settings.UME_VECTOR_DIM)
     return cls(
-        dim=settings.UME_VECTOR_DIM,
+        dim=dim,
         path=settings.UME_VECTOR_INDEX,
         query_latency_metric=VECTOR_QUERY_LATENCY,
         index_size_metric=VECTOR_INDEX_SIZE,
@@ -664,6 +680,8 @@ else:
                 store_cls = ChromaBackend
             else:  # pragma: no cover - invalid configuration
                 raise ValueError(f"Unknown vector backend: {backend}")
+            dim = kwargs.pop("dim", settings.UME_VECTOR_DIM)
+            kwargs["dim"] = _resolve_vector_dim(dim)
             return store_cls(*args, **kwargs)
 
 # Ensure ``ume.vector_store`` is set when imported standalone

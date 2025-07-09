@@ -2,6 +2,7 @@
 import time
 from pathlib import Path
 import sys
+import types
 import pytest
 
 faiss = pytest.importorskip("faiss")
@@ -329,3 +330,54 @@ def test_add_many_dimension_mismatch(store_cls) -> None:
     with pytest.raises(ValueError):
         store.add_many({"a": [1.0]})
 
+class DummyModel:
+    def __init__(self, dim: int) -> None:
+        self.dim = dim
+    def encode(self, text: str):
+        import numpy as np
+        return np.zeros(self.dim, dtype=float)
+
+
+def test_create_default_store_dimension_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    with monkeypatch.context() as m:
+        m.setenv("UME_VECTOR_BACKEND", "chroma")
+        m.setenv("UME_VECTOR_DIM", "2")
+        dummy_module = types.SimpleNamespace(SentenceTransformer=lambda name: DummyModel(3))
+        m.setitem(sys.modules, "sentence_transformers", dummy_module)
+        sys.modules.pop("ume.embedding", None)
+        import importlib
+        import ume.config as cfg
+        import ume.vector_store as vs
+        importlib.reload(cfg)
+        importlib.reload(vs)
+        with pytest.raises(ValueError):
+            vs.create_default_store()
+    sys.modules.pop("ume.embedding", None)
+    import importlib
+    import ume.config as cfg
+    import ume.vector_store as vs
+    importlib.reload(cfg)
+    importlib.reload(vs)
+
+
+def test_create_default_store_dimension_autoset(monkeypatch: pytest.MonkeyPatch) -> None:
+    with monkeypatch.context() as m:
+        m.setenv("UME_VECTOR_BACKEND", "chroma")
+        m.setenv("UME_VECTOR_DIM", "0")
+        dummy_module = types.SimpleNamespace(SentenceTransformer=lambda name: DummyModel(4))
+        m.setitem(sys.modules, "sentence_transformers", dummy_module)
+        sys.modules.pop("ume.embedding", None)
+        import importlib
+        import ume.config as cfg
+        import ume.vector_store as vs
+        importlib.reload(cfg)
+        importlib.reload(vs)
+        store = vs.create_default_store()
+        assert cfg.settings.UME_VECTOR_DIM == 4
+        assert store.dim == 4
+    sys.modules.pop("ume.embedding", None)
+    import importlib
+    import ume.config as cfg
+    import ume.vector_store as vs
+    importlib.reload(cfg)
+    importlib.reload(vs)

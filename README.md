@@ -910,7 +910,10 @@ index via `VectorStoreListener`.
 Set the following environment variables to configure the store:
 
 - `UME_VECTOR_BACKEND` – `faiss` (default) or `chroma`.
-- `UME_VECTOR_DIM` – dimension of the embedding vectors (default `1536`).
+- `UME_VECTOR_DIM` – dimension of the embedding vectors (default `1536`). This
+  must match the output dimension of the configured embedding model. If set to
+  `0`, the dimension will be detected automatically when the vector store is
+  created.
 - `UME_VECTOR_INDEX` – path of the index file.
 - `UME_VECTOR_USE_GPU` – set to `true` to build the index on a GPU (requires
   FAISS compiled with GPU support).
