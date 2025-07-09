@@ -690,6 +690,15 @@ This section outlines the basic programmatic steps to interact with the UME comp
     enable_snapshot_autosave_and_restore(graph_adapter, "ume_snapshot.json")
     ```
 
+    Or run the scheduler from the command line:
+
+    ```bash
+    ume-cli snapshot-schedule --interval 300
+    ```
+
+    This writes updates to the path configured by `UME_SNAPSHOT_PATH` every
+    5 minutes until stopped with `Ctrl+C`.
+
 6.  **Load Graph from Snapshot (Optional):**
     Restore a graph's state from a previously saved snapshot file:
     ```python
