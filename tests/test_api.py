@@ -143,7 +143,8 @@ def test_metrics_endpoint_authorized() -> None:
     assert res.status_code == 200
 
 
-def test_metrics_summary() -> None:
+def test_metrics_summary(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 0.0])
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     token = _token(client)
@@ -162,7 +163,8 @@ def test_metrics_summary() -> None:
     assert "average_request_latency" in data
 
 
-def test_metrics_summary_with_rate_limit() -> None:
+def test_metrics_summary_with_rate_limit(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 0.0])
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     with TestClient(app) as client:
         token = _token(client)
@@ -197,7 +199,8 @@ def test_metrics_summary_with_rate_limit() -> None:
         assert data["request_count_by_status"].get("429", 0) >= 1
 
 
-def test_dashboard_endpoints() -> None:
+def test_dashboard_endpoints(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 0.0])
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     client = TestClient(app)
     token = _token(client)
