@@ -21,3 +21,8 @@ The test suite requires several optional packages that are not installed with th
 - `grpcio-tools`
 
 Many tests also rely on `faiss` and `sentence-transformers`, but these are optional. Tests that require them will be skipped if the packages are not available.
+
+Install all of the above dependencies in one step with:
+```bash
+poetry install --with dev --all-extras
+```

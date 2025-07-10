@@ -212,6 +212,10 @@ Ensure you have installed the development dependencies:
 ```bash
 poetry install --with dev
 ```
+To also install all optional packages used by the tests, run:
+```bash
+scripts/setup_dev_env.sh
+```
 (This project uses `pre-commit` for linting and type checks. To run the same
 checks as CI, execute:)
 ```bash
