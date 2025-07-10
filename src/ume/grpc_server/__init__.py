@@ -16,7 +16,7 @@ from ..config import settings
 from ..logging_utils import configure_logging
 from ..event import EventError
 from ..processing import ProcessingError
-from ..services.ingest import ingest_event
+from ume.services.ingest import ingest_event
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
 
