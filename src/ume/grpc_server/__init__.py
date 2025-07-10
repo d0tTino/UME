@@ -17,6 +17,11 @@ from ..logging_utils import configure_logging
 from ..event import EventError
 from ..processing import ProcessingError
 from ume.services.ingest import ingest_event
+from ..async_graph_adapter import (
+    IAsyncGraphAdapter,
+    ingest_event_async,
+)
+import inspect
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
 
@@ -138,7 +143,10 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
                 "target_node_id": meta.target_node_id or None,
                 "label": meta.label or None,
             }
-            ingest_event(event_dict, self.graph)
+            if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(getattr(self.graph, "add_node", None)):
+                await ingest_event_async(event_dict, self.graph)  # type: ignore[arg-type]
+            else:
+                ingest_event(event_dict, self.graph)
         except (EventError, ProcessingError) as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
 
