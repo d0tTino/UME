@@ -19,6 +19,12 @@ class LedgerEvent(BaseModel):
     event: Dict[str, Any]
 
 
+class Bookmark(BaseModel):
+    """Bookmark for ledger replay."""
+
+    offset: int
+
+
 @router.get("/ledger/events", response_model=List[LedgerEvent])
 def list_events(
     start: int = Query(0, ge=0),
@@ -58,3 +64,31 @@ def graph_history(
         event_ledger, end_offset=offset, end_timestamp=timestamp
     )
     return graph.dump()
+
+
+@router.post("/ledger/compact")
+def compact_ledger(
+    offset: int = Query(..., ge=0),
+    _: str = Depends(deps.get_current_role),
+) -> Dict[str, int]:
+    """Remove ledger entries below ``offset``."""
+
+    event_ledger.compact(offset)
+    return {"offset": offset}
+
+
+@router.get("/ledger/bookmark", response_model=Bookmark)
+def get_bookmark(_: str = Depends(deps.get_current_role)) -> Bookmark:
+    """Return the stored replay bookmark."""
+
+    return Bookmark(offset=event_ledger.last_processed_offset)
+
+
+@router.post("/ledger/bookmark", response_model=Bookmark)
+def set_bookmark(
+    bookmark: Bookmark, _: str = Depends(deps.get_current_role)
+) -> Bookmark:
+    """Persist ``bookmark`` as the last processed offset."""
+
+    event_ledger.update_bookmark(bookmark.offset)
+    return bookmark
