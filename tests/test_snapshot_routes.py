@@ -427,3 +427,43 @@ def test_restore_route_temporarydir(
         fresh = create_graph_adapter(db_path)
         assert set(fresh.get_all_node_ids()) == {"a", "b"}
         assert ("a", "b", "L") in fresh.get_all_edges()
+
+
+def test_snapshot_dir_restrictions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    monkeypatch.setenv("UME_SNAPSHOT_DIR", str(allowed))
+    monkeypatch.setattr(settings, "UME_SNAPSHOT_DIR", str(allowed), raising=False)
+    db_path = str(tmp_path / "graph.db")
+    monkeypatch.setenv("UME_GRAPH_BACKEND", "sqlite")
+    monkeypatch.setenv("UME_DB_PATH", db_path)
+    monkeypatch.setattr(settings, "UME_GRAPH_BACKEND", "sqlite", raising=False)
+    monkeypatch.setattr(settings, "UME_DB_PATH", db_path, raising=False)
+    import sqlite3
+    orig_connect = sqlite3.connect
+
+    def _connect(*a: object, **kw: object) -> sqlite3.Connection:
+        kw.setdefault("check_same_thread", False)
+        return orig_connect(*a, **kw)
+
+    monkeypatch.setattr(sqlite3, "connect", _connect)
+    graph = create_graph_adapter(db_path)
+    configure_graph(graph)
+    client = TestClient(app)
+    token = _token(client)
+
+    inside = allowed / "snap.json"
+    res_ok = client.post(
+        "/snapshot/save",
+        json={"path": str(inside)},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res_ok.status_code == 200
+
+    outside = tmp_path / "snap.json"
+    res_bad = client.post(
+        "/snapshot/save",
+        json={"path": str(outside)},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res_bad.status_code == 400

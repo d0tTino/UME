@@ -156,7 +156,8 @@ Call :func:`ume.enable_periodic_snapshot` to write the graph to
 ``UME_SNAPSHOT_PATH`` at a fixed interval (default 3600 seconds). The function
 returns the background thread and a stop callback. Use
 :func:`ume.enable_snapshot_autosave_and_restore` to restore an existing snapshot
-before scheduling future saves.
+before scheduling future saves. Snapshot locations are validated against
+``UME_SNAPSHOT_DIR``.
 
 ## Memory aging
 

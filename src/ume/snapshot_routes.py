@@ -9,12 +9,26 @@ from .snapshot import snapshot_graph_to_file, load_graph_into_existing
 from .event_ledger import event_ledger
 from .persistent_graph import build_graph_from_ledger
 from .api_deps import configure_graph
+from .config import settings
 
 router = APIRouter(prefix="/snapshot")
 
 
 class SnapshotPath(BaseModel):
     path: str
+
+
+def _resolve_snapshot_path(path_str: str) -> Path:
+    base = Path(settings.UME_SNAPSHOT_DIR).resolve(strict=False)
+    candidate = Path(path_str)
+    if not candidate.is_absolute():
+        candidate = base / candidate
+    candidate = candidate.resolve(strict=False)
+    try:
+        candidate.relative_to(base)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Path not allowed") from exc
+    return candidate
 
 
 @router.post("/save")
@@ -25,7 +39,8 @@ def save_snapshot(
 ) -> dict[str, str]:
     if role != "AnalyticsAgent":
         raise HTTPException(status_code=403, detail="Forbidden")
-    snapshot_graph_to_file(graph, Path(req.path))
+    path = _resolve_snapshot_path(req.path)
+    snapshot_graph_to_file(graph, path)
     return {"status": "ok"}
 
 
@@ -37,7 +52,8 @@ def load_snapshot(
 ) -> dict[str, str]:
     if role != "AnalyticsAgent":
         raise HTTPException(status_code=403, detail="Forbidden")
-    load_graph_into_existing(graph, Path(req.path))
+    path = _resolve_snapshot_path(req.path)
+    load_graph_into_existing(graph, path)
     return {"status": "ok"}
 
 

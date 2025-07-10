@@ -21,6 +21,7 @@ except ImportError:  # pragma: no cover - allow import without environment setup
     stub.settings = SimpleNamespace(  # type: ignore[attr-defined]
         UME_DB_PATH="ume_graph.db",
         UME_SNAPSHOT_PATH="ume_snapshot.json",
+        UME_SNAPSHOT_DIR=".",
         UME_COLD_DB_PATH="ume_cold.db",
         UME_COLD_SNAPSHOT_PATH="ume_cold_snapshot.json",
         UME_COLD_EVENT_AGE_DAYS=180,

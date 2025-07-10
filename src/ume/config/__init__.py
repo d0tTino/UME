@@ -16,6 +16,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_DB_PATH: str = "ume_graph.db"
     UME_GRAPH_BACKEND: str = "sqlite"  # sqlite, postgres, or redis
     UME_SNAPSHOT_PATH: str = "ume_snapshot.json"
+    UME_SNAPSHOT_DIR: str = "."
     UME_COLD_DB_PATH: str = "ume_cold.db"
     UME_COLD_SNAPSHOT_PATH: str = "ume_cold_snapshot.json"
     UME_COLD_EVENT_AGE_DAYS: int = 180
