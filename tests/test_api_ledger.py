@@ -171,3 +171,74 @@ def test_replay_endpoint_postgres_timestamp(tmp_path, monkeypatch, postgres_serv
     data = res.json()
     assert set(data["nodes"].keys()) == {"p"}
 
+
+def test_ledger_compact(tmp_path, monkeypatch):
+    path = str(tmp_path / "ledger.db")
+    ledger = EventLedger(path)
+    for i in range(5):
+        ledger.append(
+            i,
+            {
+                "event_type": "CREATE_NODE",
+                "timestamp": i,
+                "node_id": f"n{i}",
+                "payload": {"node_id": f"n{i}"},
+            },
+        )
+
+    monkeypatch.setattr("ume.ledger_routes.event_ledger", ledger)
+
+    client = TestClient(app)
+    token = _token(client)
+
+    res = client.post(
+        "/ledger/compact",
+        params={"offset": 2},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    res = client.get("/ledger/events", headers={"Authorization": f"Bearer {token}"})
+    assert [e["offset"] for e in res.json()] == [2, 3, 4]
+
+
+def test_bookmark_persistence_and_replay(tmp_path, monkeypatch):
+    path = str(tmp_path / "ledger.db")
+    ledger = EventLedger(path)
+    for i in range(3):
+        ledger.append(
+            i,
+            {
+                "event_type": "CREATE_NODE",
+                "timestamp": i,
+                "node_id": f"n{i}",
+                "payload": {"node_id": f"n{i}"},
+            },
+        )
+    monkeypatch.setattr("ume.ledger_routes.event_ledger", ledger)
+
+    client = TestClient(app)
+    token = _token(client)
+
+    res = client.post(
+        "/ledger/bookmark",
+        json={"offset": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    ledger.close()
+    ledger2 = EventLedger(path)
+    monkeypatch.setattr("ume.ledger_routes.event_ledger", ledger2)
+
+    res = client.get("/ledger/bookmark", headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 200
+    assert res.json()["offset"] == 1
+
+    from ume.persistent_graph import PersistentGraph
+    from ume.replay import replay_from_ledger
+
+    g = PersistentGraph(":memory:")
+    replay_from_ledger(g, ledger2, start_offset=ledger2.last_processed_offset + 1)
+    assert set(g.get_all_node_ids()) == {"n2"}
+

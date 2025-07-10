@@ -17,6 +17,7 @@ class EventLedger:
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self._create_table()
+        self._last_processed_offset = self._load_bookmark()
 
     def _create_table(self) -> None:
         with self.conn:
@@ -25,6 +26,14 @@ class EventLedger:
                 CREATE TABLE IF NOT EXISTS events (
                     offset INTEGER PRIMARY KEY,
                     data TEXT NOT NULL
+                )
+                """
+            )
+            self.conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS bookmark (
+                    id INTEGER PRIMARY KEY CHECK (id=0),
+                    last_offset INTEGER
                 )
                 """
             )
@@ -65,6 +74,34 @@ class EventLedger:
         if row and row[0] is not None:
             return int(row[0])
         return -1
+
+    # Bookmark persistence -------------------------------------------------
+    def _load_bookmark(self) -> int:
+        cur = self.conn.execute("SELECT last_offset FROM bookmark WHERE id=0")
+        row = cur.fetchone()
+        if row and row[0] is not None:
+            return int(row[0])
+        return -1
+
+    @property
+    def last_processed_offset(self) -> int:
+        return self._last_processed_offset
+
+    def update_bookmark(self, offset: int) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO bookmark(id, last_offset) VALUES(0, ?) "
+                "ON CONFLICT(id) DO UPDATE SET last_offset=excluded.last_offset",
+                (offset,),
+            )
+        self._last_processed_offset = offset
+
+    # ---------------------------------------------------------------------
+
+    def compact(self, max_offset: int) -> None:
+        """Delete events with offsets lower than ``max_offset``."""
+        with self.conn:
+            self.conn.execute("DELETE FROM events WHERE offset < ?", (max_offset,))
 
     def close(self) -> None:
         self.conn.close()
