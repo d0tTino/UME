@@ -24,10 +24,11 @@ def _resolve_snapshot_path(path_str: str) -> Path:
     if not candidate.is_absolute():
         candidate = base / candidate
     candidate = candidate.resolve(strict=False)
-    try:
-        candidate.relative_to(base)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Path not allowed") from exc
+    if settings.UME_SNAPSHOT_DIR not in {"", "."}:
+        try:
+            candidate.relative_to(base)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Path not allowed") from exc
     return candidate
 
 

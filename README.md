@@ -527,6 +527,13 @@ curl -N "http://localhost:8000/recall/stream?query=demo&k=3" \
   -H "Authorization: Bearer <token>"
 ```
 
+### Interpreting Recall Metrics
+Each recall response records the distance between the query vector and
+each returned node embedding in the `ume_recall_score` histogram. Lower
+values indicate a closer match. You can view the average of recent
+scores via `/metrics/summary` and scrape raw Prometheus data from
+`/metrics`.
+
 ### Retrieve Ledger Events
 The `/ledger/events` endpoint exposes the contents of the event ledger. Use
 `start`, `end`, and `limit` query parameters to control the range of entries

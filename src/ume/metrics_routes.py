@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Response
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from .metrics import REQUEST_COUNT, REQUEST_LATENCY
+from .metrics import REQUEST_COUNT, REQUEST_LATENCY, RECALL_SCORE
 from .api_deps import get_current_role, get_vector_store
 from .vector_store import VectorStore
 
@@ -43,10 +43,21 @@ def metrics_summary(
                 latency_count += s.value
     avg_latency = latency_sum / latency_count if latency_count else 0.0
 
+    recall_sum = 0.0
+    recall_count = 0.0
+    for metric in RECALL_SCORE.collect():
+        for s in metric.samples:
+            if s.name.endswith("_sum"):
+                recall_sum += s.value
+            elif s.name.endswith("_count"):
+                recall_count += s.value
+    avg_recall = recall_sum / recall_count if recall_count else 0.0
+
     index_size = len(getattr(store, "idx_to_id", []))
     return {
         "total_requests": int(total_requests),
         "request_count_by_status": {k: int(v) for k, v in by_status.items()},
         "average_request_latency": avg_latency,
         "vector_index_size": index_size,
+        "average_recall_score": avg_recall,
     }

@@ -16,11 +16,15 @@ describe('Recall', () => {
   });
 
   it('loads recall results', async () => {
-    mockFetch({ '/recall?query=q': { nodes: [{ id: 'n1', attributes: {} }] } });
+    mockFetch({
+      '/recall?query=q': { nodes: [{ id: 'n1', attributes: {} }] },
+      '/metrics/summary': { average_recall_score: 0.5 },
+    });
     render(<Recall token="t" />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q' } });
     fireEvent.click(screen.getByText('Search'));
     await waitFor(() => screen.getByText('n1 {}'));
     expect(screen.getByText('n1 {}')).toBeInTheDocument();
+    expect(screen.getByText('Average recall score: 0.500')).toBeInTheDocument();
   });
 });

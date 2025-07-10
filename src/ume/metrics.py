@@ -30,6 +30,12 @@ STALE_VECTOR_COUNT = Gauge(
     "Current number of vectors exceeding the freshness limit",
 )
 
+# Recall metrics
+RECALL_SCORE = Histogram(
+    "ume_recall_score",
+    "Distance between the query vector and recalled node embeddings",
+)
+
 # Reliability metrics
 RESPONSE_CONFIDENCE = Histogram(
     "ume_response_confidence",

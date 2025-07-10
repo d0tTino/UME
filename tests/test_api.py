@@ -161,6 +161,7 @@ def test_metrics_summary(monkeypatch: MonkeyPatch) -> None:
     data = res.json()
     assert "vector_index_size" in data
     assert "average_request_latency" in data
+    assert "average_recall_score" in data
 
 
 def test_metrics_summary_with_rate_limit(monkeypatch: MonkeyPatch) -> None:
