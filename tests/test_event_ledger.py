@@ -44,3 +44,29 @@ def test_append_duplicate_offset_error(tmp_path):
     assert events[0][0] == 0
     assert events[0][1] == event1
 
+
+def test_replay_from_timestamp(tmp_path):
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    for i in range(5):
+        ledger.append(
+            i,
+            {
+                "event_type": "CREATE_NODE",
+                "timestamp": i,
+                "node_id": f"n{i}",
+                "payload": {"node_id": f"n{i}"},
+            },
+        )
+
+    # Replay up to timestamp 2
+    g = PersistentGraph(":memory:")
+    g.replay_from_ledger(ledger, 0, end_timestamp=2)
+    assert set(g.get_all_node_ids()) == {"n0", "n1", "n2"}
+
+    # Replay up to timestamp 4
+
+    g2 = PersistentGraph(":memory:")
+    g2.replay_from_ledger(ledger, 0, end_timestamp=4)
+    assert set(g2.get_all_node_ids()) == {"n0", "n1", "n2", "n3", "n4"}
+
+    ledger.close()
