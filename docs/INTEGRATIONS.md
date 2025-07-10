@@ -31,6 +31,24 @@ client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1
 print(client.recall({"node_id": "n1"}))
 ```
 
+## CrewAI
+```python
+from ume.integrations import CrewAI
+
+client = CrewAI()
+client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+print(client.recall({"node_id": "n1"}))
+```
+
+## AutoGen
+```python
+from ume.integrations import AutoGen
+
+client = AutoGen()
+client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+print(client.recall({"node_id": "n1"}))
+```
+
 ## SuperMemory
 ```python
 from ume.integrations import SuperMemory
