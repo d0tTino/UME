@@ -790,6 +790,23 @@ with UMEClient(settings) as client:
 The client raises `UMEClientError` for issues such as failed validation or
 broker communication errors so they can be handled cleanly.
 
+## Async gRPC Client
+
+`AsyncUMEClient` provides asynchronous access to the gRPC API. Pass the token
+returned from `/token` using the `token` parameter so the client can include it
+as `authorization` metadata on every RPC call. The examples below read the
+token from the `UME_GRPC_TOKEN` environment variable.
+
+```python
+import os
+from ume_client import AsyncUMEClient
+
+token = os.environ.get("UME_GRPC_TOKEN")
+async with AsyncUMEClient("localhost:50051", token=token) as client:
+    result = await client.run_cypher("MATCH (n) RETURN count(n)")
+    print(result)
+```
+
 ## Command-Line Interface (v0.3.0-dev)
 
 You can interact with UME via an interactive REPL (Read-Eval-Print Loop) command-line interface.
@@ -956,6 +973,22 @@ poetry install --with vector
 ```
 
 See [Vector Store Benchmark](docs/VECTOR_BENCHMARKS.md) for sample GPU results.
+## Running Tests
+
+Install dependencies in editable mode before running tests:
+
+```bash
+pip install -e .
+pytest -q
+```
+
+Some tests rely on optional integrations:
+
+```bash
+pip install ume[integrations]
+pytest -q
+```
+
 
 ## Logging
 

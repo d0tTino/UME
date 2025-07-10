@@ -1,11 +1,13 @@
 """Example agent usage of the gRPC AsyncUMEClient."""
 
 import asyncio
+import os
 from ume_client import AsyncUMEClient
 
 
 async def main() -> None:
-    async with AsyncUMEClient("localhost:50051") as client:
+    token = os.environ.get("UME_GRPC_TOKEN")
+    async with AsyncUMEClient("localhost:50051", token=token) as client:
         result = await client.run_cypher("MATCH (n) RETURN n LIMIT 1")
         print("Cypher result:", result)
 

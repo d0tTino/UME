@@ -571,7 +571,12 @@ def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
         print("Docker is not installed or not on PATH")
         raise SystemExit(1) from exc
 
-    required = {"redpanda", "ume-api", "neo4j"}
+    required = {"redpanda", "ume-api"}
+    try:
+        if "neo4j" in compose_file.read_text():
+            required.add("neo4j")
+    except OSError:
+        pass
     start = time.time()
     while time.time() - start < timeout:
         out = subprocess.check_output(
@@ -654,6 +659,8 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
 def _quickstart(no_confirm: bool = False) -> None:
     """Prepare environment and start the Docker Compose stack."""
     env_file = Path(".env")
+    if not no_confirm and not sys.stdin.isatty():
+        no_confirm = True
     if not no_confirm and not env_file.exists():
         resp = input("Create .env from env.example? [y/N]: ")
         if resp.lower() != "y":
@@ -719,6 +726,11 @@ def main() -> None:
         help="Create .env, generate certs and start the stack (same as 'up')",
     )
     sub.add_parser("ps", help="Show status and health of Docker Compose services")
+    snap_parser = sub.add_parser(
+        "snapshot-schedule",
+        help="Periodically snapshot the graph",
+    )
+    snap_parser.add_argument("--interval", type=int, default=60)
     for p in (up_parser, quick_parser):
         p.add_argument(
             "--no-confirm",
