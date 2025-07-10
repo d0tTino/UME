@@ -467,3 +467,35 @@ def test_snapshot_dir_restrictions(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res_bad.status_code == 400
+    assert res_bad.json()["detail"] == "Path outside allowed directory"
+
+@pytest.mark.parametrize("dir_value", ["", "."])
+def test_unrestricted_snapshot_dir_allows_absolute(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dir_value: str) -> None:
+    monkeypatch.setenv("UME_SNAPSHOT_DIR", dir_value)
+    monkeypatch.setattr(settings, "UME_SNAPSHOT_DIR", dir_value, raising=False)
+    db_path = str(tmp_path / "graph.db")
+    monkeypatch.setenv("UME_GRAPH_BACKEND", "sqlite")
+    monkeypatch.setenv("UME_DB_PATH", db_path)
+    monkeypatch.setattr(settings, "UME_GRAPH_BACKEND", "sqlite", raising=False)
+    monkeypatch.setattr(settings, "UME_DB_PATH", db_path, raising=False)
+    import sqlite3
+    orig_connect = sqlite3.connect
+
+    def _connect(*a: object, **kw: object) -> sqlite3.Connection:
+        kw.setdefault("check_same_thread", False)
+        return orig_connect(*a, **kw)
+
+    monkeypatch.setattr(sqlite3, "connect", _connect)
+    graph = create_graph_adapter(db_path)
+    configure_graph(graph)
+    client = TestClient(app)
+    token = _token(client)
+
+    snapshot = tmp_path / "snap.json"
+    res = client.post(
+        "/snapshot/save",
+        json={"path": str(snapshot)},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
