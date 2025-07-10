@@ -448,7 +448,7 @@ print(client.recall({"node_id": "n1"}))
 See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
 [`examples/letta_example.py`](examples/letta_example.py) for minimal scripts.
 
-### Integrations
+### Integration Gallery
 
 - [LangGraph integration](examples/langgraph_integration.ipynb) – forward
   LangGraph events with `LangGraph.send_events()` and retrieve them using
