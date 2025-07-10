@@ -556,7 +556,14 @@ UME options. When imported it first loads a `.env` file from the project root if
 present and then applies any matching environment variables, allowing you to
 override the defaults without modifying the code.
 
+
 See [`env.example`](env.example) for a minimal `.env` template.
+
+## Security Notes
+
+Always generate a unique `UME_AUDIT_SIGNING_KEY` for every deployment. Avoid
+reusing the example OAuth credentials or API keys in production. Tokens and
+signing keys should be treated as secrets and rotated periodically.
 
 ## Federated Deployments
 
