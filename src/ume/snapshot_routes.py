@@ -19,16 +19,31 @@ class SnapshotPath(BaseModel):
 
 
 def _resolve_snapshot_path(path_str: str) -> Path:
-    base = Path(settings.UME_SNAPSHOT_DIR).resolve(strict=False)
+    """Resolve ``path_str`` relative to :data:`UME_SNAPSHOT_DIR`.
+
+    Absolute paths are allowed whenever :data:`UME_SNAPSHOT_DIR` is unset
+    ("" or ".").  When the directory is set, the resulting path must remain
+    within that directory or a ``400`` error is raised.
+    """
+
+    snapshot_dir = settings.UME_SNAPSHOT_DIR
+    base = Path(snapshot_dir).resolve(strict=False)
+
     candidate = Path(path_str)
     if not candidate.is_absolute():
         candidate = base / candidate
+
     candidate = candidate.resolve(strict=False)
-    if settings.UME_SNAPSHOT_DIR not in {"", "."}:
+
+    if snapshot_dir not in {"", "."}:
         try:
             candidate.relative_to(base)
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail="Path not allowed") from exc
+            raise HTTPException(
+                status_code=400,
+                detail="Path outside allowed directory",
+            ) from exc
+
     return candidate
 
 
