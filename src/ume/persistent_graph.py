@@ -7,6 +7,7 @@ from .processing import ProcessingError
 from .audit import log_audit_entry
 from .config import settings
 from .graph_algorithms import GraphAlgorithmsMixin
+from .replay import replay_from_ledger
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .event_ledger import EventLedger
@@ -287,36 +288,12 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
         *,
         end_timestamp: int | None = None,
     ) -> int:
-        """Replay ledger events starting from ``start_offset``.
+        """Delegate to :func:`ume.replay.replay_from_ledger`."""
+        return replay_from_ledger(
+            self,
+            ledger,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            end_timestamp=end_timestamp,
+        )
 
-        If ``end_timestamp`` is provided events with a ``timestamp`` greater than
-        the given value are ignored. The method returns the last processed
-        offset or ``start_offset`` if no events were applied.
-        """
-        last = start_offset
-        from .event import parse_event
-        from .processing import apply_event_to_graph
-
-        for off, data in ledger.range(start=start_offset, end=end_offset):
-            if end_timestamp is not None and data.get("timestamp", 0) > end_timestamp:
-                break
-            event = parse_event(data)
-            apply_event_to_graph(event, self)
-            last = off
-        return last
-
-
-def build_graph_from_ledger(
-    ledger: "EventLedger",
-    *,
-    end_offset: int | None = None,
-    end_timestamp: int | None = None,
-    db_path: str | None = ":memory:",
-) -> "PersistentGraph":
-    """Return a new :class:`PersistentGraph` populated from ``ledger``."""
-
-    graph = PersistentGraph(db_path, check_same_thread=False)
-    graph.replay_from_ledger(
-        ledger, start_offset=0, end_offset=end_offset, end_timestamp=end_timestamp
-    )
-    return graph

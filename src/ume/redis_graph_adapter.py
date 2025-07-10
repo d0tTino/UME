@@ -3,13 +3,17 @@ from __future__ import annotations
 
 import importlib
 import json
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast, TYPE_CHECKING
 
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .graph_algorithms import GraphAlgorithmsMixin
 from .audit import log_audit_entry
 from .config import settings
+from .replay import replay_from_ledger
+
+if TYPE_CHECKING:  # pragma: no cover - for type hints only
+    from .event_ledger import EventLedger
 
 _spec = importlib.util.find_spec("redis")
 redis = importlib.import_module("redis") if _spec is not None else None
@@ -172,5 +176,22 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
         log_audit_entry(
             settings.UME_AGENT_ID,
             f"redact_edge {source_node_id} {target_node_id} {label}",
+        )
+
+    def replay_from_ledger(
+        self,
+        ledger: "EventLedger",
+        start_offset: int = 0,
+        end_offset: int | None = None,
+        *,
+        end_timestamp: int | None = None,
+    ) -> int:
+        """Delegate to :func:`ume.replay.replay_from_ledger`."""
+        return replay_from_ledger(
+            self,
+            ledger,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            end_timestamp=end_timestamp,
         )
 

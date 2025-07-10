@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, cast, TYPE_CHECKING
 import time
 
 from neo4j import GraphDatabase, Driver
@@ -13,6 +13,10 @@ from .processing import DEFAULT_VERSION
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .graph_algorithms import GraphAlgorithmsMixin
+from .replay import replay_from_ledger
+
+if TYPE_CHECKING:  # pragma: no cover - for type hints only
+    from .event_ledger import EventLedger
 
 
 class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
@@ -314,3 +318,20 @@ class Neo4jGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 {"window": window},
             )
             return {rec["id"]: rec["score"] for rec in result}
+
+    def replay_from_ledger(
+        self,
+        ledger: "EventLedger",
+        start_offset: int = 0,
+        end_offset: int | None = None,
+        *,
+        end_timestamp: int | None = None,
+    ) -> int:
+        """Delegate to :func:`ume.replay.replay_from_ledger`."""
+        return replay_from_ledger(
+            self,
+            ledger,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            end_timestamp=end_timestamp,
+        )

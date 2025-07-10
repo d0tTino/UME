@@ -21,16 +21,11 @@ import pytest
 # Ensure the src directory is importable when UME isn't installed
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-# Force the vector backend to chroma to avoid faiss dependency during tests
-from ume.config import settings as _settings
-object.__setattr__(_settings, "UME_VECTOR_BACKEND", "chroma")
-
 # Stub optional dependencies so importing ume modules doesn't fail when they
 # aren't installed. Tests that rely on these packages will provide their own
 # implementations.
 if importlib.util.find_spec("httpx") is None:
     sys.modules.setdefault("httpx", types.ModuleType("httpx"))
-
 
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
@@ -88,6 +83,10 @@ jsonschema_stub.validate = _validate  # type: ignore[attr-defined]
 jsonschema_stub.ValidationError = _ValidationError  # type: ignore[attr-defined]
 if importlib.util.find_spec("jsonschema") is None:
     sys.modules.setdefault("jsonschema", jsonschema_stub)
+
+# Force the vector backend to chroma to avoid faiss dependency during tests
+from ume.config import settings as _settings  # noqa: E402
+object.__setattr__(_settings, "UME_VECTOR_BACKEND", "chroma")
 
 # Additional optional packages used in some modules. These are large or
 # platform-specific dependencies that aren't needed for most unit tests, so we
