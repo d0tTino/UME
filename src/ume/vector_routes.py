@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, AsyncGenerator
+import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -12,6 +13,7 @@ from . import api_deps as deps
 from .vector_store import VectorStore
 from .graph_adapter import IGraphAdapter
 from .embedding import generate_embedding
+from .metrics import RECALL_SCORE
 
 router = APIRouter()
 
@@ -70,6 +72,12 @@ def api_recall(
     for node_id in ids:
         attrs = graph.get_node(node_id)
         if attrs is not None:
+            emb = attrs.get("embedding")
+            if isinstance(emb, list) and len(emb) == len(vector):
+                try:
+                    RECALL_SCORE.observe(math.dist(vector, emb))
+                except TypeError:
+                    pass
             nodes.append({"id": node_id, "attributes": attrs})
     return {"nodes": nodes}
 
@@ -97,6 +105,12 @@ async def api_recall_stream(
         for node_id in ids:
             attrs = graph.get_node(node_id)
             if attrs is not None:
+                emb = attrs.get("embedding")
+                if isinstance(emb, list) and len(emb) == len(vector):
+                    try:
+                        RECALL_SCORE.observe(math.dist(vector, emb))
+                    except TypeError:
+                        pass
                 payload = {"id": node_id, "attributes": attrs}
                 yield f"data: {json.dumps(payload)}\n\n"
             await asyncio.sleep(0)
