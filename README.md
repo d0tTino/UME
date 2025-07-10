@@ -697,7 +697,8 @@ This section outlines the basic programmatic steps to interact with the UME comp
     ```
 
     This writes updates to the path configured by `UME_SNAPSHOT_PATH` every
-    5 minutes until stopped with `Ctrl+C`.
+    5 minutes until stopped with `Ctrl+C`. Snapshot paths must reside under
+    the directory specified by `UME_SNAPSHOT_DIR`.
 
 6.  **Load Graph from Snapshot (Optional):**
     Restore a graph's state from a previously saved snapshot file:

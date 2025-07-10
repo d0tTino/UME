@@ -12,7 +12,8 @@ side by side and each focuses on a specific layer of storage.
   when embeddings exceed the `UME_VECTOR_MAX_AGE_DAYS` threshold.
 - `enable_periodic_snapshot` periodically writes the graph to
   `UME_SNAPSHOT_PATH`. Use `enable_snapshot_autosave_and_restore` to restore
-  the previous snapshot at startup and schedule future saves.
+  the previous snapshot at startup and schedule future saves. Snapshot files
+  must be located within `UME_SNAPSHOT_DIR`.
 
 Applications can start these schedulers independently. Each function returns the
 background thread and a stop callback so lifecycles can be coordinated.
