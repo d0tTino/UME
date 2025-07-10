@@ -27,8 +27,8 @@ def _token(client: TestClient) -> str:
 
 
 def _dict_to_envelope(data: dict[str, object]) -> events_pb2.EventEnvelope:
-    from ume.event import parse_event
-    evt = parse_event(data)
+    from ume.services.ingest import validate_event
+    evt = validate_event(data)
     struct_payload = struct_pb2.Struct()
     struct_payload.update(evt.payload)
     meta = events_pb2.BaseEvent(

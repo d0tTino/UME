@@ -18,7 +18,7 @@ from .graph_adapter import IGraphAdapter
 from .query import Neo4jQueryEngine
 from .event import EventError
 from .processing import ProcessingError
-from .services.ingest import ingest_event, ingest_events_batch
+from ume.services.ingest import ingest_event, ingest_events_batch
 
 # import shared API dependencies
 from . import api_deps as deps
