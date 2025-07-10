@@ -139,7 +139,7 @@ events up to a specified offset or timestamp:
 
 ```python
 from ume.event_ledger import EventLedger
-from ume.persistent_graph import build_graph_from_ledger
+from ume.replay import build_graph_from_ledger
 
 ledger = EventLedger("ledger.db")
 graph = build_graph_from_ledger(ledger, end_offset=10)

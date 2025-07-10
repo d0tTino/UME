@@ -3,8 +3,7 @@ import pytest
 
 from ume.event_ledger import EventLedger
 from ume.postgres_graph import PostgresGraph
-from ume.event import parse_event
-from ume.processing import apply_event_to_graph
+from ume.replay import replay_from_ledger
 
 
 @pytest.mark.integration
@@ -24,18 +23,10 @@ def test_postgres_replay_from_timestamp(tmp_path, postgres_service):
 
     graph = PostgresGraph(postgres_service["dsn"])
 
-    def replay(end_ts: int) -> None:
-        graph.clear()
-        for off, data in ledger.range():
-            if data.get("timestamp", 0) > end_ts:
-                break
-            evt = parse_event(data)
-            apply_event_to_graph(evt, graph)
-
-    replay(2)
+    replay_from_ledger(graph, ledger, end_timestamp=2)
     assert set(graph.get_all_node_ids()) == {"n0", "n1", "n2"}
-
-    replay(4)
+    graph.clear()
+    replay_from_ledger(graph, ledger, end_timestamp=4)
     assert set(graph.get_all_node_ids()) == {"n0", "n1", "n2", "n3", "n4"}
 
     graph.clear()

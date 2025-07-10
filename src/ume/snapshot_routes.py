@@ -7,7 +7,7 @@ from .api_deps import get_graph, get_current_role
 from .graph_adapter import IGraphAdapter
 from .snapshot import snapshot_graph_to_file, load_graph_into_existing
 from .event_ledger import event_ledger
-from .persistent_graph import build_graph_from_ledger
+from .replay import build_graph_from_ledger
 from .api_deps import configure_graph
 from .config import settings
 

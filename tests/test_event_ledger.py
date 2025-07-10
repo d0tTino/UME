@@ -1,5 +1,6 @@
 from ume.event_ledger import EventLedger
 from ume.persistent_graph import PersistentGraph
+from ume.replay import replay_from_ledger
 import pytest
 
 
@@ -11,7 +12,7 @@ def test_replay_from_offset(tmp_path):
     ledger.append(1, event2)
 
     g = PersistentGraph(":memory:")
-    last = g.replay_from_ledger(ledger, 0)
+    last = replay_from_ledger(g, ledger, 0)
     assert g.get_node("n1") is not None
     assert g.get_node("n2") is not None
     assert last == 1
@@ -60,13 +61,13 @@ def test_replay_from_timestamp(tmp_path):
 
     # Replay up to timestamp 2
     g = PersistentGraph(":memory:")
-    g.replay_from_ledger(ledger, 0, end_timestamp=2)
+    replay_from_ledger(g, ledger, 0, end_timestamp=2)
     assert set(g.get_all_node_ids()) == {"n0", "n1", "n2"}
 
     # Replay up to timestamp 4
 
     g2 = PersistentGraph(":memory:")
-    g2.replay_from_ledger(ledger, 0, end_timestamp=4)
+    replay_from_ledger(g2, ledger, 0, end_timestamp=4)
     assert set(g2.get_all_node_ids()) == {"n0", "n1", "n2", "n3", "n4"}
 
     ledger.close()

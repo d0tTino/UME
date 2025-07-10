@@ -4,13 +4,17 @@ from __future__ import annotations
 import importlib
 import json
 import time
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast, TYPE_CHECKING
 
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .graph_algorithms import GraphAlgorithmsMixin
 from .audit import log_audit_entry
 from .config import settings
+from .replay import replay_from_ledger
+
+if TYPE_CHECKING:  # pragma: no cover - for type hints only
+    from .event_ledger import EventLedger
 
 _spec = importlib.util.find_spec("psycopg")
 psycopg = importlib.import_module("psycopg") if _spec is not None else None
@@ -232,5 +236,22 @@ class PostgresGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 (cutoff, cutoff),
             )
             cur.execute("DELETE FROM nodes WHERE created_at < %s", (cutoff,))
+
+    def replay_from_ledger(
+        self,
+        ledger: "EventLedger",
+        start_offset: int = 0,
+        end_offset: int | None = None,
+        *,
+        end_timestamp: int | None = None,
+    ) -> int:
+        """Delegate to :func:`ume.replay.replay_from_ledger`."""
+        return replay_from_ledger(
+            self,
+            ledger,
+            start_offset=start_offset,
+            end_offset=end_offset,
+            end_timestamp=end_timestamp,
+        )
 
 

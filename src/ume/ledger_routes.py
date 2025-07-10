@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from .event_ledger import event_ledger
-from .persistent_graph import build_graph_from_ledger
+from .replay import build_graph_from_ledger
 from . import api_deps as deps
 
 router = APIRouter()
