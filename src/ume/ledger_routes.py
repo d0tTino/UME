@@ -44,3 +44,17 @@ def replay_ledger(
         event_ledger, end_offset=end_offset, end_timestamp=end_timestamp
     )
     return graph.dump()
+
+
+@router.get("/graph/history")
+def graph_history(
+    offset: int | None = Query(None, ge=0),
+    timestamp: int | None = Query(None, ge=0),
+    _: str = Depends(deps.get_current_role),
+) -> Dict[str, Any]:
+    """Return a snapshot of the graph at ``offset`` or ``timestamp``."""
+
+    graph = build_graph_from_ledger(
+        event_ledger, end_offset=offset, end_timestamp=timestamp
+    )
+    return graph.dump()

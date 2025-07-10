@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import logging
 from types import TracebackType
-from typing import Iterator, Any
+from typing import Iterator, Any, cast, Dict
+
+import httpx
 
 from confluent_kafka import Consumer, Producer, KafkaError
 from jsonschema import ValidationError
@@ -216,3 +218,23 @@ class UMEClient:
             "target_node_id": meta.target_node_id or None,
             "label": meta.label or None,
         }
+
+
+def fetch_graph_history(
+    base_url: str,
+    *,
+    offset: int | None = None,
+    timestamp: int | None = None,
+    api_key: str | None = None,
+) -> dict[str, Any]:
+    """Return the graph state at ``offset`` or ``timestamp`` via HTTP."""
+
+    params: dict[str, int] = {}
+    if offset is not None:
+        params["offset"] = offset
+    if timestamp is not None:
+        params["timestamp"] = timestamp
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    resp = httpx.get(f"{base_url.rstrip('/')}/graph/history", params=params, headers=headers, timeout=5)
+    resp.raise_for_status()
+    return cast(Dict[str, Any], resp.json())
