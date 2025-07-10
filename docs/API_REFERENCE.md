@@ -68,6 +68,10 @@ List entries in the event ledger.
 Return a snapshot of the graph reconstructed from ledger events.
 - **Query parameters**: optional `end_offset`, optional `end_timestamp`.
 
+### GET `/graph/history`
+Return a snapshot of the graph as it existed at a past point in time.
+- **Query parameters**: optional `offset`, optional `timestamp`.
+
 ### GET `/policies`
 List available Rego policy files.
 
