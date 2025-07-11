@@ -5,6 +5,9 @@ import Recommendations from './Recommendations';
 import ConsentLedger from './ConsentLedger';
 import Recall from './Recall';
 import GraphView from './GraphView';
+import NodeSearch from './NodeSearch';
+import EdgeList from './EdgeList';
+import LedgerHistory from './LedgerHistory';
 
 const POLICY_CONTENT = {
   'allow.rego': `package ume
@@ -155,6 +158,9 @@ function App() {
       <ConsentLedger token={token} />
       <Recall token={token} />
       <GraphView token={token} />
+      <NodeSearch token={token} />
+      <EdgeList token={token} />
+      <LedgerHistory token={token} />
       <h3>Policies</h3>
       <ul>
         {policies.map((p) => (

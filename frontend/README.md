@@ -42,3 +42,13 @@ npm run preview
 ```
 
 To deploy, serve the files in `frontend/dist/` with any static web server alongside the UME API.
+
+### Serving the Dashboard
+
+After building you can launch a small FastAPI server that mounts the static files at `/dashboard`:
+
+```bash
+poetry run python frontend/app.py
+```
+
+By default the server listens on port `8001`. Open <http://localhost:8001/dashboard/> to use the UI.
