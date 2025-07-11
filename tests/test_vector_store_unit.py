@@ -22,9 +22,31 @@ root = Path(__file__).resolve().parents[1]
 def vector_store_cls(request):
     orig_pkg = sys.modules.get("ume")
     orig_vs = sys.modules.get("ume.vector_store")
+    orig_cfg = sys.modules.get("ume.config")
+    orig_backends = sys.modules.get("ume.vector_backends")
     package = types.ModuleType("ume")
     package.__path__ = [str(root / "src" / "ume")]
     sys.modules["ume"] = package
+
+    cfg_spec = importlib.util.spec_from_file_location(
+        "ume.config",
+        root / "src" / "ume" / "config" / "__init__.py",
+    )
+    assert cfg_spec and cfg_spec.loader
+    cfg_module = importlib.util.module_from_spec(cfg_spec)
+    sys.modules["ume.config"] = cfg_module
+    cfg_spec.loader.exec_module(cfg_module)
+    setattr(package, "config", cfg_module)
+
+    backend_spec = importlib.util.spec_from_file_location(
+        "ume.vector_backends",
+        root / "src" / "ume" / "vector_backends" / "__init__.py",
+    )
+    assert backend_spec and backend_spec.loader
+    backends_module = importlib.util.module_from_spec(backend_spec)
+    sys.modules["ume.vector_backends"] = backends_module
+    backend_spec.loader.exec_module(backends_module)
+    setattr(package, "vector_backends", backends_module)
 
     spec = importlib.util.spec_from_file_location(
         "ume.vector_store",
@@ -50,6 +72,14 @@ def vector_store_cls(request):
             sys.modules["ume"] = orig_pkg
         else:
             sys.modules.pop("ume", None)
+        if orig_cfg is not None:
+            sys.modules["ume.config"] = orig_cfg
+        else:
+            sys.modules.pop("ume.config", None)
+        if orig_backends is not None:
+            sys.modules["ume.vector_backends"] = orig_backends
+        else:
+            sys.modules.pop("ume.vector_backends", None)
 
 
 def test_add_dimension_mismatch(vector_store_cls):
@@ -76,7 +106,7 @@ def test_query_dimension_mismatch(vector_store_cls):
 def test_init_requires_faiss(monkeypatch, vector_store_cls):
     if "Chroma" in vector_store_cls.__name__:
         pytest.skip("faiss not required for ChromaBackend")
-    monkeypatch.setattr("ume.vector_store.faiss", None)
+    monkeypatch.setattr("ume.vector_backends.faiss", None)
     with pytest.raises(ImportError):
         vector_store_cls(dim=2)
 
