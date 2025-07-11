@@ -182,6 +182,7 @@ from .agent_orchestrator import (
 )
 from .message_bus import MessageEnvelope
 from .resources import (
+    create_graph_adapter,
     create_graph,
     create_vector_store,
     graph_factory,
@@ -257,6 +258,7 @@ __all__ = [
     "VectorStore",
     "VectorStoreListener",
     "create_default_store",
+    "create_graph_adapter",
     "create_graph",
     "create_vector_store",
     "graph_factory",

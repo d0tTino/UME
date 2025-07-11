@@ -26,7 +26,7 @@ from ume import (  # noqa: E402
     apply_event_to_graph,
     load_graph_into_existing,
     snapshot_graph_to_file,
-    PersistentGraph,
+    create_graph_adapter,
     RoleBasedGraphAdapter,
     enable_snapshot_autosave_and_restore,
     ProcessingError,
@@ -58,7 +58,7 @@ class UMEPrompt(Cmd):
     def __init__(self):
         super().__init__()
         db_path = settings.UME_CLI_DB
-        base_graph = PersistentGraph(db_path)
+        base_graph = create_graph_adapter(db_path, role=None)
         self.base_graph = base_graph
         role = settings.UME_ROLE
         if role:
@@ -701,7 +701,7 @@ def _snapshot_schedule(interval: int) -> None:
     """Run periodic snapshotting until interrupted."""
     from ume.auto_snapshot import enable_periodic_snapshot, disable_periodic_snapshot
 
-    graph = PersistentGraph(settings.UME_CLI_DB)
+    graph = create_graph_adapter(settings.UME_CLI_DB, role=None)
     thread, stop = enable_periodic_snapshot(
         graph, settings.UME_SNAPSHOT_PATH, interval
     )
