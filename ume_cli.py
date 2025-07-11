@@ -630,30 +630,41 @@ def _compose_ps(compose_file: Path = COMPOSE_FILE) -> None:
 
 
 def _ensure_env_file(env_file: Path = Path(".env")) -> None:
-    """Create ``.env`` from ``env.example`` if missing.
+    """Ensure ``.env`` exists and contains a random audit signing key."""
 
-    A random ``UME_AUDIT_SIGNING_KEY`` is inserted so the default key
-    from ``src/ume/config.py`` is never used.
-    """
+    created = False
     if env_file.exists():
-        return
-    example = Path(__file__).resolve().parent / "env.example"
-    try:
-        env_lines = example.read_text().splitlines()
-    except FileNotFoundError:
-        return
+        env_lines = env_file.read_text().splitlines()
+    else:
+        example = Path(__file__).resolve().parent / "env.example"
+        try:
+            env_lines = example.read_text().splitlines()
+        except FileNotFoundError:
+            return
+        created = True
+
+    new_key = secrets.token_hex(32)
+    replaced = False
     for i, line in enumerate(env_lines):
         if line.startswith("UME_AUDIT_SIGNING_KEY="):
-            env_lines[i] = f"UME_AUDIT_SIGNING_KEY={secrets.token_hex(32)}"
+            env_lines[i] = f"UME_AUDIT_SIGNING_KEY={new_key}"
+            replaced = True
             break
+
+    if not replaced:
+        env_lines.append(f"UME_AUDIT_SIGNING_KEY={new_key}")
+
     env_content = "\n".join(env_lines) + "\n"
     env_file.write_text(env_content)
-    print("Created .env from env.example with random UME_AUDIT_SIGNING_KEY")
-    if "UME_AUDIT_SIGNING_KEY=default-key" in env_content:
+    if new_key == "default-key":
         print(
             "WARNING: UME_AUDIT_SIGNING_KEY uses the insecure default key. "
             "Edit .env and set a unique value."
         )
+    if created:
+        print("Created .env from env.example with random UME_AUDIT_SIGNING_KEY")
+    else:
+        print("Replaced UME_AUDIT_SIGNING_KEY in .env with random value")
 
 
 def _quickstart(no_confirm: bool = False) -> None:
@@ -666,7 +677,15 @@ def _quickstart(no_confirm: bool = False) -> None:
         if resp.lower() != "y":
             print("Aborted.")
             return
-    _ensure_env_file(env_file)
+    if not env_file.exists():
+        should_replace = True
+    else:
+        content = env_file.read_text()
+        should_replace = "UME_AUDIT_SIGNING_KEY=default-key" in content
+    if should_replace:
+        if env_file.exists():
+            print("Regenerating .env with secure UME_AUDIT_SIGNING_KEY")
+        _ensure_env_file(env_file)
     cert_script = Path(__file__).resolve().parent / "docker" / "generate-certs.sh"
     cert_dir = cert_script.parent / "certs"
     if not no_confirm and not any(cert_dir.glob("*.crt")):
