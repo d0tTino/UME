@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import typing
+import asyncio
 
 import grpc
 from google.protobuf import struct_pb2, empty_pb2
@@ -153,6 +154,35 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         return empty_pb2.Empty()
 
 
+class AsyncServer:
+    """Wrapper around :class:`grpc.aio.Server` with async context management."""
+
+    def __init__(self, server: grpc.aio.Server) -> None:
+        self.server = server
+
+    def add_insecure_port(self, addr: str) -> int:
+        return self.server.add_insecure_port(addr)
+
+    def add_generic_rpc_handlers(self, handlers: typing.Any) -> None:
+        self.server.add_generic_rpc_handlers(handlers)
+
+    async def start(self) -> None:
+        await self.server.start()
+
+    async def wait_for_termination(self) -> None:
+        await self.server.wait_for_termination()
+
+    async def stop(self, grace: float | None = None) -> None:
+        await self.server.stop(grace)
+
+    async def __aenter__(self) -> "AsyncServer":
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self.stop(None)
+
+
 def serve(
     query_engine: Neo4jQueryEngine,
     store: VectorStore,
@@ -161,8 +191,8 @@ def serve(
     graph: typing.Optional[typing.Any] = None,
     api_token: str | None = None,
     auth_callback: typing.Optional[typing.Callable[[str], bool]] = None,
-) -> grpc.aio.Server:
-    """Start the gRPC server and return it."""
+) -> AsyncServer:
+    """Start the gRPC server and return a wrapper object."""
     server = grpc.aio.server()
     try:
         ume_pb2_grpc.add_UMEServicer_to_server(
@@ -178,7 +208,7 @@ def serve(
     except AttributeError:  # pragma: no cover - support stub servers
         pass
     server.add_insecure_port(f"[::]:{port}")
-    return server
+    return AsyncServer(server)
 
 
 async def main() -> None:
@@ -195,7 +225,11 @@ async def main() -> None:
         api_token=settings.UME_GRPC_TOKEN,
     )
     await server.start()
-    await server.wait_for_termination()
+    try:
+        await server.wait_for_termination()
+    except asyncio.CancelledError:
+        await server.stop(None)
+        raise
 
 
-__all__ = ["UMEServicer", "serve", "main"]
+__all__ = ["UMEServicer", "AsyncServer", "serve", "main"]
