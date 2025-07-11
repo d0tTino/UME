@@ -198,7 +198,7 @@ def test_serve(monkeypatch):
     )
 
     result = serve(DummyEngine(), DummyStore(), port=123)  # type: ignore[arg-type]
-    assert result is server
+    assert result.server is server
     assert server.ports == ["[::]:123"]
     assert isinstance(created["servicer"], UMEServicer)
 
@@ -463,4 +463,28 @@ def test_stream_cypher_client_cancel() -> None:
 
     asyncio.run(runner())
     assert svc_holder[0].cancelled
+
+
+async def _run_stop_server(port_holder: list[int], srv_holder: list[grpc_service.AsyncServer]) -> None:
+    server = serve(DummyEngine(), DummyStore(), port=0)
+    srv_holder.append(server)
+    port_holder.append(server.add_insecure_port("localhost:0"))
+    await server.start()
+    await server.wait_for_termination()
+
+
+def test_server_stop_no_pending_tasks() -> None:
+    ports: list[int] = []
+    servers: list[grpc_service.AsyncServer] = []
+
+    async def runner() -> None:
+        server_task = asyncio.create_task(_run_stop_server(ports, servers))
+        while not ports:
+            await asyncio.sleep(0.01)
+        await servers[0].stop(None)
+        await server_task
+        pending = [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
+        assert pending == []
+
+    asyncio.run(runner())
 
