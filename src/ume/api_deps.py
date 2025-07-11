@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+import threading
 from pathlib import Path
 from typing import Dict
 
@@ -25,6 +26,7 @@ POLICY_DIR = Path(__file__).with_name("plugins") / "alignment" / "policies"
 # OAuth2 configuration and issued tokens
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 TOKENS: Dict[str, tuple[str, float]] = {}
+TOKENS_LOCK = threading.Lock()
 
 
 def configure_graph(graph: IGraphAdapter) -> None:
@@ -37,7 +39,11 @@ def configure_graph(graph: IGraphAdapter) -> None:
     app.state.graph = graph
     if settings.UME_API_TOKEN:
         expires_at = time.time() + settings.UME_OAUTH_TTL
-        TOKENS[settings.UME_API_TOKEN] = (settings.UME_OAUTH_ROLE, expires_at)
+        with TOKENS_LOCK:
+            TOKENS[settings.UME_API_TOKEN] = (
+                settings.UME_OAUTH_ROLE,
+                expires_at,
+            )
 
 
 def configure_vector_store(store: VectorStore) -> None:
@@ -56,22 +62,24 @@ def configure_vector_store(store: VectorStore) -> None:
 def remove_expired_tokens() -> None:
     """Delete tokens from ``TOKENS`` that have expired."""
     now = time.time()
-    expired = [tok for tok, (_, exp) in TOKENS.items() if exp < now]
-    for tok in expired:
-        TOKENS.pop(tok, None)
+    with TOKENS_LOCK:
+        expired = [tok for tok, (_, exp) in TOKENS.items() if exp < now]
+        for tok in expired:
+            TOKENS.pop(tok, None)
 
 
 def get_current_role(token: str = Depends(oauth2_scheme)) -> str:
     if token == settings.UME_API_TOKEN:
         return settings.UME_API_ROLE or ""
-    entry = TOKENS.get(token)
-    if entry is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    role, expiry = entry
-    if expiry < time.time():
-        TOKENS.pop(token, None)
-        raise HTTPException(status_code=401, detail="Token expired")
-    return role
+    with TOKENS_LOCK:
+        entry = TOKENS.get(token)
+        if entry is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        role, expiry = entry
+        if expiry < time.time():
+            TOKENS.pop(token, None)
+            raise HTTPException(status_code=401, detail="Token expired")
+        return role
 
 
 def require_token(_: str = Depends(oauth2_scheme)) -> None:
