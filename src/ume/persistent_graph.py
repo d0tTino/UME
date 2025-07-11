@@ -1,19 +1,16 @@
 import sqlite3
 import json
 import time
-from typing import Dict, Any, Optional, List, Tuple, cast, TYPE_CHECKING
+from typing import Dict, Any, Optional, List, Tuple, cast
 from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .audit import log_audit_entry
 from .config import settings
 from .graph_algorithms import GraphAlgorithmsMixin
-from .replay import replay_from_ledger
-
-if TYPE_CHECKING:  # pragma: no cover - for type hints only
-    from .event_ledger import EventLedger
+from .replay_mixin import ReplayMixin
 
 
-class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
+class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
     """SQLite-backed persistent graph implementation."""
 
     def __init__(self, db_path: str | None = None, *, check_same_thread: bool | None = None) -> None:
@@ -280,20 +277,4 @@ class PersistentGraph(GraphAlgorithmsMixin, IGraphAdapter):
             )
             self.conn.execute("DELETE FROM nodes WHERE created_at < ?", (cutoff,))
 
-    def replay_from_ledger(
-        self,
-        ledger: "EventLedger",
-        start_offset: int = 0,
-        end_offset: int | None = None,
-        *,
-        end_timestamp: int | None = None,
-    ) -> int:
-        """Delegate to :func:`ume.replay.replay_from_ledger`."""
-        return replay_from_ledger(
-            self,
-            ledger,
-            start_offset=start_offset,
-            end_offset=end_offset,
-            end_timestamp=end_timestamp,
-        )
 
