@@ -3,6 +3,7 @@
 import asyncio
 
 import grpc
+import pytest
 import sys
 import importlib.util
 from pathlib import Path
@@ -87,6 +88,7 @@ class DummySettings:
     NEO4J_PASSWORD = ""
     UME_VECTOR_DIM = 3
     UME_VECTOR_USE_GPU = False
+    UME_GRPC_TOKEN = None
 settings = DummySettings()
 stub_config.settings = settings
 sys.modules["ume.config"] = stub_config
@@ -246,7 +248,10 @@ def test_main(monkeypatch):
         async def wait_for_termination(self) -> None:
             called["wait"] = True
 
-    monkeypatch.setattr("ume.grpc_server.serve", lambda qe, store, port=50051: DummyServer())
+    monkeypatch.setattr(
+        "ume.grpc_server.serve",
+        lambda qe, store, port=50051, **_: DummyServer(),
+    )
 
     asyncio.run(main())
 
@@ -315,3 +320,147 @@ def test_get_audit_entries_with_mock(monkeypatch):
     assert entry.user_id == "u2"
     qe.execute_cypher.assert_not_called()
     store.query.assert_not_called()
+
+
+async def _run_invalid_token_server(port_holder: list[int]) -> None:
+    server = grpc.aio.server()
+    ume_pb2_grpc.add_UMEServicer_to_server(
+        UMEServicer(DummyEngine(), DummyStore(), api_token="secret"), server
+    )
+    port_holder.append(server.add_insecure_port("localhost:0"))
+    await server.start()
+    await server.wait_for_termination()
+
+
+async def _run_invalid_token_test(port: int) -> None:
+    channel = grpc.aio.insecure_channel(f"localhost:{port}")
+    stub = ume_pb2_grpc.UMEStub(channel)
+    with pytest.raises(grpc.aio.AioRpcError) as exc:
+        await stub.RunCypher(
+            ume_pb2.CypherQuery(cypher="RETURN 1"),
+            metadata=[("authorization", "Bearer wrong")],
+        )
+    assert exc.value.code() == grpc.StatusCode.UNAUTHENTICATED
+    await channel.close()
+
+
+def test_invalid_token() -> None:
+    ports: list[int] = []
+
+    async def runner() -> None:
+        server_task = asyncio.create_task(_run_invalid_token_server(ports))
+        while not ports:
+            await asyncio.sleep(0.01)
+        await _run_invalid_token_test(ports[0])
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+
+
+def _build_envelope(node_id: str) -> events_pb2.EventEnvelope:
+    payload = events_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
+    payload.update({"node_id": node_id, "attributes": {"name": "x"}})
+    meta = events_pb2.BaseEvent(
+        event_id="e1",
+        event_type="CREATE_NODE",
+        timestamp=1,
+        node_id=node_id,
+        payload=payload,
+    )
+    return events_pb2.EventEnvelope(create_node=events_pb2.CreateNode(meta=meta))
+
+
+async def _run_no_graph_server(port_holder: list[int]) -> None:
+    server = serve(DummyEngine(), DummyStore(), graph=None, port=0)
+    port_holder.append(server.add_insecure_port("localhost:0"))
+    await server.start()
+    await server.wait_for_termination()
+
+
+async def _run_no_graph_test(port: int) -> None:
+    env = _build_envelope("n1")
+    channel = grpc.aio.insecure_channel(f"localhost:{port}")
+    stub = ume_pb2_grpc.UMEStub(channel)
+    with pytest.raises(grpc.aio.AioRpcError) as exc:
+        await stub.PublishEvent(ume_pb2.PublishEventRequest(envelope=env))
+    assert exc.value.code() == grpc.StatusCode.FAILED_PRECONDITION
+    await channel.close()
+
+
+def test_publish_event_missing_graph() -> None:
+    ports: list[int] = []
+
+    async def runner() -> None:
+        server_task = asyncio.create_task(_run_no_graph_server(ports))
+        while not ports:
+            await asyncio.sleep(0.01)
+        await _run_no_graph_test(ports[0])
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+
+
+class CancelUMEServicer(UMEServicer):
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.cancelled = False
+
+    async def StreamCypher(self, request, context):
+        context.add_done_callback(lambda *_: setattr(self, "cancelled", True))
+        async for rec in super().StreamCypher(request, context):
+            yield rec
+            await asyncio.sleep(0.01)
+            if not context.is_active():
+                self.cancelled = True
+                return
+
+
+async def _run_cancel_server(port_holder: list[int], svc_holder: list[CancelUMEServicer]) -> None:
+    server = grpc.aio.server()
+    svc = CancelUMEServicer(DummyEngine([{"n": 1}, {"n": 2}]), DummyStore())
+    svc_holder.append(svc)
+    ume_pb2_grpc.add_UMEServicer_to_server(svc, server)
+    port_holder.append(server.add_insecure_port("localhost:0"))
+    await server.start()
+    await server.wait_for_termination()
+
+
+async def _run_cancel_test(port: int) -> None:
+    channel = grpc.aio.insecure_channel(f"localhost:{port}")
+    stub = ume_pb2_grpc.UMEStub(channel)
+    gen = stub.StreamCypher(ume_pb2.CypherQuery(cypher="RETURN 1"))
+    results: list[ume_pb2.CypherRecord] = []
+    async for rec in gen:
+        results.append(rec)
+        break
+    gen.cancel()
+    assert [dict(r.record) for r in results] == [{"n": 1}]
+    await channel.close()
+
+
+def test_stream_cypher_client_cancel() -> None:
+    ports: list[int] = []
+    svc_holder: list[CancelUMEServicer] = []
+
+    async def runner() -> None:
+        server_task = asyncio.create_task(_run_cancel_server(ports, svc_holder))
+        while not ports:
+            await asyncio.sleep(0.01)
+        await _run_cancel_test(ports[0])
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+    assert svc_holder[0].cancelled
+
