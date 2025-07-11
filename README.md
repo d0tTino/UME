@@ -412,18 +412,15 @@ poetry run python examples/agent_integration.py
 ```
 
 ### 8. Start the Frontend Demo
-The API now runs on `localhost:8000` via Docker Compose. Interact with it using
-the web interface or the small CLI demo in `frontend/app.py`:
+The API now runs on `localhost:8000` via Docker Compose. Build the dashboard and start the small FastAPI server:
 
 ```bash
-# open frontend/index.html in your browser (e.g. with `python -m http.server`)
-poetry run python frontend/app.py --username ume --password password query "MATCH (n) RETURN n"
+cd frontend
+npm run build
+poetry run python app.py
 ```
-You can also search the vector store with either UI:
 
-```bash
-poetry run python frontend/app.py --username ume --password password search "1,0,0" --k 3
-```
+Visit <http://localhost:8001/dashboard/> to log in with your API credentials. See [frontend/README.md](frontend/README.md) for more details.
 
 ### 9. Integration Wrappers
 
@@ -467,18 +464,15 @@ See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
 
 ### Building and Deploying the Frontend
 
-The React dashboard in `frontend/` is fully static and does not require a build
-step. Serve the files with any web server:
+The React dashboard is served from the `frontend/` directory. Build the static files and run the provided server:
 
 ```bash
 cd frontend
-python -m http.server 8001
+npm run build
+poetry run python app.py
 ```
 
-Visit `http://localhost:8001/` after starting the API to log in with your API
-credentials. To deploy, copy the contents of `frontend/` to your preferred
-static hosting service or configure your production web server to serve the
-files alongside the FastAPI application.
+Open <http://localhost:8001/dashboard/> once the API is running. For additional options see [frontend/README.md](frontend/README.md).
 
 ### API Authentication
 
