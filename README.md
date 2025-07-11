@@ -338,10 +338,11 @@ PYTHONPATH=src pytest
 ```
 
 Create a `.env` file in the project root before starting any services. Copy the
-template from [`env.example`](env.example) and set a
-non-default `UME_AUDIT_SIGNING_KEY` or UME will refuse to start. The
-`ume up` command described below automatically creates this file if it is
-missing and inserts a random signing key:
+template from [`env.example`](env.example) and set a unique
+`UME_AUDIT_SIGNING_KEY`. The `ume up` command described below automatically
+creates this file if it is missing. If an existing `.env` contains
+`UME_AUDIT_SIGNING_KEY=default-key` it will be regenerated with a secure random
+hex string:
 
 ```bash
 # .env
