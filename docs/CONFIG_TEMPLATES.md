@@ -59,7 +59,7 @@ below lists all available variables and their default values.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `UME_DB_PATH` | `ume_graph.db` | SQLite database used by `PersistentGraph`. |
-| `UME_GRAPH_BACKEND` | `sqlite` | Backend for graph storage (`sqlite`, `postgres`, or `redis`). |
+| `UME_GRAPH_BACKEND` | `sqlite` | Backend for graph storage (`sqlite`, `postgres`, `redis`, or `neo4j`). |
 | `UME_SNAPSHOT_PATH` | `ume_snapshot.json` | Path to graph snapshot file. |
 | `UME_SNAPSHOT_DIR` | `.` | Directory that snapshot APIs will accept paths from. |
 | `UME_AUDIT_LOG_PATH` | `audit.log` | Location of the audit log. |

@@ -47,7 +47,7 @@ sys.modules.setdefault("faiss", types.ModuleType("faiss"))
 from ume.config import settings
 object.__setattr__(settings, "UME_VECTOR_BACKEND", "faiss")
 
-from ume.factories import create_graph_adapter
+from ume.resources import create_graph_adapter
 from ume.api import app, configure_graph
 from ume.event_ledger import EventLedger
 

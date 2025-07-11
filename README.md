@@ -13,9 +13,10 @@ The engine is built from a few key components:
 - **FastAPI API** (`src/ume/api.py`)
   - HTTP service exposing graph queries and analytics endpoints.
   - Enforces role-based access to graph operations.
-- **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
-  - Define a common interface for manipulating different graph backends.
-  - Includes adapters for in-memory, SQLite, and Neo4j storage as well as RBAC wrappers.
+  - **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
+    - Define a common interface for manipulating different graph backends.
+    - Includes adapters for in-memory, SQLite, Postgres, Redis, and Neo4j storage as well as RBAC wrappers.
+    - The active backend is selected via `UME_GRAPH_BACKEND`.
 - **Vector Store** (`src/ume/vector_store.py`)
   - Maintains a vector index of node embeddings for similarity search.
   - Use `VectorStore()` or `create_default_store()` to instantiate one from

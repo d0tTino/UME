@@ -29,9 +29,14 @@ TOKENS: Dict[str, tuple[str, float]] = {}
 TOKENS_LOCK = threading.Lock()
 
 
-def configure_graph(graph: IGraphAdapter) -> None:
-    """Set ``app.state.graph`` applying RBAC if configured."""
+def configure_graph(graph: IGraphAdapter | None = None) -> None:
+    """Create and register the API's graph adapter."""
     from .api import app  # Local import to avoid circular dependency
+
+    if graph is None:
+        from .resources import create_graph_adapter
+
+        graph = create_graph_adapter()
 
     role = settings.UME_API_ROLE
     if role:
