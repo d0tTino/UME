@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
 from .config import settings
-from .api_deps import TOKENS
+from .api_deps import TOKENS, TOKENS_LOCK
 
 router = APIRouter(prefix="/auth")
 
@@ -26,6 +26,7 @@ def issue_token(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenRespon
     ):
         token = str(uuid4())
         expires_at = time.time() + settings.UME_OAUTH_TTL
-        TOKENS[token] = (settings.UME_OAUTH_ROLE, expires_at)
+        with TOKENS_LOCK:
+            TOKENS[token] = (settings.UME_OAUTH_ROLE, expires_at)
         return TokenResponse(access_token=token)
     raise HTTPException(status_code=400, detail="Invalid credentials")

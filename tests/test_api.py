@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 import pytest
 from typing import Any
 import time
+import threading
 
 faiss = pytest.importorskip("faiss")
 if not hasattr(faiss, "IndexFlatL2"):
@@ -304,4 +305,35 @@ def test_token_cleanup_task(monkeypatch: MonkeyPatch) -> None:
         assert token in deps.TOKENS
         time.sleep(0.05)
         assert token not in deps.TOKENS
+
+
+def test_issue_tokens_concurrently() -> None:
+    """Concurrently issue OAuth tokens without triggering errors."""
+    with TestClient(app) as client:
+        tokens: list[str] = []
+        errors: list[Exception] = []
+
+        def worker() -> None:
+            try:
+                res = client.post(
+                    "/auth/token",
+                    data={
+                        "username": settings.UME_OAUTH_USERNAME,
+                        "password": settings.UME_OAUTH_PASSWORD,
+                    },
+                )
+                tokens.append(res.json()["access_token"])
+            except Exception as exc:  # pragma: no cover - unexpected
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors
+        assert len(tokens) == 5
+        for tok in tokens:
+            deps.TOKENS.pop(tok, None)
 
