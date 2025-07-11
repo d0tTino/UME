@@ -22,7 +22,14 @@ The test suite requires several optional packages that are not installed with th
 
 Many tests also rely on `faiss` and `sentence-transformers`, but these are optional. Tests that require them will be skipped if the packages are not available.
 
+The following extras enable additional test modules:
+
+- `[vector]` &rarr; installs `faiss` for vector store tests
+- `[embedding]` &rarr; installs `sentence-transformers` for embedding tests
+- `[grpc_server]` &rarr; installs `grpcio` for the gRPC service tests
+
 Install all of the above dependencies in one step with:
 ```bash
 poetry install --with dev --all-extras
+poetry run pytest
 ```
