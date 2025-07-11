@@ -48,14 +48,18 @@ def test_redact_event_payload_without_pii(privacy_agent, monkeypatch):
 
 
 class FakeMessage:
-    def __init__(self, value):
+    def __init__(self, value, offset=0):
         self._value = value
+        self._offset = offset
 
     def value(self):
         return self._value
 
     def error(self):
         return None
+
+    def offset(self):
+        return self._offset
 
 
 class FakeConsumer:

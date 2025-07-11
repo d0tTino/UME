@@ -18,6 +18,7 @@ from ..schema_utils import validate_event_dict
 from ..audit import log_audit_entry
 from ..event import parse_event, EventError
 from ..consent_ledger import consent_ledger
+from ..event_ledger import event_ledger
 from ..plugins.alignment import load_plugins, get_plugins, PolicyViolationError
 
 
@@ -151,6 +152,10 @@ def run_privacy_agent() -> None:
             try:
                 producer.produce(dest_topic, value=json.dumps(data).encode("utf-8"))
                 pending += 1
+                try:
+                    event_ledger.append(msg.offset(), data)
+                except ValueError as exc:  # pragma: no cover - offsets should be unique
+                    logger.error("Ledger append failed: %s", exc)
             except KafkaException as exc:
                 logger.error("Failed to produce sanitized event: %s", exc)
 

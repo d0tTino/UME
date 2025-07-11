@@ -15,14 +15,18 @@ class FakeAnonymizer:
         return SimpleNamespace(text=text)
 
 class FakeMessage:
-    def __init__(self, value: bytes) -> None:
+    def __init__(self, value: bytes, offset: int = 0) -> None:
         self._value = value
+        self._offset = offset
 
     def value(self) -> bytes:
         return self._value
 
     def error(self) -> None:
         return None
+
+    def offset(self) -> int:
+        return self._offset
 
 class FakeConsumer:
     def __init__(self, messages: list[FakeMessage]) -> None:
