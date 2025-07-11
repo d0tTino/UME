@@ -10,6 +10,14 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import importlib.util
+
+
+EXTRA_MODULES = {
+    "vector": "faiss",
+    "embedding": "sentence_transformers",
+    "grpc_server": "grpc",
+}
 
 
 def run(cmd: list[str]) -> list[str]:
@@ -59,6 +67,16 @@ def docs_only(files: list[str]) -> bool:
             continue
         return False
     return True
+
+
+def missing_extras() -> list[str]:
+    """Return extras that are not currently installed."""
+
+    missing: list[str] = []
+    for extra, module in EXTRA_MODULES.items():
+        if importlib.util.find_spec(module) is None:
+            missing.append(extra)
+    return missing
 
 
 def code_diff_present(diff_lines: list[str]) -> bool:
@@ -116,7 +134,14 @@ def main() -> int:
         return 1
 
     diff_lines = run(["git", "diff", "-U1", base, "HEAD"])
-    return 0 if code_diff_present(diff_lines) else 1
+    should_run = code_diff_present(diff_lines)
+    if should_run:
+        missing = missing_extras()
+        if missing:
+            hint = ", ".join(f"[{name}]" for name in missing)
+            print(f"Hint: install extras {hint} to enable all tests.", file=sys.stderr)
+        return 0
+    return 1
 
 
 if __name__ == "__main__":

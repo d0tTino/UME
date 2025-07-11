@@ -98,6 +98,16 @@ Please refer to the `README.md` for instructions on setting up your development 
    ```
 5. Push your branch and open a pull request.
 
+### Full Test Suite
+
+Some tests rely on optional dependencies provided by extras.
+Install them all and run the suite with:
+```bash
+poetry install --with dev --all-extras
+poetry run pytest
+```
+This exercises vector search, embedding, and gRPC server functionality.
+
 ## Questions?
 
 If you have any questions, feel free to ask by opening an issue.
