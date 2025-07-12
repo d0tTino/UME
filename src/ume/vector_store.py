@@ -104,8 +104,10 @@ def create_default_store() -> VectorBackend:  # pragma: no cover - trivial wrapp
     """Instantiate a vector store using ``ume.config.settings``."""
     backend_name = settings.UME_VECTOR_BACKEND.lower()
     cls = get_backend(backend_name)
+    import inspect
+
     kwargs: Dict[str, Any] = {}
-    if cls is FaissBackend:
+    if "use_gpu" in inspect.signature(cls).parameters:
         kwargs["use_gpu"] = settings.UME_VECTOR_USE_GPU
     dim = _resolve_vector_dim(settings.UME_VECTOR_DIM)
     return cls(
@@ -138,7 +140,8 @@ else:
             store_cls = get_backend(backend_name)
             dim = kwargs.pop("dim", settings.UME_VECTOR_DIM)
             kwargs["dim"] = _resolve_vector_dim(dim)
-            if store_cls is FaissBackend:
+            import inspect
+            if "use_gpu" in inspect.signature(store_cls).parameters:
                 kwargs.setdefault("use_gpu", settings.UME_VECTOR_USE_GPU)
             return store_cls(*args, **kwargs)
 

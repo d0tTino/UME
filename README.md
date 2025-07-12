@@ -988,6 +988,60 @@ poetry install --with vector
 ```
 
 See [Vector Store Benchmark](docs/VECTOR_BENCHMARKS.md) for sample GPU results.
+
+### Custom Backends
+
+Third-party packages can provide additional vector store implementations. A
+backend must implement the :class:`ume.vector_store.VectorBackend` interface and
+register itself using :func:`ume.vector_backends.register_backend` or via the
+``ume.vector_backends`` entry point group. The
+``examples/vector_backend_plugin.py`` file demonstrates a minimal in-memory
+backend:
+
+```python
+from ume.vector_store import VectorBackend
+from ume.vector_backends import register_backend
+
+class MemoryBackend(VectorBackend):
+    def __init__(self, dim: int, **_):
+        self.dim = dim
+        self.vectors: dict[str, list[float]] = {}
+
+    def add(self, item_id: str, vector: list[float], *, persist: bool = False) -> None:
+        self.vectors[item_id] = list(vector)
+
+    def add_many(self, vectors: dict[str, list[float]], *, persist: bool = False) -> None:
+        for vid, vec in vectors.items():
+            self.add(vid, vec)
+
+    def delete(self, item_id: str) -> None:
+        self.vectors.pop(item_id, None)
+
+    def query(self, vector: list[float], k: int = 5) -> list[str]:
+        import numpy as np
+        if not self.vectors:
+            return []
+        arr = np.asarray([self.vectors[i] for i in self.vectors], dtype="float32")
+        q = np.asarray(vector, dtype="float32")
+        dists = np.linalg.norm(arr - q, axis=1)
+        ids = list(self.vectors)
+        idxs = np.argsort(dists)[:k]
+        return [ids[i] for i in idxs]
+
+    # save/load omitted for brevity
+
+register_backend("memory", MemoryBackend)
+```
+
+To expose the backend automatically, declare an entry point in your package:
+
+```toml
+[project.entry-points."ume.vector_backends"]
+memory = "yourpkg.memory_backend:MemoryBackend"
+```
+
+Setting ``UME_VECTOR_BACKEND=memory`` will then use the plugin when creating a
+vector store.
 ## Running Tests
 
 Install dependencies in editable mode before running tests:

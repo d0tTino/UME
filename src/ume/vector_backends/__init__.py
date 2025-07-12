@@ -8,6 +8,7 @@ import os
 import numbers
 import time
 import threading
+from importlib import metadata
 
 import numpy as np
 
@@ -39,6 +40,24 @@ def get_backend(name: str) -> type[VectorBackend]:
 def available_backends() -> Iterable[str]:
     """Return names of all registered backends."""
     return list(_BACKENDS.keys())
+
+
+ENTRYPOINT_GROUP = "ume.vector_backends"
+
+
+def load_entrypoints() -> None:
+    """Load and register backends from ``ENTRYPOINT_GROUP`` entry points."""
+    try:
+        eps = metadata.entry_points(group=ENTRYPOINT_GROUP)
+    except Exception:
+        return
+    for ep in eps:
+        try:
+            cls = ep.load()
+        except Exception:  # pragma: no cover - import failures
+            logger.exception("Failed to load vector backend %s", ep.value)
+            continue
+        register_backend(ep.name, cls)
 
 
 class FaissBackend(VectorBackend):
@@ -464,7 +483,8 @@ class ChromaBackend(VectorBackend):
             raise ValueError("No path specified for saving index")
         with self.lock:
             arr = np.asarray(self.vectors, dtype="float32")
-            np.save(path, arr)
+            with open(path, "wb") as f:
+                np.save(f, arr)
             with open(f"{path}.json", "w", encoding="utf-8") as f:
                 json.dump({"ids": self.idx_to_id, "ts": self.vector_ts}, f)
 
@@ -473,8 +493,10 @@ class ChromaBackend(VectorBackend):
         if not path:
             raise ValueError("No path specified for loading index")
         with self.lock:
+            arr = np.array([])
             try:
-                arr = np.load(path)
+                with open(path, "rb") as f:
+                    arr = np.load(f)
                 self.vectors = list(np.asarray(arr, dtype="float32"))
                 with open(f"{path}.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -499,3 +521,9 @@ class ChromaBackend(VectorBackend):
 
 register_backend("faiss", FaissBackend)
 register_backend("chroma", ChromaBackend)
+
+# Load any third-party backends exposed via entry points
+try:  # pragma: no cover - import side effects
+    load_entrypoints()
+except Exception:  # pragma: no cover - log but proceed
+    logger.exception("Failed to load vector backend entry points")
