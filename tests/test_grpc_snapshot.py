@@ -12,3 +12,4 @@ def test_snapshot_roundtrip(tmp_path: pathlib.Path) -> None:
     graph.clear()
     load_graph_into_existing(graph, path)
     assert graph.get_node("a") == {"val": 1}
+

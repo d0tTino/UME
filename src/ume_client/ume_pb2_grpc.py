@@ -65,6 +65,16 @@ class UMEStub(object):
                 request_serializer=ume__pb2.PublishEventRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
+        self.SaveSnapshot = channel.unary_unary(
+                '/ume.UME/SaveSnapshot',
+                request_serializer=ume__pb2.SnapshotPath.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                _registered_method=True)
+        self.LoadSnapshot = channel.unary_unary(
+                '/ume.UME/LoadSnapshot',
+                request_serializer=ume__pb2.SnapshotPath.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                _registered_method=True)
 
 
 class UMEServicer(object):
@@ -107,6 +117,18 @@ class UMEServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SaveSnapshot(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def LoadSnapshot(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_UMEServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -138,6 +160,16 @@ def add_UMEServicer_to_server(servicer, server):
             'PublishEvent': grpc.unary_unary_rpc_method_handler(
                     servicer.PublishEvent,
                     request_deserializer=ume__pb2.PublishEventRequest.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'SaveSnapshot': grpc.unary_unary_rpc_method_handler(
+                    servicer.SaveSnapshot,
+                    request_deserializer=ume__pb2.SnapshotPath.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'LoadSnapshot': grpc.unary_unary_rpc_method_handler(
+                    servicer.LoadSnapshot,
+                    request_deserializer=ume__pb2.SnapshotPath.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
     }
@@ -302,6 +334,60 @@ class UME(object):
             target,
             '/ume.UME/PublishEvent',
             ume__pb2.PublishEventRequest.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SaveSnapshot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.UME/SaveSnapshot',
+            ume__pb2.SnapshotPath.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def LoadSnapshot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.UME/LoadSnapshot',
+            ume__pb2.SnapshotPath.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,
