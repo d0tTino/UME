@@ -12,7 +12,10 @@ def load_modules():
     for name in ["config", "audit", "value_overseer", "agent_orchestrator", "message_bus"]:
         full = f"ume.{name}"
         sys.modules.pop(full, None)
-        spec = importlib.util.spec_from_file_location(full, base / f"{name}.py")
+        path = base / f"{name}.py"
+        if not path.exists():
+            path = base / name / "__init__.py"
+        spec = importlib.util.spec_from_file_location(full, path)
         assert spec and spec.loader
         mod = importlib.util.module_from_spec(spec)
         sys.modules[full] = mod

@@ -1,5 +1,6 @@
 """Integrations for external frameworks."""
 
+from .base import BaseClient, AsyncBaseClient
 from .langgraph import LangGraph, AsyncLangGraph
 from .letta import Letta, AsyncLetta
 from .memgpt import MemGPT, AsyncMemGPT
@@ -20,4 +21,6 @@ __all__ = [
     "AsyncAutoGen",
     "SuperMemory",
     "AsyncSuperMemory",
+    "BaseClient",
+    "AsyncBaseClient",
 ]
