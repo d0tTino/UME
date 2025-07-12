@@ -32,6 +32,19 @@ class AsyncUMEClient:
         response = await self._stub.SearchVectors(request, metadata=self._metadata)
         return list(response.ids)
 
+    async def recall(
+        self,
+        *,
+        query: str | None = None,
+        vector: list[float] | None = None,
+        k: int = 5,
+    ) -> list[dict[str, object]]:
+        request = ume_pb2.RecallRequest(query=query or "", vector=vector or [], k=k)
+        response = await self._stub.Recall(request, metadata=self._metadata)
+        return [
+            {"id": n.id, "attributes": dict(n.attributes)} for n in response.nodes
+        ]
+
     async def get_audit_entries(self, limit: int = 10):
         request = ume_pb2.AuditRequest(limit=limit)
         response = await self._stub.GetAuditEntries(request, metadata=self._metadata)

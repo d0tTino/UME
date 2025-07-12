@@ -27,6 +27,21 @@ message VectorSearchResponse {
   repeated string ids = 1;
 }
 
+message Node {
+  string id = 1;
+  google.protobuf.Struct attributes = 2;
+}
+
+message RecallRequest {
+  string query = 1;
+  repeated float vector = 2;
+  int32 k = 3;
+}
+
+message RecallResponse {
+  repeated Node nodes = 1;
+}
+
 message AuditRequest {
   int32 limit = 1;
 }
@@ -51,6 +66,7 @@ service UME {
   // Server streaming variant of RunCypher
   rpc StreamCypher(CypherQuery) returns (stream CypherRecord);
   rpc SearchVectors(VectorSearchRequest) returns (VectorSearchResponse);
+  rpc Recall(RecallRequest) returns (RecallResponse);
   rpc GetAuditEntries(AuditRequest) returns (AuditResponse);
   rpc PublishEvent(PublishEventRequest) returns (google.protobuf.Empty);
 }

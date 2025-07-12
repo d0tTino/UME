@@ -50,6 +50,11 @@ class UMEStub(object):
                 request_serializer=ume__pb2.VectorSearchRequest.SerializeToString,
                 response_deserializer=ume__pb2.VectorSearchResponse.FromString,
                 _registered_method=True)
+        self.Recall = channel.unary_unary(
+                '/ume.UME/Recall',
+                request_serializer=ume__pb2.RecallRequest.SerializeToString,
+                response_deserializer=ume__pb2.RecallResponse.FromString,
+                _registered_method=True)
         self.GetAuditEntries = channel.unary_unary(
                 '/ume.UME/GetAuditEntries',
                 request_serializer=ume__pb2.AuditRequest.SerializeToString,
@@ -84,6 +89,12 @@ class UMEServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Recall(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetAuditEntries(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -113,6 +124,11 @@ def add_UMEServicer_to_server(servicer, server):
                     servicer.SearchVectors,
                     request_deserializer=ume__pb2.VectorSearchRequest.FromString,
                     response_serializer=ume__pb2.VectorSearchResponse.SerializeToString,
+            ),
+            'Recall': grpc.unary_unary_rpc_method_handler(
+                    servicer.Recall,
+                    request_deserializer=ume__pb2.RecallRequest.FromString,
+                    response_serializer=ume__pb2.RecallResponse.SerializeToString,
             ),
             'GetAuditEntries': grpc.unary_unary_rpc_method_handler(
                     servicer.GetAuditEntries,
@@ -206,6 +222,33 @@ class UME(object):
             '/ume.UME/SearchVectors',
             ume__pb2.VectorSearchRequest.SerializeToString,
             ume__pb2.VectorSearchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Recall(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.UME/Recall',
+            ume__pb2.RecallRequest.SerializeToString,
+            ume__pb2.RecallResponse.FromString,
             options,
             channel_credentials,
             insecure,
