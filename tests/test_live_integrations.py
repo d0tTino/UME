@@ -9,6 +9,7 @@ neo4j_mod = sys.modules["neo4j"]
 neo4j_mod.GraphDatabase = getattr(neo4j_mod, "GraphDatabase", object)
 neo4j_mod.Driver = getattr(neo4j_mod, "Driver", object)
 
+from ume.integrations.base import BaseClient
 from ume.integrations.langgraph import LangGraph
 from ume.integrations.letta import Letta
 from ume.api import app, configure_graph, configure_vector_store
@@ -70,6 +71,7 @@ def test_langgraph_and_letta_roundtrip() -> None:
         "payload": {"node_id": "n1", "attributes": {"text": "a"}},
     }
     with LangGraph(base_url=str(client.base_url), api_key=token) as lg:
+        assert isinstance(lg, BaseClient)
         lg._client = httpx.Client(
             base_url=str(client.base_url),
             transport=client._transport,
@@ -94,6 +96,7 @@ def test_langgraph_and_letta_roundtrip() -> None:
         },
     ]
     with Letta(base_url=str(client.base_url), api_key=token) as lt:
+        assert isinstance(lt, BaseClient)
         lt._client = httpx.Client(
             base_url=str(client.base_url),
             transport=client._transport,

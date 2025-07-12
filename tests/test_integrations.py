@@ -1,6 +1,7 @@
 import httpx
 import pytest
 
+from ume.integrations.base import BaseClient
 from ume.integrations.langgraph import LangGraph
 from ume.integrations.letta import Letta
 from ume.integrations.memgpt import MemGPT
@@ -9,8 +10,22 @@ from ume.integrations.supermemory import SuperMemory
 respx = pytest.importorskip("respx")
 
 
+def test_base_client_forwards() -> None:
+    client = BaseClient(base_url="http://ume", api_key="token")
+    with respx.mock(assert_all_called=True) as mock:
+        evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
+        recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"ok": True}))
+        client.send_events([{"foo": "bar"}])
+        result = client.recall({"node_id": "n1"})
+        assert evt.called
+        assert recall.called
+        assert result == {"ok": True}
+        assert dict(recall.calls.last.request.url.params) == {"node_id": "n1"}
+
+
 def test_langgraph_wrapper_forwards() -> None:
     client = LangGraph(base_url="http://ume", api_key="token")
+    assert isinstance(client, BaseClient)
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
         recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"ok": True}))
@@ -24,6 +39,7 @@ def test_langgraph_wrapper_forwards() -> None:
 
 def test_letta_wrapper_forwards() -> None:
     client = Letta(base_url="http://ume")
+    assert isinstance(client, BaseClient)
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
         recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"id": 1}))
@@ -37,6 +53,7 @@ def test_letta_wrapper_forwards() -> None:
 
 def test_memgpt_wrapper_forwards() -> None:
     client = MemGPT(base_url="http://ume")
+    assert isinstance(client, BaseClient)
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
         recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"id": 2}))
@@ -50,6 +67,7 @@ def test_memgpt_wrapper_forwards() -> None:
 
 def test_supermemory_wrapper_forwards() -> None:
     client = SuperMemory(base_url="http://ume")
+    assert isinstance(client, BaseClient)
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
         recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"result": 3}))
@@ -63,6 +81,7 @@ def test_supermemory_wrapper_forwards() -> None:
 
 def test_wrapper_batch_endpoint() -> None:
     client = LangGraph(base_url="http://ume")
+    assert isinstance(client, BaseClient)
     with respx.mock(assert_all_called=True) as mock:
         batch = mock.post("http://ume/events/batch").mock(return_value=httpx.Response(200))
         client.send_events([{"foo": "a"}, {"foo": "b"}])
