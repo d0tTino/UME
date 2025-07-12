@@ -512,14 +512,33 @@ def test_cli_env_file_warning(
 
     importlib.reload(cli)
 
-    env_example = tmp_path / "env.example"
-    env_example.write_text("UME_AUDIT_SIGNING_KEY=<your-key>\n")
+    env_file = tmp_path / ".env"
+    env_file.write_text("UME_AUDIT_SIGNING_KEY=default-key\n")
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli, "__file__", str(tmp_path / "ume_cli.py"))
-    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "default-key")
+    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "new-key")
 
     cli._ensure_env_file()
 
     out = capsys.readouterr().out
     assert "insecure default key" in out
+
+
+def test_cli_env_file_no_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import importlib
+    import ume_cli as cli
+
+    importlib.reload(cli)
+
+    env_file = tmp_path / ".env"
+    env_file.write_text("UME_AUDIT_SIGNING_KEY=old-key\n")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "default-key")
+
+    cli._ensure_env_file()
+
+    out = capsys.readouterr().out
+    assert "insecure default key" not in out
