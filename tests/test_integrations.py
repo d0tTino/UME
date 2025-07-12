@@ -1,17 +1,13 @@
 import httpx
 import pytest
 
-from ume.integrations.base import BaseClient
-from ume.integrations.langgraph import LangGraph
-from ume.integrations.letta import Letta
-from ume.integrations.memgpt import MemGPT
-from ume.integrations.supermemory import SuperMemory
+from ume.integrations import BaseClient, LangGraph, Letta, MemGPT, SuperMemory
 
 respx = pytest.importorskip("respx")
 
 
 def test_base_client_forwards() -> None:
-    client = BaseClient(base_url="http://ume", api_key="token")
+    client = BaseClient(base_url="http://ume", api_key="dummy-token")  # pragma: allowlist secret
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
         recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"ok": True}))
@@ -24,7 +20,7 @@ def test_base_client_forwards() -> None:
 
 
 def test_langgraph_wrapper_forwards() -> None:
-    client = LangGraph(base_url="http://ume", api_key="token")
+    client = LangGraph(base_url="http://ume", api_key="dummy-token")  # pragma: allowlist secret
     assert isinstance(client, BaseClient)
     with respx.mock(assert_all_called=True) as mock:
         evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
