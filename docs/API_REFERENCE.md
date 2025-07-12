@@ -9,6 +9,11 @@ For gRPC clients, send the configured `UME_GRPC_TOKEN` as a bearer token in the
 `authorization` metadata. The helper class `AsyncUMEClient` accepts this token
 via its `token` argument and attaches it automatically.
 
+The gRPC service also exposes `SaveSnapshot` and `LoadSnapshot` RPCs which
+mirror the `/snapshot/save` and `/snapshot/load` HTTP endpoints. Both accept a
+`SnapshotPath` message containing the target file path and return an empty
+response on success.
+
 ## Endpoints
 
 ### GET `/query`

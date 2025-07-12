@@ -20,6 +20,7 @@ from ..embedding import generate_embedding
 from ..metrics import RECALL_SCORE
 from ..event import EventError
 from ..processing import ProcessingError
+from ..snapshot import snapshot_graph_to_file, load_graph_into_existing
 from ume.services.ingest import ingest_event
 from ..async_graph_adapter import (
     IAsyncGraphAdapter,
@@ -194,6 +195,32 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         except (EventError, ProcessingError) as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
 
+        return empty_pb2.Empty()
+
+    async def SaveSnapshot(
+        self, request: ume_pb2.SnapshotPath, context: grpc.aio.ServicerContext
+    ) -> empty_pb2.Empty:
+        await self._require_auth(context)
+        if self.graph is None:
+            await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
+        try:
+            snapshot_graph_to_file(self.graph, request.path)
+        except Exception as exc:  # pragma: no cover - unexpected errors
+            await context.abort(grpc.StatusCode.INTERNAL, str(exc))
+        return empty_pb2.Empty()
+
+    async def LoadSnapshot(
+        self, request: ume_pb2.SnapshotPath, context: grpc.aio.ServicerContext
+    ) -> empty_pb2.Empty:
+        await self._require_auth(context)
+        if self.graph is None:
+            await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
+        try:
+            load_graph_into_existing(self.graph, request.path)
+        except FileNotFoundError:
+            await context.abort(grpc.StatusCode.NOT_FOUND, "Snapshot not found")
+        except Exception as exc:  # pragma: no cover - unexpected errors
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
         return empty_pb2.Empty()
 
 
