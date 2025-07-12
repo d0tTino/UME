@@ -61,6 +61,10 @@ message PublishEventRequest {
   EventEnvelope envelope = 1;
 }
 
+message SnapshotPath {
+  string path = 1;
+}
+
 service UME {
   rpc RunCypher(CypherQuery) returns (CypherResult);
   // Server streaming variant of RunCypher
@@ -69,6 +73,8 @@ service UME {
   rpc Recall(RecallRequest) returns (RecallResponse);
   rpc GetAuditEntries(AuditRequest) returns (AuditResponse);
   rpc PublishEvent(PublishEventRequest) returns (google.protobuf.Empty);
+  rpc SaveSnapshot(SnapshotPath) returns (google.protobuf.Empty);
+  rpc LoadSnapshot(SnapshotPath) returns (google.protobuf.Empty);
 }
 
 message Task {

@@ -27,7 +27,7 @@ from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 import events_pb2 as events__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tume.proto\x12\x03ume\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0c\x65vents.proto\"\x1d\n\x0b\x43ypherQuery\x12\x0e\n\x06\x63ypher\x18\x01 \x01(\t\"8\n\x0c\x43ypherResult\x12(\n\x07records\x18\x01 \x03(\x0b\x32\x17.google.protobuf.Struct\"7\n\x0c\x43ypherRecord\x12\'\n\x06record\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"0\n\x13VectorSearchRequest\x12\x0e\n\x06vector\x18\x01 \x03(\x02\x12\t\n\x01k\x18\x02 \x01(\x05\"#\n\x14VectorSearchResponse\x12\x0b\n\x03ids\x18\x01 \x03(\t\"?\n\x04Node\x12\n\n\x02id\x18\x01 \x01(\t\x12+\n\nattributes\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct\"9\n\rRecallRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\x0e\n\x06vector\x18\x02 \x03(\x02\x12\t\n\x01k\x18\x03 \x01(\x05\"*\n\x0eRecallResponse\x12\x18\n\x05nodes\x18\x01 \x03(\x0b\x32\t.ume.Node\"\x1d\n\x0c\x41uditRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\"S\n\nAuditEntry\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x11\n\tsignature\x18\x04 \x01(\t\"1\n\rAuditResponse\x12 \n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x0f.ume.AuditEntry\";\n\x13PublishEventRequest\x12$\n\x08\x65nvelope\x18\x01 \x01(\x0b\x32\x12.ume.EventEnvelope\"#\n\x04Task\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0f\n\x07payload\x18\x02 \x01(\t\">\n\nTaskResult\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x0f\n\x07task_id\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x01\" \n\x0bPlanRequest\x12\x11\n\tobjective\x18\x01 \x01(\t\"(\n\x0cPlanResponse\x12\x18\n\x05tasks\x18\x01 \x03(\x0b\x32\t.ume.Task2\xe3\x02\n\x03UME\x12\x30\n\tRunCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherResult\x12\x35\n\x0cStreamCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherRecord0\x01\x12\x44\n\rSearchVectors\x12\x18.ume.VectorSearchRequest\x1a\x19.ume.VectorSearchResponse\x12\x31\n\x06Recall\x12\x12.ume.RecallRequest\x1a\x13.ume.RecallResponse\x12\x38\n\x0fGetAuditEntries\x12\x11.ume.AuditRequest\x1a\x12.ume.AuditResponse\x12@\n\x0cPublishEvent\x12\x18.ume.PublishEventRequest\x1a\x16.google.protobuf.Empty2k\n\x11\x41gentOrchestrator\x12+\n\x04Plan\x12\x10.ume.PlanRequest\x1a\x11.ume.PlanResponse\x12)\n\x0b\x45xecuteTask\x12\t.ume.Task\x1a\x0f.ume.TaskResultb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tume.proto\x12\x03ume\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0c\x65vents.proto\"\x1d\n\x0b\x43ypherQuery\x12\x0e\n\x06\x63ypher\x18\x01 \x01(\t\"8\n\x0c\x43ypherResult\x12(\n\x07records\x18\x01 \x03(\x0b\x32\x17.google.protobuf.Struct\"7\n\x0c\x43ypherRecord\x12\'\n\x06record\x18\x01 \x01(\x0b\x32\x17.google.protobuf.Struct\"0\n\x13VectorSearchRequest\x12\x0e\n\x06vector\x18\x01 \x03(\x02\x12\t\n\x01k\x18\x02 \x01(\x05\"#\n\x14VectorSearchResponse\x12\x0b\n\x03ids\x18\x01 \x03(\t\"?\n\x04Node\x12\n\n\x02id\x18\x01 \x01(\t\x12+\n\nattributes\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct\"9\n\rRecallRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\x0e\n\x06vector\x18\x02 \x03(\x02\x12\t\n\x01k\x18\x03 \x01(\x05\"*\n\x0eRecallResponse\x12\x18\n\x05nodes\x18\x01 \x03(\x0b\x32\t.ume.Node\"\x1d\n\x0c\x41uditRequest\x12\r\n\x05limit\x18\x01 \x01(\x05\"S\n\nAuditEntry\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x11\n\tsignature\x18\x04 \x01(\t\"1\n\rAuditResponse\x12 \n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x0f.ume.AuditEntry\";\n\x13PublishEventRequest\x12$\n\x08\x65nvelope\x18\x01 \x01(\x0b\x32\x12.ume.EventEnvelope\"\x1c\n\x0cSnapshotPath\x12\x0c\n\x04path\x18\x01 \x01(\t\"#\n\x04Task\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0f\n\x07payload\x18\x02 \x01(\t\">\n\nTaskResult\x12\x10\n\x08\x61gent_id\x18\x01 \x01(\t\x12\x0f\n\x07task_id\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x01\" \n\x0bPlanRequest\x12\x11\n\tobjective\x18\x01 \x01(\t\"(\n\x0cPlanResponse\x12\x18\n\x05tasks\x18\x01 \x03(\x0b\x32\t.ume.Task2\xd9\x03\n\x03UME\x12\x30\n\tRunCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherResult\x12\x35\n\x0cStreamCypher\x12\x10.ume.CypherQuery\x1a\x11.ume.CypherRecord0\x01\x12\x44\n\rSearchVectors\x12\x18.ume.VectorSearchRequest\x1a\x19.ume.VectorSearchResponse\x12\x31\n\x06Recall\x12\x12.ume.RecallRequest\x1a\x13.ume.RecallResponse\x12\x38\n\x0fGetAuditEntries\x12\x11.ume.AuditRequest\x1a\x12.ume.AuditResponse\x12@\n\x0cPublishEvent\x12\x18.ume.PublishEventRequest\x1a\x16.google.protobuf.Empty\x12\x39\n\x0cSaveSnapshot\x12\x11.ume.SnapshotPath\x1a\x16.google.protobuf.Empty\x12\x39\n\x0cLoadSnapshot\x12\x11.ume.SnapshotPath\x1a\x16.google.protobuf.Empty2k\n\x11\x41gentOrchestrator\x12+\n\x04Plan\x12\x10.ume.PlanRequest\x1a\x11.ume.PlanResponse\x12)\n\x0b\x45xecuteTask\x12\t.ume.Task\x1a\x0f.ume.TaskResultb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -58,16 +58,18 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_AUDITRESPONSE']._serialized_end=657
   _globals['_PUBLISHEVENTREQUEST']._serialized_start=659
   _globals['_PUBLISHEVENTREQUEST']._serialized_end=718
-  _globals['_TASK']._serialized_start=720
-  _globals['_TASK']._serialized_end=755
-  _globals['_TASKRESULT']._serialized_start=757
-  _globals['_TASKRESULT']._serialized_end=819
-  _globals['_PLANREQUEST']._serialized_start=821
-  _globals['_PLANREQUEST']._serialized_end=853
-  _globals['_PLANRESPONSE']._serialized_start=855
-  _globals['_PLANRESPONSE']._serialized_end=895
-  _globals['_UME']._serialized_start=898
-  _globals['_UME']._serialized_end=1253
-  _globals['_AGENTORCHESTRATOR']._serialized_start=1255
-  _globals['_AGENTORCHESTRATOR']._serialized_end=1362
+  _globals['_SNAPSHOTPATH']._serialized_start=720
+  _globals['_SNAPSHOTPATH']._serialized_end=748
+  _globals['_TASK']._serialized_start=750
+  _globals['_TASK']._serialized_end=785
+  _globals['_TASKRESULT']._serialized_start=787
+  _globals['_TASKRESULT']._serialized_end=849
+  _globals['_PLANREQUEST']._serialized_start=851
+  _globals['_PLANREQUEST']._serialized_end=883
+  _globals['_PLANRESPONSE']._serialized_start=885
+  _globals['_PLANRESPONSE']._serialized_end=925
+  _globals['_UME']._serialized_start=928
+  _globals['_UME']._serialized_end=1401
+  _globals['_AGENTORCHESTRATOR']._serialized_start=1403
+  _globals['_AGENTORCHESTRATOR']._serialized_end=1510
 # @@protoc_insertion_point(module_scope)

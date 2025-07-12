@@ -62,6 +62,14 @@ class AsyncUMEClient:
         request = ume_pb2.PublishEventRequest(envelope=envelope)
         await self._stub.PublishEvent(request, metadata=self._metadata)
 
+    async def save_snapshot(self, path: str) -> None:
+        request = ume_pb2.SnapshotPath(path=path)
+        await self._stub.SaveSnapshot(request, metadata=self._metadata)
+
+    async def load_snapshot(self, path: str) -> None:
+        request = ume_pb2.SnapshotPath(path=path)
+        await self._stub.LoadSnapshot(request, metadata=self._metadata)
+
     async def close(self) -> None:
         await self._channel.close()
 
