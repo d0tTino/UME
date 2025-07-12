@@ -644,9 +644,11 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
         created = True
 
     new_key = secrets.token_hex(32)
+    prev_key: str | None = None
     replaced = False
     for i, line in enumerate(env_lines):
         if line.startswith("UME_AUDIT_SIGNING_KEY="):
+            prev_key = line.split("=", 1)[1]
             env_lines[i] = f"UME_AUDIT_SIGNING_KEY={new_key}"
             replaced = True
             break
@@ -656,7 +658,7 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
 
     env_content = "\n".join(env_lines) + "\n"
     env_file.write_text(env_content)
-    if new_key == "default-key":
+    if prev_key == "default-key":
         print(
             "WARNING: UME_AUDIT_SIGNING_KEY uses the insecure default key. "
             "Edit .env and set a unique value."
