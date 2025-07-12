@@ -2,18 +2,20 @@ import asyncio
 import httpx
 import pytest
 
-from ume.integrations.base import AsyncBaseClient
-from ume.integrations.langgraph import AsyncLangGraph
-from ume.integrations.letta import AsyncLetta
-from ume.integrations.memgpt import AsyncMemGPT
-from ume.integrations.supermemory import AsyncSuperMemory
+from ume.integrations import (
+    AsyncBaseClient,
+    AsyncLangGraph,
+    AsyncLetta,
+    AsyncMemGPT,
+    AsyncSuperMemory,
+)
 
 respx = pytest.importorskip("respx")
 
 
 def test_async_base_client_forwards() -> None:
     async def runner():
-        async with AsyncBaseClient(base_url="http://ume", api_key="token") as client:
+        async with AsyncBaseClient(base_url="http://ume", api_key="dummy-token") as client:  # pragma: allowlist secret
             with respx.mock(assert_all_called=True) as mock:
                 evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
                 recall = mock.get("http://ume/recall").mock(return_value=httpx.Response(200, json={"ok": True}))
@@ -29,7 +31,7 @@ def test_async_base_client_forwards() -> None:
 
 def test_async_langgraph_wrapper_forwards() -> None:
     async def runner():
-        async with AsyncLangGraph(base_url="http://ume", api_key="token") as client:
+        async with AsyncLangGraph(base_url="http://ume", api_key="dummy-token") as client:  # pragma: allowlist secret
             assert isinstance(client, AsyncBaseClient)
             with respx.mock(assert_all_called=True) as mock:
                 evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
