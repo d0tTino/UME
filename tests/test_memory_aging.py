@@ -5,6 +5,8 @@ from ume.metrics import STALE_VECTOR_WARNINGS
 from ume.memory.tiered import TieredMemoryManager
 from ume.memory_aging import start_memory_aging_scheduler, stop_memory_aging_scheduler
 
+import itertools
+
 import threading
 
 import time
@@ -276,3 +278,65 @@ def test_start_scheduler_twice_without_leaks() -> None:
     stop_memory_aging_scheduler()
     assert not thread1.is_alive()
     assert threading.active_count() == baseline
+
+
+def test_aging_scheduler_prunes_and_audits_vectors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Events migrate and stale vectors are removed."""
+
+    counter = itertools.count(start=1000, step=1)
+    monkeypatch.setattr(time, "time", lambda: next(counter))
+
+    episodic = EpisodicMemory(db_path=":memory:")
+    semantic = SemanticMemory(db_path=":memory:")
+    class DummyStore:
+        def __init__(self) -> None:
+            self.vectors = {"old": [0.0, 1.0]}
+            self.vector_ts = {"old": 990}
+
+        def add(self, item_id: str, vector: list[float]) -> None:
+            self.vectors[item_id] = vector
+            self.vector_ts[item_id] = int(time.time())
+
+        def expire_vectors(self, age: int) -> None:
+            cutoff = int(time.time()) - age
+            to_del = [i for i, ts in self.vector_ts.items() if ts < cutoff]
+            for i in to_del:
+                self.vectors.pop(i, None)
+                self.vector_ts.pop(i, None)
+
+        def get_vector_timestamps(self) -> dict[str, int]:
+            return dict(self.vector_ts)
+
+        def query(self, vector: list[float], k: int = 1) -> list[str]:
+            return list(self.vectors.keys())[:k]
+
+    store = DummyStore()
+
+    episodic.graph.add_node("old", {"text": "hi"})
+    old_ts = 990
+    with episodic.graph.conn:
+        episodic.graph.conn.execute(
+            "UPDATE nodes SET created_at=? WHERE id='old'", (old_ts,)
+        )
+
+    monkeypatch.setattr(settings, "UME_VECTOR_MAX_AGE_DAYS", 0, raising=False)
+    STALE_VECTOR_WARNINGS._value.set(0)  # type: ignore[attr-defined]
+
+    start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        vector_store=store,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        vector_age_seconds=0,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    time.sleep(0.02)
+    stop_memory_aging_scheduler()
+
+    assert not episodic.graph.node_exists("old")
+    assert semantic.get_fact("old") == {"text": "hi"}
+    assert store.query([0.0, 1.0], k=1) == []
