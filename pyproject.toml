@@ -53,6 +53,7 @@ mypy = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-xdist = "*"
+pytest-asyncio = "*"
 redis = "*"
 fastapi-limiter = "*"
 
@@ -77,7 +78,11 @@ compile-protos = "scripts.compile_protos:main"
 
 [tool.ruff]
 line-length = 88
-exclude = ["src/ume/proto/*", "src/ume_client/ume_pb2*.py"]
+exclude = [
+    "src/ume/proto/*",
+    "src/ume_client/ume_pb2*.py",
+    "src/ume_client/*_pb2*.py",
+]
 
 [build-system]
 requires = ["poetry-core"]
