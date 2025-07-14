@@ -357,7 +357,7 @@ settings.
 The `ume` CLI can spin up all services for local development. From the repository root run:
 
 ```bash
-poetry run python ume_cli.py up --no-confirm
+poetry run ume up --no-confirm
 
 ```
 

@@ -73,6 +73,7 @@ grpc_server = ["grpcio"]
 [tool.poetry.scripts]
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
+ume = "ume.__main__:main"
 compile-protos = "scripts.compile_protos:main"
 
 
