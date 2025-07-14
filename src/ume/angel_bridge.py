@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable, Dict, Any, List
 import logging
 import time
-import json
 
-from .persistent_graph import PersistentGraph
+try:  # Optional Kafka dependency
+    from .client import UMEClient
+except Exception:  # pragma: no cover - confluent_kafka may be missing
+    UMEClient = None
 
+from .event_ledger import event_ledger
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -24,56 +27,50 @@ class AngelBridge:
     def consume_events(self) -> List[Dict[str, Any]]:
         """Return events from the last ``lookback_hours``.
 
-        This stub implementation returns an empty list. A real implementation
-        would query an event store or database for events within the given time
-        window.
+        Events are fetched from the local :mod:`event_ledger`. If Kafka is
+        configured and available, it will be used instead.
         """
 
         logger.debug("Consuming events for last %s hours", self.lookback_hours)
         cutoff = int(time.time()) - self.lookback_hours * 3600
         events: List[Dict[str, Any]] = []
-        graph = PersistentGraph()
-        try:
-            cur = graph.conn.execute(
-                "SELECT id, attributes, created_at FROM nodes "
-                "WHERE redacted=0 AND created_at >= ?",
-                (cutoff,),
-            )
-            for row in cur.fetchall():
-                events.append(
-                    {
-                        "type": "node",
-                        "id": row["id"],
-                        "timestamp": row["created_at"],
-                        "attributes": json.loads(row["attributes"]),
-                    }
-                )
 
-            cur = graph.conn.execute(
-                "SELECT source, target, label, created_at FROM edges "
-                "WHERE redacted=0 AND created_at >= ?",
-                (cutoff,),
-            )
-            for row in cur.fetchall():
-                events.append(
-                    {
-                        "type": "edge",
-                        "source": row["source"],
-                        "target": row["target"],
-                        "label": row["label"],
-                        "timestamp": row["created_at"],
-                    }
-                )
-        finally:
-            graph.close()
+        used_kafka = False
+        if UMEClient is not None and settings.KAFKA_BOOTSTRAP_SERVERS:
+            try:
+                with UMEClient(settings) as client:
+                    for event in client.consume_events(timeout=0.5):
+                        if event.timestamp >= cutoff:
+                            events.append(
+                                {
+                                    "event_type": event.event_type,
+                                    "timestamp": event.timestamp,
+                                }
+                            )
+                used_kafka = True
+            except Exception as exc:  # pragma: no cover - Kafka optional
+                logger.warning("Kafka read failed: %s", exc)
+
+        if not used_kafka:
+            for _, data in event_ledger.range():
+                ts = data.get("timestamp", 0)
+                if ts >= cutoff:
+                    events.append(data)
 
         return events
 
     def generate_summary(self, events: Iterable[Dict[str, Any]]) -> str:
         """Generate a text summary for the provided events."""
-        count = len(list(events))
-        today = datetime.utcnow().date()
-        return f"Summary for {today}: {count} events"
+        counts: Dict[str, int] = {}
+        for ev in events:
+            etype = ev.get("event_type") or ev.get("type", "unknown")
+            counts[etype] = counts.get(etype, 0) + 1
+
+        today = datetime.now(timezone.utc).date()
+        lines = [f"Summary for {today}:"]
+        for etype, num in sorted(counts.items()):
+            lines.append(f"{etype}: {num}")
+        return "\n".join(lines)
 
     def emit_daily_summary(self) -> str:
         """Consume events and return the summary string."""

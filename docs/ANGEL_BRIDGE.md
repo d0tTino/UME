@@ -1,12 +1,19 @@
 # Angel Bridge
 
-`AngelBridge` consumes recent events and emits a short daily summary. This can be
-used to keep external services informed about the system's activity without
-exposing the full event stream.
+`AngelBridge` consumes recent sanitized events and emits a short daily summary.
+The service keeps external systems informed about activity without exposing the
+full event stream.
 
-The implementation included here is a stub which counts events in a given
-lookback window. Real deployments might query a database or message queue and
-post the resulting summary to another service.
+Events are retrieved from the local SQLite based `event_ledger` that is filled
+by the privacy agent. If Kafka is configured, the bridge will read directly from
+the clean events topic instead. The returned summary aggregates the number of
+events for each `event_type`.
+
+Example output::
+
+    Summary for 2024-05-08:
+    CREATE_NODE: 2
+    CREATE_EDGE: 1
 
 ## Configuration
 
