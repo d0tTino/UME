@@ -1,6 +1,6 @@
 """Integrations for external frameworks."""
 
-from .base import BaseClient, AsyncBaseClient
+from .base import AsyncBaseClient, BaseClient, IntegrationError
 from .langgraph import LangGraph, AsyncLangGraph
 from .letta import Letta, AsyncLetta
 from .memgpt import MemGPT, AsyncMemGPT
@@ -23,4 +23,5 @@ __all__ = [
     "AsyncSuperMemory",
     "BaseClient",
     "AsyncBaseClient",
+    "IntegrationError",
 ]
