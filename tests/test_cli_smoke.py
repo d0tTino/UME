@@ -341,6 +341,28 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
     assert "Stack stopped." in out_down
 
 
+def test_top_level_ume_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure the top-level ``ume up`` command runs ``_quickstart``."""
+    import importlib
+    import ume.__main__ as main
+
+    importlib.reload(main)
+
+    called: dict[str, bool] = {}
+
+    def fake_quickstart(no_confirm: bool = False) -> None:
+        called["flag"] = no_confirm
+
+    monkeypatch.setattr(main, "_quickstart", fake_quickstart)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume", "up", "--no-confirm"]
+    main.main()
+    sys.argv = argv
+
+    assert called.get("flag") is True
+
+
 def test_cli_up_custom_compose(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -513,7 +535,7 @@ def test_cli_env_file_warning(
     importlib.reload(cli)
 
     env_file = tmp_path / ".env"
-    env_file.write_text("UME_AUDIT_SIGNING_KEY=default-key\n")
+    env_file.write_text("UME_AUDIT_SIGNING_KEY=default-key\n")  # pragma: allowlist secret
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "new-key")
