@@ -130,6 +130,18 @@ curl -X POST http://localhost:8000/events \
   -d '{"event_type":"CREATE_NODE","timestamp":1,"node_id":"n1","payload":{"node_id":"n1"}}'
 ```
 
+### POST `/events/batch`
+Apply multiple events sequentially.
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/events/batch \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '[{"event_type":"CREATE_NODE","timestamp":1,"node_id":"n1","payload":{"node_id":"n1"}}]'
+```
+
 ### GET `/recall`
 Retrieve attribute data for the `k` nearest nodes to a query.
 

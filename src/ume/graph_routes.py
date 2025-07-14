@@ -79,6 +79,19 @@ class SnapshotPathRequest(BaseModel):
     path: str
 
 
+class EventRequest(BaseModel):
+    """Schema for a single event."""
+
+    event_type: str
+    timestamp: int
+    event_id: str | None = None
+    source: str | None = None
+    node_id: str | None = None
+    target_node_id: str | None = None
+    label: str | None = None
+    payload: Dict[str, Any] | None = None
+
+
 @router.get("/query")
 def run_cypher(
     cypher: str,
@@ -180,13 +193,16 @@ def api_redact_node(
 
 @router.post("/events/batch")
 def api_post_events_batch(
-    events: List[Dict[str, Any]] = Body(...),
+    events: List[EventRequest] = Body(...),
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: None = Depends(deps.require_token),
 ) -> Dict[str, Any]:
     """Apply multiple events sequentially to the graph."""
     try:
-        ingest_events_batch(events, graph)
+        ingest_events_batch(
+            [e.model_dump(exclude_none=True) for e in events],
+            graph,
+        )
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -293,13 +309,13 @@ def api_get_document(
 
 @router.post("/events")
 def api_post_event(
-    data: Dict[str, Any] = Body(...),
+    req: EventRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: None = Depends(deps.require_token),
 ) -> Dict[str, Any]:
     """Validate and apply an event to the graph."""
     try:
-        ingest_event(data, graph)
+        ingest_event(req.model_dump(exclude_none=True), graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

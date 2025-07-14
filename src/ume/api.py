@@ -23,6 +23,7 @@ try:  # pragma: no cover - optional dependency
 except Exception:  # pragma: no cover - allow tests without opentelemetry installed
     trace = None
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
@@ -211,5 +212,13 @@ async def access_denied_handler(
     request: Request, exc: AccessDeniedError
 ) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Return 400 for request validation errors."""
+    return JSONResponse(status_code=400, content={"detail": exc.errors()})
 
 

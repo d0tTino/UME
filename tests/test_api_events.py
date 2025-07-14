@@ -102,3 +102,14 @@ def test_post_events_batch_invalid(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 400
+
+
+def test_post_event_missing_field(client_and_graph) -> None:
+    client, _ = client_and_graph
+    token = _token(client)
+    res = client.post(
+        "/events",
+        json={"timestamp": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
