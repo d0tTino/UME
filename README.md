@@ -338,20 +338,30 @@ PYTHONPATH=src pytest
 
 ```
 
+## Security Setup
+
 Create a `.env` file in the project root before starting any services. Copy the
-template from [`env.example`](env.example) and set a unique
-`UME_AUDIT_SIGNING_KEY`. The `ume up` command described below automatically
-creates this file if it is missing. If an existing `.env` contains
-`UME_AUDIT_SIGNING_KEY=default-key` it will be regenerated with a secure random
-hex string:
+template from [`env.example`](env.example) and **replace** the
+`UME_AUDIT_SIGNING_KEY` placeholder. If the file is missing or still contains
+`UME_AUDIT_SIGNING_KEY=default-key`, running `ume up` will generate a new key:
 
 ```bash
-# .env
+$ poetry run python ume_cli.py up --no-confirm
+Regenerating .env with secure UME_AUDIT_SIGNING_KEY
+WARNING: UME_AUDIT_SIGNING_KEY uses the insecure default key. Edit .env and set a unique value.
+Replaced UME_AUDIT_SIGNING_KEY in .env with random value
+Stack running. API docs: http://localhost:8000/docs
+Recall endpoint: http://localhost:8000/recall
+```
+
+The resulting `.env` will contain something like:
+
+```bash
 UME_AUDIT_SIGNING_KEY=<randomly-generated-key>
 ```
 
-See [`env.example`](env.example) for the full list of available
-settings.
+See [`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md) for the full list of
+environment variables.
 
 ### 2. Start the Docker Stack
 The `ume` CLI can spin up all services for local development. From the repository root run:
