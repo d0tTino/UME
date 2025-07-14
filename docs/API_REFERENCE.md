@@ -2,7 +2,7 @@
 
 
 This document summarizes the HTTP routes exposed by the UME FastAPI application.
-Acquire a token from `/token` using the OAuth2 password flow and include it as a
+Acquire a token from `/auth/token` using the OAuth2 password flow and include it as a
 `Bearer` token in the `Authorization` header. Tokens expire after `UME_OAUTH_TTL` seconds.
 
 For gRPC clients, send the configured `UME_GRPC_TOKEN` as a bearer token in the
