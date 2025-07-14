@@ -488,10 +488,10 @@ Open <http://localhost:8001/dashboard/> once the API is running. For additional 
 
 ### API Authentication
 
-Obtain an OAuth2 token via the `/token` endpoint using the password grant:
+Obtain an OAuth2 token via the `/auth/token` endpoint using the password grant:
 
 ```bash
-curl -X POST -d "username=ume&password=password" http://localhost:8000/token
+curl -X POST -d "username=ume&password=password" http://localhost:8000/auth/token
 ```
 
 Include the returned access token in the `Authorization` header for subsequent
@@ -818,7 +818,7 @@ broker communication errors so they can be handled cleanly.
 ## Async gRPC Client
 
 `AsyncUMEClient` provides asynchronous access to the gRPC API. Pass the token
-returned from `/token` using the `token` parameter so the client can include it
+returned from `/auth/token` using the `token` parameter so the client can include it
 as `authorization` metadata on every RPC call. The examples below read the
 token from the `UME_GRPC_TOKEN` environment variable.
 
