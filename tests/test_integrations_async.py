@@ -8,6 +8,7 @@ from ume.integrations import (
     AsyncLetta,
     AsyncMemGPT,
     AsyncSuperMemory,
+    IntegrationError,
 )
 
 respx = pytest.importorskip("respx")
@@ -105,5 +106,28 @@ def test_async_wrapper_batch_endpoint() -> None:
                 batch = mock.post("http://ume/events/batch").mock(return_value=httpx.Response(200))
                 await client.send_events([{"foo": "a"}, {"foo": "b"}])
                 assert batch.called
+
+    asyncio.run(runner())
+
+
+def test_async_env_token(monkeypatch) -> None:
+    async def runner():
+        monkeypatch.setenv("UME_API_TOKEN", "async-token")
+        async with AsyncBaseClient(base_url="http://ume") as client:
+            with respx.mock(assert_all_called=True) as mock:
+                evt = mock.post("http://ume/events").mock(return_value=httpx.Response(200))
+                await client.send_events([{"foo": "bar"}])
+                assert evt.calls.last.request.headers["Authorization"] == "Bearer async-token"
+
+    asyncio.run(runner())
+
+
+def test_async_error_handling() -> None:
+    async def runner():
+        async with AsyncLangGraph(base_url="http://ume") as client:
+            with respx.mock(assert_all_called=True) as mock:
+                mock.post("http://ume/events").mock(return_value=httpx.Response(500))
+                with pytest.raises(IntegrationError):
+                    await client.send_events([{"foo": "bar"}])
 
     asyncio.run(runner())
