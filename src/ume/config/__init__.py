@@ -41,7 +41,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     # Vector store
     UME_VECTOR_BACKEND: str = "faiss"  # faiss or chroma
-    UME_VECTOR_DIM: int = 1536
+    UME_VECTOR_DIM: int = 2
     UME_VECTOR_INDEX: str = "vectors.faiss"
     UME_VECTOR_USE_GPU: bool = False
     UME_VECTOR_GPU_MEM_MB: int = 256

@@ -15,7 +15,7 @@ def load_config(package: str) -> tuple[types.ModuleType, type]:
         config = importlib.import_module(".config", package)
         Settings = config.Settings
         setattr(sys.modules[package], "config", config)
-    except Exception:  # pragma: no cover - fall back to stub on any failure
+    except ImportError:  # pragma: no cover - fall back if module missing
         stub = _make_stub(f"{package}.config")
         sys.modules[f"{package}.config"] = stub
         stub.settings = SimpleNamespace(  # type: ignore[attr-defined]
