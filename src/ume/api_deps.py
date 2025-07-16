@@ -34,7 +34,7 @@ def configure_graph(graph: IGraphAdapter | None = None) -> None:
     from .api import app  # Local import to avoid circular dependency
 
     if graph is None:
-        from .resources import create_graph_adapter
+        from .factories import create_graph_adapter
 
         graph = create_graph_adapter()
 
