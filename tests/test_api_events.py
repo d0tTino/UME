@@ -3,6 +3,20 @@ from fastapi.testclient import TestClient
 # ruff: noqa: E402
 import sys
 import types
+import importlib.util
+from pathlib import Path
+
+base = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(base / "src" / "ume_client"))
+sys.path.insert(0, str(base / "src"))
+
+spec_ev = importlib.util.spec_from_file_location(
+    "events_pb2", base / "src" / "ume_client" / "events_pb2.py"
+)
+assert spec_ev and spec_ev.loader
+events_pb2 = importlib.util.module_from_spec(spec_ev)
+spec_ev.loader.exec_module(events_pb2)
+sys.modules["events_pb2"] = events_pb2
 
 sys.modules.setdefault("neo4j", types.ModuleType("neo4j"))
 neo4j_mod = sys.modules["neo4j"]
