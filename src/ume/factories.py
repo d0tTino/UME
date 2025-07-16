@@ -5,6 +5,17 @@ from .persistent_graph import PersistentGraph
 from .postgres_graph import PostgresGraph
 from .redis_graph_adapter import RedisGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - for optional dependency hints
+    from .neo4j_graph import Neo4jGraph
+else:  # pragma: no cover - optional dependency
+    try:
+        from .neo4j_graph import Neo4jGraph
+    except Exception:
+        class Neo4jGraph:
+            def __init__(self, *_: object, **__: object) -> None:
+                raise ImportError("neo4j is required for Neo4jGraph")
 from .vector_store import VectorBackend, create_vector_store as _create_vector_store
 from .memory import EpisodicMemory, SemanticMemory
 
@@ -24,6 +35,12 @@ def create_graph_adapter(
         base = PostgresGraph(db_path or settings.UME_DB_PATH)
     elif backend == "redis":
         base = RedisGraphAdapter(db_path or settings.UME_DB_PATH)
+    elif backend == "neo4j":
+        base = Neo4jGraph(
+            settings.NEO4J_URI,
+            settings.NEO4J_USER,
+            settings.NEO4J_PASSWORD,
+        )
     else:
         base = PersistentGraph(db_path or settings.UME_DB_PATH)
     if is_tracing_enabled():

@@ -83,10 +83,9 @@ from .agent_orchestrator import (
     ReflectionAgent,
 )
 from .message_bus import MessageEnvelope
+from .factories import create_graph_adapter, create_vector_store
 from .resources import (
-    create_graph_adapter,
     create_graph,
-    create_vector_store,
     graph_factory,
     vector_store_factory,
 )
