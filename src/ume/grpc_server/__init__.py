@@ -9,7 +9,6 @@ import math
 
 import grpc
 from google.protobuf import struct_pb2, empty_pb2
-from google.protobuf.json_format import MessageToDict
 
 from ..query import Neo4jQueryEngine
 from ..vector_store import VectorStore
@@ -21,11 +20,8 @@ from ..metrics import RECALL_SCORE
 from ..event import EventError
 from ..processing import ProcessingError
 from ..snapshot import snapshot_graph_to_file, load_graph_into_existing
-from ume.services.ingest import ingest_event
-from ..async_graph_adapter import (
-    IAsyncGraphAdapter,
-    ingest_event_async,
-)
+from ume.services.ingest import ingest_envelope, ingest_envelope_async
+from ..async_graph_adapter import IAsyncGraphAdapter
 import inspect
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
@@ -166,32 +162,12 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
 
         try:
             envelope = request.envelope
-            if envelope.HasField("create_node"):
-                meta = envelope.create_node.meta
-            elif envelope.HasField("update_node_attributes"):
-                meta = envelope.update_node_attributes.meta
-            elif envelope.HasField("create_edge"):
-                meta = envelope.create_edge.meta
-            elif envelope.HasField("delete_edge"):
-                meta = envelope.delete_edge.meta
+            if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+                getattr(self.graph, "add_node", None)
+            ):
+                await ingest_envelope_async(envelope, self.graph)  # type: ignore[arg-type]
             else:
-                await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Envelope missing payload")
-                return empty_pb2.Empty()  # Unreachable but satisfies type checkers
-
-            event_dict = {
-                "event_id": meta.event_id,
-                "event_type": meta.event_type,
-                "timestamp": meta.timestamp,
-                "payload": MessageToDict(meta.payload),
-                "source": meta.source or None,
-                "node_id": meta.node_id or None,
-                "target_node_id": meta.target_node_id or None,
-                "label": meta.label or None,
-            }
-            if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(getattr(self.graph, "add_node", None)):
-                await ingest_event_async(event_dict, self.graph)  # type: ignore[arg-type]
-            else:
-                ingest_event(event_dict, self.graph)
+                ingest_envelope(envelope, self.graph)
         except (EventError, ProcessingError) as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
 
