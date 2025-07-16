@@ -1,8 +1,9 @@
 # Integration Adapters
 
 UME ships with simple wrappers for popular frameworks. Each adapter forwards events
-to a running UME instance and exposes a `send_events` and `recall` API. Async
-variants are also available with the `Async` prefix.
+to a running UME instance and exposes a `send_events` and `recall` API. A
+`store_events` alias using the `/store` endpoint is also available. Async variants
+are provided with the `Async` prefix.
 
 The examples below demonstrate both synchronous and asynchronous usage.
 

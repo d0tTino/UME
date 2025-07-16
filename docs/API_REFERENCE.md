@@ -110,7 +110,8 @@ Return recent audit log entries, newest first.
 - **Query parameters**: optional `limit` (default `10`).
 
 ### POST `/events`
-Validate and apply an event to the graph.
+Validate and apply an event to the graph. This endpoint is also available as
+`/store`.
 
 **Body Parameters**
 
@@ -131,7 +132,8 @@ curl -X POST http://localhost:8000/events \
 ```
 
 ### POST `/events/batch`
-Apply multiple events sequentially.
+Apply multiple events sequentially. This endpoint is also available as
+`/store/batch`.
 
 Example request:
 

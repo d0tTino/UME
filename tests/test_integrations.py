@@ -84,6 +84,14 @@ def test_wrapper_batch_endpoint() -> None:
         assert batch.called
 
 
+def test_store_events_alias() -> None:
+    client = BaseClient(base_url="http://ume")
+    with respx.mock(assert_all_called=True) as mock:
+        evt = mock.post("http://ume/store").mock(return_value=httpx.Response(200))
+        client.store_events([{"foo": "bar"}])
+        assert evt.called
+
+
 def test_env_token(monkeypatch) -> None:
     monkeypatch.setenv("UME_API_TOKEN", "token")
     client = BaseClient(base_url="http://ume")
