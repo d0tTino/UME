@@ -113,3 +113,44 @@ def test_post_event_missing_field(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 400
+
+
+def test_store_event_success(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+    event = {
+        "event_type": "CREATE_NODE",
+        "timestamp": 1,
+        "node_id": "n3",
+        "payload": {"node_id": "n3", "attributes": {"text": "store"}},
+    }
+    res = client.post("/store", json=event, headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 200
+    assert g.get_node("n3") == {"text": "store"}
+
+
+def test_store_events_batch(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+    events = [
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "n4",
+            "payload": {"node_id": "n4", "attributes": {"text": "x"}},
+        },
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 2,
+            "node_id": "n5",
+            "payload": {"node_id": "n5", "attributes": {"text": "y"}},
+        },
+    ]
+    res = client.post(
+        "/store/batch",
+        json=events,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert g.get_node("n4") == {"text": "x"}
+    assert g.get_node("n5") == {"text": "y"}

@@ -110,6 +110,17 @@ def test_async_wrapper_batch_endpoint() -> None:
     asyncio.run(runner())
 
 
+def test_async_store_events_alias() -> None:
+    async def runner():
+        async with AsyncBaseClient(base_url="http://ume") as client:
+            with respx.mock(assert_all_called=True) as mock:
+                evt = mock.post("http://ume/store").mock(return_value=httpx.Response(200))
+                await client.store_events([{"foo": "bar"}])
+                assert evt.called
+
+    asyncio.run(runner())
+
+
 def test_async_env_token(monkeypatch) -> None:
     async def runner():
         monkeypatch.setenv("UME_API_TOKEN", "async-token")

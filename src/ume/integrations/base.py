@@ -40,6 +40,25 @@ class BaseClient:
         except httpx.HTTPError as exc:
             raise IntegrationError(str(exc)) from exc
 
+    def store_events(self, events: Iterable[Mapping[str, Any]]) -> None:
+        """Alias for :meth:`send_events` that uses the ``/store`` endpoint."""
+        headers = self._auth_headers()
+        events_list = list(events)
+        if not events_list:
+            return
+        try:
+            if len(events_list) > 1:
+                resp = self._client.post(
+                    f"{self.base_url}/store/batch", json=events_list, headers=headers
+                )
+            else:
+                resp = self._client.post(
+                    f"{self.base_url}/store", json=events_list[0], headers=headers
+                )
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise IntegrationError(str(exc)) from exc
+
     def recall(self, payload: Mapping[str, Any]) -> Any:
         headers = self._auth_headers()
         try:
@@ -85,6 +104,25 @@ class AsyncBaseClient:
             else:
                 resp = await self._client.post(
                     f"{self.base_url}/events", json=events_list[0], headers=headers
+                )
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise IntegrationError(str(exc)) from exc
+
+    async def store_events(self, events: Iterable[Mapping[str, Any]]) -> None:
+        """Alias for :meth:`send_events` that uses the ``/store`` endpoint."""
+        headers = self._auth_headers()
+        events_list = list(events)
+        if not events_list:
+            return
+        try:
+            if len(events_list) > 1:
+                resp = await self._client.post(
+                    f"{self.base_url}/store/batch", json=events_list, headers=headers
+                )
+            else:
+                resp = await self._client.post(
+                    f"{self.base_url}/store", json=events_list[0], headers=headers
                 )
             resp.raise_for_status()
         except httpx.HTTPError as exc:

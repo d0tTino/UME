@@ -209,6 +209,24 @@ def api_post_events_batch(
     return {"status": "ok"}
 
 
+@router.post("/store/batch")
+def api_store_events_batch(
+    events: List[EventRequest] = Body(...),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+    _: None = Depends(deps.require_token),
+) -> Dict[str, Any]:
+    """Alias for :func:`api_post_events_batch`."""
+    try:
+        ingest_events_batch(
+            [e.model_dump(exclude_none=True) for e in events],
+            graph,
+        )
+    except (EventError, ProcessingError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return {"status": "ok"}
+
+
 @router.post("/redact/edge")
 def api_redact_edge(
     req: RedactEdgeRequest,
@@ -314,6 +332,21 @@ def api_post_event(
     _: None = Depends(deps.require_token),
 ) -> Dict[str, Any]:
     """Validate and apply an event to the graph."""
+    try:
+        ingest_event(req.model_dump(exclude_none=True), graph)
+    except (EventError, ProcessingError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return {"status": "ok"}
+
+
+@router.post("/store")
+def api_store_event(
+    req: EventRequest,
+    graph: IGraphAdapter = Depends(deps.get_graph),
+    _: None = Depends(deps.require_token),
+) -> Dict[str, Any]:
+    """Alias for :func:`api_post_event`."""
     try:
         ingest_event(req.model_dump(exclude_none=True), graph)
     except (EventError, ProcessingError) as exc:

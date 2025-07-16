@@ -34,6 +34,14 @@ def test_autogen_wrapper_forwards() -> None:
         assert dict(recall.calls.last.request.url.params) == {"v": "2"}
 
 
+def test_store_events_method() -> None:
+    client = CrewAI(base_url="http://ume")
+    with respx.mock(assert_all_called=True) as mock:
+        evt = mock.post("http://ume/store").mock(return_value=httpx.Response(200))
+        client.store_events([{"foo": 3}])
+        assert evt.called
+
+
 def test_crewai_env_and_error(monkeypatch) -> None:
     monkeypatch.setenv("CREWAI_UME_API_TOKEN", "tok")
     client = CrewAI(base_url="http://ume")
