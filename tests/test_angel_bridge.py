@@ -37,6 +37,7 @@ def test_consume_events_filters_by_time(tmp_path: Path, monkeypatch: pytest.Monk
     ledger.append(0, {"event_type": "CREATE_NODE", "timestamp": now, "node_id": "recent", "payload": {}})
     ledger.append(1, {"event_type": "CREATE_NODE", "timestamp": now - 5 * 3600, "node_id": "old", "payload": {}})
 
+    monkeypatch.setattr(settings, "KAFKA_BOOTSTRAP_SERVERS", "", raising=False)
     bridge = AngelBridge(lookback_hours=2)
     events = bridge.consume_events()
 

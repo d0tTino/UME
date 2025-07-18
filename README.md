@@ -340,24 +340,26 @@ PYTHONPATH=src pytest
 
 ## Security Setup
 
-Create a `.env` file in the project root before starting any services. Copy the
-template from [`env.example`](env.example) and **replace** the
-`UME_AUDIT_SIGNING_KEY` placeholder. If the file is missing or still contains
-`UME_AUDIT_SIGNING_KEY=default-key`, running `ume up` will generate a new key:
+Running `ume up` automatically creates a `.env` file from
+[`env.example`](env.example) if it doesn't exist and replaces any insecure
+defaults. A random `UME_AUDIT_SIGNING_KEY` and `UME_OAUTH_PASSWORD` are
+generated the first time you start the stack. Subsequent runs update the values
+if the file still contains the placeholders.
 
 ```bash
-$ poetry run python ume_cli.py up --no-confirm
-Regenerating .env with secure UME_AUDIT_SIGNING_KEY
-WARNING: UME_AUDIT_SIGNING_KEY uses the insecure default key. Edit .env and set a unique value.
-Replaced UME_AUDIT_SIGNING_KEY in .env with random value
+$ poetry run ume up --no-confirm
+Creating .env with secure defaults
+Installing frontend dependencies...
+Building frontend dashboard...
 Stack running. API docs: http://localhost:8000/docs
 Recall endpoint: http://localhost:8000/recall
 ```
 
-The resulting `.env` will contain something like:
+The resulting `.env` will contain values similar to:
 
 ```bash
 UME_AUDIT_SIGNING_KEY=<randomly-generated-key>
+UME_OAUTH_PASSWORD=<randomly-generated-password>
 ```
 
 See [`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md) for the full list of
@@ -371,8 +373,9 @@ poetry run ume up --no-confirm
 
 ```
 
-The command generates TLS certificates if needed and waits until the services
-become healthy before printing the main URLs:
+The command generates TLS certificates if needed, installs frontend dependencies
+on the first run, builds the React dashboard and waits until the services become
+healthy before printing the main URLs:
 
 ```
 http://localhost:8000/docs
@@ -424,11 +427,11 @@ poetry run python examples/agent_integration.py
 ```
 
 ### 8. Start the Frontend Demo
-The API now runs on `localhost:8000` via Docker Compose. Build the dashboard and start the small FastAPI server:
+The API now runs on `localhost:8000` via Docker Compose. The dashboard is built
+automatically during `ume up`. Launch the small FastAPI server:
 
 ```bash
 cd frontend
-npm run build
 poetry run python app.py
 ```
 

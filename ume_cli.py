@@ -643,7 +643,7 @@ def _compose_ps(compose_file: Path = COMPOSE_FILE) -> None:
 
 
 def _ensure_env_file(env_file: Path = Path(".env")) -> None:
-    """Ensure ``.env`` exists and contains a random audit signing key."""
+    """Create ``.env`` if missing and populate secure defaults."""
 
     created = False
     if env_file.exists():
@@ -657,29 +657,40 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
         created = True
 
     new_key = secrets.token_hex(32)
+    new_pass = secrets.token_hex(16)
     prev_key: str | None = None
-    replaced = False
+    replaced_key = False
+    replaced_pass = False
     for i, line in enumerate(env_lines):
         if line.startswith("UME_AUDIT_SIGNING_KEY="):
             prev_key = line.split("=", 1)[1]
             env_lines[i] = f"UME_AUDIT_SIGNING_KEY={new_key}"
-            replaced = True
-            break
+            replaced_key = True
+        elif line.startswith("UME_OAUTH_PASSWORD="):
+            env_lines[i] = f"UME_OAUTH_PASSWORD={new_pass}"
+            replaced_pass = True
 
-    if not replaced:
+    if not replaced_key:
         env_lines.append(f"UME_AUDIT_SIGNING_KEY={new_key}")
+    if not replaced_pass:
+        env_lines.append(f"UME_OAUTH_PASSWORD={new_pass}")
 
     env_content = "\n".join(env_lines) + "\n"
     env_file.write_text(env_content)
+
     if prev_key == "default-key":
         print(
             "WARNING: UME_AUDIT_SIGNING_KEY uses the insecure default key. "
             "Edit .env and set a unique value."
         )
+
     if created:
-        print("Created .env from env.example with random UME_AUDIT_SIGNING_KEY")
-    else:
-        print("Replaced UME_AUDIT_SIGNING_KEY in .env with random value")
+        print(
+            "Created .env from env.example with random UME_AUDIT_SIGNING_KEY "
+            "and UME_OAUTH_PASSWORD"
+        )
+    elif replaced_key or replaced_pass:
+        print("Updated secrets in .env with secure values")
 
 
 def _quickstart(no_confirm: bool = False) -> None:
@@ -687,19 +698,12 @@ def _quickstart(no_confirm: bool = False) -> None:
     env_file = Path(".env")
     if not no_confirm and not sys.stdin.isatty():
         no_confirm = True
-    if not no_confirm and not env_file.exists():
-        resp = input("Create .env from env.example? [y/N]: ")
-        if resp.lower() != "y":
-            print("Aborted.")
-            return
-    if not env_file.exists():
-        should_replace = True
-    else:
-        content = env_file.read_text()
-        should_replace = "UME_AUDIT_SIGNING_KEY=default-key" in content
-    if should_replace:
+    content = env_file.read_text() if env_file.exists() else ""
+    if not env_file.exists() or "UME_AUDIT_SIGNING_KEY=default-key" in content or "UME_OAUTH_PASSWORD=password" in content:
         if env_file.exists():
-            print("Regenerating .env with secure UME_AUDIT_SIGNING_KEY")
+            print("Regenerating .env with secure defaults")
+        else:
+            print("Creating .env with secure defaults")
         _ensure_env_file(env_file)
     cert_script = Path(__file__).resolve().parent / "docker" / "generate-certs.sh"
     cert_dir = cert_script.parent / "certs"
@@ -709,6 +713,17 @@ def _quickstart(no_confirm: bool = False) -> None:
             print("Aborted.")
             return
     subprocess.run(["bash", str(cert_script)], check=True)
+
+    frontend_dir = Path(__file__).resolve().parent / "frontend"
+    try:
+        if not (frontend_dir / "node_modules").exists():
+            print("Installing frontend dependencies...")
+            subprocess.run(["npm", "install"], cwd=frontend_dir, check=True)
+        print("Building frontend dashboard...")
+        subprocess.run(["npm", "run", "build"], cwd=frontend_dir, check=True)
+    except FileNotFoundError:
+        print("npm is required to build the dashboard. Please install Node.js.")
+
     _compose_up()
 
 
