@@ -470,6 +470,11 @@ See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
   with `Letta.send_events()` and recall results via `Letta.recall()`.
 - [MemGPT integration](examples/memgpt_integration.ipynb) – write memory events
   through `MemGPT.send_events()` and access them with `MemGPT.recall()`.
+- [CrewAI integration](examples/crewai_integration.ipynb) – forward CrewAI
+  events using `CrewAI.send_events()` and recall them via `CrewAI.recall()`.
+- [AutoGen integration](examples/autogen_integration.ipynb) – send AutoGen
+  events with `AutoGen.send_events()` and retrieve them with
+  `AutoGen.recall()`.
 - [SuperMemory integration](examples/supermemory_integration.ipynb) – log
   events using `SuperMemory.send_events()` and retrieve them with
   `SuperMemory.recall()`.
