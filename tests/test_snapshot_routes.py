@@ -193,7 +193,8 @@ def test_restore_route_builds_graph(
             "payload": {},
         },
     )
-    monkeypatch.setattr("ume.snapshot_routes.event_ledger", ledger)
+    import ume.snapshot_routes as sr  # ensure module loaded for monkeypatch
+    monkeypatch.setattr(sr, "event_ledger", ledger)
 
     graph = create_graph_adapter(db_path)
     configure_graph(graph)
@@ -409,7 +410,8 @@ def test_restore_route_temporarydir(
             },
         )
 
-        monkeypatch.setattr("ume.snapshot_routes.event_ledger", ledger)
+        import ume.snapshot_routes as sr  # ensure module loaded for monkeypatch
+        monkeypatch.setattr(sr, "event_ledger", ledger)
 
         graph = create_graph_adapter(db_path)
         configure_graph(graph)

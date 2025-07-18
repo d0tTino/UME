@@ -49,7 +49,7 @@ def test_env_file_replaced_with_warning(
 
     out = capsys.readouterr().out
     assert "insecure default key" in out
-    assert "Replaced UME_AUDIT_SIGNING_KEY in .env" in out
+    assert "Updated secrets in .env with secure values" in out
 
 
 def test_env_file_replaced_without_warning(
@@ -73,4 +73,4 @@ def test_env_file_replaced_without_warning(
 
     out = capsys.readouterr().out
     assert "insecure default key" not in out
-    assert "Replaced UME_AUDIT_SIGNING_KEY in .env" in out
+    assert "Updated secrets in .env with secure values" in out
