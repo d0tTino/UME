@@ -499,3 +499,36 @@ def test_unrestricted_snapshot_dir_allows_absolute(tmp_path: Path, monkeypatch: 
     )
     assert res.status_code == 200
 
+
+def test_restore_route_path_restriction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    monkeypatch.setenv("UME_SNAPSHOT_DIR", str(allowed))
+    monkeypatch.setattr(settings, "UME_SNAPSHOT_DIR", str(allowed), raising=False)
+    db_path = str(tmp_path / "graph.db")
+    monkeypatch.setenv("UME_GRAPH_BACKEND", "sqlite")
+    monkeypatch.setenv("UME_DB_PATH", db_path)
+    monkeypatch.setattr(settings, "UME_GRAPH_BACKEND", "sqlite", raising=False)
+    monkeypatch.setattr(settings, "UME_DB_PATH", db_path, raising=False)
+    import sqlite3
+    orig_connect = sqlite3.connect
+
+    def _connect(*a: object, **kw: object) -> sqlite3.Connection:
+        kw.setdefault("check_same_thread", False)
+        return orig_connect(*a, **kw)
+
+    monkeypatch.setattr(sqlite3, "connect", _connect)
+    graph = create_graph_adapter(db_path)
+    configure_graph(graph)
+    client = TestClient(app)
+    token = _token(client)
+
+    outside = tmp_path / "new.db"
+    res_bad = client.post(
+        "/snapshot/restore",
+        json={"path": str(outside)},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res_bad.status_code == 400
+    assert res_bad.json()["detail"] == "Path outside allowed directory"
+

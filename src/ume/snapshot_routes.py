@@ -84,6 +84,7 @@ def restore_graph(
         raise HTTPException(status_code=403, detail="Forbidden")
     if hasattr(graph, "close"):
         graph.close()
-    new_graph = build_graph_from_ledger(event_ledger, db_path=req.path)
+    path = _resolve_snapshot_path(req.path)
+    new_graph = build_graph_from_ledger(event_ledger, db_path=path)
     configure_graph(new_graph)
     return {"status": "ok"}
