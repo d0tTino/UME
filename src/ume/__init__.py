@@ -189,6 +189,7 @@ _KNOWN_SUBMODULES = {
     "resources",
     "api",
     "policy",
+    "snapshot_routes",
 }
 
 def __getattr__(name: str) -> object:  # pragma: no cover - thin wrapper

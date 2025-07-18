@@ -8,6 +8,7 @@ import os
 
 # Force pure-Python protobuf implementation for compatibility with Python 3.12
 os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "test-key")
 
 try:
     from testcontainers.core.container import DockerContainer

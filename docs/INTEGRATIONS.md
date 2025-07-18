@@ -8,6 +8,8 @@ are provided with the `Async` prefix.
 The examples below demonstrate both synchronous and asynchronous usage.
 
 ## LangGraph
+See [examples/langgraph_integration.ipynb](../examples/langgraph_integration.ipynb)
+for a minimal demonstration of `send_events` and `recall`.
 ```python
 from ume.integrations import LangGraph, AsyncLangGraph
 
@@ -24,6 +26,8 @@ async def main():
 ```
 
 ## Letta
+See [examples/letta_integration.ipynb](../examples/letta_integration.ipynb) for
+a minimal demonstration of `send_events` and `recall`.
 ```python
 from ume.integrations import Letta, AsyncLetta
 
@@ -40,6 +44,8 @@ async def main():
 ```
 
 ## MemGPT
+See [examples/memgpt_integration.ipynb](../examples/memgpt_integration.ipynb)
+for a minimal demonstration of `send_events` and `recall`.
 ```python
 from ume.integrations import MemGPT, AsyncMemGPT
 
@@ -56,6 +62,8 @@ async def main():
 ```
 
 ## CrewAI
+See [examples/crewai_integration.ipynb](../examples/crewai_integration.ipynb)
+for a minimal demonstration of `send_events` and `recall`.
 ```python
 from ume.integrations import CrewAI, AsyncCrewAI
 
@@ -72,6 +80,8 @@ async def main():
 ```
 
 ## AutoGen
+See [examples/autogen_integration.ipynb](../examples/autogen_integration.ipynb)
+for a minimal demonstration of `send_events` and `recall`.
 ```python
 from ume.integrations import AutoGen, AsyncAutoGen
 
@@ -88,6 +98,8 @@ async def main():
 ```
 
 ## SuperMemory
+See [examples/supermemory_integration.ipynb](../examples/supermemory_integration.ipynb)
+for a minimal demonstration of `send_events` and `recall`.
 ```python
 from ume.integrations import SuperMemory, AsyncSuperMemory
 
