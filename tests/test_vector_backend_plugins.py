@@ -44,3 +44,28 @@ def test_entrypoint_registration(monkeypatch):
 
     assert "dummy" in available_backends()
     assert get_backend("dummy") is DummyBackend
+
+
+def test_backend_loaded_on_import(monkeypatch):
+    module = types.ModuleType("dummy_mod")
+    module.DummyBackend = DummyBackend
+    monkeypatch.setitem(importlib.sys.modules, "dummy_mod", module)
+
+    ep = metadata.EntryPoint(
+        name="dummy_imp",
+        value="dummy_mod:DummyBackend",
+        group="ume.vector_backends",
+    )
+    monkeypatch.setattr(
+        metadata,
+        "entry_points",
+        lambda group=None: (ep,) if group == "ume.vector_backends" else (),
+    )
+
+    import sys
+
+    sys.modules.pop("ume.vector_backends", None)
+    reloaded = importlib.import_module("ume.vector_backends")
+
+    assert "dummy_imp" in reloaded.available_backends()
+    assert reloaded.get_backend("dummy_imp") is DummyBackend

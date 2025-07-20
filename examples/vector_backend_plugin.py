@@ -9,7 +9,7 @@ from ume.vector_backends import register_backend
 from ume.vector_store import VectorBackend
 
 
-class MemoryBackend(VectorBackend):
+class MemoryBackend(VectorBackend):  # type: ignore[misc]
     """Naive in-memory backend demonstrating the plugin API."""
 
     def __init__(self, dim: int, **_: object) -> None:
