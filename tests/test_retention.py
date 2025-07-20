@@ -27,6 +27,8 @@ from ume.retention import (
     stop_retention_scheduler,
     start_vector_age_scheduler,
     stop_vector_age_scheduler,
+    start_ledger_compaction_scheduler,
+    stop_ledger_compaction_scheduler,
     _check_stale_vectors,
 )
 import ume.retention as retention
@@ -201,3 +203,23 @@ def test_vector_age_scheduler_reuses_thread(monkeypatch: pytest.MonkeyPatch) -> 
     stop1()
     stop_vector_age_scheduler()
     assert thread1 is thread2
+
+
+def test_ledger_compaction_scheduler(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from ume.event_ledger import EventLedger
+
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    for i in range(5):
+        ledger.append(i, {"event_type": "E", "timestamp": i})
+    ledger.update_bookmark(4)
+
+    monkeypatch.setattr(settings, "UME_LEDGER_OFFSET_WINDOW", 2)
+
+    thread, stop = start_ledger_compaction_scheduler(
+        ledger, interval_seconds=0.01, offset_window=2
+    )
+    time.sleep(0.02)
+    stop()
+    stop_ledger_compaction_scheduler()
+
+    assert [o for o, _ in ledger.range()] == [2, 3, 4]

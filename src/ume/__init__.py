@@ -29,7 +29,12 @@ from .auto_snapshot import (
     disable_periodic_snapshot,
     enable_snapshot_autosave_and_restore,
 )
-from .retention import start_retention_scheduler, stop_retention_scheduler
+from .retention import (
+    start_retention_scheduler,
+    stop_retention_scheduler,
+    start_ledger_compaction_scheduler,
+    stop_ledger_compaction_scheduler,
+)
 from .memory_aging import (
     start_memory_aging_scheduler,
     stop_memory_aging_scheduler,
@@ -131,6 +136,8 @@ __all__ = [
     "stop_memory_aging_scheduler",
     "start_vector_age_scheduler",
     "stop_vector_age_scheduler",
+    "start_ledger_compaction_scheduler",
+    "stop_ledger_compaction_scheduler",
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",

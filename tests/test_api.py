@@ -4,6 +4,7 @@ import pytest
 from typing import Any
 import time
 import threading
+from pathlib import Path
 
 faiss = pytest.importorskip("faiss")
 if not hasattr(faiss, "IndexFlatL2"):
@@ -305,6 +306,25 @@ def test_token_cleanup_task(monkeypatch: MonkeyPatch) -> None:
         assert token in deps.TOKENS
         time.sleep(0.05)
         assert token not in deps.TOKENS
+
+
+def test_api_ledger_compaction(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    from ume.event_ledger import EventLedger
+
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    for i in range(5):
+        ledger.append(i, {"event_type": "E", "timestamp": i})
+    ledger.update_bookmark(4)
+
+    monkeypatch.setattr("ume.event_ledger.event_ledger", ledger)
+    monkeypatch.setattr(settings, "UME_LEDGER_OFFSET_WINDOW", 2)
+    monkeypatch.setattr(settings, "UME_LEDGER_COMPACTION_INTERVAL", 0.01)
+
+    with TestClient(app) as client:
+        _token(client)
+        time.sleep(0.05)
+
+    assert [o for o, _ in ledger.range()] == [2, 3, 4]
 
 
 def test_issue_tokens_concurrently() -> None:

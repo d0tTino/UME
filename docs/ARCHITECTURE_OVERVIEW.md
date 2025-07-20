@@ -97,6 +97,11 @@ adapter layer.
 Sanitized events are appended to a lightweight ledger along with their
 Redpanda offsets. The ledger can be queried via the `/ledger/events` API and
 used with `ume.replay.replay_from_ledger()` to rebuild state from any offset.
+On startup the API launches a scheduler that periodically calls
+`event_ledger.compact()` to remove entries older than
+`UME_LEDGER_OFFSET_WINDOW` offsets from the latest processed bookmark. The
+interval between compaction runs is configurable via
+`UME_LEDGER_COMPACTION_INTERVAL`.
 
 ## Policy DSL Flow
 
