@@ -1062,18 +1062,25 @@ Setting ``UME_VECTOR_BACKEND=memory`` will then use the plugin when creating a
 vector store.
 ## Running Tests
 
-Install dependencies in editable mode before running tests:
+Install development dependencies before running tests:
 
 ```bash
-pip install -e .
-pytest -q
+poetry install --with dev
+poetry run pytest -q
 ```
 
-Some tests rely on optional integrations:
+You can also run the helper script which installs everything, including dev tools:
 
 ```bash
-pip install ume[integrations]
-pytest -q
+./codex_setup.sh
+poetry run pytest -q
+```
+
+Some tests rely on optional integrations. Install them with:
+
+```bash
+poetry install --with dev --all-extras
+poetry run pytest -q
 ```
 
 

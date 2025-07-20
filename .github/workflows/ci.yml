@@ -57,6 +57,8 @@ jobs:
       - uses: ./.github/actions/setup-python-poetry
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: poetry install --with dev --extras vector --extras embedding
       - name: Run unit tests with coverage
         run: poetry run pytest --cov=ume --cov-report xml --cov-fail-under=30 -m "not integration"
 
@@ -72,6 +74,8 @@ jobs:
       - uses: ./.github/actions/setup-python-poetry
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: poetry install --with dev --extras vector --extras embedding
       - name: Run integration tests
         env:
           UME_DOCKER_TESTS: true
