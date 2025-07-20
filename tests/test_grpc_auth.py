@@ -22,9 +22,11 @@ class DummyStore:
     pass
 
 
-async def _run_server(port_holder: list[int], svc_holder: list[UMEServicer]):
+async def _run_server(
+    port_holder: list[int], svc_holder: list[UMEServicer], token: str | None
+):
     server = grpc.aio.server()
-    svc = UMEServicer(DummyQE(), DummyStore(), api_token="secret")
+    svc = UMEServicer(DummyQE(), DummyStore(), api_token=token)
     svc_holder.append(svc)
     ume_pb2_grpc.add_UMEServicer_to_server(svc, server)
     port_holder.append(server.add_insecure_port("localhost:0"))
@@ -35,18 +37,27 @@ async def _run_server(port_holder: list[int], svc_holder: list[UMEServicer]):
         await server.stop(None)
 
 
-async def _run_tests(port: int):
+async def _run_tests(port: int, token: str | None, expect_success: bool = True):
     channel = grpc.aio.insecure_channel(f"localhost:{port}")
     stub = ume_pb2_grpc.UMEStub(channel)
     with pytest.raises(grpc.aio.AioRpcError) as exc:
         await stub.RunCypher(ume_pb2.CypherQuery(cypher="RETURN 1"))
     assert exc.value.code() == grpc.StatusCode.UNAUTHENTICATED
 
-    res = await stub.RunCypher(
-        ume_pb2.CypherQuery(cypher="RETURN 1"),
-        metadata=[("authorization", "Bearer secret")],
-    )
-    assert len(res.records) == 0
+    if token:
+        if expect_success:
+            res = await stub.RunCypher(
+                ume_pb2.CypherQuery(cypher="RETURN 1"),
+                metadata=[("authorization", f"Bearer {token}")],
+            )
+            assert len(res.records) == 0
+        else:
+            with pytest.raises(grpc.aio.AioRpcError) as exc:
+                await stub.RunCypher(
+                    ume_pb2.CypherQuery(cypher="RETURN 1"),
+                    metadata=[("authorization", f"Bearer {token}")],
+                )
+            assert exc.value.code() == grpc.StatusCode.UNAUTHENTICATED
     await channel.close()
 
 
@@ -55,10 +66,28 @@ def test_grpc_authentication():
     svcs: list[UMEServicer] = []
 
     async def runner():
-        task = asyncio.create_task(_run_server(ports, svcs))
+        task = asyncio.create_task(_run_server(ports, svcs, "secret"))
         while not ports:
             await asyncio.sleep(0.01)
-        await _run_tests(ports[0])
+        await _run_tests(ports[0], "secret")
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+
+
+def test_grpc_authentication_no_token():
+    ports: list[int] = []
+    svcs: list[UMEServicer] = []
+
+    async def runner():
+        task = asyncio.create_task(_run_server(ports, svcs, ""))
+        while not ports:
+            await asyncio.sleep(0.01)
+        await _run_tests(ports[0], "secret", expect_success=False)
         task.cancel()
         try:
             await task

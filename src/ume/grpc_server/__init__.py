@@ -6,6 +6,7 @@ from __future__ import annotations
 import typing
 import asyncio
 import math
+import logging
 
 import grpc
 from google.protobuf import struct_pb2, empty_pb2
@@ -47,6 +48,12 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
 
     async def _require_auth(self, context: grpc.aio.ServicerContext) -> None:
         if self.api_token is None and self.auth_callback is None:
+            return
+        if self.api_token == "":
+            logging.getLogger(__name__).warning(
+                "UME_GRPC_TOKEN is empty; rejecting unauthenticated requests"
+            )
+            await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
             return
         metadata = {k.lower(): v for k, v in context.invocation_metadata()}
         header = metadata.get("authorization")
