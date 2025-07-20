@@ -8,12 +8,12 @@ def test_umeprompt_commands(tmp_path: Path) -> None:
     os.environ["UME_CLI_DB"] = ":memory:"
     os.environ["UME_ROLE"] = "AnalyticsAgent"
     import importlib
-    import ume_cli as cli
+    import ume.cli.prompt as prompt
     import ume.config as cfg
     importlib.reload(cfg)
-    importlib.reload(cli)
-    UMEPrompt = cli.UMEPrompt
-    _setup_warnings = cli._setup_warnings
+    importlib.reload(prompt)
+    UMEPrompt = prompt.UMEPrompt
+    from ume_cli import _setup_warnings
     prompt = UMEPrompt()
     prompt.do_new_node('n1 "{}"')
     prompt.do_new_node('n2 "{}"')
@@ -54,17 +54,17 @@ def test_umeprompt_commands(tmp_path: Path) -> None:
 
 def test_compose_ps(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     import importlib
-    import ume_cli as cli
+    from ume.cli import compose
 
-    importlib.reload(cli)
+    importlib.reload(compose)
 
     def fake_check_output(cmd: list[str], **_: object) -> str:
         assert "ps" in cmd
         return "api healthy\nagent unhealthy"
 
-    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
 
-    cli._compose_ps()
+    compose._compose_ps()
 
     out = capsys.readouterr().out
     assert "api: healthy" in out
@@ -75,17 +75,19 @@ def test_up_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     import importlib
     import sys
     import ume_cli as cli
+    from ume.cli import compose
 
     importlib.reload(cli)
+    importlib.reload(compose)
 
     calls: list[str] = []
 
     def fake_compose_up(*_: object, **__: object) -> None:
         calls.append("up")
 
-    monkeypatch.setattr(cli, "_compose_up", fake_compose_up)
-    monkeypatch.setattr(cli, "_ensure_env_file", lambda *_: None)
-    monkeypatch.setattr(cli.subprocess, "run", lambda *a, **k: None)
+    monkeypatch.setattr(compose, "_compose_up", fake_compose_up)
+    monkeypatch.setattr(compose, "_ensure_env_file", lambda *_: None)
+    monkeypatch.setattr(compose.subprocess, "run", lambda *a, **k: None)
 
     sys.argv = ["ume_cli.py", "up", "--no-confirm"]
     cli.main()

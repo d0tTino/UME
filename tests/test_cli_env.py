@@ -9,14 +9,14 @@ import pytest
 def test_env_file_created(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import ume_cli as cli
+    from ume.cli import compose
 
-    importlib.reload(cli)
+    importlib.reload(compose)
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "new-key")
+    monkeypatch.setattr(compose.secrets, "token_hex", lambda *_: "new-key")
 
-    cli._ensure_env_file()
+    compose._ensure_env_file()
 
     env_file = tmp_path / ".env"
     assert env_file.exists()
@@ -31,19 +31,19 @@ def test_env_file_created(
 def test_env_file_replaced_with_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import ume_cli as cli
+    from ume.cli import compose
 
     env_file = tmp_path / ".env"
     env_file.write_text(
         "UME_AUDIT_SIGNING_KEY=default-key\n"  # pragma: allowlist secret
     )
 
-    importlib.reload(cli)
+    importlib.reload(compose)
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "new-key")
+    monkeypatch.setattr(compose.secrets, "token_hex", lambda *_: "new-key")
 
-    cli._ensure_env_file()
+    compose._ensure_env_file()
 
     assert "UME_AUDIT_SIGNING_KEY=new-key" in env_file.read_text()
 
@@ -55,19 +55,19 @@ def test_env_file_replaced_with_warning(
 def test_env_file_replaced_without_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import ume_cli as cli
+    from ume.cli import compose
 
     env_file = tmp_path / ".env"
     env_file.write_text(
         "UME_AUDIT_SIGNING_KEY=old-key\n"  # pragma: allowlist secret
     )
 
-    importlib.reload(cli)
+    importlib.reload(compose)
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "new-key")
+    monkeypatch.setattr(compose.secrets, "token_hex", lambda *_: "new-key")
 
-    cli._ensure_env_file()
+    compose._ensure_env_file()
 
     assert "UME_AUDIT_SIGNING_KEY=new-key" in env_file.read_text()
 
