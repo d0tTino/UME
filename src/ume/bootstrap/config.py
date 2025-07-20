@@ -40,6 +40,7 @@ def load_config(package: str) -> tuple[types.ModuleType, type]:
             UME_LOG_JSON=False,
             UME_GRAPH_RETENTION_DAYS=30,
             UME_RELIABILITY_THRESHOLD=0.5,
+            UME_LEDGER_OFFSET_WINDOW=1000,
             WATCH_PATHS=["."],
             DAG_RESOURCES={"cpu": 1, "io": 1},
             UME_VALUE_STORE_PATH=None,
