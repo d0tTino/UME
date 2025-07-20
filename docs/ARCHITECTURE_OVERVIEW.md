@@ -149,3 +149,16 @@ The web dashboard now includes a view showing the overseer's recommended
 actions. Data is fetched from the `/recommendations` endpoint and each
 item can be accepted or rejected. User feedback is stored for future
 analysis and helps refine subsequent suggestions.
+
+## Graph Viewer
+
+The `/graph` page visualizes the current knowledge graph. The React component
+fetches data from `/graph/dump` and renders it using `vis-network`.
+
+```javascript
+fetch('/graph/dump', { headers: { Authorization: 'Bearer TOKEN' } })
+  .then((r) => r.json())
+  .then((data) => {
+    // pass data.nodes and data.edges to vis-network
+  });
+```
