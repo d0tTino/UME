@@ -23,6 +23,7 @@ from ..processing import ProcessingError
 from ..snapshot import snapshot_graph_to_file, load_graph_into_existing
 from ume.services.ingest import ingest_envelope, ingest_envelope_async
 from ..async_graph_adapter import IAsyncGraphAdapter
+from ..event_ledger import event_ledger
 import inspect
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
@@ -205,6 +206,19 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         except Exception as exc:  # pragma: no cover - unexpected errors
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
         return empty_pb2.Empty()
+
+    async def GetBookmark(
+        self, request: empty_pb2.Empty, context: grpc.aio.ServicerContext
+    ) -> ume_pb2.Bookmark:
+        await self._require_auth(context)
+        return ume_pb2.Bookmark(offset=event_ledger.last_processed_offset)
+
+    async def SetBookmark(
+        self, request: ume_pb2.Bookmark, context: grpc.aio.ServicerContext
+    ) -> ume_pb2.Bookmark:
+        await self._require_auth(context)
+        event_ledger.update_bookmark(request.offset)
+        return ume_pb2.Bookmark(offset=request.offset)
 
 
 class AsyncServer:

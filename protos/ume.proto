@@ -65,6 +65,10 @@ message SnapshotPath {
   string path = 1;
 }
 
+message Bookmark {
+  int64 offset = 1;
+}
+
 service UME {
   rpc RunCypher(CypherQuery) returns (CypherResult);
   // Server streaming variant of RunCypher
@@ -75,6 +79,8 @@ service UME {
   rpc PublishEvent(PublishEventRequest) returns (google.protobuf.Empty);
   rpc SaveSnapshot(SnapshotPath) returns (google.protobuf.Empty);
   rpc LoadSnapshot(SnapshotPath) returns (google.protobuf.Empty);
+  rpc GetBookmark(google.protobuf.Empty) returns (Bookmark);
+  rpc SetBookmark(Bookmark) returns (Bookmark);
 }
 
 message Task {

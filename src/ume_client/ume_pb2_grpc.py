@@ -75,6 +75,16 @@ class UMEStub(object):
                 request_serializer=ume__pb2.SnapshotPath.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
+        self.GetBookmark = channel.unary_unary(
+                '/ume.UME/GetBookmark',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=ume__pb2.Bookmark.FromString,
+                _registered_method=True)
+        self.SetBookmark = channel.unary_unary(
+                '/ume.UME/SetBookmark',
+                request_serializer=ume__pb2.Bookmark.SerializeToString,
+                response_deserializer=ume__pb2.Bookmark.FromString,
+                _registered_method=True)
 
 
 class UMEServicer(object):
@@ -129,6 +139,18 @@ class UMEServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetBookmark(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetBookmark(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_UMEServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -171,6 +193,16 @@ def add_UMEServicer_to_server(servicer, server):
                     servicer.LoadSnapshot,
                     request_deserializer=ume__pb2.SnapshotPath.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'GetBookmark': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetBookmark,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=ume__pb2.Bookmark.SerializeToString,
+            ),
+            'SetBookmark': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetBookmark,
+                    request_deserializer=ume__pb2.Bookmark.FromString,
+                    response_serializer=ume__pb2.Bookmark.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -389,6 +421,60 @@ class UME(object):
             '/ume.UME/LoadSnapshot',
             ume__pb2.SnapshotPath.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetBookmark(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.UME/GetBookmark',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ume__pb2.Bookmark.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SetBookmark(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/ume.UME/SetBookmark',
+            ume__pb2.Bookmark.SerializeToString,
+            ume__pb2.Bookmark.FromString,
             options,
             channel_credentials,
             insecure,
