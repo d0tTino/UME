@@ -40,6 +40,11 @@ jobs:
           npm ci
           npm run build
 
+      - name: Run frontend tests
+        if: steps.changes.outputs.run == 'true'
+        working-directory: frontend
+        run: npm test
+
   unit-tests:
     runs-on: ubuntu-latest
     needs: lint-and-install
