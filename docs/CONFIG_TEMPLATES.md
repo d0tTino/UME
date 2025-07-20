@@ -77,8 +77,9 @@ Valid values for `UME_GRAPH_BACKEND` are:
 | `UME_ROLE` | *(unset)* | Optional role for the CLI. |
 | `UME_API_ROLE` | *(unset)* | Optional role applied by the API server. |
 | `UME_RATE_LIMIT_REDIS` | *(unset)* | Redis URL for API rate limiting. |
+| `UME_VECTOR_BACKEND` | `faiss` | Vector store backend (`faiss`, `chroma`, or plugin such as `memory`). |
 | `UME_VECTOR_DIM` | `1536` | Dimension of embedding vectors. |
-| `UME_VECTOR_INDEX` | `vectors.faiss` | FAISS index file path. |
+| `UME_VECTOR_INDEX` | `vectors.faiss` | Vector index file path. |
 | `UME_VECTOR_USE_GPU` | `False` | Whether to build the index on a GPU. |
 | `UME_VECTOR_GPU_MEM_MB` | `256` | GPU memory used when building the index. |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Comma separated list of Kafka brokers. |

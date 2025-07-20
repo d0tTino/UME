@@ -42,7 +42,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_VALUE_STORE_PATH: str | None = None
 
     # Vector store
-    UME_VECTOR_BACKEND: str = "faiss"  # faiss or chroma
+    UME_VECTOR_BACKEND: str = "faiss"  # faiss, chroma, or plugin name
     UME_VECTOR_DIM: int = 2
     UME_VECTOR_INDEX: str = "vectors.faiss"
     UME_VECTOR_USE_GPU: bool = False

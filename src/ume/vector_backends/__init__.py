@@ -74,11 +74,13 @@ class FaissBackend(VectorBackend):
         index_size_metric: Gauge | None = None,
     ) -> None:
         if faiss is None:
-            raise ImportError("faiss is required for FaissBackend")
+            raise ImportError(
+                "faiss is required for FaissBackend. Install it with 'poetry install --with vector'"
+            )
 
         self.path = path or settings.UME_VECTOR_INDEX
-        if path:  # pragma: no cover - filesystem
-            dirpath = os.path.dirname(path)
+        if self.path:  # pragma: no cover - filesystem
+            dirpath = os.path.dirname(self.path)
             if dirpath:
                 os.makedirs(dirpath, exist_ok=True)
         self.id_to_idx: Dict[str, int] = {}
@@ -347,8 +349,8 @@ class ChromaBackend(VectorBackend):
         **__: object,
     ) -> None:
         self.path = path or settings.UME_VECTOR_INDEX
-        if path:  # pragma: no cover - filesystem
-            dirpath = os.path.dirname(path)
+        if self.path:  # pragma: no cover - filesystem
+            dirpath = os.path.dirname(self.path)
             if dirpath:
                 os.makedirs(dirpath, exist_ok=True)
         self.dim = dim
