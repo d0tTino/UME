@@ -271,12 +271,12 @@ def test_cli_sync_without_peer() -> None:
 
 def test_cli_set_peer_and_sync_calls_replicator(monkeypatch: pytest.MonkeyPatch) -> None:
     import importlib
-    import ume_cli as cli
     import ume.config as cfg
     import ume.federation as federation
+    import ume.cli.prompt as prompt
 
     importlib.reload(cfg)
-    importlib.reload(cli)
+    importlib.reload(prompt)
 
     called: list[str] = []
 
@@ -291,7 +291,7 @@ def test_cli_set_peer_and_sync_calls_replicator(monkeypatch: pytest.MonkeyPatch)
             called.append("stop")
 
     monkeypatch.setattr(federation, "ClusterReplicator", DummyReplicator)
-    prompt = cli.UMEPrompt()
+    prompt = prompt.UMEPrompt()
     prompt.do_set_peer("foo:9092")
     prompt.do_sync("")
 
@@ -303,8 +303,10 @@ def test_cli_set_peer_and_sync_calls_replicator(monkeypatch: pytest.MonkeyPatch)
 def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     import importlib
     import ume_cli as cli
+    from ume.cli import compose
 
     importlib.reload(cli)
+    importlib.reload(compose)
 
     run_calls: list[list[str]] = []
 
@@ -317,10 +319,10 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
 
         return ""
 
-    monkeypatch.setattr(cli.subprocess, "run", fake_run)
-    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
-    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
-    monkeypatch.setattr(cli, "_ensure_env_file", lambda *_: None)
+    monkeypatch.setattr(compose.subprocess, "run", fake_run)
+    monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(compose.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(compose, "_ensure_env_file", lambda *_: None)
 
     argv = sys.argv[:]
     sys.argv = ["ume-cli", "up", "--no-confirm"]
@@ -369,8 +371,10 @@ def test_cli_up_custom_compose(
     """Start the stack using a temporary compose file."""
     import importlib
     import ume_cli as cli
+    from ume.cli import compose
 
     importlib.reload(cli)
+    importlib.reload(compose)
 
     compose_file = tmp_path / "docker-compose.yml"
     compose_file.write_text(
@@ -401,12 +405,12 @@ def test_cli_up_custom_compose(
         return ""
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli.subprocess, "run", fake_run)
-    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
-    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
-    orig_compose_up = cli._compose_up
+    monkeypatch.setattr(compose.subprocess, "run", fake_run)
+    monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(compose.time, "sleep", lambda *_: None)
+    orig_compose_up = compose._compose_up
     monkeypatch.setattr(
-        cli,
+        compose,
         "_compose_up",
         lambda compose_file=compose_file, timeout=120: orig_compose_up(
             compose_file, timeout
@@ -430,8 +434,10 @@ def test_cli_quickstart_creates_env_file(
 ) -> None:
     import importlib
     import ume_cli as cli
+    from ume.cli import compose
 
     importlib.reload(cli)
+    importlib.reload(compose)
 
     run_calls: list[list[str]] = []
 
@@ -444,9 +450,9 @@ def test_cli_quickstart_creates_env_file(
         return ""
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli.subprocess, "run", fake_run)
-    monkeypatch.setattr(cli.subprocess, "check_output", fake_check_output)
-    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(compose.subprocess, "run", fake_run)
+    monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
+    monkeypatch.setattr(compose.time, "sleep", lambda *_: None)
 
     argv = sys.argv[:]
     sys.argv = ["ume-cli", "quickstart", "--no-confirm"]
@@ -530,17 +536,17 @@ def test_cli_env_file_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     import importlib
-    import ume_cli as cli
+    from ume.cli import compose
 
-    importlib.reload(cli)
+    importlib.reload(compose)
 
     env_file = tmp_path / ".env"
     env_file.write_text("UME_AUDIT_SIGNING_KEY=default-key\n")  # pragma: allowlist secret
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "new-key")
+    monkeypatch.setattr(compose.secrets, "token_hex", lambda *_: "new-key")
 
-    cli._ensure_env_file()
+    compose._ensure_env_file()
 
     out = capsys.readouterr().out
     assert "insecure default key" in out
@@ -550,17 +556,17 @@ def test_cli_env_file_no_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     import importlib
-    import ume_cli as cli
+    from ume.cli import compose
 
-    importlib.reload(cli)
+    importlib.reload(compose)
 
     env_file = tmp_path / ".env"
     env_file.write_text("UME_AUDIT_SIGNING_KEY=old-key\n")
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli.secrets, "token_hex", lambda *_: "default-key")
+    monkeypatch.setattr(compose.secrets, "token_hex", lambda *_: "default-key")
 
-    cli._ensure_env_file()
+    compose._ensure_env_file()
 
     out = capsys.readouterr().out
     assert "insecure default key" not in out
