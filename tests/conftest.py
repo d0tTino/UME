@@ -71,7 +71,9 @@ if importlib.util.find_spec("prometheus_client") is None:
     sys.modules.setdefault("prometheus_client", prom_stub)
 
 if importlib.util.find_spec("numpy") is None:
-    sys.modules.setdefault("numpy", types.ModuleType("numpy"))
+    numpy_stub = types.ModuleType("numpy")
+    numpy_stub.asarray = lambda x, dtype=None: list(x)
+    sys.modules.setdefault("numpy", numpy_stub)
 
 jsonschema_stub = types.ModuleType("jsonschema")
 class _ValidationError(Exception):
@@ -97,6 +99,11 @@ _OPTIONAL_PACKAGES = [
     "structlog",
     "neo4j",
     "faiss",
+    "fastapi_limiter",
+    "sse_starlette",
+    "networkx",
+    "grpc",
+    "aiosqlite",
 ]
 
 for _package in _OPTIONAL_PACKAGES:

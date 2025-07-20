@@ -27,6 +27,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
+from .retention import (
+    start_ledger_compaction_scheduler,
+    stop_ledger_compaction_scheduler,
+)
 
 from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter  # noqa: F401
@@ -57,6 +61,7 @@ configure_vector_store = api_deps.configure_vector_store  # noqa: F401 re-export
 TOKEN_CLEANUP_INTERVAL = 60.0
 
 _token_cleanup_task: asyncio.Task | None = None
+_ledger_compaction_stop: Callable[[], None] | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -140,9 +145,18 @@ async def _token_cleanup_loop(interval: float) -> None:
 @app.on_event("startup")
 async def _start_token_cleanup() -> None:
     """Launch background task for expired token cleanup."""
-    global _token_cleanup_task
+    from .event_ledger import event_ledger
+
+    global _token_cleanup_task, _ledger_compaction_stop
     interval = min(TOKEN_CLEANUP_INTERVAL, settings.UME_OAUTH_TTL)
     _token_cleanup_task = asyncio.create_task(_token_cleanup_loop(interval))
+
+    _, stop = start_ledger_compaction_scheduler(
+        event_ledger,
+        interval_seconds=settings.UME_LEDGER_COMPACTION_INTERVAL,
+        offset_window=settings.UME_LEDGER_OFFSET_WINDOW,
+    )
+    _ledger_compaction_stop = stop
 
 
 @app.on_event("shutdown")
@@ -156,7 +170,7 @@ def _close_vector_store() -> None:
 @app.on_event("shutdown")
 async def _stop_token_cleanup() -> None:
     """Cancel the background token cleanup task if running."""
-    global _token_cleanup_task
+    global _token_cleanup_task, _ledger_compaction_stop
     if _token_cleanup_task is not None:
         _token_cleanup_task.cancel()
         try:
@@ -164,6 +178,9 @@ async def _stop_token_cleanup() -> None:
         except Exception:
             pass
         _token_cleanup_task = None
+    if _ledger_compaction_stop is not None:
+        stop_ledger_compaction_scheduler()
+        _ledger_compaction_stop = None
 
 
 @app.middleware("http")

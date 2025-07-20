@@ -17,6 +17,10 @@ _vector_thread: threading.Thread | None = None
 _vector_stop: threading.Event | None = None
 _vector_params: tuple[Any, ...] | None = None
 
+_ledger_thread: threading.Thread | None = None
+_ledger_stop: threading.Event | None = None
+_ledger_params: tuple[Any, ...] | None = None
+
 
 class _SupportsPurge(Protocol):
     """Graph-like object able to purge old records."""
@@ -150,3 +154,65 @@ def stop_vector_age_scheduler() -> None:
     _vector_thread = None
     _vector_stop = None
     _vector_params = None
+
+
+def start_ledger_compaction_scheduler(
+    ledger: Any,
+    *,
+    interval_seconds: float = 24 * 3600,
+    offset_window: int = settings.UME_LEDGER_OFFSET_WINDOW,
+) -> tuple[threading.Thread, Callable[[], None]]:
+    """Compact the event ledger periodically in a background thread."""
+
+    global _ledger_thread, _ledger_stop, _ledger_params
+
+    params = (ledger, interval_seconds, offset_window)
+
+    if _ledger_thread and _ledger_thread.is_alive():
+        if params == _ledger_params:
+            return _ledger_thread, lambda: None
+        stop_ledger_compaction_scheduler()
+
+    stop_event = threading.Event()
+
+    def _run() -> None:
+        def _compact() -> None:
+            cutoff = ledger.last_processed_offset - offset_window
+            ledger.compact(cutoff)
+
+        try:
+            _compact()
+        except Exception:  # pragma: no cover - log and continue
+            logger.exception("Failed to compact event ledger")
+
+        while not stop_event.wait(interval_seconds):
+            try:
+                _compact()
+            except Exception:  # pragma: no cover - log and continue
+                logger.exception("Failed to compact event ledger")
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    _ledger_thread = thread
+    _ledger_stop = stop_event
+    _ledger_params = params
+
+    def stop() -> None:
+        stop_event.set()
+        thread.join()
+
+    return thread, stop
+
+
+def stop_ledger_compaction_scheduler() -> None:
+    """Stop the ledger compaction scheduler if running."""
+
+    global _ledger_thread, _ledger_stop, _ledger_params
+    if _ledger_stop is not None:
+        _ledger_stop.set()
+    if _ledger_thread is not None:
+        _ledger_thread.join()
+    _ledger_thread = None
+    _ledger_stop = None
+    _ledger_params = None
