@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import PiiStatus from './PiiStatus';
 import PolicyEditor from './PolicyEditor';
 import Recommendations from './Recommendations';
 import ConsentLedger from './ConsentLedger';
 import Recall from './Recall';
 import GraphView from './GraphView';
+import GraphNetwork from './GraphNetwork';
 import NodeSearch from './NodeSearch';
 import EdgeList from './EdgeList';
 import LedgerHistory from './LedgerHistory';
@@ -120,25 +122,7 @@ function App() {
     setEditingPolicy(name);
   };
 
-  if (!token) {
-    return (
-      <form onSubmit={login} style={{ padding: '20px' }}>
-        <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-        <input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ marginLeft: '4px' }}
-        />
-        <button type="submit" style={{ marginLeft: '4px' }}>
-          Login
-        </button>
-      </form>
-    );
-  }
-
-  return (
+  const Dashboard = () => (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <button onClick={loadStats}>Refresh Stats</button>
       <button onClick={loadEvents} style={{ marginLeft: '4px' }}>
@@ -180,6 +164,39 @@ function App() {
       </ul>
       <PolicyEditor token={token} policy={editingPolicy} onSaved={loadPolicies} />
     </div>
+  );
+
+  if (!token) {
+    return (
+      <form onSubmit={login} style={{ padding: '20px' }}>
+        <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{ marginLeft: '4px' }}
+        />
+        <button type="submit" style={{ marginLeft: '4px' }}>
+          Login
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <nav style={{ padding: '8px' }}>
+        <Link to="/">Dashboard</Link>
+        <Link to="/graph" style={{ marginLeft: '8px' }}>
+          Graph
+        </Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/graph" element={<GraphNetwork token={token} />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

@@ -7,7 +7,9 @@ import uvicorn
 
 def create_app(directory: str) -> FastAPI:
     app = FastAPI()
-    app.mount("/dashboard", StaticFiles(directory=directory, html=True), name="dashboard")
+    static = StaticFiles(directory=directory, html=True)
+    app.mount("/dashboard", static, name="dashboard")
+    app.mount("/graph", static, name="graph")
     return app
 
 
