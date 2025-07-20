@@ -70,6 +70,18 @@ class AsyncUMEClient:
         request = ume_pb2.SnapshotPath(path=path)
         await self._stub.LoadSnapshot(request, metadata=self._metadata)
 
+    async def get_bookmark(self) -> int:
+        response = await self._stub.GetBookmark(
+            ume_pb2.google_dot_protobuf_dot_empty__pb2.Empty(),
+            metadata=self._metadata,
+        )
+        return response.offset
+
+    async def set_bookmark(self, offset: int) -> int:
+        request = ume_pb2.Bookmark(offset=offset)
+        response = await self._stub.SetBookmark(request, metadata=self._metadata)
+        return response.offset
+
     async def close(self) -> None:
         await self._channel.close()
 
