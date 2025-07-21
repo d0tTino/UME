@@ -190,3 +190,37 @@ def test_grpc_bookmark_persistence(tmp_path: pathlib.Path, monkeypatch) -> None:
     replay_from_ledger(g, ledger2, start_offset=ledger2.last_processed_offset + 1)
     assert set(g.get_all_node_ids()) == {"n2"}
 
+
+def test_grpc_bookmark_invalid(tmp_path: pathlib.Path, monkeypatch) -> None:
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    monkeypatch.setattr("ume.grpc_server.event_ledger", ledger)
+
+    async def _run_server(port_holder: list[int]) -> None:
+        server = grpc.aio.server()
+        svc = UMEServicer(DummyQE(), DummyStore())
+        ume_pb2_grpc.add_UMEServicer_to_server(svc, server)
+        port_holder.append(server.add_insecure_port("localhost:0"))
+        await server.start()
+        await server.wait_for_termination()
+
+    async def _set_bad(port: int) -> None:
+        async with AsyncUMEClient(f"localhost:{port}") as client:
+            with pytest.raises(grpc.aio.AioRpcError) as exc:
+                await client.set_bookmark(-1)
+            assert exc.value.code() == grpc.StatusCode.INVALID_ARGUMENT
+
+    ports: list[int] = []
+
+    async def runner() -> None:
+        server_task = asyncio.create_task(_run_server(ports))
+        while not ports:
+            await asyncio.sleep(0.01)
+        await _set_bad(ports[0])
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+

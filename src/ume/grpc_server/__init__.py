@@ -217,7 +217,10 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         self, request: ume_pb2.Bookmark, context: grpc.aio.ServicerContext
     ) -> ume_pb2.Bookmark:
         await self._require_auth(context)
-        event_ledger.update_bookmark(request.offset)
+        try:
+            event_ledger.update_bookmark(request.offset)
+        except ValueError as exc:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
         return ume_pb2.Bookmark(offset=request.offset)
 
 

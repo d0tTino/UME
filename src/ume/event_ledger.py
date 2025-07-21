@@ -88,6 +88,8 @@ class EventLedger:
         return self._last_processed_offset
 
     def update_bookmark(self, offset: int) -> None:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         with self.conn:
             self.conn.execute(
                 "INSERT INTO bookmark(id, last_offset) VALUES(0, ?) "
