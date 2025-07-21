@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Iterable, Mapping
+from typing import Any, AsyncGenerator, Generator, Iterable, Mapping
 from types import TracebackType
 
 import httpx
+import json
 
 
 class IntegrationError(Exception):
@@ -67,6 +68,42 @@ class BaseClient:
             )
             resp.raise_for_status()
             return resp.json()
+        except httpx.HTTPError as exc:
+            raise IntegrationError(str(exc)) from exc
+
+    def recall_stream(self, payload: Mapping[str, Any]) -> Generator[Mapping[str, Any], None, None]:
+        """Yield recall results using the ``/recall/stream`` SSE endpoint."""
+        headers = self._auth_headers()
+        try:
+            with self._client.stream(
+                "GET",
+                f"{self.base_url}/recall/stream",
+                params=payload,
+                headers=headers,
+                timeout=None,
+            ) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if line.startswith("data: "):
+                        yield json.loads(line[6:])
+        except httpx.HTTPError as exc:
+            raise IntegrationError(str(exc)) from exc
+
+    def path_stream(self, payload: Mapping[str, Any]) -> Generator[str, None, None]:
+        """Yield nodes along a path using the ``/analytics/path/stream`` SSE endpoint."""
+        headers = self._auth_headers()
+        try:
+            with self._client.stream(
+                "GET",
+                f"{self.base_url}/analytics/path/stream",
+                params=payload,
+                headers=headers,
+                timeout=None,
+            ) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if line.startswith("data: "):
+                        yield line[6:]
         except httpx.HTTPError as exc:
             raise IntegrationError(str(exc)) from exc
 
@@ -136,6 +173,42 @@ class AsyncBaseClient:
             )
             resp.raise_for_status()
             return resp.json()
+        except httpx.HTTPError as exc:
+            raise IntegrationError(str(exc)) from exc
+
+    async def recall_stream(self, payload: Mapping[str, Any]) -> AsyncGenerator[Mapping[str, Any], None]:
+        """Yield recall results using the ``/recall/stream`` SSE endpoint."""
+        headers = self._auth_headers()
+        try:
+            async with self._client.stream(
+                "GET",
+                f"{self.base_url}/recall/stream",
+                params=payload,
+                headers=headers,
+                timeout=None,
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if line.startswith("data: "):
+                        yield json.loads(line[6:])
+        except httpx.HTTPError as exc:
+            raise IntegrationError(str(exc)) from exc
+
+    async def path_stream(self, payload: Mapping[str, Any]) -> AsyncGenerator[str, None]:
+        """Yield nodes along a path using the ``/analytics/path/stream`` SSE endpoint."""
+        headers = self._auth_headers()
+        try:
+            async with self._client.stream(
+                "GET",
+                f"{self.base_url}/analytics/path/stream",
+                params=payload,
+                headers=headers,
+                timeout=None,
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if line.startswith("data: "):
+                        yield line[6:]
         except httpx.HTTPError as exc:
             raise IntegrationError(str(exc)) from exc
 

@@ -107,3 +107,20 @@ def test_error_handling() -> None:
         mock.post("http://ume/events").mock(return_value=httpx.Response(500))
         with pytest.raises(IntegrationError):
             client.send_events([{"foo": "bar"}])
+
+
+def test_stream_methods() -> None:
+    client = BaseClient(base_url="http://ume")
+    stream_body = b"data: {\"id\": 1}\n\ndata: {\"id\": 2}\n\n"
+    path_body = b"data: a\n\ndata: b\n\n"
+    with respx.mock(assert_all_called=True) as mock:
+        mock.get("http://ume/recall/stream").mock(
+            return_value=httpx.Response(200, stream=httpx.ByteStream(stream_body))
+        )
+        mock.get("http://ume/analytics/path/stream").mock(
+            return_value=httpx.Response(200, stream=httpx.ByteStream(path_body))
+        )
+        items = list(client.recall_stream({"node_id": "n1"}))
+        nodes = list(client.path_stream({"source": "a", "target": "b"}))
+    assert items == [{"id": 1}, {"id": 2}]
+    assert nodes == ["a", "b"]
