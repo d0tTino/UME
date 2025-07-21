@@ -3,8 +3,9 @@ import sys
 import pytest
 
 
-def test_import_without_key(monkeypatch):
+def test_import_without_key(monkeypatch, tmp_path):
     monkeypatch.delenv("UME_AUDIT_SIGNING_KEY", raising=False)
+    monkeypatch.chdir(tmp_path)
     sys.modules.pop("ume", None)
     sys.modules.pop("ume.config", None)
     with pytest.raises(ValueError):

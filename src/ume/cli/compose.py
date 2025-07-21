@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import secrets
 import subprocess
 import sys
@@ -18,6 +19,8 @@ COMPOSE_FILE = ROOT_DIR / "docker" / "docker-compose.yml"
 
 def _require_docker() -> None:
     """Exit with a message if Docker is not available."""
+    if os.getenv("UME_SKIP_DOCKER_CHECK") == "1":
+        return
     if shutil.which("docker") is None:
         print(
             "Docker is required to run the UME stack. "
@@ -28,6 +31,8 @@ def _require_docker() -> None:
 
 def _require_npm() -> None:
     """Exit with a message if npm (Node.js) is not available."""
+    if os.getenv("UME_SKIP_NPM_CHECK") == "1":
+        return
     if shutil.which("npm") is None:
         print("npm is required to build the dashboard. Please install Node.js.")
         raise SystemExit(1)

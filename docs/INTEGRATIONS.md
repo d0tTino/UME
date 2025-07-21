@@ -178,3 +178,22 @@ memory = "yourpkg.memory_backend:MemoryBackend"
 
 Setting `UME_VECTOR_BACKEND=memory` will then use the plugin when creating a
 vector store.
+
+## Custom Integration Adapters
+
+Third-party packages can provide their own integration clients. An adapter
+should extend :class:`ume.integrations.base.BaseClient` (or the async variant)
+and register itself using :func:`ume.integrations.register_adapter`:
+
+```python
+from ume.integrations.base import BaseClient
+from ume.integrations import register_adapter
+
+class MyAdapter(BaseClient):
+    ...  # implement any custom logic
+
+register_adapter("my-adapter", MyAdapter)
+```
+
+The adapter can then be retrieved with
+``get_adapter("my-adapter")`` and used like any built-in client.
