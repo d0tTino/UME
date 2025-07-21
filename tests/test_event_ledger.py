@@ -77,3 +77,29 @@ def test_update_bookmark_invalid(tmp_path):
     ledger = EventLedger(str(tmp_path / "ledger.db"))
     with pytest.raises(ValueError):
         ledger.update_bookmark(-1)
+
+
+def test_compact_removes_old_events(tmp_path):
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    for i in range(5):
+        ledger.append(i, {"val": i})
+
+    ledger.compact(3)
+
+    remaining = ledger.range()
+    assert [off for off, _ in remaining] == [3, 4]
+
+
+def test_bookmark_persists_between_instances(tmp_path):
+    path = str(tmp_path / "ledger.db")
+    ledger = EventLedger(path)
+    ledger.update_bookmark(2)
+    ledger.close()
+
+    ledger2 = EventLedger(path)
+    assert ledger2.last_processed_offset == 2
+    ledger2.update_bookmark(4)
+    ledger2.close()
+
+    ledger3 = EventLedger(path)
+    assert ledger3.last_processed_offset == 4

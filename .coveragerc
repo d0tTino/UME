@@ -5,6 +5,8 @@ source =
     ume.grpc_server
     ume.dag_executor
     ume.vector_store
+    ume.snapshot
+    ume.event_ledger
 omit =
     */proto/*
     */tests/*
@@ -13,6 +15,8 @@ include =
     ume.grpc_server
     ume.dag_executor
     ume.vector_store
+    ume.snapshot
+    ume.event_ledger
 
 [html]
 directory = coverage_html
