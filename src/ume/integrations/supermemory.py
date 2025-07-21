@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 from ume.integrations.base import BaseClient, AsyncBaseClient
+from .registry import register_adapter
 
 
 class SuperMemory(BaseClient):
@@ -17,4 +18,7 @@ class AsyncSuperMemory(AsyncBaseClient):
 
     def __init__(self, base_url: str = "http://localhost:8000", api_key: str | None = None) -> None:
         super().__init__(base_url, api_key or os.getenv("SUPERMEMORY_UME_API_TOKEN"))
+
+
+register_adapter("supermemory", SuperMemory)
 

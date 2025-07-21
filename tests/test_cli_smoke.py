@@ -320,11 +320,13 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
         return ""
 
     monkeypatch.setattr(compose.shutil, "which", lambda name: "/usr/bin/" + name)
-
+    
     monkeypatch.setattr(compose.subprocess, "run", fake_run)
     monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
     monkeypatch.setattr(compose.time, "sleep", lambda *_: None)
     monkeypatch.setattr(compose, "_ensure_env_file", lambda *_: None)
+    monkeypatch.setenv("UME_SKIP_DOCKER_CHECK", "1")
+    monkeypatch.setenv("UME_SKIP_NPM_CHECK", "1")
 
     argv = sys.argv[:]
     sys.argv = ["ume-cli", "up", "--no-confirm"]
@@ -407,6 +409,8 @@ def test_cli_up_custom_compose(
         return ""
 
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("UME_SKIP_DOCKER_CHECK", "1")
+    monkeypatch.setenv("UME_SKIP_NPM_CHECK", "1")
     monkeypatch.setattr(compose.subprocess, "run", fake_run)
     monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
     monkeypatch.setattr(compose.time, "sleep", lambda *_: None)
@@ -452,6 +456,8 @@ def test_cli_quickstart_creates_env_file(
         return ""
 
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("UME_SKIP_DOCKER_CHECK", "1")
+    monkeypatch.setenv("UME_SKIP_NPM_CHECK", "1")
     monkeypatch.setattr(compose.subprocess, "run", fake_run)
     monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
     monkeypatch.setattr(compose.time, "sleep", lambda *_: None)

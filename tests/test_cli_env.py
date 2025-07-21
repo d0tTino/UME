@@ -110,6 +110,8 @@ def test_quickstart_regenerates_env_file(
         return ""
 
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("UME_SKIP_DOCKER_CHECK", "1")
+    monkeypatch.setenv("UME_SKIP_NPM_CHECK", "1")
     monkeypatch.setattr(compose.subprocess, "run", fake_run)
     monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
     monkeypatch.setattr(compose.time, "sleep", lambda *_: None)
