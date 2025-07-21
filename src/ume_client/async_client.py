@@ -45,6 +45,17 @@ class AsyncUMEClient:
             {"id": n.id, "attributes": dict(n.attributes)} for n in response.nodes
         ]
 
+    async def stream_recall(
+        self,
+        *,
+        query: str | None = None,
+        vector: list[float] | None = None,
+        k: int = 5,
+    ):
+        request = ume_pb2.RecallRequest(query=query or "", vector=vector or [], k=k)
+        async for node in self._stub.StreamRecall(request, metadata=self._metadata):
+            yield {"id": node.id, "attributes": dict(node.attributes)}
+
     async def get_audit_entries(self, limit: int = 10):
         request = ume_pb2.AuditRequest(limit=limit)
         response = await self._stub.GetAuditEntries(request, metadata=self._metadata)

@@ -142,6 +142,46 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
 
         return ume_pb2.RecallResponse(nodes=nodes)
 
+    async def StreamRecall(
+        self,
+        request: ume_pb2.RecallRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> typing.AsyncIterator[ume_pb2.Node]:
+        await self._require_auth(context)
+
+        if not request.query and not request.vector:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "query or vector required")
+
+        vector = list(request.vector)
+        if not vector and request.query:
+            vector = generate_embedding(request.query)
+
+        if len(vector) != self.store.dim:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Invalid vector dimension")
+
+        if self.graph is None:
+            await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
+
+        ids = self.store.query(vector, k=request.k or 5)
+        for node_id in ids:
+            if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+                getattr(self.graph, "get_node", None)
+            ):
+                attrs = await self.graph.get_node(node_id)  # type: ignore[misc]
+            else:
+                attrs = self.graph.get_node(node_id)  # type: ignore[call-arg]
+            if attrs is not None:
+                struct = struct_pb2.Struct()
+                struct.update(attrs)
+                emb = attrs.get("embedding")
+                if isinstance(emb, list) and len(emb) == len(vector):
+                    try:
+                        RECALL_SCORE.observe(math.dist(vector, emb))
+                    except TypeError:
+                        pass
+                yield ume_pb2.Node(id=node_id, attributes=struct)
+            await asyncio.sleep(0)
+
     async def GetAuditEntries(
         self, request: ume_pb2.AuditRequest, context: grpc.aio.ServicerContext
     ) -> ume_pb2.AuditResponse:
