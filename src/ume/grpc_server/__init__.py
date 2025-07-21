@@ -7,6 +7,7 @@ import typing
 import asyncio
 import math
 import logging
+import time
 
 import grpc
 from google.protobuf import struct_pb2, empty_pb2
@@ -17,7 +18,7 @@ from ..audit import get_audit_entries
 from ..config import settings
 from ..logging_utils import configure_logging
 from ..embedding import generate_embedding
-from ..metrics import RECALL_SCORE
+from ..metrics import RECALL_SCORE, RECALL_LATENCY_MS
 from ..event import EventError
 from ..processing import ProcessingError
 from ..snapshot import snapshot_graph_to_file, load_graph_into_existing
@@ -122,6 +123,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         if self.graph is None:
             await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
 
+        start = time.perf_counter()
         ids = self.store.query(vector, k=request.k or 5)
         nodes = []
         for node_id in ids:
@@ -139,7 +141,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
                     except TypeError:
                         pass
                 nodes.append(ume_pb2.Node(id=node_id, attributes=struct))
-
+        RECALL_LATENCY_MS.observe((time.perf_counter() - start) * 1000)
         return ume_pb2.RecallResponse(nodes=nodes)
 
     async def StreamRecall(
@@ -162,6 +164,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         if self.graph is None:
             await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
 
+        start = time.perf_counter()
         ids = self.store.query(vector, k=request.k or 5)
         for node_id in ids:
             if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
@@ -181,6 +184,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
                         pass
                 yield ume_pb2.Node(id=node_id, attributes=struct)
             await asyncio.sleep(0)
+        RECALL_LATENCY_MS.observe((time.perf_counter() - start) * 1000)
 
     async def GetAuditEntries(
         self, request: ume_pb2.AuditRequest, context: grpc.aio.ServicerContext

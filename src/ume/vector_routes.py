@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, AsyncGenerator
+import asyncio
+import json
 import math
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-import asyncio
-import json
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .vector_store import VectorStore
 from .graph_adapter import IGraphAdapter
 from .embedding import generate_embedding
-from .metrics import RECALL_SCORE
+from .metrics import RECALL_SCORE, RECALL_LATENCY_MS
 
 router = APIRouter()
 
@@ -67,6 +68,7 @@ def api_recall(
     assert vector is not None
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
+    start = time.perf_counter()
     ids = store.query(vector, k=k)
     nodes = []
     for node_id in ids:
@@ -79,6 +81,7 @@ def api_recall(
                 except TypeError:
                     pass
             nodes.append({"id": node_id, "attributes": attrs})
+    RECALL_LATENCY_MS.observe((time.perf_counter() - start) * 1000)
     return {"nodes": nodes}
 
 
@@ -101,6 +104,7 @@ async def api_recall_stream(
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
 
     async def _gen() -> AsyncGenerator[str, None]:
+        start = time.perf_counter()
         ids = store.query(vector, k=k)
         for node_id in ids:
             attrs = graph.get_node(node_id)
@@ -114,6 +118,7 @@ async def api_recall_stream(
                 payload = {"id": node_id, "attributes": attrs}
                 yield f"data: {json.dumps(payload)}\n\n"
             await asyncio.sleep(0)
+        RECALL_LATENCY_MS.observe((time.perf_counter() - start) * 1000)
 
     return StreamingResponse(_gen(), media_type="text/event-stream")
 

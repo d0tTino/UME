@@ -1,12 +1,13 @@
 import logging
 import threading
 import time
+import os
 from collections.abc import Callable
 from typing import Any
 
 from typing import Protocol
 from .config import settings
-from .metrics import STALE_VECTOR_WARNINGS
+from .metrics import STALE_VECTOR_WARNINGS, LEDGER_COMPACTED_BYTES
 
 logger = logging.getLogger(__name__)
 
@@ -177,8 +178,13 @@ def start_ledger_compaction_scheduler(
 
     def _run() -> None:
         def _compact() -> None:
+            path = getattr(ledger, "db_path", None)
+            before = os.path.getsize(path) if path and os.path.exists(path) else 0
             cutoff = ledger.last_processed_offset - offset_window
             ledger.compact(cutoff)
+            after = os.path.getsize(path) if path and os.path.exists(path) else 0
+            if after < before:
+                LEDGER_COMPACTED_BYTES.set(before - after)
 
         try:
             _compact()
