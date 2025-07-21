@@ -45,3 +45,15 @@ FALSE_TEXT_RATE = Counter(
     "ume_false_text_total",
     "Number of low-confidence items filtered",
 )
+
+# Additional recall metrics
+RECALL_LATENCY_MS = Histogram(
+    "ume_recall_latency_ms",
+    "Latency of recall operations in milliseconds",
+)
+
+# Ledger maintenance metrics
+LEDGER_COMPACTED_BYTES = Gauge(
+    "ume_ledger_compacted_bytes",
+    "Bytes removed during the most recent ledger compaction",
+)
