@@ -11,6 +11,7 @@ import threading
 from importlib import metadata
 
 import numpy as np
+from numpy.typing import NDArray
 
 from ..config import settings
 from prometheus_client import Gauge, Histogram
@@ -352,7 +353,7 @@ class ChromaBackend(VectorBackend):
             if dirpath:
                 os.makedirs(dirpath, exist_ok=True)
         self.dim = dim
-        self.vectors: list[np.ndarray] = []
+        self.vectors: list[NDArray[np.float64]] = []
         self.id_to_idx: dict[str, int] = {}
         self.idx_to_id: list[str] = []
         self.vector_ts: dict[str, int] = {}

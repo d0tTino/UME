@@ -3,17 +3,24 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Iterable, Dict, Any, List
+from .event_ledger import event_ledger
+from .config import settings
+from typing import Iterable, Dict, Any, List, Optional, TYPE_CHECKING
+import importlib
 import logging
 import time
 
-try:  # Optional Kafka dependency
-    from .client import UMEClient
-except Exception:  # pragma: no cover - confluent_kafka may be missing
-    UMEClient = None
+if TYPE_CHECKING:  # pragma: no cover - type hints only
+    from .client import UMEClient as UMEClientType  # noqa: F401
 
-from .event_ledger import event_ledger
-from .config import settings
+try:  # Optional Kafka dependency
+    _module = importlib.import_module("ume.client")
+    _UMEClientAny = getattr(_module, "UMEClient")
+except Exception:  # pragma: no cover - confluent_kafka may be missing
+    _UMEClientAny = None
+
+UMEClient: Optional[type[UMEClientType]]
+UMEClient = _UMEClientAny
 
 logger = logging.getLogger(__name__)
 

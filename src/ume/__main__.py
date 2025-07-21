@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 
-from ume_cli import _quickstart
+from ume_cli import quickstart
+
+_quickstart = quickstart
 
 
 def main() -> None:
