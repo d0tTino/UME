@@ -20,6 +20,8 @@ from ume.cli.compose import (
     _compose_ps,
     _quickstart,
 )
+
+quickstart = _quickstart
 from ume.cli.prompt import UMEPrompt, create_graph_adapter
 
 # Detect if a lightweight stub was injected for testing.
@@ -149,6 +151,9 @@ def _setup_warnings(display: bool, log_file: str | None) -> None:
             )
 
     warnings.showwarning = custom_showwarning
+
+
+__all__ = ["quickstart", "main"]
 
 
 if __name__ == "__main__":

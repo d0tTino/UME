@@ -102,17 +102,22 @@ class VectorStoreListener(GraphListener):
 
 def create_default_store() -> VectorBackend:  # pragma: no cover - trivial wrapper
     """Instantiate a vector store using ``ume.config.settings``."""
-    backend_name = settings.UME_VECTOR_BACKEND.lower()
+    import os
+    from .config import settings as cfg_settings
+
+    backend_name = os.getenv("UME_VECTOR_BACKEND", cfg_settings.UME_VECTOR_BACKEND).lower()
     cls = get_backend(backend_name)
     import inspect
 
     kwargs: Dict[str, Any] = {}
     if "use_gpu" in inspect.signature(cls).parameters:
-        kwargs["use_gpu"] = settings.UME_VECTOR_USE_GPU
-    dim = _resolve_vector_dim(settings.UME_VECTOR_DIM)
+        kwargs["use_gpu"] = cfg_settings.UME_VECTOR_USE_GPU
+    env_dim = os.getenv("UME_VECTOR_DIM")
+    dim_setting = int(env_dim) if env_dim is not None else cfg_settings.UME_VECTOR_DIM
+    dim = _resolve_vector_dim(dim_setting)
     return cls(
         dim=dim,
-        path=settings.UME_VECTOR_INDEX,
+        path=cfg_settings.UME_VECTOR_INDEX,
         query_latency_metric=VECTOR_QUERY_LATENCY,
         index_size_metric=VECTOR_INDEX_SIZE,
         **kwargs,
