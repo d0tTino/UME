@@ -89,6 +89,8 @@ def set_bookmark(
     bookmark: Bookmark, _: str = Depends(deps.get_current_role)
 ) -> Bookmark:
     """Persist ``bookmark`` as the last processed offset."""
-
-    event_ledger.update_bookmark(bookmark.offset)
+    try:
+        event_ledger.update_bookmark(bookmark.offset)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return bookmark

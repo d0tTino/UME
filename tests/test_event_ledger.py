@@ -71,3 +71,9 @@ def test_replay_from_timestamp(tmp_path):
     assert set(g2.get_all_node_ids()) == {"n0", "n1", "n2", "n3", "n4"}
 
     ledger.close()
+
+
+def test_update_bookmark_invalid(tmp_path):
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    with pytest.raises(ValueError):
+        ledger.update_bookmark(-1)
