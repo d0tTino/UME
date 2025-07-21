@@ -319,6 +319,8 @@ def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
 
         return ""
 
+    monkeypatch.setattr(compose.shutil, "which", lambda name: "/usr/bin/" + name)
+
     monkeypatch.setattr(compose.subprocess, "run", fake_run)
     monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
     monkeypatch.setattr(compose.time, "sleep", lambda *_: None)
@@ -570,3 +572,49 @@ def test_cli_env_file_no_warning(
 
     out = capsys.readouterr().out
     assert "insecure default key" not in out
+
+
+def test_cli_up_missing_docker(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    """CLI should exit with message when Docker is absent."""
+    import importlib
+    import ume_cli as cli
+    from ume.cli import compose
+
+    importlib.reload(cli)
+    importlib.reload(compose)
+
+    monkeypatch.setattr(compose.shutil, "which", lambda name: None if name == "docker" else "/usr/bin/" + name)
+    monkeypatch.setattr(compose, "_compose_up", lambda *_: None)
+    monkeypatch.setattr(compose.subprocess, "run", lambda *_, **__: None)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "up", "--no-confirm"]
+    with pytest.raises(SystemExit):
+        cli.main()
+    out = capsys.readouterr().out
+    sys.argv = argv
+
+    assert "Docker is required" in out
+
+
+def test_cli_up_missing_node(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    """CLI should exit with message when Node/npm is absent."""
+    import importlib
+    import ume_cli as cli
+    from ume.cli import compose
+
+    importlib.reload(cli)
+    importlib.reload(compose)
+
+    monkeypatch.setattr(compose.shutil, "which", lambda name: None if name == "npm" else "/usr/bin/" + name)
+    monkeypatch.setattr(compose, "_compose_up", lambda *_: None)
+    monkeypatch.setattr(compose.subprocess, "run", lambda *_, **__: None)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "up", "--no-confirm"]
+    with pytest.raises(SystemExit):
+        cli.main()
+    out = capsys.readouterr().out
+    sys.argv = argv
+
+    assert "npm is required" in out
