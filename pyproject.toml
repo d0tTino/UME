@@ -7,6 +7,8 @@ readme = "README.md"
 packages = [
     {include = "ume", from = "src"},
     {include = "ume_client", from = "src"},
+    {include = "ume/py.typed", from = "src"},
+    {include = "ume_client/py.typed", from = "src"},
 ]
 
 [tool.poetry.dependencies]
