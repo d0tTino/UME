@@ -38,6 +38,7 @@ This section outlines the necessary tools for developing and running the Univers
 *   **Python:** Version **3.10** or newer is required.
 *   **Poetry:** For Python dependency management. Installation instructions can be found at [https://python-poetry.org/docs/#installation](https://python-poetry.org/docs/#installation).
 *   **Docker:** Docker Desktop (for Windows/macOS) or Docker Engine + Docker Compose (for Linux) is required to run backend services like Redpanda. Download from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/).
+*   **Node.js:** Node 18+ and `npm` are required to build the React dashboard.
 
 After installing these tools and cloning the repository, install all Python
 dependencies (including development requirements) with:
@@ -213,7 +214,7 @@ Ensure you have installed the development dependencies:
 ```bash
 poetry install --with dev
 ```
-To also install all optional packages used by the tests, run:
+(**Important**: run the helper script below before executing the tests. It installs all optional packages and sets up the pre-commit hooks.)
 ```bash
 scripts/setup_dev_env.sh
 ```
@@ -1082,6 +1083,15 @@ Some tests rely on optional integrations. Install them with:
 poetry install --with dev --all-extras
 poetry run pytest -q
 ```
+
+## Troubleshooting
+
+If the setup commands fail or tests do not run:
+
+* **"npm: command not found"** – install Node.js (version 18 or newer) and ensure `npm` is in your `PATH`.
+* **"pyenv: python3.10 not found"** – check that Python 3.10+ is installed and selected before running `poetry install`.
+* **Pre-commit hook errors** – re-run `scripts/setup_dev_env.sh` to reinstall hooks and dependencies.
+
 
 
 ## Logging
