@@ -55,6 +55,11 @@ class UMEStub(object):
                 request_serializer=ume__pb2.RecallRequest.SerializeToString,
                 response_deserializer=ume__pb2.RecallResponse.FromString,
                 _registered_method=True)
+        self.StreamRecall = channel.unary_stream(
+                '/ume.UME/StreamRecall',
+                request_serializer=ume__pb2.RecallRequest.SerializeToString,
+                response_deserializer=ume__pb2.Node.FromString,
+                _registered_method=True)
         self.GetAuditEntries = channel.unary_unary(
                 '/ume.UME/GetAuditEntries',
                 request_serializer=ume__pb2.AuditRequest.SerializeToString,
@@ -111,6 +116,13 @@ class UMEServicer(object):
 
     def Recall(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StreamRecall(self, request, context):
+        """Server streaming variant of Recall
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -173,6 +185,11 @@ def add_UMEServicer_to_server(servicer, server):
                     servicer.Recall,
                     request_deserializer=ume__pb2.RecallRequest.FromString,
                     response_serializer=ume__pb2.RecallResponse.SerializeToString,
+            ),
+            'StreamRecall': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamRecall,
+                    request_deserializer=ume__pb2.RecallRequest.FromString,
+                    response_serializer=ume__pb2.Node.SerializeToString,
             ),
             'GetAuditEntries': grpc.unary_unary_rpc_method_handler(
                     servicer.GetAuditEntries,
@@ -313,6 +330,33 @@ class UME(object):
             '/ume.UME/Recall',
             ume__pb2.RecallRequest.SerializeToString,
             ume__pb2.RecallResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StreamRecall(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/ume.UME/StreamRecall',
+            ume__pb2.RecallRequest.SerializeToString,
+            ume__pb2.Node.FromString,
             options,
             channel_credentials,
             insecure,

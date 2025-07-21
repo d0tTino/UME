@@ -49,6 +49,11 @@ class RecallServicer(ume_pb2_grpc.UMEServicer):
                 nodes.append(ume_pb2.Node(id=nid, attributes=struct))
         return ume_pb2.RecallResponse(nodes=nodes)
 
+    async def StreamRecall(self, request, context):
+        response = await self.Recall(request, context)
+        for node in response.nodes:
+            yield node
+
 async def _run_server(port_holder: list[int]):
     server = grpc.aio.server()
     ume_pb2_grpc.add_UMEServicer_to_server(RecallServicer(GRAPH), server)
@@ -61,6 +66,13 @@ async def _run_recall_test(port: int):
     store.queries.clear()
     async with AsyncUMEClient(f"localhost:{port}") as client:
         nodes = await client.recall(query="foo", k=1)
+        assert nodes == [{"id": "a", "attributes": {"val": 1}}]
+        assert store.queries == [([1.0, 0.0], 1)]
+
+async def _run_stream_recall_test(port: int):
+    store.queries.clear()
+    async with AsyncUMEClient(f"localhost:{port}") as client:
+        nodes = [n async for n in client.stream_recall(query="foo", k=1)]
         assert nodes == [{"id": "a", "attributes": {"val": 1}}]
         assert store.queries == [([1.0, 0.0], 1)]
 
@@ -99,6 +111,7 @@ def test_grpc_recall():
         while not port_holder:
             await asyncio.sleep(0.01)
         await _run_recall_test(port_holder[0])
+        await _run_stream_recall_test(port_holder[0])
         await _run_bad_vector_test(port_holder[0])
         await _run_empty_request_test(port_holder[0])
         server_task.cancel()

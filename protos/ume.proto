@@ -75,6 +75,8 @@ service UME {
   rpc StreamCypher(CypherQuery) returns (stream CypherRecord);
   rpc SearchVectors(VectorSearchRequest) returns (VectorSearchResponse);
   rpc Recall(RecallRequest) returns (RecallResponse);
+  // Streaming recall for incremental node retrieval
+  rpc StreamRecall(RecallRequest) returns (stream Node);
   rpc GetAuditEntries(AuditRequest) returns (AuditResponse);
   rpc PublishEvent(PublishEventRequest) returns (google.protobuf.Empty);
   rpc SaveSnapshot(SnapshotPath) returns (google.protobuf.Empty);
