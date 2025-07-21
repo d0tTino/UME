@@ -142,3 +142,23 @@ def test_async_error_handling() -> None:
                     await client.send_events([{"foo": "bar"}])
 
     asyncio.run(runner())
+
+
+def test_async_stream_methods() -> None:
+    async def runner():
+        async with AsyncBaseClient(base_url="http://ume") as client:
+            stream_body = b"data: {\"id\": 1}\n\ndata: {\"id\": 2}\n\n"
+            path_body = b"data: a\n\ndata: b\n\n"
+            with respx.mock(assert_all_called=True) as mock:
+                mock.get("http://ume/recall/stream").mock(
+                    return_value=httpx.Response(200, stream=httpx.ByteStream(stream_body))
+                )
+                mock.get("http://ume/analytics/path/stream").mock(
+                    return_value=httpx.Response(200, stream=httpx.ByteStream(path_body))
+                )
+                items = [i async for i in client.recall_stream({"node_id": "n1"})]
+                nodes = [n async for n in client.path_stream({"source": "a", "target": "b"})]
+            assert items == [{"id": 1}, {"id": 2}]
+            assert nodes == ["a", "b"]
+
+    asyncio.run(runner())

@@ -96,6 +96,7 @@ Valid values for `UME_GRAPH_BACKEND` are:
 | `UME_OAUTH_ROLE` | `AnalyticsAgent` | Role assigned to issued tokens. |
 | `UME_OAUTH_TTL` | `3600` | Lifetime of issued tokens in seconds. |
 | `UME_GRPC_TOKEN` | *(unset)* | Bearer token required by the gRPC server. If empty, the server logs a warning and rejects requests. |
+| `UME_API_TOKEN` | *(unset)* | Required token for HTTP API requests. |
 | `UME_LOG_LEVEL` | `INFO` | Logging level used by `configure_logging`. |
 | `UME_LOG_JSON` | `False` | Output logs as JSON lines when set to `True`. |
 | `UME_GRAPH_RETENTION_DAYS` | `30` | Age in days before old nodes/edges are purged. |

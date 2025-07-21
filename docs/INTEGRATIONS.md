@@ -5,7 +5,17 @@ to a running UME instance and exposes a `send_events` and `recall` API. A
 `store_events` alias using the `/store` endpoint is also available. Async variants
 are provided with the `Async` prefix.
 
+### Authentication
+Set `UME_API_TOKEN` in your environment or pass ``api_key`` when creating a
+client. The value is sent as a ``Bearer`` token in the ``Authorization``
+header for all requests.
+
 The examples below demonstrate both synchronous and asynchronous usage.
+
+Each adapter also exposes ``recall_stream`` and ``path_stream`` for
+consuming the server-sent event endpoints.
+See [examples/continuous_updates.ipynb](../examples/continuous_updates.ipynb)
+for a simple streaming demonstration.
 
 ## LangGraph
 See [examples/langgraph_integration.ipynb](../examples/langgraph_integration.ipynb)
