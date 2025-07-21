@@ -5,6 +5,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+import shutil
 
 # Ensure local package import when run directly without installation
 _src_path = Path(__file__).resolve().parents[3] / "src"
@@ -15,8 +16,26 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 COMPOSE_FILE = ROOT_DIR / "docker" / "docker-compose.yml"
 
 
+def _require_docker() -> None:
+    """Exit with a message if Docker is not available."""
+    if shutil.which("docker") is None:
+        print(
+            "Docker is required to run the UME stack. "
+            "Please install Docker and ensure it is on your PATH."
+        )
+        raise SystemExit(1)
+
+
+def _require_npm() -> None:
+    """Exit with a message if npm (Node.js) is not available."""
+    if shutil.which("npm") is None:
+        print("npm is required to build the dashboard. Please install Node.js.")
+        raise SystemExit(1)
+
+
 def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
     """Start Docker Compose services and wait until healthy."""
+    _require_docker()
     try:
         subprocess.run(
             ["docker", "compose", "-f", str(compose_file), "up", "-d"],
@@ -65,6 +84,7 @@ def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:
 
 def _compose_down(compose_file: Path = COMPOSE_FILE) -> None:
     """Stop Docker Compose services."""
+    _require_docker()
     try:
         subprocess.run(
             ["docker", "compose", "-f", str(compose_file), "down"],
@@ -78,6 +98,7 @@ def _compose_down(compose_file: Path = COMPOSE_FILE) -> None:
 
 def _compose_ps(compose_file: Path = COMPOSE_FILE) -> None:
     """Print Docker Compose service health info."""
+    _require_docker()
     try:
         out = subprocess.check_output(
             [
@@ -155,6 +176,8 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
 
 def _quickstart(no_confirm: bool = False) -> None:
     """Prepare environment and start the Docker Compose stack."""
+    _require_docker()
+    _require_npm()
     env_file = Path(".env")
     if not no_confirm and not sys.stdin.isatty():
         no_confirm = True
