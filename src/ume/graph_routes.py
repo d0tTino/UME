@@ -14,7 +14,9 @@ from .analytics import shortest_path
 from .config import settings
 from .document_guru import reformat_document
 from .reliability import filter_low_confidence
+import inspect
 from .graph_adapter import IGraphAdapter
+from .async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from .query import Neo4jQueryEngine
 from .event import EventError
 from .processing import ProcessingError
@@ -24,6 +26,15 @@ from ume.services.ingest import ingest_event, ingest_events_batch
 from . import api_deps as deps
 
 router = APIRouter()
+
+
+async def _maybe_call(graph: IGraphAdapter, name: str, *args: Any) -> Any:
+    func = getattr(graph, name)
+    if inspect.iscoroutinefunction(func):
+        return await func(*args)
+    if isinstance(graph, IAsyncGraphAdapter):
+        return await func(*args)
+    return func(*args)
 
 
 class ShortestPathRequest(BaseModel):
@@ -182,27 +193,31 @@ def api_subgraph(
 
 
 @router.post("/redact/node/{node_id}")
-def api_redact_node(
+async def api_redact_node(
     node_id: str,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Redact (delete) a node by its ID."""
-    graph.redact_node(node_id)
+    await _maybe_call(graph, "redact_node", node_id)
     return {"status": "ok"}
 
 
 @router.post("/events/batch")
-def api_post_events_batch(
+async def api_post_events_batch(
     events: List[EventRequest] = Body(...),
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: None = Depends(deps.require_token),
 ) -> Dict[str, Any]:
     """Apply multiple events sequentially to the graph."""
     try:
-        ingest_events_batch(
-            [e.model_dump(exclude_none=True) for e in events],
-            graph,
-        )
+        payload = [e.model_dump(exclude_none=True) for e in events]
+        if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+            getattr(graph, "add_node", None)
+        ):
+            for data in payload:
+                await ingest_event_async(data, graph)  # type: ignore[arg-type]
+        else:
+            ingest_events_batch(payload, graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -210,17 +225,21 @@ def api_post_events_batch(
 
 
 @router.post("/store/batch")
-def api_store_events_batch(
+async def api_store_events_batch(
     events: List[EventRequest] = Body(...),
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: None = Depends(deps.require_token),
 ) -> Dict[str, Any]:
     """Alias for :func:`api_post_events_batch`."""
     try:
-        ingest_events_batch(
-            [e.model_dump(exclude_none=True) for e in events],
-            graph,
-        )
+        payload = [e.model_dump(exclude_none=True) for e in events]
+        if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+            getattr(graph, "add_node", None)
+        ):
+            for data in payload:
+                await ingest_event_async(data, graph)  # type: ignore[arg-type]
+        else:
+            ingest_events_batch(payload, graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -228,112 +247,128 @@ def api_store_events_batch(
 
 
 @router.post("/redact/edge")
-def api_redact_edge(
+async def api_redact_edge(
     req: RedactEdgeRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Redact an edge between two nodes."""
-    graph.redact_edge(req.source, req.target, req.label)
+    await _maybe_call(graph, "redact_edge", req.source, req.target, req.label)
     return {"status": "ok"}
 
 
 @router.post("/nodes")
-def api_create_node(
+async def api_create_node(
     req: NodeCreateRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Create a node with optional attributes."""
-    graph.add_node(req.id, req.attributes or {})
+    await _maybe_call(graph, "add_node", req.id, req.attributes or {})
     return {"status": "ok"}
 
 
 @router.patch("/nodes/{node_id}")
-def api_update_node(
+async def api_update_node(
     node_id: str,
     req: NodeUpdateRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Update attributes of an existing node."""
-    graph.update_node(node_id, req.attributes)
+    await _maybe_call(graph, "update_node", node_id, req.attributes)
     return {"status": "ok"}
 
 
 @router.delete("/nodes/{node_id}")
-def api_delete_node(
+async def api_delete_node(
     node_id: str,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Remove a node from the graph."""
-    graph.redact_node(node_id)
+    await _maybe_call(graph, "redact_node", node_id)
     return {"status": "ok"}
 
 
 @router.post("/edges")
-def api_create_edge(
+async def api_create_edge(
     req: EdgeCreateRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Create an edge between two nodes."""
-    graph.add_edge(req.source, req.target, req.label)
+    await _maybe_call(graph, "add_edge", req.source, req.target, req.label)
     return {"status": "ok"}
 
 
 @router.delete("/edges/{source}/{target}/{label}")
-def api_delete_edge(
+async def api_delete_edge(
     source: str,
     target: str,
     label: str,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Delete an edge identified by source, target and label."""
-    graph.delete_edge(source, target, label)
+    await _maybe_call(graph, "delete_edge", source, target, label)
     return {"status": "ok"}
 
 
 @router.post("/tweets")
-def api_post_tweet(
+async def api_post_tweet(
     req: TweetCreateRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Create a tweet node used by the Tweet-bot."""
     node_id = f"tweet:{uuid4()}"
-    graph.add_node(node_id, {"text": req.text, "timestamp": int(time.time())})
+    await _maybe_call(
+        graph,
+        "add_node",
+        node_id,
+        {"text": req.text, "timestamp": int(time.time())},
+    )
     return {"id": node_id}
 
 
 @router.post("/documents")
-def api_upload_document(
+async def api_upload_document(
     req: DocumentUploadRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Upload a document for Document Guru."""
     node_id = f"doc:{uuid4()}"
     cleaned = reformat_document(req.content)
-    graph.add_node(node_id, {"content": cleaned, "timestamp": int(time.time())})
+    await _maybe_call(
+        graph,
+        "add_node",
+        node_id,
+        {"content": cleaned, "timestamp": int(time.time())},
+    )
     return {"id": node_id}
 
 
 @router.get("/documents/{document_id}")
-def api_get_document(
+async def api_get_document(
     document_id: str,
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Return a previously uploaded document."""
-    doc = graph.get_node(document_id)
+    doc = await _maybe_call(graph, "get_node", document_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"id": document_id, "content": doc.get("content", "")}
 
 
 @router.post("/events")
-def api_post_event(
+async def api_post_event(
     req: EventRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: None = Depends(deps.require_token),
 ) -> Dict[str, Any]:
     """Validate and apply an event to the graph."""
     try:
-        ingest_event(req.model_dump(exclude_none=True), graph)
+        data = req.model_dump(exclude_none=True)
+        if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+            getattr(graph, "add_node", None)
+        ):
+            await ingest_event_async(data, graph)  # type: ignore[arg-type]
+        else:
+            ingest_event(data, graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -341,14 +376,20 @@ def api_post_event(
 
 
 @router.post("/store")
-def api_store_event(
+async def api_store_event(
     req: EventRequest,
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: None = Depends(deps.require_token),
 ) -> Dict[str, Any]:
     """Alias for :func:`api_post_event`."""
     try:
-        ingest_event(req.model_dump(exclude_none=True), graph)
+        data = req.model_dump(exclude_none=True)
+        if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+            getattr(graph, "add_node", None)
+        ):
+            await ingest_event_async(data, graph)  # type: ignore[arg-type]
+        else:
+            ingest_event(data, graph)
     except (EventError, ProcessingError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
