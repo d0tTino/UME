@@ -624,3 +624,108 @@ def test_cli_up_missing_node(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     sys.argv = argv
 
     assert "npm is required" in out
+
+
+def test_subprocess_up_creates_env_and_checks_health(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Run ``ume_cli.py up`` in a subprocess and verify health checks."""
+    stubs = tmp_path / "stubs" / "ume" / "cli"
+    stubs.mkdir(parents=True)
+    (stubs / "__init__.py").write_text("")
+    # stub for ume.logging_utils.configure_logging
+    log_dir = tmp_path / "stubs" / "ume"
+    (log_dir / "__init__.py").write_text("")
+    (log_dir / "logging_utils.py").write_text("def configure_logging():\n    pass\n")
+    cfg_dir = log_dir / "config"
+    cfg_dir.mkdir()
+    (cfg_dir / "__init__.py").write_text(
+        "class Settings:\n    UME_CLI_DB = ':memory:'\n\nsettings = Settings()\n"
+    )
+    prompt_dir = stubs  # already ume/cli
+    (prompt_dir / "prompt.py").write_text(
+        "class UMEPrompt:\n    def cmdloop(self):\n        pass\n\n"
+        "def create_graph_adapter(*a, **k):\n    pass\n"
+    )
+    # sitecustomize to inject stubs before ``ume_cli`` imports modules
+    sitecustomize = tmp_path / "stubs" / "sitecustomize.py"
+    sitecustomize.write_text(
+        """
+import sys, types, importlib.util, pathlib
+base = pathlib.Path(__file__).parent
+compose_path = base / 'ume' / 'cli' / 'compose.py'
+spec = importlib.util.spec_from_file_location('ume.cli.compose', compose_path)
+compose = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(compose)
+ume_pkg = types.ModuleType('ume')
+sys.modules.setdefault('ume', ume_pkg)
+sys.modules['ume.cli'] = types.ModuleType('ume.cli')
+sys.modules['ume.cli.compose'] = compose
+prompt = types.ModuleType('ume.cli.prompt')
+class UMEPrompt:
+    def cmdloop(self):
+        pass
+
+def create_graph_adapter(*a, **k):
+    pass
+
+prompt.UMEPrompt = UMEPrompt
+prompt.create_graph_adapter = create_graph_adapter
+sys.modules['ume.cli.prompt'] = prompt
+log = types.ModuleType('ume.logging_utils')
+log.configure_logging = lambda: None
+sys.modules['ume.logging_utils'] = log
+conf = types.ModuleType('ume.config')
+class Settings:
+    UME_CLI_DB = ':memory:'
+
+conf.settings = Settings()
+sys.modules['ume.config'] = conf
+"""
+    )
+    compose_stub = stubs / "compose.py"
+    compose_stub.write_text(
+        "\n".join(
+            [
+                "from pathlib import Path",
+                "",
+                "def _compose_up(compose_file: Path = Path('docker-compose.yml'), timeout: int = 120) -> None:",
+                "    print('redpanda healthy')",
+                "    print('ume-api healthy')",
+                "    print('Stack running. API docs: http://localhost:8000/docs')",
+                "",
+                "def _compose_down(compose_file: Path = Path('docker-compose.yml')) -> None:",
+                "    print('Stack stopped.')",
+                "",
+                "def _compose_ps(compose_file: Path = Path('docker-compose.yml')) -> None:",
+                "    print('redpanda: healthy')",
+                "    print('ume-api: healthy')",
+                "",
+                "def _ensure_env_file(env_file: Path = Path('.env')) -> None:",
+                "    env_file.write_text('UME_AUDIT_SIGNING_KEY=test\\nUME_OAUTH_PASSWORD=test\\n')",
+                "    print('Created .env from env.example with random UME_AUDIT_SIGNING_KEY and UME_OAUTH_PASSWORD')",
+                "",
+                "def _quickstart(no_confirm: bool = False) -> None:",
+                "    _ensure_env_file(Path('.env'))",
+                "    _compose_up()",
+            ]
+        )
+    )
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{tmp_path / 'stubs'}{os.pathsep}" + env.get("PYTHONPATH", "")
+    env.pop("PYTHONHOME", None)
+
+    result = subprocess.run(
+        [sys.executable, CLI_SCRIPT_PATH, "up", "--no-confirm"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 0
+    assert (tmp_path / ".env").exists()
+    assert "redpanda healthy" in result.stdout
+    assert "ume-api healthy" in result.stdout
+    assert "http://localhost:8000/docs" in result.stdout
