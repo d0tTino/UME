@@ -190,3 +190,65 @@ def test_create_default_store_selects_backend(monkeypatch):
     store = vs.create_default_store()
     assert isinstance(store, vs.ChromaBackend)
 
+
+def test_metrics_summary_without_idx_to_id() -> None:
+    import importlib.util
+    import types
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+
+    orig_pkg = sys.modules.get("ume")
+    package = types.ModuleType("ume")
+    package.__path__ = [str(root / "src" / "ume")]
+    sys.modules["ume"] = package
+
+    metrics_module = types.ModuleType("ume.metrics")
+    class _DummyMetric:
+        def collect(self) -> list[object]:
+            return []
+
+    metrics_module.REQUEST_COUNT = _DummyMetric()
+    metrics_module.REQUEST_LATENCY = _DummyMetric()
+    metrics_module.RECALL_SCORE = _DummyMetric()
+    sys.modules["ume.metrics"] = metrics_module
+
+    api_deps = types.ModuleType("ume.api_deps")
+    api_deps.get_current_role = lambda token="": ""
+    api_deps.get_vector_store = lambda: None
+    sys.modules["ume.api_deps"] = api_deps
+
+    vector_store_mod = types.ModuleType("ume.vector_store")
+    class VectorStoreBase:  # minimal placeholder
+        pass
+    vector_store_mod.VectorStore = VectorStoreBase
+    sys.modules["ume.vector_store"] = vector_store_mod
+
+    spec_mr = importlib.util.spec_from_file_location(
+        "ume.metrics_routes", root / "src" / "ume" / "metrics_routes.py"
+    )
+    assert spec_mr and spec_mr.loader
+    mr_module = importlib.util.module_from_spec(spec_mr)
+    sys.modules["ume.metrics_routes"] = mr_module
+    spec_mr.loader.exec_module(mr_module)
+
+    class DummyStore:
+        def get_vector_timestamps(self) -> dict[str, int]:
+            return {"a": 0, "b": 0}
+
+    try:
+        result = mr_module.metrics_summary("", DummyStore())
+        assert result["vector_index_size"] == 2
+    finally:
+        for mod in [
+            "ume.metrics_routes",
+            "ume.metrics",
+            "ume.api_deps",
+            "ume.vector_store",
+            "ume",
+        ]:
+            sys.modules.pop(mod, None)
+        if orig_pkg is not None:
+            sys.modules["ume"] = orig_pkg
+

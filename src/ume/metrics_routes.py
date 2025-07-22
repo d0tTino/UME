@@ -53,7 +53,18 @@ def metrics_summary(
                 recall_count += s.value
     avg_recall = recall_sum / recall_count if recall_count else 0.0
 
-    index_size = len(getattr(store, "idx_to_id", []))
+    if hasattr(store, "get_index_size"):
+        try:
+            index_size = store.get_index_size()
+        except Exception:  # pragma: no cover - best effort
+            index_size = 0
+    elif hasattr(store, "get_vector_timestamps"):
+        try:
+            index_size = len(store.get_vector_timestamps())
+        except Exception:  # pragma: no cover - best effort
+            index_size = 0
+    else:
+        index_size = len(getattr(store, "idx_to_id", []))
     return {
         "total_requests": int(total_requests),
         "request_count_by_status": {k: int(v) for k, v in by_status.items()},
