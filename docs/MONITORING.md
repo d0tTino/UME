@@ -68,6 +68,11 @@ Here are a few Prometheus queries you can use when building graphs:
 You can combine these metrics in Grafana to visualize API performance and index
 growth over time.
 
+The metrics summary endpoint expects the configured vector store to expose a
+`get_index_size()` method or `get_vector_timestamps()` mapping. If neither is
+implemented, it falls back to counting the legacy `idx_to_id` attribute when
+present.
+
 ## Distributed Tracing with OpenTelemetry
 
 Set the `UME_OTLP_ENDPOINT` environment variable to enable trace export via OTLP.
