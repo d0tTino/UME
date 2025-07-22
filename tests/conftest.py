@@ -75,6 +75,9 @@ if importlib.util.find_spec("numpy") is None:
     numpy_stub = types.ModuleType("numpy")
     numpy_stub.asarray = lambda x, dtype=None: list(x)
     sys.modules.setdefault("numpy", numpy_stub)
+    numpy_typing = types.ModuleType("numpy.typing")
+    numpy_typing.NDArray = list  # type: ignore[attr-defined]
+    sys.modules.setdefault("numpy.typing", numpy_typing)
 
 jsonschema_stub = types.ModuleType("jsonschema")
 class _ValidationError(Exception):
@@ -105,6 +108,8 @@ _OPTIONAL_PACKAGES = [
     "networkx",
     "grpc",
     "aiosqlite",
+    "pydantic_settings",
+    "pydantic",
 ]
 
 for _package in _OPTIONAL_PACKAGES:
@@ -125,6 +130,33 @@ for _package in _OPTIONAL_PACKAGES:
         if _package == "neo4j":
             module.GraphDatabase = object
             module.Driver = object
+        if _package == "structlog":
+            proc = type("P", (), {})
+            module.contextvars = types.SimpleNamespace(
+                merge_contextvars=lambda *_: None
+            )
+            module.processors = types.SimpleNamespace(
+                add_log_level=lambda *_: None,
+                TimeStamper=lambda *_, **__: proc(),
+                JSONRenderer=lambda *_: proc(),
+            )
+            module.dev = types.SimpleNamespace(ConsoleRenderer=lambda *_: proc())
+            module.PrintLoggerFactory = lambda *_: proc()
+            module.make_filtering_bound_logger = (
+                lambda *_: (lambda logger: logger)
+            )
+            module.configure = lambda *_ , **__: None
+        if _package == "pydantic_settings":
+            class _BaseSettings:
+                model_config = {}
+
+                def __init__(self, *_, **__):
+                    pass
+
+            module.BaseSettings = _BaseSettings  # type: ignore[attr-defined]
+            module.SettingsConfigDict = dict
+        if _package == "pydantic":
+            module.Extra = type("Extra", (), {"ignore": "ignore"})
         sys.modules.setdefault(_package, module)
 
 try:
