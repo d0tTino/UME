@@ -1,6 +1,8 @@
 from __future__ import annotations
 # ruff: noqa: E402
 
+import pytest
+
 import sys
 import importlib.util
 from pathlib import Path
@@ -20,7 +22,16 @@ import httpx
 from fastapi.testclient import TestClient
 from ume.api import app, configure_graph, configure_vector_store
 from ume.persistent_graph import PersistentGraph
-from ume.integrations import LangGraph, Letta, MemGPT, SuperMemory, BaseClient
+from ume.integrations import (
+    LangGraph,
+    Letta,
+    MemGPT,
+    SuperMemory,
+    BaseClient,
+    AsyncLangGraph,
+    AsyncLetta,
+    AsyncBaseClient,
+)
 from ume.config import settings
 
 class DummyVectorStore:
@@ -82,6 +93,40 @@ def test_integration_clients(tmp_path) -> None:
                 result = c.recall({"vector": vec, "k": 1})
             assert app.state.graph.get_node(nid) == {"text": nid}
             assert result == {"nodes": [{"id": nid, "attributes": {"text": nid}}]}
+
+
+@pytest.mark.asyncio
+async def test_async_langgraph_and_letta(tmp_path) -> None:
+    db_path = tmp_path / "db_async.sqlite"
+    configure_graph(PersistentGraph(str(db_path), check_same_thread=False))
+    configure_vector_store(DummyVectorStore(dim=2))
+
+    with TestClient(app) as client:
+        token = _token(client)
+        store = app.state.vector_store
+        store.add("n1", [1.0, 0.0])
+        store.add("n2", [0.0, 1.0])
+
+        async with AsyncLangGraph(base_url=str(client.base_url), api_key=token) as lg:
+            assert isinstance(lg, AsyncBaseClient)
+            lg._client = httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url=str(client.base_url))
+            await lg.send_events([
+                {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {"node_id": "n1", "attributes": {"text": "n1"}}}
+            ])
+            result1 = await lg.recall({"vector": [1.0, 0.0], "k": 1})
+
+        async with AsyncLetta(base_url=str(client.base_url), api_key=token) as lt:
+            assert isinstance(lt, AsyncBaseClient)
+            lt._client = httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url=str(client.base_url))
+            await lt.send_events([
+                {"event_type": "CREATE_NODE", "timestamp": 2, "node_id": "n2", "payload": {"node_id": "n2", "attributes": {"text": "n2"}}}
+            ])
+            result2 = await lt.recall({"vector": [0.0, 1.0], "k": 1})
+
+        assert app.state.graph.get_node("n1") == {"text": "n1"}
+        assert app.state.graph.get_node("n2") == {"text": "n2"}
+        assert result1 == {"nodes": [{"id": "n1", "attributes": {"text": "n1"}}]}
+        assert result2 == {"nodes": [{"id": "n2", "attributes": {"text": "n2"}}]}
 
 
 

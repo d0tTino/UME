@@ -61,6 +61,25 @@ class DummyVS:
 def dummy_create() -> DummyVS:
     return DummyVS()
 
+
+class DummyVectorStore:
+    def __init__(self, dim: int) -> None:
+        self.dim = dim
+        self.vectors: dict[str, list[float]] = {}
+
+    def add(self, vid: str, vector: list[float]) -> None:
+        assert len(vector) == self.dim
+        self.vectors[vid] = vector
+
+    def query(self, vector: list[float], k: int = 5) -> list[str]:
+        def dist(v: list[float]) -> float:
+            return sum((a - b) ** 2 for a, b in zip(v, vector))
+
+        return [vid for vid, v in sorted(self.vectors.items(), key=lambda kv: dist(kv[1]))][:k]
+
+    def close(self) -> None:  # pragma: no cover - no cleanup needed
+        pass
+
 package.VectorStore = DummyVS  # type: ignore[attr-defined]
 package.create_vector_store = dummy_create  # type: ignore[attr-defined]
 package.create_default_store = dummy_create  # type: ignore[attr-defined]
@@ -72,6 +91,7 @@ sys.modules["ume.api"] = api_module
 spec_api.loader.exec_module(api_module)
 app = api_module.app
 configure_graph = api_module.configure_graph
+configure_vector_store = api_module.configure_vector_store
 
 if "ume.metrics" in sys.modules:
     metrics_module = sys.modules["ume.metrics"]
@@ -83,6 +103,8 @@ else:
     spec_metrics.loader.exec_module(metrics_module)
 REQUEST_COUNT = metrics_module.REQUEST_COUNT
 REQUEST_LATENCY = metrics_module.REQUEST_LATENCY
+RECALL_LATENCY_MS = metrics_module.RECALL_LATENCY_MS
+LEDGER_COMPACTED_BYTES = metrics_module.LEDGER_COMPACTED_BYTES
 
 spec_graph = importlib.util.spec_from_file_location("ume.graph", root / "src" / "ume" / "graph.py")
 assert spec_graph and spec_graph.loader
@@ -168,6 +190,23 @@ def _latency_counts() -> List[float]:
     ]
 
 
+def _recall_latency_counts() -> List[float]:
+    return [
+        s.value
+        for m in RECALL_LATENCY_MS.collect()
+        for s in m.samples
+        if s.name.endswith("_count")
+    ]
+
+
+def _ledger_compacted_bytes() -> float:
+    for m in LEDGER_COMPACTED_BYTES.collect():
+        for s in m.samples:
+            if s.name == "ume_ledger_compacted_bytes" and s.labels == {}:
+                return float(s.value)
+    return 0.0
+
+
 def test_http_metrics_recorded():
     client = TestClient(app)
     tok = _token(client)
@@ -182,3 +221,29 @@ def test_http_metrics_recorded():
 def test_metrics_reset_between_tests():
     assert _count_samples() == []
     assert sum(_latency_counts()) == 0
+
+
+def test_recall_latency_metric_recorded(tmp_path) -> None:
+    configure_graph(MockGraph())
+    configure_vector_store(DummyVectorStore(dim=2))
+    app.state.vector_store = DummyVectorStore(dim=2)
+    app.state.graph = MockGraph()
+    client = TestClient(app)
+    tok = _token(client)
+    store = app.state.vector_store
+    store.add("n1", [0.0, 1.0])
+    app.state.graph.get_node = lambda _id: {"embedding": [0.0, 1.0]}
+    client.get(
+        "/recall",
+        params=[("vector", 0.0), ("vector", 1.0)],
+        headers={"Authorization": f"Bearer {tok}"},
+    )
+    assert sum(_recall_latency_counts()) > 0
+
+
+def test_ledger_compacted_bytes_metric_recorded() -> None:
+    LEDGER_COMPACTED_BYTES.set(123)
+    client = TestClient(app)
+    tok = _token(client)
+    client.get("/metrics", headers={"Authorization": f"Bearer {tok}"})
+    assert _ledger_compacted_bytes() == 123
