@@ -103,6 +103,7 @@ else:
     spec_metrics.loader.exec_module(metrics_module)
 REQUEST_COUNT = metrics_module.REQUEST_COUNT
 REQUEST_LATENCY = metrics_module.REQUEST_LATENCY
+RECALL_LATENCY = metrics_module.RECALL_LATENCY
 RECALL_LATENCY_MS = metrics_module.RECALL_LATENCY_MS
 LEDGER_COMPACTED_BYTES = metrics_module.LEDGER_COMPACTED_BYTES
 
@@ -193,7 +194,7 @@ def _latency_counts() -> List[float]:
 def _recall_latency_counts() -> List[float]:
     return [
         s.value
-        for m in RECALL_LATENCY_MS.collect()
+        for m in RECALL_LATENCY.collect()
         for s in m.samples
         if s.name.endswith("_count")
     ]

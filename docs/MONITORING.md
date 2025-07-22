@@ -63,7 +63,7 @@ Here are a few Prometheus queries you can use when building graphs:
 | `ume_vector_query_latency_seconds` | Latency of vector similarity search | `rate(ume_vector_query_latency_seconds_sum[5m]) / rate(ume_vector_query_latency_seconds_count[5m])` |
 | `ume_vector_index_size` | Number of vectors stored | `ume_vector_index_size` |
 | `ume_stale_vector_count` | Vectors older than the freshness limit | `ume_stale_vector_count` |
-| `ume_recall_latency_ms` | Latency of recall operations | `rate(ume_recall_latency_ms_sum[5m]) / rate(ume_recall_latency_ms_count[5m])` |
+| `ume_recall_latency_seconds` | Latency of recall operations | `rate(ume_recall_latency_seconds_sum[5m]) / rate(ume_recall_latency_seconds_count[5m])` |
 | `ume_ledger_compacted_bytes` | Bytes removed during the last ledger compaction | `ume_ledger_compacted_bytes` |
 
 You can combine these metrics in Grafana to visualize API performance and index

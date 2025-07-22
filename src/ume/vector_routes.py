@@ -14,7 +14,7 @@ from . import api_deps as deps
 from .vector_store import VectorStore
 from .graph_adapter import IGraphAdapter
 from .embedding import generate_embedding
-from .metrics import RECALL_SCORE, RECALL_LATENCY_MS
+from .metrics import RECALL_SCORE, RECALL_LATENCY, RECALL_LATENCY_MS
 
 router = APIRouter()
 
@@ -81,7 +81,9 @@ def api_recall(
                 except TypeError:
                     pass
             nodes.append({"id": node_id, "attributes": attrs})
-    RECALL_LATENCY_MS.observe((time.perf_counter() - start) * 1000)
+    duration = time.perf_counter() - start
+    RECALL_LATENCY.observe(duration)
+    RECALL_LATENCY_MS.observe(duration * 1000)
     return {"nodes": nodes}
 
 
@@ -118,7 +120,9 @@ async def api_recall_stream(
                 payload = {"id": node_id, "attributes": attrs}
                 yield f"data: {json.dumps(payload)}\n\n"
             await asyncio.sleep(0)
-        RECALL_LATENCY_MS.observe((time.perf_counter() - start) * 1000)
+        duration = time.perf_counter() - start
+        RECALL_LATENCY.observe(duration)
+        RECALL_LATENCY_MS.observe(duration * 1000)
 
     return StreamingResponse(_gen(), media_type="text/event-stream")
 

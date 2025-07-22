@@ -164,6 +164,8 @@ def test_metrics_summary(monkeypatch: MonkeyPatch) -> None:
     assert "vector_index_size" in data
     assert "average_request_latency" in data
     assert "average_recall_score" in data
+    assert "average_recall_latency" in data
+    assert "ledger_compacted_bytes" in data
 
 
 def test_metrics_summary_with_rate_limit(monkeypatch: MonkeyPatch) -> None:
@@ -200,6 +202,8 @@ def test_metrics_summary_with_rate_limit(monkeypatch: MonkeyPatch) -> None:
         assert res.status_code == 200
         data = res.json()
         assert data["request_count_by_status"].get("429", 0) >= 1
+        assert "average_recall_latency" in data
+        assert "ledger_compacted_bytes" in data
 
 
 def test_dashboard_endpoints(monkeypatch: MonkeyPatch) -> None:
