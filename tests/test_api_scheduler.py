@@ -8,6 +8,7 @@ import types
 import pytest
 
 root = Path(__file__).resolve().parents[1]
+_orig_ume = sys.modules.get("ume")
 package = types.ModuleType("ume")
 package.__path__ = [str(root / "src" / "ume")]
 sys.modules["ume"] = package
@@ -144,3 +145,8 @@ async def test_api_compaction_thread_stops(tmp_path, monkeypatch: pytest.MonkeyP
     assert thread.is_alive() is False
     retention.stop_ledger_compaction_scheduler()
     ledger.close()
+
+if _orig_ume is None:
+    sys.modules.pop("ume", None)
+else:
+    sys.modules["ume"] = _orig_ume

@@ -356,6 +356,10 @@ Stack running. API docs: http://localhost:8000/docs
 Recall endpoint: http://localhost:8000/recall
 ```
 
+Frontend dependencies are installed and the dashboard is built only if the
+`node_modules` or `frontend/dist` directories are missing. Use the
+`--force-build` flag to rebuild these assets.
+
 The resulting `.env` will contain values similar to:
 
 ```bash
@@ -375,8 +379,9 @@ poetry run ume up --no-confirm
 ```
 
 The command generates TLS certificates if needed, installs frontend dependencies
-on the first run, builds the React dashboard and waits until the services become
-healthy before printing the main URLs:
+and builds the React dashboard when required. Pass ``--force-build`` to reinstall
+Node modules and rebuild the dashboard. The command waits until the services
+become healthy before printing the main URLs:
 
 ```
 http://localhost:8000/docs

@@ -5,7 +5,8 @@ from pathlib import Path
 
 # Avoid executing ume/__init__.py which imports optional dependencies.
 pkg_root = Path(__file__).resolve().parents[1] / "src" / "ume"
-if "ume" not in sys.modules:
+_orig_ume = sys.modules.get("ume")
+if _orig_ume is None:
     stub = types.ModuleType("ume")
     stub.__path__ = [str(pkg_root)]
     sys.modules["ume"] = stub
@@ -87,3 +88,8 @@ def test_dag_service_task_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     service._thread.join()
     assert not service._thread.is_alive()
     service.stop()
+
+if _orig_ume is None:
+    sys.modules.pop("ume", None)
+else:
+    sys.modules["ume"] = _orig_ume
