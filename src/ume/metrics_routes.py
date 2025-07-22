@@ -6,7 +6,13 @@ from fastapi import APIRouter, Depends, Response
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from .metrics import REQUEST_COUNT, REQUEST_LATENCY, RECALL_SCORE
+from .metrics import (
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
+    RECALL_SCORE,
+    RECALL_LATENCY,
+    LEDGER_COMPACTED_BYTES,
+)
 from .api_deps import get_current_role, get_vector_store
 from .vector_store import VectorStore
 
@@ -53,6 +59,28 @@ def metrics_summary(
                 recall_count += s.value
     avg_recall = recall_sum / recall_count if recall_count else 0.0
 
+    recall_lat_sum = 0.0
+    recall_lat_count = 0.0
+    for metric in RECALL_LATENCY.collect():
+        for s in metric.samples:
+            if s.name.endswith("_sum"):
+                recall_lat_sum += s.value
+            elif s.name.endswith("_count"):
+                recall_lat_count += s.value
+    avg_recall_latency = (
+        recall_lat_sum / recall_lat_count if recall_lat_count else 0.0
+    )
+
+    compacted_bytes = 0.0
+    for metric in LEDGER_COMPACTED_BYTES.collect():
+        for s in metric.samples:
+            if (
+                s.name == "ume_ledger_compacted_bytes"
+                and s.labels == {}
+            ):
+                compacted_bytes = float(s.value)
+                break
+
     if hasattr(store, "get_index_size"):
         try:
             index_size = store.get_index_size()
@@ -71,4 +99,6 @@ def metrics_summary(
         "average_request_latency": avg_latency,
         "vector_index_size": index_size,
         "average_recall_score": avg_recall,
+        "average_recall_latency": avg_recall_latency,
+        "ledger_compacted_bytes": int(compacted_bytes),
     }

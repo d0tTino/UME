@@ -47,6 +47,10 @@ FALSE_TEXT_RATE = Counter(
 )
 
 # Additional recall metrics
+RECALL_LATENCY = Histogram(
+    "ume_recall_latency_seconds",
+    "Latency of recall operations in seconds",
+)
 RECALL_LATENCY_MS = Histogram(
     "ume_recall_latency_ms",
     "Latency of recall operations in milliseconds",
