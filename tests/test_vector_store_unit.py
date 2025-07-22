@@ -1,4 +1,5 @@
 # ruff: noqa: E402
+import importlib
 import importlib.util
 import sys
 import types
@@ -75,7 +76,10 @@ def vector_store_cls(request):
         if orig_cfg is not None:
             sys.modules["ume.config"] = orig_cfg
         else:
+            # Re-import config so subsequent tests have it available
             sys.modules.pop("ume.config", None)
+            import ume.config as cfg  # type: ignore
+            sys.modules["ume.config"] = cfg
         if orig_backends is not None:
             sys.modules["ume.vector_backends"] = orig_backends
         else:

@@ -590,6 +590,9 @@ def test_cli_up_missing_docker(monkeypatch: pytest.MonkeyPatch, capsys: pytest.C
     importlib.reload(compose)
 
     monkeypatch.setattr(compose.shutil, "which", lambda name: None if name == "docker" else "/usr/bin/" + name)
+    # Ensure previous tests haven't disabled the Docker check.
+    monkeypatch.delenv("UME_SKIP_DOCKER_CHECK", raising=False)
+    monkeypatch.delenv("UME_SKIP_NPM_CHECK", raising=False)
     monkeypatch.setattr(compose, "_compose_up", lambda *_: None)
     monkeypatch.setattr(compose.subprocess, "run", lambda *_, **__: None)
 
@@ -613,6 +616,9 @@ def test_cli_up_missing_node(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     importlib.reload(compose)
 
     monkeypatch.setattr(compose.shutil, "which", lambda name: None if name == "npm" else "/usr/bin/" + name)
+    # Ensure previous tests haven't disabled the Node check.
+    monkeypatch.delenv("UME_SKIP_DOCKER_CHECK", raising=False)
+    monkeypatch.delenv("UME_SKIP_NPM_CHECK", raising=False)
     monkeypatch.setattr(compose, "_compose_up", lambda *_: None)
     monkeypatch.setattr(compose.subprocess, "run", lambda *_, **__: None)
 
