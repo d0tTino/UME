@@ -50,7 +50,8 @@ Start the stack with `docker-compose up`. Prometheus will scrape
    credentials.
 2. Add a Prometheus data source pointing to `http://prometheus:9090`.
 3. Create a dashboard and add graphs using the `ume_http_requests_total` and
-   other metrics exposed by UME.
+   other metrics exposed by UME, or import the ready-made dashboard from
+   `docs/grafana/ume_dashboard.json`.
 
 ## Example Grafana Panels
 
