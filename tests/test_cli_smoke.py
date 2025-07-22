@@ -356,17 +356,21 @@ def test_top_level_ume_up(monkeypatch: pytest.MonkeyPatch) -> None:
 
     called: dict[str, bool] = {}
 
-    def fake_quickstart(no_confirm: bool = False) -> None:
-        called["flag"] = no_confirm
+    def fake_quickstart(
+        no_confirm: bool = False, force_build: bool = False
+    ) -> None:
+        called["no_confirm"] = no_confirm
+        called["force_build"] = force_build
 
     monkeypatch.setattr(main, "_quickstart", fake_quickstart)
 
     argv = sys.argv[:]
-    sys.argv = ["ume", "up", "--no-confirm"]
+    sys.argv = ["ume", "up", "--no-confirm", "--force-build"]
     main.main()
     sys.argv = argv
 
-    assert called.get("flag") is True
+    assert called.get("no_confirm") is True
+    assert called.get("force_build") is True
 
 
 def test_cli_up_custom_compose(
@@ -504,10 +508,22 @@ def test_cli_snapshot_schedule(
     bench.benchmark_vector_store = lambda *_: None
     feder = types.ModuleType("ume.federation")
     feder.MirrorMakerDriver = object  # type: ignore[assignment]
+    cli_pkg = types.ModuleType("ume.cli")
+    compose_pkg = types.ModuleType("ume.cli.compose")
+    compose_pkg._compose_down = lambda *_, **__: None
+    compose_pkg._compose_ps = lambda *_, **__: None
+    compose_pkg._quickstart = lambda *_, **__: None
+    cli_pkg.compose = compose_pkg
+    prompt_pkg = types.ModuleType("ume.cli.prompt")
+    prompt_pkg.UMEPrompt = object
+    prompt_pkg.create_graph_adapter = lambda *_, **__: None
     sys.modules["ume"] = stub
     sys.modules["ume.benchmarks"] = bench
     sys.modules["ume.federation"] = feder
     sys.modules["ume.auto_snapshot"] = auto_snapshot
+    sys.modules["ume.cli"] = cli_pkg
+    sys.modules["ume.cli.compose"] = compose_pkg
+    sys.modules["ume.cli.prompt"] = prompt_pkg
 
     import ume_cli as cli
     importlib.reload(cli)
@@ -538,6 +554,16 @@ def test_cli_snapshot_schedule(
 
     assert called["interval"] == 1
     assert "Snapshots will be written" in out
+
+    for mod in [
+        "ume.cli.compose",
+        "ume.cli",
+        "ume.auto_snapshot",
+        "ume.federation",
+        "ume.benchmarks",
+        "ume",
+    ]:
+        sys.modules.pop(mod, None)
 
 
 def test_cli_env_file_warning(
@@ -711,7 +737,7 @@ sys.modules['ume.config'] = conf
                 "    env_file.write_text('UME_AUDIT_SIGNING_KEY=test\\nUME_OAUTH_PASSWORD=test\\n')",
                 "    print('Created .env from env.example with random UME_AUDIT_SIGNING_KEY and UME_OAUTH_PASSWORD')",
                 "",
-                "def _quickstart(no_confirm: bool = False) -> None:",
+                "def _quickstart(no_confirm: bool = False, force_build: bool = False) -> None:",
                 "    _ensure_env_file(Path('.env'))",
                 "    _compose_up()",
             ]

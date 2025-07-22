@@ -179,7 +179,7 @@ def _ensure_env_file(env_file: Path = Path(".env")) -> None:
         print("Updated secrets in .env with secure values")
 
 
-def _quickstart(no_confirm: bool = False) -> None:
+def _quickstart(no_confirm: bool = False, force_build: bool = False) -> None:
     """Prepare environment and start the Docker Compose stack."""
     _require_docker()
     _require_npm()
@@ -207,12 +207,15 @@ def _quickstart(no_confirm: bool = False) -> None:
     subprocess.run(["bash", str(cert_script)], check=True)
 
     frontend_dir = ROOT_DIR / "frontend"
+    need_install = force_build or not (frontend_dir / "node_modules").exists()
+    need_build = force_build or not (frontend_dir / "dist").exists()
     try:
-        if not (frontend_dir / "node_modules").exists():
+        if need_install:
             print("Installing frontend dependencies...")
             subprocess.run(["npm", "install"], cwd=frontend_dir, check=True)
-        print("Building frontend dashboard...")
-        subprocess.run(["npm", "run", "build"], cwd=frontend_dir, check=True)
+        if need_build:
+            print("Building frontend dashboard...")
+            subprocess.run(["npm", "run", "build"], cwd=frontend_dir, check=True)
     except FileNotFoundError:
         print("npm is required to build the dashboard. Please install Node.js.")
 

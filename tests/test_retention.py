@@ -15,7 +15,8 @@ from typing import Callable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 pkg_root = Path(__file__).resolve().parents[1] / "src" / "ume"
-if "ume" not in sys.modules:
+_orig_ume = sys.modules.get("ume")
+if _orig_ume is None:
     stub = types.ModuleType("ume")
     stub.__path__ = [str(pkg_root)]
     sys.modules["ume"] = stub
@@ -223,3 +224,8 @@ def test_ledger_compaction_scheduler(tmp_path: Path, monkeypatch: pytest.MonkeyP
     stop_ledger_compaction_scheduler()
 
     assert [o for o, _ in ledger.range()] == [2, 3, 4]
+
+if _orig_ume is None:
+    sys.modules.pop("ume", None)
+else:
+    sys.modules["ume"] = _orig_ume

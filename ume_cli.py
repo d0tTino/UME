@@ -93,12 +93,20 @@ def main() -> None:
             action="store_true",
             help="Create .env and certs without prompting",
         )
+        p.add_argument(
+            "--force-build",
+            action="store_true",
+            help="Reinstall and rebuild frontend assets",
+        )
 
     args = parser.parse_args()
 
     try:
         if args.command in {"up", "quickstart"}:
-            _quickstart(getattr(args, "no_confirm", False))
+            _quickstart(
+                getattr(args, "no_confirm", False),
+                getattr(args, "force_build", False),
+            )
             return
         if args.command == "down":
             _compose_down()
