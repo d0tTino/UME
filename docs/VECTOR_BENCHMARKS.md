@@ -1,6 +1,6 @@
 # Vector Store Benchmark
 
-The `benchmark_vector_store` utility measures how quickly the FAISS index can be built and queried.  
+The `benchmark_vector_store` utility measures how quickly the FAISS index can be built and queried.
 It now supports running the benchmark multiple times and reports the average build time and query latency.
 
 On an RTX 4080 with 100k random vectors (dimension 1536) and 100 search queries the GPU backed store built the index in about **2.1s** and averaged **0.7ms** per query. The CPU version required roughly **9.5s** to build and **3.6ms** per query.
@@ -26,4 +26,24 @@ Example response:
   "avg_query_latency": 0.0007
 }
 ```
+```
+
+## Recall Benchmark
+
+`scripts/benchmark_recall.py` generates synthetic nodes via the HTTP API and then
+times the `/recall` endpoint. The script reports the 95th percentile latency for
+a series of queries.
+
+Run the benchmark with one million nodes:
+
+```bash
+poetry run python scripts/benchmark_recall.py --num-nodes 1000000 --num-queries 100
+```
+
+Example output:
+
+```text
+Loading 1000000 nodes...
+Benchmarking recall...
+p95 recall latency: 12.3 ms
 ```

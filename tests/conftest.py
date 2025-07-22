@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import types
 import importlib
+from typing import Generator
 from pathlib import Path
 import os
 
@@ -217,4 +218,34 @@ def redis_service():
     host = container.get_container_host_ip()
     yield {"url": f"redis://{host}:{port}/0"}
     container.stop()  # type: ignore[no-untyped-call]
+
+
+@pytest.fixture(autouse=True)
+def _restore_env() -> Generator[None, None, None]:
+    """Reset env vars and reload ume.config after each test."""
+    import importlib
+
+    orig_docker = os.environ.get("UME_SKIP_DOCKER_CHECK")
+    orig_npm = os.environ.get("UME_SKIP_NPM_CHECK")
+    orig_key = os.environ.get("UME_AUDIT_SIGNING_KEY")
+    yield
+    if orig_docker is None:
+        os.environ.pop("UME_SKIP_DOCKER_CHECK", None)
+    else:
+        os.environ["UME_SKIP_DOCKER_CHECK"] = orig_docker
+    if orig_npm is None:
+        os.environ.pop("UME_SKIP_NPM_CHECK", None)
+    else:
+        os.environ["UME_SKIP_NPM_CHECK"] = orig_npm
+    if orig_key is None:
+        os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "test-key")
+    else:
+        os.environ["UME_AUDIT_SIGNING_KEY"] = orig_key
+    try:
+        module = importlib.import_module("ume.config")
+        pkg = importlib.import_module("ume")
+    except Exception:
+        return
+    if getattr(pkg, "__path__", None):
+        importlib.reload(module)
 

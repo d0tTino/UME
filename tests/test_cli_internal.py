@@ -3,10 +3,6 @@ from pathlib import Path
 import pytest
 
 
-
-import pytest
-
-
 @pytest.mark.xfail(reason="RoleBasedGraphAdapter behaves unexpectedly in this environment")
 def test_umeprompt_commands(tmp_path: Path) -> None:
     os.environ["UME_CLI_DB"] = ":memory:"
@@ -60,6 +56,11 @@ def test_umeprompt_commands(tmp_path: Path) -> None:
     _setup_warnings(True, str(tmp_path / "warn.log"))
     prompt.do_exit("")
 
+    # Reset environment variables modified for this test to avoid
+    # side effects on subsequent tests.
+    os.environ.pop("UME_SKIP_DOCKER_CHECK", None)
+    os.environ.pop("UME_SKIP_NPM_CHECK", None)
+
 
 def test_compose_ps(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     import importlib
@@ -72,6 +73,8 @@ def test_compose_ps(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixtu
         return "api healthy\nagent unhealthy"
 
     monkeypatch.setattr(compose.subprocess, "check_output", fake_check_output)
+    # Avoid dependency on a real Docker installation
+    monkeypatch.setenv("UME_SKIP_DOCKER_CHECK", "1")
 
     compose._compose_ps()
 
@@ -97,6 +100,8 @@ def test_up_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(compose, "_compose_up", fake_compose_up)
     monkeypatch.setattr(compose, "_ensure_env_file", lambda *_: None)
     monkeypatch.setattr(compose.subprocess, "run", lambda *a, **k: None)
+    # Avoid dependency on Docker for these CLI helpers
+    monkeypatch.setenv("UME_SKIP_DOCKER_CHECK", "1")
 
     sys.argv = ["ume_cli.py", "up", "--no-confirm"]
     cli.main()
