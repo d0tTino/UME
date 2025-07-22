@@ -1,0 +1,29 @@
+{
+  "title": "UME Dashboard",
+  "uid": "ume-dashboard",
+  "schemaVersion": 37,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request Rate",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "rate(ume_http_requests_total[1m])"}],
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "Recall Latency",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "rate(ume_recall_latency_ms_sum[5m]) / rate(ume_recall_latency_ms_count[5m])"}],
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "Compaction Bytes",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ume_ledger_compacted_bytes"}],
+      "id": 3
+    }
+  ]
+}
