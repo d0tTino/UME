@@ -1,6 +1,8 @@
 # src/ume/graph_adapter.py
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional, List, Tuple
+
+import asyncio
 
 # To avoid circular dependency if ProcessingError is defined in processing.py
 # and processing.py imports IGraphAdapter.
@@ -260,3 +262,70 @@ class IGraphAdapter(ABC):
         must return an empty list when no path satisfies the constraints.
         """
         pass
+
+
+class AsyncAdapterMixin:
+    """Async wrappers for CRUD operations on a synchronous :class:`IGraphAdapter`."""
+
+    _adapter: IGraphAdapter
+
+    def __init__(self, adapter: IGraphAdapter) -> None:
+        self._adapter = adapter
+
+    async def add_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
+        await asyncio.to_thread(self._adapter.add_node, node_id, attributes)
+
+    async def update_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
+        await asyncio.to_thread(self._adapter.update_node, node_id, attributes)
+
+    async def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:
+        return await asyncio.to_thread(self._adapter.get_node, node_id)
+
+    async def node_exists(self, node_id: str) -> bool:
+        return await asyncio.to_thread(self._adapter.node_exists, node_id)
+
+    async def dump(self) -> Dict[str, Any]:
+        return await asyncio.to_thread(self._adapter.dump)
+
+    async def clear(self) -> None:
+        await asyncio.to_thread(self._adapter.clear)
+
+    async def get_all_node_ids(self) -> List[str]:
+        return await asyncio.to_thread(self._adapter.get_all_node_ids)
+
+    async def find_connected_nodes(
+        self, node_id: str, edge_label: Optional[str] = None
+    ) -> List[str]:
+        return await asyncio.to_thread(
+            self._adapter.find_connected_nodes, node_id, edge_label
+        )
+
+    async def add_edge(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
+        await asyncio.to_thread(
+            self._adapter.add_edge, source_node_id, target_node_id, label
+        )
+
+    async def get_all_edges(self) -> List[Tuple[str, str, str]]:
+        return await asyncio.to_thread(self._adapter.get_all_edges)
+
+    async def delete_edge(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
+        await asyncio.to_thread(
+            self._adapter.delete_edge, source_node_id, target_node_id, label
+        )
+
+    async def redact_node(self, node_id: str) -> None:
+        await asyncio.to_thread(self._adapter.redact_node, node_id)
+
+    async def redact_edge(
+        self, source_node_id: str, target_node_id: str, label: str
+    ) -> None:
+        await asyncio.to_thread(
+            self._adapter.redact_edge, source_node_id, target_node_id, label
+        )
+
+    async def close(self) -> None:
+        await asyncio.to_thread(self._adapter.close)
