@@ -175,12 +175,16 @@ async def _stop_token_cleanup() -> None:
         _token_cleanup_task.cancel()
         try:
             await _token_cleanup_task
+        except asyncio.CancelledError:
+            pass
         except Exception:
             pass
         _token_cleanup_task = None
     if _ledger_compaction_stop is not None:
+        _ledger_compaction_stop()
+    else:
         stop_ledger_compaction_scheduler()
-        _ledger_compaction_stop = None
+    _ledger_compaction_stop = None
 
 
 @app.middleware("http")
