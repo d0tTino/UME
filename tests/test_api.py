@@ -5,6 +5,7 @@ from typing import Any
 import time
 import threading
 from pathlib import Path
+from prometheus_client.parser import text_string_to_metric_families
 
 faiss = pytest.importorskip("faiss")
 if not hasattr(faiss, "IndexFlatL2"):
@@ -166,6 +167,59 @@ def test_metrics_summary(monkeypatch: MonkeyPatch) -> None:
     assert "average_recall_score" in data
     assert "average_recall_latency" in data
     assert "ledger_compacted_bytes" in data
+
+
+def test_metrics_after_recall(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 1.0])
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    g = MockGraph()
+    g.add_node("n1", {"embedding": [0.0, 1.0]})
+    configure_graph(g)
+    app.state.vector_store.add("n1", [0.0, 1.0])
+
+
+    with TestClient(app) as client:
+        token = _token(client)
+        before = client.get("/metrics", headers={"Authorization": f"Bearer {token}"}).text
+
+        def _metric_val(text: str, name: str, labels: dict[str, str] | None = None) -> float:
+            for fam in text_string_to_metric_families(text):
+                for sample in fam.samples:
+                    if sample.name == name and (
+                        not labels or all(sample.labels.get(k) == v for k, v in labels.items())
+                    ):
+                        return float(sample.value)
+            return 0.0
+
+        count_before = _metric_val(
+            before,
+            "ume_http_requests_total",
+            {"method": "GET", "path": "/recall", "status": "200"},
+        )
+        latency_before = _metric_val(
+            before, "ume_request_latency_seconds_count", {"method": "GET", "path": "/recall"}
+        )
+        recall_before = _metric_val(before, "ume_recall_score_count")
+        recall_latency_before = _metric_val(before, "ume_recall_latency_ms_count")
+
+        client.get(
+            "/recall",
+            params=[("vector", 0.0), ("vector", 1.0)],
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        after = client.get("/metrics", headers={"Authorization": f"Bearer {token}"}).text
+
+        assert _metric_val(
+            after,
+            "ume_http_requests_total",
+            {"method": "GET", "path": "/recall", "status": "200"},
+        ) == count_before + 1
+        assert _metric_val(
+            after, "ume_request_latency_seconds_count", {"method": "GET", "path": "/recall"}
+        ) == latency_before + 1
+        assert _metric_val(after, "ume_recall_score_count") > recall_before
+        assert _metric_val(after, "ume_recall_latency_ms_count") == recall_latency_before + 1
 
 
 def test_metrics_summary_with_rate_limit(monkeypatch: MonkeyPatch) -> None:
