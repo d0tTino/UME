@@ -19,7 +19,9 @@ for a simple streaming demonstration.
 
 ## LangGraph
 See [examples/langgraph_integration.ipynb](../examples/langgraph_integration.ipynb)
-for a minimal demonstration of `send_events` and `recall`.
+for a minimal demonstration of `send_events` and `recall`. A more complete
+workflow is provided in
+[examples/langgraph_workflow.ipynb](../examples/langgraph_workflow.ipynb).
 ```python
 from ume.integrations import LangGraph, AsyncLangGraph
 
@@ -37,7 +39,9 @@ async def main():
 
 ## Letta
 See [examples/letta_integration.ipynb](../examples/letta_integration.ipynb) for
-a minimal demonstration of `send_events` and `recall`.
+a minimal demonstration of `send_events` and `recall`. A step-by-step workflow
+is shown in
+[examples/letta_workflow.ipynb](../examples/letta_workflow.ipynb).
 ```python
 from ume.integrations import Letta, AsyncLetta
 
