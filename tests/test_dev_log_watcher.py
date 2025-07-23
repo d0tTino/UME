@@ -35,6 +35,20 @@ def load_dev_log_watcher(monkeypatch: MonkeyPatch):
     monkeypatch.setitem(sys.modules, "ume.event", event_module)
 
     watchers_pkg = types.ModuleType("ume.watchers")
+    watchers_pkg.__path__ = []  # make it a package
+
+    hooks_mod = types.ModuleType("ume.watchers.hooks")
+    hook_calls: list[dict[str, Any]] = []
+
+    def notify_hooks(payload: dict[str, Any]) -> None:
+        hook_calls.append(payload)
+
+    hooks_mod.notify_hooks = notify_hooks
+    hooks_mod.register_hook = lambda hook: None
+    hooks_mod.unregister_hook = lambda hook: None
+    watchers_pkg.hooks = hooks_mod
+    monkeypatch.setitem(sys.modules, "ume.watchers.hooks", hooks_mod)
+
     ume_pkg.watchers = watchers_pkg
     monkeypatch.setitem(sys.modules, "ume.watchers", watchers_pkg)
 
@@ -85,6 +99,7 @@ def load_dev_log_watcher(monkeypatch: MonkeyPatch):
     dev_log_watcher = importlib.util.module_from_spec(devlog_spec)
     assert devlog_spec.loader is not None
     devlog_spec.loader.exec_module(dev_log_watcher)
+    dev_log_watcher.hook_calls = hook_calls
     watchers_pkg.dev_log_watcher = dev_log_watcher
     monkeypatch.setitem(sys.modules, "ume.watchers.dev_log_watcher", dev_log_watcher)
 
@@ -108,6 +123,7 @@ def test_handler_produces_event(tmp_path: Path, monkeypatch: MonkeyPatch) -> Non
     assert messages
     evt = parse_event(json.loads(messages[0].decode()))
     assert evt.payload["node_id"] == str(tmp_path / "file.txt")
+    assert dev_log_watcher.hook_calls == [{"path": str(tmp_path / "file.txt")}]
 
 
 def test_run_watcher_produces_event(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -159,6 +175,7 @@ def test_run_watcher_produces_event(tmp_path: Path, monkeypatch: MonkeyPatch) ->
     assert messages
     evt = parse_event(json.loads(messages[0].decode()))
     assert evt.payload["node_id"].endswith("watched.txt")
+    assert dev_log_watcher.hook_calls == [{"path": str(tmp_path / "watched.txt")}]
 
 
 def test_run_watcher_interrupt_stops_and_flushes(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -205,6 +222,7 @@ def test_run_watcher_interrupt_stops_and_flushes(tmp_path: Path, monkeypatch: Mo
     assert producer.flush_calls == 1
     assert observer.stop_calls == 1
     assert observer.join_calls == 2
+    assert dev_log_watcher.hook_calls == []
 
 
 def test_run_watcher_skips_missing_path(tmp_path: Path, monkeypatch: MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
@@ -246,6 +264,7 @@ def test_run_watcher_skips_missing_path(tmp_path: Path, monkeypatch: MonkeyPatch
 
     assert observer.scheduled == [str(tmp_path)]
     assert any("does not exist" in rec.message for rec in caplog.records)
+    assert dev_log_watcher.hook_calls == []
 
 
 def test_run_watcher_no_valid_paths(tmp_path: Path, monkeypatch: MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
@@ -287,3 +306,4 @@ def test_run_watcher_no_valid_paths(tmp_path: Path, monkeypatch: MonkeyPatch, ca
 
     assert not observer.started
     assert any("No existing paths" in rec.message for rec in caplog.records)
+    assert dev_log_watcher.hook_calls == []

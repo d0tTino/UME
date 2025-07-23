@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+import json
 
 import yaml
 
@@ -69,6 +70,16 @@ class Dossier:
             self.projects = proj
         self.preferences = self._read_yaml(self.root / "preferences.yaml") or {}
         self.reflections = self._read_yaml(self.root / "reflections.yaml") or []
+
+    def add_activity(self, payload: dict[str, Any]) -> None:
+        """Append ``payload`` to ``telemetry/activity.log`` if allowed."""
+        if not self.preferences.get("record_activity", True):
+            return
+        log_path = self.root / "telemetry" / "activity.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        entry = {"timestamp": datetime.utcnow().isoformat(), "payload": payload}
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
 
     @staticmethod
     def _read_yaml(path: Path) -> Any:
