@@ -200,6 +200,15 @@ def _recall_latency_counts() -> List[float]:
     ]
 
 
+def _recall_latency_ms_counts() -> List[float]:
+    return [
+        s.value
+        for m in RECALL_LATENCY_MS.collect()
+        for s in m.samples
+        if s.name.endswith("_count")
+    ]
+
+
 def _ledger_compacted_bytes() -> float:
     for m in LEDGER_COMPACTED_BYTES.collect():
         for s in m.samples:
@@ -240,6 +249,28 @@ def test_recall_latency_metric_recorded(tmp_path) -> None:
         headers={"Authorization": f"Bearer {tok}"},
     )
     assert sum(_recall_latency_counts()) > 0
+
+
+def test_recall_metrics_exposed_via_endpoint(tmp_path) -> None:
+    configure_graph(MockGraph())
+    configure_vector_store(DummyVectorStore(dim=2))
+    app.state.vector_store = DummyVectorStore(dim=2)
+    app.state.graph = MockGraph()
+    client = TestClient(app)
+    tok = _token(client)
+    store = app.state.vector_store
+    store.add("n1", [0.0, 1.0])
+    app.state.graph.get_node = lambda _id: {"embedding": [0.0, 1.0]}
+    before_sec = sum(_recall_latency_counts())
+    before_ms = sum(_recall_latency_ms_counts())
+    client.get(
+        "/recall",
+        params=[("vector", 0.0), ("vector", 1.0)],
+        headers={"Authorization": f"Bearer {tok}"},
+    )
+    client.get("/metrics", headers={"Authorization": f"Bearer {tok}"})
+    assert sum(_recall_latency_counts()) > before_sec
+    assert sum(_recall_latency_ms_counts()) > before_ms
 
 
 def test_ledger_compacted_bytes_metric_recorded() -> None:
