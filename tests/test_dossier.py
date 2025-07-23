@@ -1,5 +1,6 @@
 import json
 import threading
+import pytest
 from ume.dossier import (
     Dossier,
     add_reflection,
@@ -69,3 +70,38 @@ def test_add_activity_thread_safety(tmp_path):
     log = tmp_path / "telemetry" / "activity.log"
     entries = [json.loads(line) for line in log.read_text().splitlines()]
     assert len(entries) == 5
+
+
+def test_dossier_encryption_roundtrip(tmp_path, monkeypatch):
+    import importlib
+    try:
+        from cryptography.fernet import Fernet
+    except Exception:
+        pytest.skip("cryptography not available")
+    from ume.config.loader import load_settings
+
+    key = Fernet.generate_key().decode()
+    monkeypatch.setenv("UME_ENCRYPTION_ENABLED", "true")
+    monkeypatch.setenv("UME_ENCRYPTION_KEY", key)
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+
+    import ume.config as cfg
+    load_settings.cache_clear()
+    importlib.reload(cfg)
+    import ume.dossier as dossier_mod
+    importlib.reload(dossier_mod)
+
+    dossier = dossier_mod.Dossier.init_dossier(tmp_path)
+    dossier.profile["name"] = "Alice"
+    dossier.preferences["record_activity"] = True
+    dossier.save()
+    dossier.add_activity({"act": 1})
+
+    raw = (tmp_path / "profile.yaml").read_bytes()
+    assert b"Alice" not in raw
+    log_raw = (tmp_path / "telemetry" / "activity.log").read_bytes()
+    assert b"act" not in log_raw
+
+    importlib.reload(dossier_mod)
+    reloaded = dossier_mod.Dossier.load(tmp_path)
+    assert reloaded.profile["name"] == "Alice"
