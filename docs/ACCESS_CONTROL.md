@@ -52,6 +52,19 @@ UME_ROLE=UserService ume new_node UserProfile.123 '{}'
 
 Without the `UserService` role the command raises `AccessDeniedError`.
 
+## Dossier Endpoint RBAC
+
+API routes under `/dossier` use their own role checks. Two roles are
+implemented today:
+
+- **ProjectManager** – allowed to view any dossier and attach new projects.
+- **Viewer** – allowed to view dossier information but not modify it.
+
+A future **TelemetryAdmin** role will enable privileged updates to telemetry
+files stored in each dossier. The HTTP server reads the current role from the
+OAuth token via `UME_OAUTH_ROLE`. Command line tools can specify `UME_ROLE` to
+emulate the same restrictions.
+
 ## User Consent Ledger
 
 The privacy agent checks user consent before forwarding sanitized events.
@@ -70,10 +83,11 @@ Consent can be granted or revoked programmatically using the
 ### Ledger Encryption Migration
 
 UME can optionally encrypt the audit log and SQLite ledgers. Enable this by
-setting `UME_ENCRYPTION_ENABLED` to `True` and provide a base64 encoded key via
-`UME_ENCRYPTION_KEY`. Existing plaintext files must be re-encrypted or replaced.
-The simplest migration is to archive the old files and let UME create new,
-encrypted ones on startup.
+setting `UME_ENCRYPTION_ENABLED` to `True` and providing a base64 encoded key
+via `UME_ENCRYPTION_KEY`. When enabled, both the event and consent ledgers will
+be written in encrypted form alongside the audit log. Existing plaintext files
+must be re-encrypted or replaced. The simplest migration is to archive the old
+files and let UME create new, encrypted ones on startup.
 
 ## Sample Rego Rules
 
@@ -90,6 +104,14 @@ can_read_projects {
 }
 
 can_read_projects {
+    input.role == "ProjectManager"
+}
+
+can_read_projects {
+    input.role == "Viewer"
+}
+
+allow_add_project {
     input.role == "ProjectManager"
 }
 
