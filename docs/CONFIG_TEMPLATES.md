@@ -71,6 +71,8 @@ Valid values for `UME_GRAPH_BACKEND` are:
 | `UME_SNAPSHOT_DIR` | `.` | Directory that snapshot APIs will accept paths from. |
 | `UME_AUDIT_LOG_PATH` | `audit.log` | Location of the audit log. |
 | `UME_AUDIT_SIGNING_KEY` | `default-key` | Key used to sign audit entries. Must be changed from the default or startup will fail. |
+| `UME_ENCRYPTION_ENABLED` | `False` | If `True`, encrypt audit log and ledger files with `UME_ENCRYPTION_KEY`. |
+| `UME_ENCRYPTION_KEY` | *(unset)* | Base64 Fernet key used when encryption is enabled. |
 | `UME_AGENT_ID` | `SYSTEM` | Identifier recorded in audit logs. |
 | `UME_EMBED_MODEL` | `all-MiniLM-L6-v2` | SentenceTransformer model name. |
 | `UME_CLI_DB` | `ume_graph.db` | Database path used by the CLI. |

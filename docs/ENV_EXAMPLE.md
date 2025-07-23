@@ -13,6 +13,10 @@ UME_AUDIT_LOG_PATH=./audit.log
 
 # Key used to sign audit entries. Must be changed from the default.
 UME_AUDIT_SIGNING_KEY=<your-key>
+# Enable encryption of audit and ledger files
+UME_ENCRYPTION_ENABLED=False
+# Base64 Fernet key used when encryption is enabled
+UME_ENCRYPTION_KEY=
 
 # Credentials used to obtain OAuth tokens
 UME_OAUTH_USERNAME=ume

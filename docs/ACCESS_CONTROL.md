@@ -66,3 +66,11 @@ policies can reference this status via the `input.consent` value.
 
 Consent can be granted or revoked programmatically using the
 `ConsentLedger` class from `ume.consent_ledger`.
+
+### Ledger Encryption Migration
+
+UME can optionally encrypt the audit log and SQLite ledgers. Enable this by
+setting `UME_ENCRYPTION_ENABLED` to `True` and provide a base64 encoded key via
+`UME_ENCRYPTION_KEY`. Existing plaintext files must be re-encrypted or replaced.
+The simplest migration is to archive the old files and let UME create new,
+encrypted ones on startup.

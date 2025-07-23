@@ -28,6 +28,8 @@ def load_config(package: str) -> tuple[types.ModuleType, type]:
             UME_COLD_EVENT_AGE_DAYS=180,
             UME_AUDIT_LOG_PATH="/tmp/audit.log",
             UME_AUDIT_SIGNING_KEY="stub",
+            UME_ENCRYPTION_ENABLED=False,
+            UME_ENCRYPTION_KEY=None,
             UME_CONSENT_LEDGER_PATH="consent_ledger.db",
             UME_EVENT_LEDGER_PATH="event_ledger.db",
             UME_FEEDBACK_DB_PATH="feedback.db",

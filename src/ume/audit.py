@@ -5,7 +5,12 @@ import hmac
 import hashlib
 import logging
 import os
-from typing import List, Dict
+from typing import List, Dict, cast
+
+try:
+    from cryptography.fernet import Fernet
+except Exception:  # pragma: no cover - cryptography optional
+    Fernet = None
 
 try:
     import boto3
@@ -18,6 +23,13 @@ logger = logging.getLogger(__name__)
 
 AUDIT_LOG_PATH = settings.UME_AUDIT_LOG_PATH
 SIGNING_KEY = settings.UME_AUDIT_SIGNING_KEY.encode()
+ENCRYPTION_ENABLED = settings.UME_ENCRYPTION_ENABLED
+if ENCRYPTION_ENABLED:
+    if not (Fernet and settings.UME_ENCRYPTION_KEY):
+        raise ValueError("Encryption enabled but cryptography not available or key not set")
+    _fernet = Fernet(settings.UME_ENCRYPTION_KEY.encode())
+else:
+    _fernet = None
 
 
 def _parse_s3(path: str) -> tuple[str, str]:
@@ -49,31 +61,57 @@ def _read_lines(path: str) -> List[str]:
         s3 = boto3.client("s3")
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
-            data: str = obj["Body"].read().decode()
+            raw: bytes = obj["Body"].read()
         except BotoCoreError as exc:
-            logger.error(
-                "BotoCoreError while reading audit log from %s: %s", path, exc
-            )
+            logger.error("BotoCoreError while reading audit log from %s: %s", path, exc)
             return []
         except ClientError as exc:
-            logger.error(
-                "ClientError while reading audit log from %s: %s", path, exc
-            )
+            logger.error("ClientError while reading audit log from %s: %s", path, exc)
+            return []
+
+        if ENCRYPTION_ENABLED:
+            try:
+                text = cast(bytes, _fernet.decrypt(raw)).decode()
+            except Exception as exc:
+                logger.error("Failed to decrypt audit log from %s: %s", path, exc)
+                return []
+        else:
+            try:
+                text = raw.decode()
+            except UnicodeDecodeError as exc:
+                logger.error("Failed to decode audit log from %s: %s", path, exc)
+                return []
+        return text.splitlines()
+    else:
+        try:
+            if ENCRYPTION_ENABLED:
+                with open(path, "rb") as f:
+                    raw = f.read()
+                if not raw:
+                    return []
+                try:
+                    text = cast(bytes, _fernet.decrypt(raw)).decode()
+                except Exception as exc:
+                    logger.error("Failed to decrypt audit log from %s: %s", path, exc)
+                    return []
+                return text.splitlines()
+            else:
+                with open(path, "r", encoding="utf-8") as f:
+                    return [line.rstrip("\n") for line in f]
+        except FileNotFoundError:
             return []
         except UnicodeDecodeError as exc:
             logger.error("Failed to decode audit log from %s: %s", path, exc)
-            return []
-        return data.splitlines()
-    else:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return [line.rstrip("\n") for line in f]
-        except FileNotFoundError:
             return []
 
 
 def _write_lines(path: str, lines: List[str]) -> None:
     data = "\n".join(lines) + "\n"
+    payload: bytes
+    if ENCRYPTION_ENABLED:
+        payload = _fernet.encrypt(data.encode())
+    else:
+        payload = data.encode()
     if path.startswith("s3://"):
         if not boto3:
             raise ImportError(
@@ -86,7 +124,7 @@ def _write_lines(path: str, lines: List[str]) -> None:
             )
         s3 = boto3.client("s3")
         try:
-            s3.put_object(Bucket=bucket, Key=key, Body=data.encode())
+            s3.put_object(Bucket=bucket, Key=key, Body=payload)
         except BotoCoreError as exc:
             logger.error(
                 "BotoCoreError while writing audit log to %s: %s", path, exc
@@ -102,8 +140,12 @@ def _write_lines(path: str, lines: List[str]) -> None:
             dir_path = os.path.dirname(path)
             if dir_path:
                 os.makedirs(dir_path, exist_ok=True)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(data)
+            if ENCRYPTION_ENABLED:
+                with open(path, "wb") as f:
+                    f.write(payload)
+            else:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(data)
         except OSError as exc:
             logger.error("Failed to write audit log to %s: %s", path, exc)
             raise
