@@ -20,7 +20,10 @@ scrape_configs:
 
 ## Docker Compose Example
 
-The following compose file runs UME, Prometheus and Grafana:
+The repository `docker/docker-compose.yml` now includes optional Prometheus and
+Grafana services. The Grafana service mounts
+`docs/grafana/ume_dashboard.json` so the default dashboard is available out of
+the box. An abbreviated example stack looks like:
 
 ```yaml
 version: '3'
@@ -37,6 +40,9 @@ services:
       - "9090:9090"
   grafana:
     image: grafana/grafana
+    volumes:
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ../docs/grafana/ume_dashboard.json:/var/lib/grafana/dashboards/ume_dashboard.json:ro
     ports:
       - "3000:3000"
 ```
