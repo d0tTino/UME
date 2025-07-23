@@ -3,9 +3,15 @@ from ume.memory import EpisodicMemory, SemanticMemory, ColdMemory
 from ume.config import settings
 from ume.metrics import STALE_VECTOR_WARNINGS
 from ume.memory.tiered import TieredMemoryManager
-from ume.memory_aging import start_memory_aging_scheduler, stop_memory_aging_scheduler
+from ume.memory_aging import (
+    start_memory_aging_scheduler,
+    stop_memory_aging_scheduler,
+    start_vector_age_scheduler,
+    stop_vector_age_scheduler,
+)
 
 import itertools
+import types
 
 import threading
 
@@ -340,3 +346,49 @@ def test_aging_scheduler_prunes_and_audits_vectors(monkeypatch: pytest.MonkeyPat
     assert not episodic.graph.node_exists("old")
     assert semantic.get_fact("old") == {"text": "hi"}
     assert store.query([0.0, 1.0], k=1) == []
+
+
+def test_start_memory_aging_scheduler_moves_events() -> None:
+    """Scheduler migrates aged events and stops cleanly."""
+    episodic = EpisodicMemory(db_path=":memory:")
+    semantic = SemanticMemory(db_path=":memory:")
+    episodic.graph.add_node("e1", {"text": "hi"})
+    old_ts = int(time.time()) - 10
+    with episodic.graph.conn:
+        episodic.graph.conn.execute(
+            "UPDATE nodes SET created_at=? WHERE id='e1'", (old_ts,)
+        )
+
+    start_memory_aging_scheduler(
+        episodic,
+        semantic,
+        cold=None,
+        event_age_seconds=0,
+        cold_age_seconds=None,
+        vector_age_seconds=None,
+        interval_seconds=0.01,
+        vector_check_interval=0.01,
+    )
+
+    time.sleep(0.02)
+    stop_memory_aging_scheduler()
+
+    assert not episodic.graph.node_exists("e1")
+    assert semantic.get_fact("e1") == {"text": "hi"}
+
+
+def test_start_vector_age_scheduler_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vector age scheduler updates metrics and stops."""
+    now = int(time.time())
+    store = types.SimpleNamespace(get_vector_timestamps=lambda: {"old": now - 100})
+
+    monkeypatch.setattr(settings, "UME_VECTOR_MAX_AGE_DAYS", 0)
+    STALE_VECTOR_WARNINGS._value.set(0)  # type: ignore[attr-defined]
+
+    thread, stop = start_vector_age_scheduler(store, interval_seconds=0.01)
+    threading.Event().wait(0.05)
+    stop()
+    stop_vector_age_scheduler()
+
+    assert not thread.is_alive()
+    assert STALE_VECTOR_WARNINGS._value.get() > 0  # type: ignore[attr-defined]
