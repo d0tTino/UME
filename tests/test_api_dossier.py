@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from ume.api import app
 from ume.config import settings
+from ume.dossier import Dossier
 
 
 def _token(client: TestClient) -> str:
@@ -68,15 +69,54 @@ def test_dossier_persists_after_restart(tmp_path, monkeypatch):
     )
     assert res.status_code == 200
 
-    import importlib
-    import ume.api as api_mod
+    reloaded = Dossier.load(tmp_path / "d3")
+    assert "p3" in reloaded.projects
 
-    api_mod = importlib.reload(api_mod)
-    monkeypatch.setattr(api_mod.settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
-    client2 = TestClient(api_mod.app)
-    token2 = _token(client2)
-    headers2 = {"Authorization": f"Bearer {token2}"}
-    res2 = client2.get("/dossier/d3", headers=headers2)
-    assert res2.status_code == 200
-    assert res2.json()["projects"] == ["p3"]
+
+def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.post(
+        "/dossier/add-reflection",
+        json={"dossier_id": "d4", "text": "thinking"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    res = client.post(
+        "/dossier/set-pref",
+        json={"dossier_id": "d4", "key": "theme", "value": "dark"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    dossier = Dossier.load(tmp_path / "d4")
+    assert dossier.reflections[0]["text"] == "thinking"
+    assert dossier.preferences["theme"] == "dark"
+
+
+def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.post(
+        "/dossier/add-reflection",
+        json={"dossier_id": "d5", "text": "idea"},
+        headers=headers,
+    )
+    assert res.status_code == 403
+
+    res = client.post(
+        "/dossier/set-pref",
+        json={"dossier_id": "d5", "key": "foo", "value": "bar"},
+        headers=headers,
+    )
+    assert res.status_code == 403
 

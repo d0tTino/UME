@@ -89,6 +89,46 @@ def _dossier_add_project(dossier_id: str, project_id: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_add_reflection(dossier_id: str, text: str) -> None:
+    """Send a request to append a reflection."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id, "text": text}
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/add-reflection",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
+def _dossier_set_pref(dossier_id: str, key: str, value: str) -> None:
+    """Send a request to update a preference key."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id, "key": key, "value": value}
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/set-pref",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
     parser = argparse.ArgumentParser(description="UME CLI")
@@ -126,6 +166,13 @@ def main() -> None:
     add_p = dossier_sub.add_parser("add-project", help="Add a project to a dossier")
     add_p.add_argument("dossier_id")
     add_p.add_argument("project_id")
+    refl_p = dossier_sub.add_parser("add-reflection", help="Add a reflection entry")
+    refl_p.add_argument("dossier_id")
+    refl_p.add_argument("text")
+    pref_p = dossier_sub.add_parser("set-pref", help="Set a preference key")
+    pref_p.add_argument("dossier_id")
+    pref_p.add_argument("key")
+    pref_p.add_argument("value")
     for p in (up_parser, quick_parser):
         p.add_argument(
             "--no-confirm",
@@ -161,6 +208,10 @@ def main() -> None:
                 _dossier_view(args.dossier_id)
             elif args.dossier_cmd == "add-project":
                 _dossier_add_project(args.dossier_id, args.project_id)
+            elif args.dossier_cmd == "add-reflection":
+                _dossier_add_reflection(args.dossier_id, args.text)
+            elif args.dossier_cmd == "set-pref":
+                _dossier_set_pref(args.dossier_id, args.key, args.value)
             return
 
         configure_logging()
