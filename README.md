@@ -375,6 +375,8 @@ The resulting `.env` will contain values similar to:
 UME_AUDIT_SIGNING_KEY=<randomly-generated-key>
 UME_OAUTH_PASSWORD=<randomly-generated-password>
 ```
+To encrypt the audit log and ledger files, set `UME_ENCRYPTION_ENABLED=true` and provide a base64 key via `UME_ENCRYPTION_KEY`.
+
 
 See [`docs/CONFIG_TEMPLATES.md`](docs/CONFIG_TEMPLATES.md) for the full list of
 environment variables.
@@ -882,6 +884,7 @@ Pass `--show-warnings` to display Python warnings or `--warnings-log <file>` to
 log them for debugging.
 
 You can set `UME_CLI_DB` to override where the CLI stores its SQLite database.
+You can set `UME_DOSSIER_PATH` to change where the YAML dossier files are stored (default `~/.ume_dossier`).
 If you define `UME_ROLE`, the CLI will run with that role's permissions and
 display an informational message at startup.
 

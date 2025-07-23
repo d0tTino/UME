@@ -1,0 +1,44 @@
+# Dossier Overview
+
+The user dossier is a lightweight collection of YAML files that track basic profile information and notes. UME loads the dossier from the directory specified by `UME_DOSSIER_PATH` (defaults to `~/.ume_dossier`). The directory is created automatically when missing.
+
+## File Structure
+
+A newly initialized dossier contains:
+
+- `meta.yaml` – schema version metadata
+- `profile.yaml` – basic user details (name, email)
+- `projects.yaml` – list of active projects
+- `preferences.yaml` – arbitrary key/value settings
+- `reflections.yaml` – journal style reflections
+- `telemetry/` – directory for captured traces
+
+You can create the folder manually or call `Dossier.init_dossier(path)` from Python to copy the template files.
+
+## Security Practices
+
+Dossier API routes enforce role-based access. `ProjectManager` can add projects while `Viewer` may only read.
+To secure audit logs and ledger files, enable encryption by setting `UME_ENCRYPTION_ENABLED=true` and defining a base64 key in `UME_ENCRYPTION_KEY`.
+
+## CLI Examples
+
+```bash
+# View a dossier using the running API
+ume dossier view user123
+
+# Attach a project to a dossier
+ume dossier add-project user123 projectA
+```
+
+## API Examples
+
+```bash
+# Fetch dossier details
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/dossier/user123
+
+# Add a project
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -d '{"dossier_id":"user123","project_id":"projectA"}' \
+  http://localhost:8000/dossier/add-project
+```

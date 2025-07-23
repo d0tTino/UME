@@ -76,6 +76,7 @@ Valid values for `UME_GRAPH_BACKEND` are:
 | `UME_AGENT_ID` | `SYSTEM` | Identifier recorded in audit logs. |
 | `UME_EMBED_MODEL` | `all-MiniLM-L6-v2` | SentenceTransformer model name. |
 | `UME_CLI_DB` | `ume_graph.db` | Database path used by the CLI. |
+| `UME_DOSSIER_PATH` | `~/.ume_dossier` | Directory containing YAML files for the user dossier. |
 | `UME_ROLE` | *(unset)* | Optional role for the CLI. |
 | `UME_API_ROLE` | *(unset)* | Optional role applied by the API server. |
 | `UME_RATE_LIMIT_REDIS` | *(unset)* | Redis URL for API rate limiting. |
