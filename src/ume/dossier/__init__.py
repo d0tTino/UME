@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 import json
 
+from filelock import FileLock
+
 import yaml
 
 
@@ -46,14 +48,25 @@ class Dossier:
     def save(self) -> None:
         """Persist current state to disk."""
         self.root.mkdir(parents=True, exist_ok=True)
-        yaml.safe_dump(
-            {"schema_version": self.schema_version, "shareable": self.shareable},
-            (self.root / "meta.yaml").open("w", encoding="utf-8"),
-        )
-        yaml.safe_dump(self.profile, (self.root / "profile.yaml").open("w", encoding="utf-8"))
-        yaml.safe_dump({"projects": self.projects}, (self.root / "projects.yaml").open("w", encoding="utf-8"))
-        yaml.safe_dump(self.preferences, (self.root / "preferences.yaml").open("w", encoding="utf-8"))
-        yaml.safe_dump(self.reflections, (self.root / "reflections.yaml").open("w", encoding="utf-8"))
+        lock = FileLock(str(self.root / ".dossier.lock"))
+        with lock:
+            yaml.safe_dump(
+                {"schema_version": self.schema_version, "shareable": self.shareable},
+                (self.root / "meta.yaml").open("w", encoding="utf-8"),
+            )
+            yaml.safe_dump(
+                self.profile, (self.root / "profile.yaml").open("w", encoding="utf-8")
+            )
+            yaml.safe_dump(
+                {"projects": self.projects},
+                (self.root / "projects.yaml").open("w", encoding="utf-8"),
+            )
+            yaml.safe_dump(
+                self.preferences, (self.root / "preferences.yaml").open("w", encoding="utf-8")
+            )
+            yaml.safe_dump(
+                self.reflections, (self.root / "reflections.yaml").open("w", encoding="utf-8")
+            )
 
     def _ensure_dirs(self) -> None:
         (self.root / "telemetry").mkdir(parents=True, exist_ok=True)
