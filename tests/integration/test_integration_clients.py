@@ -2,7 +2,6 @@ from __future__ import annotations
 # ruff: noqa: E402
 
 import pytest
-
 import sys
 import importlib.util
 from pathlib import Path
@@ -17,6 +16,8 @@ spec_ev.loader.exec_module(events_pb2)
 sys.modules["events_pb2"] = events_pb2
 sys.path.insert(0, str(base / "src" / "ume_client"))
 sys.path.insert(0, str(base / "src"))
+
+pytestmark = pytest.mark.integration
 
 import httpx
 from fastapi.testclient import TestClient
