@@ -97,6 +97,7 @@ from .resources import (
 
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
+from .dossier import Dossier
 
 # Import the API lazily via __getattr__ to avoid circular imports during
 # initialization. The ``api`` module will be loaded on first attribute access.
@@ -178,6 +179,7 @@ __all__ = [
     "DAGService",
     "ResourceScheduler",
     "ScheduledTask",
+    "Dossier",
 
 
 ]
@@ -197,6 +199,7 @@ _KNOWN_SUBMODULES = {
     "api",
     "policy",
     "snapshot_routes",
+    "dossier",
 }
 
 def __getattr__(name: str) -> object:  # pragma: no cover - thin wrapper
