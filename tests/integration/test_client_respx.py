@@ -1,6 +1,5 @@
 import httpx
 import pytest
-
 from ume.integrations import (
     LangGraph,
     Letta,
@@ -17,6 +16,8 @@ from ume.integrations import (
     BaseClient,
     AsyncBaseClient,
 )
+
+pytestmark = pytest.mark.integration
 
 respx = pytest.importorskip("respx")
 

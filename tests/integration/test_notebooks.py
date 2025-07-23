@@ -3,6 +3,8 @@ from nbconvert.preprocessors import ExecutePreprocessor
 from pathlib import Path
 import pytest
 
+pytestmark = pytest.mark.integration
+
 NOTEBOOKS = [
     Path('examples/langgraph_workflow.ipynb'),
     Path('examples/letta_workflow.ipynb'),

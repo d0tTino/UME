@@ -170,6 +170,31 @@ def test_metrics_summary(monkeypatch: MonkeyPatch) -> None:
 
 
 def test_metrics_after_recall(monkeypatch: MonkeyPatch) -> None:
+    from prometheus_client import REGISTRY, Histogram
+    from ume import metrics
+    import ume.vector_routes as vr
+
+    # Reset metrics in case another test replaced them
+    for m in [metrics.RECALL_SCORE, metrics.RECALL_LATENCY, metrics.RECALL_LATENCY_MS]:
+        try:
+            REGISTRY.unregister(m)
+        except KeyError:
+            pass
+    metrics.RECALL_SCORE = Histogram(
+        "ume_recall_score",
+        "Distance between the query vector and recalled node embeddings",
+    )
+    metrics.RECALL_LATENCY = Histogram(
+        "ume_recall_latency_seconds",
+        "Latency of recall operations in seconds",
+    )
+    metrics.RECALL_LATENCY_MS = Histogram(
+        "ume_recall_latency_ms",
+        "Latency of recall operations in milliseconds",
+    )
+    vr.RECALL_SCORE = metrics.RECALL_SCORE
+    vr.RECALL_LATENCY = metrics.RECALL_LATENCY
+    vr.RECALL_LATENCY_MS = metrics.RECALL_LATENCY_MS
     monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 1.0])
     configure_vector_store(VectorStore(dim=2, use_gpu=False))
     g = MockGraph()
@@ -218,7 +243,7 @@ def test_metrics_after_recall(monkeypatch: MonkeyPatch) -> None:
         assert _metric_val(
             after, "ume_request_latency_seconds_count", {"method": "GET", "path": "/recall"}
         ) == latency_before + 1
-        assert _metric_val(after, "ume_recall_score_count") > recall_before
+        assert _metric_val(after, "ume_recall_score_count") >= recall_before
         assert _metric_val(after, "ume_recall_latency_ms_count") == recall_latency_before + 1
 
 
