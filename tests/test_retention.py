@@ -11,6 +11,7 @@ import sqlite3
 import time
 import logging
 from typing import Callable
+import threading
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -224,6 +225,39 @@ def test_ledger_compaction_scheduler(tmp_path: Path, monkeypatch: pytest.MonkeyP
     stop_ledger_compaction_scheduler()
 
     assert [o for o, _ in ledger.range()] == [2, 3, 4]
+
+
+def test_vector_age_scheduler_start_stop_cycles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Repeated start/stop cycles should not leave running threads."""
+    store = types.SimpleNamespace(get_vector_timestamps=lambda: {})
+    baseline = threading.active_count()
+    for _ in range(3):
+        thread, stop = start_vector_age_scheduler(store, interval_seconds=0.01)
+        assert thread.is_alive()
+        stop()
+        stop_vector_age_scheduler()
+        assert retention._vector_thread is None
+    assert threading.active_count() == baseline
+
+
+def test_ledger_compaction_scheduler_start_stop_cycles(tmp_path: Path) -> None:
+    """Repeated start/stop cycles should not leave running threads."""
+    from ume.event_ledger import EventLedger
+
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    ledger.append(0, {"event_type": "E", "timestamp": 0})
+    ledger.update_bookmark(0)
+
+    baseline = threading.active_count()
+    for _ in range(3):
+        thread, stop = start_ledger_compaction_scheduler(
+            ledger, interval_seconds=0.01, offset_window=0
+        )
+        assert thread.is_alive()
+        stop()
+        stop_ledger_compaction_scheduler()
+        assert retention._ledger_thread is None
+    assert threading.active_count() == baseline
 
 if _orig_ume is None:
     sys.modules.pop("ume", None)
