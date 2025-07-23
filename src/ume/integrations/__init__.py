@@ -7,7 +7,14 @@ from .memgpt import MemGPT, AsyncMemGPT
 from .supermemory import SuperMemory, AsyncSuperMemory
 from .crewai import CrewAI, AsyncCrewAI
 from .autogen import AutoGen, AsyncAutoGen
-from .registry import register_adapter, get_adapter, available_adapters
+from .registry import (
+    register_adapter,
+    get_adapter,
+    available_adapters,
+    register_builtin_adapters,
+)
+
+register_builtin_adapters()
 
 __all__ = [
     "LangGraph",
@@ -28,4 +35,5 @@ __all__ = [
     "register_adapter",
     "get_adapter",
     "available_adapters",
+    "register_builtin_adapters",
 ]
