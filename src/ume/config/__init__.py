@@ -22,6 +22,8 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_COLD_EVENT_AGE_DAYS: int = 180
     UME_AUDIT_LOG_PATH: str = "audit.log"
     UME_AUDIT_SIGNING_KEY: str = DEFAULT_AUDIT_SIGNING_KEY
+    UME_ENCRYPTION_ENABLED: bool = False
+    UME_ENCRYPTION_KEY: str | None = None
     UME_CONSENT_LEDGER_PATH: str = "consent_ledger.db"
     UME_EVENT_LEDGER_PATH: str = "event_ledger.db"
     UME_FEEDBACK_DB_PATH: str = "feedback.db"
