@@ -819,3 +819,26 @@ sys.modules['ume.config'] = conf
     assert "redpanda healthy" in result.stdout
     assert "ume-api healthy" in result.stdout
     assert "http://localhost:8000/docs" in result.stdout
+
+def test_wrapper_script_runs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """scripts/ume_up.sh should exit with status 0 when tools are present."""
+    script = Path(__file__).resolve().parents[1] / "scripts" / "ume_up.sh"
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    # stub poetry to handle install and run commands
+    poetry_stub = bin_dir / "poetry"
+    poetry_stub.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = install ]; then exit 0; fi\n"
+        "if [ \"$1\" = run ]; then shift; exec \"$@\"; fi\n"
+    )
+    poetry_stub.chmod(0o755)
+    for cmd in ["node", "docker", "ume"]:
+        f = bin_dir / cmd
+        f.write_text("#!/bin/sh\nexit 0\n")
+        f.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = f"{bin_dir}{os.pathsep}" + env.get("PATH", "")
+    result = subprocess.run(["bash", str(script), "--no-confirm"], env=env, capture_output=True, text=True)
+    assert result.returncode == 0
+

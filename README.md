@@ -318,6 +318,13 @@ evaluates them using the built-in `RegoPolicyEngine`. Policies should define
 - A non-default `UME_AUDIT_SIGNING_KEY` environment variable
 - See [docs/WINDOWS_QUICKSTART.md](docs/WINDOWS_QUICKSTART.md) for Windows-specific instructions
 
+### Quick Setup
+```bash
+./scripts/ume_up.sh --no-confirm
+```
+This wrapper installs Poetry, Node.js and Docker if they are missing, installs Python dependencies and starts the stack. Use `--force-build` to rebuild frontend assets.
+
+
 ### 1. Install Python Dependencies
 ```bash
 git clone https://github.com/d0tTino/universal-memory-engine.git
