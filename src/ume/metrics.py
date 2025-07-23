@@ -61,3 +61,18 @@ LEDGER_COMPACTED_BYTES = Gauge(
     "ume_ledger_compacted_bytes",
     "Bytes removed during the most recent ledger compaction",
 )
+
+__all__ = [
+    "REQUEST_COUNT",
+    "REQUEST_LATENCY",
+    "VECTOR_QUERY_LATENCY",
+    "VECTOR_INDEX_SIZE",
+    "STALE_VECTOR_WARNINGS",
+    "STALE_VECTOR_COUNT",
+    "RECALL_SCORE",
+    "RESPONSE_CONFIDENCE",
+    "FALSE_TEXT_RATE",
+    "RECALL_LATENCY",
+    "RECALL_LATENCY_MS",
+    "LEDGER_COMPACTED_BYTES",
+]
