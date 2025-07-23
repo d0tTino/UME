@@ -17,25 +17,31 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 COMPOSE_FILE = ROOT_DIR / "docker" / "docker-compose.yml"
 
 
-def _require_docker() -> None:
-    """Exit with a message if Docker is not available."""
+def _require_docker(abort: bool = True) -> bool:
+    """Return ``True`` if Docker is available, optionally exiting if not."""
     if os.getenv("UME_SKIP_DOCKER_CHECK") == "1":
-        return
+        return True
     if shutil.which("docker") is None:
         print(
             "Docker is required to run the UME stack. "
             "Please install Docker and ensure it is on your PATH."
         )
-        raise SystemExit(1)
+        if abort:
+            raise SystemExit(1)
+        return False
+    return True
 
 
-def _require_npm() -> None:
-    """Exit with a message if npm (Node.js) is not available."""
+def _require_npm(abort: bool = True) -> bool:
+    """Return ``True`` if npm is available, optionally exiting if not."""
     if os.getenv("UME_SKIP_NPM_CHECK") == "1":
-        return
+        return True
     if shutil.which("npm") is None:
         print("npm is required to build the dashboard. Please install Node.js.")
-        raise SystemExit(1)
+        if abort:
+            raise SystemExit(1)
+        return False
+    return True
 
 
 def _compose_up(compose_file: Path = COMPOSE_FILE, timeout: int = 120) -> None:

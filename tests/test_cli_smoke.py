@@ -658,6 +658,64 @@ def test_cli_up_missing_node(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     assert "npm is required" in out
 
 
+def test_cli_missing_docker_does_not_create_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure .env is not created when Docker is missing."""
+    import importlib
+    import ume_cli as cli
+    from ume.cli import compose
+
+    importlib.reload(cli)
+    importlib.reload(compose)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        compose.shutil,
+        "which",
+        lambda name: None if name == "docker" else "/usr/bin/" + name,
+    )
+    monkeypatch.delenv("UME_SKIP_DOCKER_CHECK", raising=False)
+    monkeypatch.delenv("UME_SKIP_NPM_CHECK", raising=False)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "up", "--no-confirm"]
+    with pytest.raises(SystemExit):
+        cli.main()
+    sys.argv = argv
+
+    assert not (tmp_path / ".env").exists()
+
+
+def test_cli_missing_node_does_not_create_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure .env is not created when npm is missing."""
+    import importlib
+    import ume_cli as cli
+    from ume.cli import compose
+
+    importlib.reload(cli)
+    importlib.reload(compose)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        compose.shutil,
+        "which",
+        lambda name: None if name == "npm" else "/usr/bin/" + name,
+    )
+    monkeypatch.delenv("UME_SKIP_DOCKER_CHECK", raising=False)
+    monkeypatch.delenv("UME_SKIP_NPM_CHECK", raising=False)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "up", "--no-confirm"]
+    with pytest.raises(SystemExit):
+        cli.main()
+    sys.argv = argv
+
+    assert not (tmp_path / ".env").exists()
+
+
 def test_subprocess_up_creates_env_and_checks_health(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
