@@ -1,4 +1,5 @@
 import json
+import threading
 from ume.dossier import (
     Dossier,
     add_reflection,
@@ -49,3 +50,22 @@ def test_add_activity_respects_preferences(tmp_path):
     dossier.add_activity({"b": 2})
     entries = [json.loads(line) for line in log.read_text().splitlines()]
     assert entries[-1]["payload"] == {"b": 2}
+
+
+def test_add_activity_thread_safety(tmp_path):
+    dossier = Dossier.init_dossier(tmp_path)
+    dossier.preferences["record_activity"] = True
+    dossier.save()
+
+    def worker(i: int) -> None:
+        dossier.add_activity({"n": i})
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(5)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    log = tmp_path / "telemetry" / "activity.log"
+    entries = [json.loads(line) for line in log.read_text().splitlines()]
+    assert len(entries) == 5
