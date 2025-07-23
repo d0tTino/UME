@@ -12,6 +12,23 @@ from filelock import FileLock
 
 import yaml
 
+try:
+    from cryptography.fernet import Fernet
+except Exception:  # pragma: no cover - cryptography optional
+    Fernet = None
+
+from ..config import settings
+
+ENCRYPTION_ENABLED = settings.UME_ENCRYPTION_ENABLED
+if ENCRYPTION_ENABLED:
+    if not (Fernet and settings.UME_ENCRYPTION_KEY):
+        raise ValueError(
+            "Encryption enabled but cryptography not available or key not set"
+        )
+    _fernet = Fernet(settings.UME_ENCRYPTION_KEY.encode())
+else:
+    _fernet = None
+
 
 @dataclass
 class Dossier:
@@ -50,23 +67,14 @@ class Dossier:
         self.root.mkdir(parents=True, exist_ok=True)
         lock = FileLock(str(self.root / ".dossier.lock"))
         with lock:
-            yaml.safe_dump(
+            self._write_yaml(
+                self.root / "meta.yaml",
                 {"schema_version": self.schema_version, "shareable": self.shareable},
-                (self.root / "meta.yaml").open("w", encoding="utf-8"),
             )
-            yaml.safe_dump(
-                self.profile, (self.root / "profile.yaml").open("w", encoding="utf-8")
-            )
-            yaml.safe_dump(
-                {"projects": self.projects},
-                (self.root / "projects.yaml").open("w", encoding="utf-8"),
-            )
-            yaml.safe_dump(
-                self.preferences, (self.root / "preferences.yaml").open("w", encoding="utf-8")
-            )
-            yaml.safe_dump(
-                self.reflections, (self.root / "reflections.yaml").open("w", encoding="utf-8")
-            )
+            self._write_yaml(self.root / "profile.yaml", self.profile)
+            self._write_yaml(self.root / "projects.yaml", {"projects": self.projects})
+            self._write_yaml(self.root / "preferences.yaml", self.preferences)
+            self._write_yaml(self.root / "reflections.yaml", self.reflections)
 
     def _ensure_dirs(self) -> None:
         (self.root / "telemetry").mkdir(parents=True, exist_ok=True)
@@ -91,15 +99,40 @@ class Dossier:
         log_path = self.root / "telemetry" / "activity.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         entry = {"timestamp": datetime.utcnow().isoformat(), "payload": payload}
-        with log_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(entry) + "\n")
+        data = json.dumps(entry)
+        if ENCRYPTION_ENABLED:
+            token = _fernet.encrypt(data.encode()).decode()
+            with log_path.open("a", encoding="utf-8") as f:
+                f.write(token + "\n")
+        else:
+            with log_path.open("a", encoding="utf-8") as f:
+                f.write(data + "\n")
 
     @staticmethod
     def _read_yaml(path: Path) -> Any:
         if not path.is_file():
             return None
-        with path.open("r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or None
+        if ENCRYPTION_ENABLED:
+            with path.open("rb") as f:
+                raw = f.read()
+            if not raw:
+                return None
+            data = _fernet.decrypt(raw).decode()
+            return yaml.safe_load(data) or None
+        else:
+            with path.open("r", encoding="utf-8") as f:
+                return yaml.safe_load(f) or None
+
+    @staticmethod
+    def _write_yaml(path: Path, data: Any) -> None:
+        text = yaml.safe_dump(data)
+        if ENCRYPTION_ENABLED:
+            payload = _fernet.encrypt(text.encode())
+            with path.open("wb") as f:
+                f.write(payload)
+        else:
+            with path.open("w", encoding="utf-8") as f:
+                f.write(text)
 
 
 # Helper functions
