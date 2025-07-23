@@ -140,6 +140,7 @@ def start_vector_age_scheduler(
     def stop() -> None:
         stop_event.set()
         thread.join()
+        stop_vector_age_scheduler()
 
     return thread, stop
 
@@ -207,6 +208,7 @@ def start_ledger_compaction_scheduler(
     def stop() -> None:
         stop_event.set()
         thread.join()
+        stop_ledger_compaction_scheduler()
 
     return thread, stop
 
