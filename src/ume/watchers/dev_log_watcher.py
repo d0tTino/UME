@@ -15,6 +15,7 @@ from confluent_kafka import Producer, KafkaException
 
 from ume.config import settings
 from ume.event import Event, EventType
+from .hooks import notify_hooks
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ class DevLogHandler(FileSystemEventHandler):  # type: ignore[misc]
                 settings.KAFKA_RAW_EVENTS_TOPIC,
                 json.dumps(data).encode("utf-8"),
             )
+            notify_hooks(payload)
         except KafkaException as exc:  # pragma: no cover - logging only
             logger.error("Failed to produce dev log event: %s", exc)
 

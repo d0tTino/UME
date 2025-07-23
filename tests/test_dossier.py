@@ -1,3 +1,4 @@
+import json
 from ume.dossier import (
     Dossier,
     add_reflection,
@@ -27,3 +28,19 @@ def test_dossier_env_load(tmp_path, monkeypatch):
     monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
     dossier = Dossier.load()
     assert dossier.root == tmp_path
+
+
+def test_add_activity_respects_preferences(tmp_path):
+    dossier = Dossier.init_dossier(tmp_path)
+    dossier.preferences["record_activity"] = False
+    dossier.save()
+
+    dossier.add_activity({"a": 1})
+    log = tmp_path / "telemetry" / "activity.log"
+    assert not log.exists() or log.read_text() == ""
+
+    dossier.preferences["record_activity"] = True
+    dossier.save()
+    dossier.add_activity({"b": 2})
+    entries = [json.loads(line) for line in log.read_text().splitlines()]
+    assert entries[-1]["payload"] == {"b": 2}

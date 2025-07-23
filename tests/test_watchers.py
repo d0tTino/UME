@@ -20,6 +20,7 @@ def test_on_modified_ignores_directory(tmp_path, monkeypatch: pytest.MonkeyPatch
     handler.on_modified(event)
 
     assert messages == []
+    assert dev_log_watcher.hook_calls == []
 
 
 def test_on_modified_logs_error(tmp_path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
@@ -35,3 +36,4 @@ def test_on_modified_logs_error(tmp_path, monkeypatch: pytest.MonkeyPatch, caplo
     handler.on_modified(event)
 
     assert any("Failed to produce dev log event" in rec.message for rec in caplog.records)
+    assert dev_log_watcher.hook_calls == []
