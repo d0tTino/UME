@@ -74,3 +74,26 @@ setting `UME_ENCRYPTION_ENABLED` to `True` and provide a base64 encoded key via
 `UME_ENCRYPTION_KEY`. Existing plaintext files must be re-encrypted or replaced.
 The simplest migration is to archive the old files and let UME create new,
 encrypted ones on startup.
+
+## Sample Rego Rules
+
+The following snippet demonstrates how dossier permissions could be expressed in Rego.
+
+```rego
+package ume.dossier
+
+# Allow reading projects if the dossier is shareable or the caller has a valid role
+default can_read_projects = false
+
+can_read_projects {
+    input.metadata.shareable
+}
+
+can_read_projects {
+    input.role == "ProjectManager"
+}
+
+can_modify_telemetry {
+    input.role == "TelemetryAdmin"
+}
+```
