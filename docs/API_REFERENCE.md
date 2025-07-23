@@ -167,6 +167,24 @@ curl -X GET -H "Authorization: Bearer <token>" \
   'http://localhost:8000/recall?vector=0.1&vector=0.2&k=2'
 ```
 
+### GET `/dossier/{dossier_id}`
+View details for a dossier.
+
+```bash
+curl -X GET -H "Authorization: Bearer <token>" \
+  http://localhost:8000/dossier/example
+```
+
+### POST `/dossier/add-project`
+Attach a project to a dossier.
+
+```bash
+curl -X POST http://localhost:8000/dossier/add-project \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"dossier_id":"example","project_id":"p1"}'
+```
+
 ## API Documentation
 
 To explore the API interactively, run the FastAPI server and open the Swagger UI:

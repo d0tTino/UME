@@ -6,6 +6,8 @@ import os
 import sys
 import warnings
 from pathlib import Path
+import json
+import httpx
 
 # Ensure local package import when run directly without installation
 _src_path = Path(__file__).resolve().parent / "src"
@@ -58,6 +60,35 @@ def _snapshot_schedule(interval: int) -> None:
         print("Snapshot scheduler stopped.")
 
 
+def _dossier_view(dossier_id: str) -> None:
+    """Fetch and display dossier details from the running API."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    try:
+        resp = httpx.get(f"{base_url}/dossier/{dossier_id}", headers=headers, timeout=5)
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
+def _dossier_add_project(dossier_id: str, project_id: str) -> None:
+    """Send a request to add a project to a dossier."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id, "project_id": project_id}
+    try:
+        resp = httpx.post(f"{base_url}/dossier/add-project", json=payload, headers=headers, timeout=5)
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
     parser = argparse.ArgumentParser(description="UME CLI")
@@ -87,6 +118,14 @@ def main() -> None:
         help="Periodically snapshot the graph",
     )
     snap_parser.add_argument("--interval", type=int, default=60)
+
+    dossier_parser = sub.add_parser("dossier", help="Manage dossiers")
+    dossier_sub = dossier_parser.add_subparsers(dest="dossier_cmd")
+    view_p = dossier_sub.add_parser("view", help="View a dossier")
+    view_p.add_argument("dossier_id")
+    add_p = dossier_sub.add_parser("add-project", help="Add a project to a dossier")
+    add_p.add_argument("dossier_id")
+    add_p.add_argument("project_id")
     for p in (up_parser, quick_parser):
         p.add_argument(
             "--no-confirm",
@@ -116,6 +155,12 @@ def main() -> None:
             return
         if args.command == "snapshot-schedule":
             _snapshot_schedule(args.interval)
+            return
+        if args.command == "dossier":
+            if args.dossier_cmd == "view":
+                _dossier_view(args.dossier_id)
+            elif args.dossier_cmd == "add-project":
+                _dossier_add_project(args.dossier_id, args.project_id)
             return
 
         configure_logging()
