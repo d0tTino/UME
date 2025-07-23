@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Dict, cast
+from typing import Any, Dict, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .policy import can_read_projects
-from .dossier import Dossier
+
+from .dossier import Dossier, add_reflection, update_preferences
 
 router = APIRouter(prefix="/dossier")
 
@@ -23,6 +24,17 @@ def _dossier_path(dossier_id: str) -> Path:
 class AddProjectRequest(BaseModel):
     dossier_id: str
     project_id: str
+
+
+class AddReflectionRequest(BaseModel):
+    dossier_id: str
+    text: str
+
+
+class SetPreferenceRequest(BaseModel):
+    dossier_id: str
+    key: str
+    value: Any
 
 
 @router.get("/{dossier_id}")
@@ -51,4 +63,30 @@ def add_project(req: AddProjectRequest, role: str = Depends(deps.get_current_rol
         dossier.projects.append(req.project_id)
         dossier.save()
     return cast(Dict[str, object], {"dossier_id": req.dossier_id, "projects": list(dossier.projects), "shareable": dossier.shareable})
+
+
+@router.post("/add-reflection")
+def add_reflection_endpoint(
+    req: AddReflectionRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    """Append a reflection entry to the dossier."""
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
+    add_reflection(dossier, req.text)
+    return {"status": "ok"}
+
+
+@router.post("/set-pref")
+def set_preference(
+    req: SetPreferenceRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    """Update a single preference key in the dossier."""
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
+    update_preferences(dossier, **{req.key: req.value})
+    return {"status": "ok"}
 
