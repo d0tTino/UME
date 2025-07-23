@@ -392,7 +392,7 @@ http://localhost:8000/recall
 ```
 Stop the services with:
 ```bash
-poetry run ume-cli down
+poetry run ume down
 ```
 See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 
@@ -737,7 +737,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
     Or run the scheduler from the command line:
 
     ```bash
-    ume-cli snapshot-schedule --interval 300
+    ume snapshot-schedule --interval 300
     ```
 
     This writes updates to the path configured by `UME_SNAPSHOT_PATH` every
@@ -858,9 +858,9 @@ You can interact with UME via an interactive REPL (Read-Eval-Print Loop) command
 
 To start the CLI, run the console script installed by Poetry:
 ```bash
-poetry run ume-cli
+poetry run ume
 ```
-If you have installed UME into your environment, you can simply run `ume-cli`.
+If you have installed UME into your environment, you can simply run `ume`.
 For development purposes you can still execute the module directly:
 ```bash
 poetry run python ume_cli.py

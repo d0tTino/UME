@@ -128,7 +128,7 @@ stack:
 1. Install Docker and Docker Compose.
 2. From the project root run:
    ```bash
-   poetry run ume-cli up
+   poetry run ume up
    ```
 3. Wait until `redpanda`, `neo4j`, and `ume-api` report `healthy` with `docker compose ps`.
 4. Inspect logs with `docker compose logs -f ume-api`.

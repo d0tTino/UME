@@ -196,7 +196,7 @@ returned schema object can be used for validating future events.
 
 ### CLI Helpers
 
-The ``ume-cli`` tool includes two utilities for working with schema versions:
+The ``ume`` tool includes two utilities for working with schema versions:
 
 * ``register_schema <version> <schema_path> <proto_module>`` – load an external
   YAML schema file and associated Protobuf module at runtime.
