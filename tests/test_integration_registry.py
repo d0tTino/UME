@@ -1,4 +1,8 @@
-from ume.integrations.registry import register_adapter, get_adapter
+from ume.integrations.registry import (
+    register_adapter,
+    get_adapter,
+    register_builtin_adapters,
+)
 from ume.integrations.langgraph import LangGraph
 
 
@@ -12,4 +16,9 @@ def test_register_and_retrieve() -> None:
 
 
 def test_builtin_registered() -> None:
+    assert get_adapter("langgraph") is LangGraph
+
+
+def test_register_builtin_function() -> None:
+    register_builtin_adapters()
     assert get_adapter("langgraph") is LangGraph
