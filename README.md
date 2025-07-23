@@ -486,10 +486,14 @@ See [`examples/langgraph_example.py`](examples/langgraph_example.py) and
   `LangGraph.recall()`.
 - [LangGraph workflow](examples/langgraph_workflow.ipynb) – end-to-end example
   showing event creation and recall with `LangGraph`.
+- [LangGraph `send_events` demo](examples/langgraph_send_events.ipynb) – simple
+  example showing `send_events()` and `recall()`.
 - [Letta integration](examples/letta_integration.ipynb) – send Letta flow events
   with `Letta.send_events()` and recall results via `Letta.recall()`.
 - [Letta workflow](examples/letta_workflow.ipynb) – complete flow using
   `Letta` to store and recall nodes.
+- [Letta `send_events` demo](examples/letta_send_events.ipynb) – minimal
+  demonstration of `send_events()` and `recall()`.
 - [MemGPT integration](examples/memgpt_integration.ipynb) – write memory events
   through `MemGPT.send_events()` and access them with `MemGPT.recall()`.
 - [CrewAI integration](examples/crewai_integration.ipynb) – forward CrewAI
