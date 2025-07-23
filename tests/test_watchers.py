@@ -37,3 +37,4 @@ def test_on_modified_logs_error(tmp_path, monkeypatch: pytest.MonkeyPatch, caplo
 
     assert any("Failed to produce dev log event" in rec.message for rec in caplog.records)
     assert dev_log_watcher.hook_calls == []
+

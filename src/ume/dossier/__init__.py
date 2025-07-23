@@ -17,6 +17,7 @@ class Dossier:
 
     root: Path
     schema_version: int = 1
+    shareable: bool = False
     profile: dict[str, Any] = field(default_factory=dict)
     projects: list[dict[str, Any]] = field(default_factory=list)
     preferences: dict[str, Any] = field(default_factory=dict)
@@ -45,7 +46,10 @@ class Dossier:
     def save(self) -> None:
         """Persist current state to disk."""
         self.root.mkdir(parents=True, exist_ok=True)
-        yaml.safe_dump({"schema_version": self.schema_version}, (self.root / "meta.yaml").open("w", encoding="utf-8"))
+        yaml.safe_dump(
+            {"schema_version": self.schema_version, "shareable": self.shareable},
+            (self.root / "meta.yaml").open("w", encoding="utf-8"),
+        )
         yaml.safe_dump(self.profile, (self.root / "profile.yaml").open("w", encoding="utf-8"))
         yaml.safe_dump({"projects": self.projects}, (self.root / "projects.yaml").open("w", encoding="utf-8"))
         yaml.safe_dump(self.preferences, (self.root / "preferences.yaml").open("w", encoding="utf-8"))
@@ -57,6 +61,7 @@ class Dossier:
     def _load_files(self) -> None:
         meta = self._read_yaml(self.root / "meta.yaml") or {}
         self.schema_version = int(meta.get("schema_version", self.schema_version))
+        self.shareable = bool(meta.get("shareable", self.shareable))
         self.profile = self._read_yaml(self.root / "profile.yaml") or {}
         proj = self._read_yaml(self.root / "projects.yaml") or {}
         if isinstance(proj, dict):
