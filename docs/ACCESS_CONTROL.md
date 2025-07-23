@@ -47,7 +47,7 @@ responds with HTTP 403.
 *Editing a user profile via the CLI*
 
 ```bash
-UME_ROLE=UserService ume-cli new_node UserProfile.123 '{}'
+UME_ROLE=UserService ume new_node UserProfile.123 '{}'
 ```
 
 Without the `UserService` role the command raises `AccessDeniedError`.
