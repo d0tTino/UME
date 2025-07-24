@@ -41,6 +41,7 @@ class Dossier:
     projects: list[dict[str, Any]] = field(default_factory=list)
     preferences: dict[str, Any] = field(default_factory=dict)
     reflections: list[dict[str, Any]] = field(default_factory=list)
+    telemetry_files: list[str] = field(default_factory=list)
 
     @classmethod
     def load(cls, root: str | Path | None = None) -> "Dossier":
@@ -69,7 +70,11 @@ class Dossier:
         with lock:
             self._write_yaml(
                 self.root / "meta.yaml",
-                {"schema_version": self.schema_version, "shareable": self.shareable},
+                {
+                    "schema_version": self.schema_version,
+                    "shareable": self.shareable,
+                    "telemetry_files": self.telemetry_files,
+                },
             )
             self._write_yaml(self.root / "profile.yaml", self.profile)
             self._write_yaml(self.root / "projects.yaml", {"projects": self.projects})
@@ -83,6 +88,7 @@ class Dossier:
         meta = self._read_yaml(self.root / "meta.yaml") or {}
         self.schema_version = int(meta.get("schema_version", self.schema_version))
         self.shareable = bool(meta.get("shareable", self.shareable))
+        self.telemetry_files = meta.get("telemetry_files", [])
         self.profile = self._read_yaml(self.root / "profile.yaml") or {}
         proj = self._read_yaml(self.root / "projects.yaml") or {}
         if isinstance(proj, dict):
@@ -96,10 +102,13 @@ class Dossier:
         """Append ``payload`` to ``telemetry/activity.log`` if allowed."""
         if not self.preferences.get("record_activity", True):
             return
-        log_path = self.root / "telemetry" / "activity.log"
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        entry = {"timestamp": datetime.utcnow().isoformat(), "payload": payload}
+        log_dir = self.root / "telemetry"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / "activity.log"
+        now = datetime.utcnow()
+        entry = {"timestamp": now.isoformat(), "payload": payload}
         data = json.dumps(entry)
+
         if ENCRYPTION_ENABLED:
             token = _fernet.encrypt(data.encode()).decode()
             with log_path.open("a", encoding="utf-8") as f:
@@ -107,6 +116,39 @@ class Dossier:
         else:
             with log_path.open("a", encoding="utf-8") as f:
                 f.write(data + "\n")
+
+        # Daily CSV log
+        csv_path = log_dir / f"{now.date().isoformat()}.csv"
+        if ENCRYPTION_ENABLED:
+            csv_token = _fernet.encrypt(data.encode()).decode()
+            with csv_path.open("a", encoding="utf-8") as f:
+                f.write(csv_token + "\n")
+        else:
+            if not csv_path.exists():
+                with csv_path.open("w", encoding="utf-8") as f:
+                    f.write("timestamp,payload\n")
+            with csv_path.open("a", encoding="utf-8") as f:
+                f.write(f"{now.isoformat()},{json.dumps(payload)}\n")
+
+        # Update meta information
+        rel_log = log_path.relative_to(self.root).as_posix()
+        rel_csv = csv_path.relative_to(self.root).as_posix()
+        updated = False
+        for rel in (rel_log, rel_csv):
+            if rel not in self.telemetry_files:
+                self.telemetry_files.append(rel)
+                updated = True
+        if updated:
+            lock = FileLock(str(self.root / ".dossier.lock"))
+            with lock:
+                self._write_yaml(
+                    self.root / "meta.yaml",
+                    {
+                        "schema_version": self.schema_version,
+                        "shareable": self.shareable,
+                        "telemetry_files": self.telemetry_files,
+                    },
+                )
 
     @staticmethod
     def _read_yaml(path: Path) -> Any:

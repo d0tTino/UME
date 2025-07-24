@@ -1,5 +1,7 @@
 import json
 import threading
+from datetime import datetime
+import yaml
 import pytest
 from ume.dossier import (
     Dossier,
@@ -44,13 +46,23 @@ def test_add_activity_respects_preferences(tmp_path):
 
     dossier.add_activity({"a": 1})
     log = tmp_path / "telemetry" / "activity.log"
+    csv = tmp_path / "telemetry" / f"{datetime.utcnow().date().isoformat()}.csv"
+    meta = yaml.safe_load((tmp_path / "meta.yaml").read_text())
     assert not log.exists() or log.read_text() == ""
+    assert not csv.exists()
+    assert meta.get("telemetry_files", []) == []
 
     dossier.preferences["record_activity"] = True
     dossier.save()
     dossier.add_activity({"b": 2})
     entries = [json.loads(line) for line in log.read_text().splitlines()]
     assert entries[-1]["payload"] == {"b": 2}
+    assert csv.exists()
+    meta = yaml.safe_load((tmp_path / "meta.yaml").read_text())
+    assert sorted(meta.get("telemetry_files", [])) == sorted([
+        "telemetry/activity.log",
+        f"telemetry/{datetime.utcnow().date().isoformat()}.csv",
+    ])
 
 
 def test_add_activity_thread_safety(tmp_path):
@@ -105,3 +117,33 @@ def test_dossier_encryption_roundtrip(tmp_path, monkeypatch):
     importlib.reload(dossier_mod)
     reloaded = dossier_mod.Dossier.load(tmp_path)
     assert reloaded.profile["name"] == "Alice"
+
+
+def test_add_activity_multiple_files(tmp_path, monkeypatch):
+    dossier = Dossier.init_dossier(tmp_path)
+    dossier.preferences["record_activity"] = True
+    dossier.save()
+
+    class D1:
+        @staticmethod
+        def utcnow():
+            return datetime(2023, 1, 1, 0, 0, 0)
+
+    class D2:
+        @staticmethod
+        def utcnow():
+            return datetime(2023, 1, 2, 0, 0, 0)
+
+    import ume.dossier as dossier_mod
+    monkeypatch.setattr(dossier_mod, "datetime", D1)
+    dossier.add_activity({"n": 1})
+    monkeypatch.setattr(dossier_mod, "datetime", D2)
+    dossier.add_activity({"n": 2})
+
+    meta = yaml.safe_load((tmp_path / "meta.yaml").read_text())
+    expected = {
+        "telemetry/activity.log",
+        "telemetry/2023-01-01.csv",
+        "telemetry/2023-01-02.csv",
+    }
+    assert set(meta.get("telemetry_files", [])) == expected
