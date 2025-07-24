@@ -64,3 +64,8 @@ with your `UME_ENCRYPTION_KEY`:
 UME_ENCRYPTION_ENABLED=true UME_ENCRYPTION_KEY=<key> \
   poetry run python scripts/migrate_dossier.py --encrypt ~/.ume_dossier
 ```
+
+## Watcher Hooks
+
+Importing `ume.watchers` automatically registers the `dossier_activity_hook`. When active, file events collected by watchers are appended to `telemetry/activity.log` inside the user's dossier.
+
