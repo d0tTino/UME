@@ -1,5 +1,5 @@
 import json
-import threading
+import multiprocessing as mp
 from datetime import datetime
 import yaml
 import pytest
@@ -14,6 +14,11 @@ from ume.dossier import (
     list_skills,
     update_preferences,
 )
+
+
+def _activity_worker(path: str, i: int) -> None:
+    dossier = Dossier.load(path)
+    dossier.add_activity({"n": i})
 
 
 def test_dossier_init_and_helpers(tmp_path):
@@ -86,14 +91,14 @@ def test_add_activity_thread_safety(tmp_path):
     dossier.preferences["record_activity"] = True
     dossier.save()
 
-    def worker(i: int) -> None:
-        dossier.add_activity({"n": i})
-
-    threads = [threading.Thread(target=worker, args=(i,)) for i in range(5)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+    procs = [
+        mp.Process(target=_activity_worker, args=(str(tmp_path), i))
+        for i in range(5)
+    ]
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
 
     log = tmp_path / "telemetry" / "activity.log"
     entries = [json.loads(line) for line in log.read_text().splitlines()]

@@ -137,26 +137,28 @@ class Dossier:
         entry = {"timestamp": now.isoformat(), "payload": payload}
         data = json.dumps(entry)
 
-        if ENCRYPTION_ENABLED:
-            token = _fernet.encrypt(data.encode()).decode()
-            with log_path.open("a", encoding="utf-8") as f:
-                f.write(token + "\n")
-        else:
-            with log_path.open("a", encoding="utf-8") as f:
-                f.write(data + "\n")
+        lock = FileLock(str(log_dir / ".activity.lock"))
+        with lock:
+            if ENCRYPTION_ENABLED:
+                token = _fernet.encrypt(data.encode()).decode()
+                with log_path.open("a", encoding="utf-8") as f:
+                    f.write(token + "\n")
+            else:
+                with log_path.open("a", encoding="utf-8") as f:
+                    f.write(data + "\n")
 
-        # Daily CSV log
-        csv_path = log_dir / f"{now.date().isoformat()}.csv"
-        if ENCRYPTION_ENABLED:
-            csv_token = _fernet.encrypt(data.encode()).decode()
-            with csv_path.open("a", encoding="utf-8") as f:
-                f.write(csv_token + "\n")
-        else:
-            if not csv_path.exists():
-                with csv_path.open("w", encoding="utf-8") as f:
-                    f.write("timestamp,payload\n")
-            with csv_path.open("a", encoding="utf-8") as f:
-                f.write(f"{now.isoformat()},{json.dumps(payload)}\n")
+            # Daily CSV log
+            csv_path = log_dir / f"{now.date().isoformat()}.csv"
+            if ENCRYPTION_ENABLED:
+                csv_token = _fernet.encrypt(data.encode()).decode()
+                with csv_path.open("a", encoding="utf-8") as f:
+                    f.write(csv_token + "\n")
+            else:
+                if not csv_path.exists():
+                    with csv_path.open("w", encoding="utf-8") as f:
+                        f.write("timestamp,payload\n")
+                with csv_path.open("a", encoding="utf-8") as f:
+                    f.write(f"{now.isoformat()},{json.dumps(payload)}\n")
 
         # Update meta information
         rel_log = log_path.relative_to(self.root).as_posix()
