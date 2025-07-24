@@ -15,6 +15,10 @@ A newly initialized dossier contains:
 
 You can create the folder manually or call `Dossier.init_dossier(path)` from Python to copy the template files.
 
+## Linking Entries
+
+Projects and reflections are stored as objects that include a generated `id` field using `uuid4`.  Entries may reference other items by listing their IDs in a `links` array.  Helper functions automatically create the IDs and accept lists of related entry IDs when adding new records.
+
 ## Security Practices
 
 Dossier API routes enforce role-based access. `ProjectManager` can add projects while `Viewer` may only read.

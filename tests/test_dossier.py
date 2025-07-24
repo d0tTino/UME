@@ -1,8 +1,10 @@
 import json
 import threading
 import pytest
+import uuid
 from ume.dossier import (
     Dossier,
+    add_project,
     add_reflection,
     list_projects,
     update_preferences,
@@ -14,10 +16,9 @@ def test_dossier_init_and_helpers(tmp_path):
     assert dossier.schema_version == Dossier.schema_version
     assert dossier.shareable is False
 
-    dossier.projects.append({"name": "demo"})
-    dossier.save()
+    pid = add_project(dossier, "demo")
 
-    add_reflection(dossier, "thinking")
+    rid = add_reflection(dossier, "thinking", links=[pid])
     update_preferences(dossier, theme="dark")
 
     dossier.shareable = True
@@ -27,6 +28,12 @@ def test_dossier_init_and_helpers(tmp_path):
     assert list_projects(reloaded) == ["demo"]
     assert reloaded.preferences["theme"] == "dark"
     assert reloaded.reflections[0]["text"] == "thinking"
+    assert reloaded.reflections[0]["id"] == rid
+    assert reloaded.reflections[0]["links"] == [pid]
+    assert reloaded.projects[0]["id"] == pid
+    assert reloaded.projects[0]["links"] == []
+    uuid.UUID(reloaded.projects[0]["id"])
+    uuid.UUID(reloaded.reflections[0]["id"])
     assert reloaded.shareable is True
 
 
