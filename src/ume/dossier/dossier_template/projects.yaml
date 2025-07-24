@@ -1,2 +1,2 @@
-# List your projects
+# List your projects. Each entry includes an id (uuid4), name and optional links
 projects: []

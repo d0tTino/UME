@@ -10,7 +10,13 @@ from pydantic import BaseModel
 from . import api_deps as deps
 from .policy import can_read_projects
 
-from .dossier import Dossier, add_reflection, update_preferences
+from .dossier import (
+    Dossier,
+    add_project as dossier_add_project,
+    add_reflection,
+    list_projects,
+    update_preferences,
+)
 
 router = APIRouter(prefix="/dossier")
 
@@ -29,6 +35,7 @@ class AddProjectRequest(BaseModel):
 class AddReflectionRequest(BaseModel):
     dossier_id: str
     text: str
+    links: list[str] | None = None
 
 
 class SetPreferenceRequest(BaseModel):
@@ -46,7 +53,7 @@ def view_dossier(dossier_id: str, role: str = Depends(deps.get_current_role)) ->
     dossier = Dossier.load(path)
     if not can_read_projects(role, dossier.shareable):
         raise HTTPException(status_code=403, detail="Not authorized")
-    return {"dossier_id": dossier_id, "projects": list(dossier.projects), "shareable": dossier.shareable}
+    return {"dossier_id": dossier_id, "projects": list_projects(dossier), "shareable": dossier.shareable}
 
 
 @router.post("/add-project")
@@ -59,10 +66,11 @@ def add_project(req: AddProjectRequest, role: str = Depends(deps.get_current_rol
         dossier = Dossier.load(path)
     else:
         dossier = Dossier.init_dossier(path)
-    if req.project_id not in dossier.projects:
-        dossier.projects.append(req.project_id)
-        dossier.save()
-    return cast(Dict[str, object], {"dossier_id": req.dossier_id, "projects": list(dossier.projects), "shareable": dossier.shareable})
+    dossier_add_project(dossier, req.project_id)
+    return cast(
+        Dict[str, object],
+        {"dossier_id": req.dossier_id, "projects": list_projects(dossier), "shareable": dossier.shareable},
+    )
 
 
 @router.post("/add-reflection")
@@ -74,7 +82,7 @@ def add_reflection_endpoint(
         raise HTTPException(status_code=403, detail="Not authorized")
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
-    add_reflection(dossier, req.text)
+    add_reflection(dossier, req.text, req.links)
     return {"status": "ok"}
 
 

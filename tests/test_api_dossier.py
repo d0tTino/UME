@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from ume.api import app
 from ume.config import settings
-from ume.dossier import Dossier
+from ume.dossier import Dossier, list_projects
 
 
 def _token(client: TestClient) -> str:
@@ -70,7 +70,7 @@ def test_dossier_persists_after_restart(tmp_path, monkeypatch):
     assert res.status_code == 200
 
     reloaded = Dossier.load(tmp_path / "d3")
-    assert "p3" in reloaded.projects
+    assert "p3" in list_projects(reloaded)
 
 
 def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
@@ -96,6 +96,7 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
 
     dossier = Dossier.load(tmp_path / "d4")
     assert dossier.reflections[0]["text"] == "thinking"
+    assert "id" in dossier.reflections[0]
     assert dossier.preferences["theme"] == "dark"
 
 
