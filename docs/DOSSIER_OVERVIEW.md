@@ -22,7 +22,7 @@ Projects and reflections are stored as objects that include a generated `id` fie
 ## Security Practices
 
 Dossier API routes enforce role-based access. `ProjectManager` can add projects while `Viewer` may only read.
-To secure audit logs, ledger files, and the dossier itself, enable encryption by setting `UME_ENCRYPTION_ENABLED=true` and defining a base64 key in `UME_ENCRYPTION_KEY`. When enabled, the YAML files and telemetry logs in `UME_DOSSIER_PATH` are stored encrypted on disk.
+To secure audit logs, ledger files, and the dossier itself, enable encryption by setting `UME_ENCRYPTION_ENABLED=true` and defining a base64 key in `UME_ENCRYPTION_KEY`. When enabled, the YAML files and telemetry logs in `UME_DOSSIER_PATH` are stored encrypted on disk. Additional notes on key management can be found in [SECURITY_NOTES.md](SECURITY_NOTES.md).
 
 ## CLI Examples
 

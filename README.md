@@ -613,7 +613,9 @@ See [`env.example`](env.example) for a minimal `.env` template.
 
 Always generate a unique `UME_AUDIT_SIGNING_KEY` for every deployment. Avoid
 reusing the example OAuth credentials or API keys in production. Tokens and
-signing keys should be treated as secrets and rotated periodically.
+signing keys should be treated as secrets and rotated periodically. Additional
+guidance on encryption and ledger storage is available in
+[docs/SECURITY_NOTES.md](docs/SECURITY_NOTES.md).
 
 ## Federated Deployments
 
