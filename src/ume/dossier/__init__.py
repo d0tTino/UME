@@ -102,10 +102,13 @@ class Dossier:
         normalized_projects = []
         for p in self.projects:
             if isinstance(p, str):
-                normalized_projects.append({"id": p, "name": p, "links": []})
+                normalized_projects.append(
+                    {"id": p, "name": p, "links": [], "attachments": []}
+                )
             else:
                 p.setdefault("id", str(uuid4()))
                 p.setdefault("links", [])
+                p.setdefault("attachments", [])
                 normalized_projects.append(p)
         self.projects = normalized_projects
 
@@ -113,6 +116,7 @@ class Dossier:
         for r in self.reflections:
             r.setdefault("id", str(uuid4()))
             r.setdefault("links", [])
+            r.setdefault("attachments", [])
             normalized_reflections.append(r)
         self.reflections = normalized_reflections
 
@@ -197,25 +201,41 @@ class Dossier:
 
 # Helper functions
 
-def add_project(dossier: Dossier, name: str, links: list[str] | None = None) -> str:
+def add_project(
+    dossier: Dossier,
+    name: str,
+    links: list[str] | None = None,
+    attachments: list[str] | None = None,
+) -> str:
     """Append a project entry and return its id."""
     for p in dossier.projects:
         if p.get("name") == name:
             return str(p["id"])
     entry_id = str(uuid4())
-    entry = {"id": entry_id, "name": name, "links": links or []}
+    entry = {
+        "id": entry_id,
+        "name": name,
+        "links": links or [],
+        "attachments": attachments or [],
+    }
     dossier.projects.append(entry)
     dossier.save()
     return entry_id
 
 
-def add_reflection(dossier: Dossier, text: str, links: list[str] | None = None) -> str:
+def add_reflection(
+    dossier: Dossier,
+    text: str,
+    links: list[str] | None = None,
+    attachments: list[str] | None = None,
+) -> str:
     entry_id = str(uuid4())
     entry = {
         "id": entry_id,
         "text": text,
         "timestamp": datetime.utcnow().isoformat(),
         "links": links or [],
+        "attachments": attachments or [],
     }
     dossier.reflections.append(entry)
     dossier.save()

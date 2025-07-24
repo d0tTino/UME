@@ -18,9 +18,9 @@ def test_dossier_init_and_helpers(tmp_path):
     assert dossier.schema_version == Dossier.schema_version
     assert dossier.shareable is False
 
-    pid = add_project(dossier, "demo")
+    pid = add_project(dossier, "demo", attachments=["file.txt"])
 
-    rid = add_reflection(dossier, "thinking", links=[pid])
+    rid = add_reflection(dossier, "thinking", links=[pid], attachments=["img.png"])
     update_preferences(dossier, theme="dark")
 
     dossier.shareable = True
@@ -32,8 +32,10 @@ def test_dossier_init_and_helpers(tmp_path):
     assert reloaded.reflections[0]["text"] == "thinking"
     assert reloaded.reflections[0]["id"] == rid
     assert reloaded.reflections[0]["links"] == [pid]
+    assert reloaded.reflections[0]["attachments"] == ["img.png"]
     assert reloaded.projects[0]["id"] == pid
     assert reloaded.projects[0]["links"] == []
+    assert reloaded.projects[0]["attachments"] == ["file.txt"]
     uuid.UUID(reloaded.projects[0]["id"])
     uuid.UUID(reloaded.reflections[0]["id"])
     assert reloaded.shareable is True
