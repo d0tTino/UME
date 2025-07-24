@@ -104,6 +104,7 @@ Valid values for `UME_GRAPH_BACKEND` are:
 | `UME_LOG_JSON` | `False` | Output logs as JSON lines when set to `True`. |
 | `UME_GRAPH_RETENTION_DAYS` | `30` | Age in days before old nodes/edges are purged. |
 | `WATCH_PATHS` | `['.']` | Paths watched by the dev-log watcher. |
+| `UME_ACTIVITY_LOG_ENABLED` | `True` | Disable to skip registering `dossier_activity_hook`. |
 | `DAG_RESOURCES` | `{'cpu': 1, 'io': 1}` | Resource slots for the DAG service. |
 | `KAFKA_CA_CERT` | *(unset)* | CA certificate for Kafka TLS. |
 | `KAFKA_CLIENT_CERT` | *(unset)* | Client certificate for Kafka TLS. |
