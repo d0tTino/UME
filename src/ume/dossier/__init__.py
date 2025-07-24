@@ -42,6 +42,8 @@ class Dossier:
     projects: list[dict[str, Any]] = field(default_factory=list)
     preferences: dict[str, Any] = field(default_factory=dict)
     reflections: list[dict[str, Any]] = field(default_factory=list)
+    values: list[str] = field(default_factory=list)
+    skills: list[str] = field(default_factory=list)
     telemetry_files: list[str] = field(default_factory=list)
 
     @classmethod
@@ -81,6 +83,8 @@ class Dossier:
             self._write_yaml(self.root / "projects.yaml", {"projects": self.projects})
             self._write_yaml(self.root / "preferences.yaml", self.preferences)
             self._write_yaml(self.root / "reflections.yaml", self.reflections)
+            self._write_yaml(self.root / "values.yaml", self.values)
+            self._write_yaml(self.root / "skills.yaml", self.skills)
 
     def _ensure_dirs(self) -> None:
         (self.root / "telemetry").mkdir(parents=True, exist_ok=True)
@@ -98,6 +102,8 @@ class Dossier:
             self.projects = proj
         self.preferences = self._read_yaml(self.root / "preferences.yaml") or {}
         self.reflections = self._read_yaml(self.root / "reflections.yaml") or []
+        self.values = self._read_yaml(self.root / "values.yaml") or []
+        self.skills = self._read_yaml(self.root / "skills.yaml") or []
 
         normalized_projects = []
         for p in self.projects:
@@ -247,3 +253,21 @@ def list_projects(dossier: Dossier) -> list[str]:
 def update_preferences(dossier: Dossier, **prefs: Any) -> None:
     dossier.preferences.update(prefs)
     dossier.save()
+
+
+def add_value(dossier: Dossier, value: str) -> None:
+    """Append a value string if not present."""
+    if value not in dossier.values:
+        dossier.values.append(value)
+        dossier.save()
+
+
+def add_skill(dossier: Dossier, skill: str) -> None:
+    """Append a skill string if not present."""
+    if skill not in dossier.skills:
+        dossier.skills.append(skill)
+        dossier.save()
+
+
+def list_skills(dossier: Dossier) -> list[str]:
+    return list(dossier.skills)

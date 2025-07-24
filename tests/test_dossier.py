@@ -8,7 +8,10 @@ from ume.dossier import (
     Dossier,
     add_project,
     add_reflection,
+    add_value,
+    add_skill,
     list_projects,
+    list_skills,
     update_preferences,
 )
 
@@ -21,6 +24,8 @@ def test_dossier_init_and_helpers(tmp_path):
     pid = add_project(dossier, "demo", attachments=["file.txt"])
 
     rid = add_reflection(dossier, "thinking", links=[pid], attachments=["img.png"])
+    add_value(dossier, "honesty")
+    add_skill(dossier, "python")
     update_preferences(dossier, theme="dark")
 
     dossier.shareable = True
@@ -33,6 +38,8 @@ def test_dossier_init_and_helpers(tmp_path):
     assert reloaded.reflections[0]["id"] == rid
     assert reloaded.reflections[0]["links"] == [pid]
     assert reloaded.reflections[0]["attachments"] == ["img.png"]
+    assert reloaded.values == ["honesty"]
+    assert list_skills(reloaded) == ["python"]
     assert reloaded.projects[0]["id"] == pid
     assert reloaded.projects[0]["links"] == []
     assert reloaded.projects[0]["attachments"] == ["file.txt"]
