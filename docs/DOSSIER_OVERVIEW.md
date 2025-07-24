@@ -46,3 +46,21 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
   -d '{"dossier_id":"user123","project_id":"projectA"}' \
   http://localhost:8000/dossier/add-project
 ```
+
+## Migrating Existing Dossiers
+
+New releases may introduce additional dossier fields or change the
+storage format. Update your local dossier after pulling updates by
+running the migration helper:
+
+```bash
+poetry run python scripts/migrate_dossier.py ~/.ume_dossier
+```
+
+Pass `--encrypt` when enabling encryption so the files are re-written
+with your `UME_ENCRYPTION_KEY`:
+
+```bash
+UME_ENCRYPTION_ENABLED=true UME_ENCRYPTION_KEY=<key> \
+  poetry run python scripts/migrate_dossier.py --encrypt ~/.ume_dossier
+```
