@@ -148,5 +148,7 @@ async def test_api_compaction_thread_stops(tmp_path, monkeypatch: pytest.MonkeyP
 
 if _orig_ume is None:
     sys.modules.pop("ume", None)
+    sys.modules.pop("ume.api", None)
 else:
     sys.modules["ume"] = _orig_ume
+    sys.modules["ume.api"] = importlib.import_module("ume.api")
