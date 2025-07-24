@@ -94,3 +94,12 @@ UME_ENCRYPTION_ENABLED=true UME_ENCRYPTION_KEY=<key> \
 
 Importing `ume.watchers` automatically registers the `dossier_activity_hook`. When active, file events collected by watchers are appended to `telemetry/activity.log` inside the user's dossier.
 
+### Enabling and Disabling Activity Logging
+
+Activity logging is enabled by default. Set the environment variable
+`UME_ACTIVITY_LOG_ENABLED=false` to prevent the watcher from registering
+`dossier_activity_hook`. With the hook disabled, file events are ignored and no
+entries are written to `telemetry/activity.log`. Using any value other than
+`0`, `false`, or `no` re-enables the hook on the next import of
+`ume.watchers`.
+
