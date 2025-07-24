@@ -14,7 +14,10 @@ from .dossier import (
     Dossier,
     add_project as dossier_add_project,
     add_reflection,
+    add_value,
+    add_skill,
     list_projects,
+    list_skills,
     update_preferences,
 )
 
@@ -42,6 +45,16 @@ class SetPreferenceRequest(BaseModel):
     dossier_id: str
     key: str
     value: Any
+
+
+class AddValueRequest(BaseModel):
+    dossier_id: str
+    value: str
+
+
+class AddSkillRequest(BaseModel):
+    dossier_id: str
+    skill: str
 
 
 @router.get("/{dossier_id}")
@@ -97,4 +110,41 @@ def set_preference(
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     update_preferences(dossier, **{req.key: req.value})
     return {"status": "ok"}
+
+
+@router.post("/add-value")
+def add_value_endpoint(
+    req: AddValueRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
+    add_value(dossier, req.value)
+    return {"status": "ok"}
+
+
+@router.post("/add-skill")
+def add_skill_endpoint(
+    req: AddSkillRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
+    add_skill(dossier, req.skill)
+    return {"status": "ok"}
+
+
+@router.get("/skills/{dossier_id}")
+def get_skills(
+    dossier_id: str, role: str = Depends(deps.get_current_role)
+) -> Dict[str, object]:
+    path = _dossier_path(dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    if not can_read_projects(role, dossier.shareable):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return {"dossier_id": dossier_id, "skills": list_skills(dossier)}
 

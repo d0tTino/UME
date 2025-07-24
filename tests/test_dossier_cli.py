@@ -54,6 +54,18 @@ async def add_reflection(payload: dict):
 async def set_pref(payload: dict):
     return {'dossier_id': payload['dossier_id'], 'key': payload['key'], 'value': payload['value']}
 
+@app.post('/dossier/add-value')
+async def add_value(payload: dict):
+    return {'dossier_id': payload['dossier_id'], 'value': payload['value']}
+
+@app.post('/dossier/add-skill')
+async def add_skill(payload: dict):
+    return {'dossier_id': payload['dossier_id'], 'skill': payload['skill']}
+
+@app.get('/dossier/skills/{dossier_id}')
+async def list_skills(dossier_id: str):
+    return {'dossier_id': dossier_id, 'skills': ['s1']}
+
 client = TestClient(app)
 
 def _wrap(method):
@@ -147,5 +159,44 @@ def test_dossier_set_pref(tmp_path: Path):
             "method": "POST",
             "url": "http://localhost:8000/dossier/set-pref",
             "json": {"dossier_id": "d3", "key": "theme", "value": "dark"},
+        }
+    ]
+
+
+def test_dossier_add_value(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "add-value", "d4", "honesty"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d4", "value": "honesty"}
+    assert requests == [
+        {
+            "method": "POST",
+            "url": "http://localhost:8000/dossier/add-value",
+            "json": {"dossier_id": "d4", "value": "honesty"},
+        }
+    ]
+
+
+def test_dossier_add_skill(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "add-skill", "d5", "python"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d5", "skill": "python"}
+    assert requests == [
+        {
+            "method": "POST",
+            "url": "http://localhost:8000/dossier/add-skill",
+            "json": {"dossier_id": "d5", "skill": "python"},
+        }
+    ]
+
+
+def test_dossier_list_skills(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "list-skills", "d6"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d6", "skills": ["s1"]}
+    assert requests == [
+        {
+            "method": "GET",
+            "url": "http://localhost:8000/dossier/skills/d6",
+            "json": None,
         }
     ]

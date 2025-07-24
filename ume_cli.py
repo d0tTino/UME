@@ -129,6 +129,64 @@ def _dossier_set_pref(dossier_id: str, key: str, value: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_add_value(dossier_id: str, value: str) -> None:
+    """Send a request to append a value."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id, "value": value}
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/add-value",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
+def _dossier_add_skill(dossier_id: str, skill: str) -> None:
+    """Send a request to append a skill."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id, "skill": skill}
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/add-skill",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
+def _dossier_list_skills(dossier_id: str) -> None:
+    """Fetch and print the skill list."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    try:
+        resp = httpx.get(
+            f"{base_url}/dossier/skills/{dossier_id}",
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
     parser = argparse.ArgumentParser(description="UME CLI")
@@ -173,6 +231,14 @@ def main() -> None:
     pref_p.add_argument("dossier_id")
     pref_p.add_argument("key")
     pref_p.add_argument("value")
+    val_p = dossier_sub.add_parser("add-value", help="Add a value entry")
+    val_p.add_argument("dossier_id")
+    val_p.add_argument("value")
+    skill_p = dossier_sub.add_parser("add-skill", help="Add a skill entry")
+    skill_p.add_argument("dossier_id")
+    skill_p.add_argument("skill")
+    list_skills_p = dossier_sub.add_parser("list-skills", help="List skills")
+    list_skills_p.add_argument("dossier_id")
     for p in (up_parser, quick_parser):
         p.add_argument(
             "--no-confirm",
@@ -212,6 +278,12 @@ def main() -> None:
                 _dossier_add_reflection(args.dossier_id, args.text)
             elif args.dossier_cmd == "set-pref":
                 _dossier_set_pref(args.dossier_id, args.key, args.value)
+            elif args.dossier_cmd == "add-value":
+                _dossier_add_value(args.dossier_id, args.value)
+            elif args.dossier_cmd == "add-skill":
+                _dossier_add_skill(args.dossier_id, args.skill)
+            elif args.dossier_cmd == "list-skills":
+                _dossier_list_skills(args.dossier_id)
             return
 
         configure_logging()

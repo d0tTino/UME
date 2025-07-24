@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from ume.api import app
 from ume.config import settings
-from ume.dossier import Dossier, list_projects
+from ume.dossier import Dossier, list_projects, list_skills
 
 
 def _token(client: TestClient) -> str:
@@ -99,6 +99,28 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     assert "id" in dossier.reflections[0]
     assert dossier.preferences["theme"] == "dark"
 
+    res = client.post(
+        "/dossier/add-value",
+        json={"dossier_id": "d4", "value": "honesty"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    res = client.post(
+        "/dossier/add-skill",
+        json={"dossier_id": "d4", "skill": "python"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    res = client.get("/dossier/skills/d4", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["skills"] == ["python"]
+
+    dossier = Dossier.load(tmp_path / "d4")
+    assert dossier.values == ["honesty"]
+    assert list_skills(dossier) == ["python"]
+
 
 def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
@@ -117,6 +139,20 @@ def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
     res = client.post(
         "/dossier/set-pref",
         json={"dossier_id": "d5", "key": "foo", "value": "bar"},
+        headers=headers,
+    )
+    assert res.status_code == 403
+
+    res = client.post(
+        "/dossier/add-value",
+        json={"dossier_id": "d5", "value": "honesty"},
+        headers=headers,
+    )
+    assert res.status_code == 403
+
+    res = client.post(
+        "/dossier/add-skill",
+        json={"dossier_id": "d5", "skill": "python"},
         headers=headers,
     )
     assert res.status_code == 403

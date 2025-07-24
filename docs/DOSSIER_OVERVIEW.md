@@ -11,6 +11,8 @@ A newly initialized dossier contains:
 - `projects.yaml` – list of active projects
 - `preferences.yaml` – arbitrary key/value settings
 - `reflections.yaml` – journal style reflections
+- `values.yaml` – list of personal values
+- `skills.yaml` – list of personal skills
 - `telemetry/` – directory for captured traces
 
 You can create the folder manually or call `Dossier.init_dossier(path)` from Python to copy the template files.
@@ -32,6 +34,15 @@ ume dossier view user123
 
 # Attach a project to a dossier
 ume dossier add-project user123 projectA
+
+# Add a personal value
+ume dossier add-value user123 honesty
+
+# Add a skill
+ume dossier add-skill user123 python
+
+# List skills
+ume dossier list-skills user123
 ```
 
 ## API Examples
@@ -45,6 +56,20 @@ curl -H "Authorization: Bearer $TOKEN" \
 curl -X POST -H "Authorization: Bearer $TOKEN" \
   -d '{"dossier_id":"user123","project_id":"projectA"}' \
   http://localhost:8000/dossier/add-project
+
+# Add a value
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -d '{"dossier_id":"user123","value":"honesty"}' \
+  http://localhost:8000/dossier/add-value
+
+# Add a skill
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -d '{"dossier_id":"user123","skill":"python"}' \
+  http://localhost:8000/dossier/add-skill
+
+# List skills
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/dossier/skills/user123
 ```
 
 ## Migrating Existing Dossiers
