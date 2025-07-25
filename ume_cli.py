@@ -187,6 +187,26 @@ def _dossier_list_skills(dossier_id: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_snapshot(dossier_id: str) -> None:
+    """Request a dossier snapshot from the API."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id}
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/snapshot",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def main() -> None:
     """Entry point for the ``ume-cli`` console script."""
     parser = argparse.ArgumentParser(description="UME CLI")
@@ -239,6 +259,8 @@ def main() -> None:
     skill_p.add_argument("skill")
     list_skills_p = dossier_sub.add_parser("list-skills", help="List skills")
     list_skills_p.add_argument("dossier_id")
+    snap_p = dossier_sub.add_parser("snapshot", help="Snapshot dossier")
+    snap_p.add_argument("dossier_id")
     for p in (up_parser, quick_parser):
         p.add_argument(
             "--no-confirm",
@@ -284,6 +306,8 @@ def main() -> None:
                 _dossier_add_skill(args.dossier_id, args.skill)
             elif args.dossier_cmd == "list-skills":
                 _dossier_list_skills(args.dossier_id)
+            elif args.dossier_cmd == "snapshot":
+                _dossier_snapshot(args.dossier_id)
             return
 
         configure_logging()

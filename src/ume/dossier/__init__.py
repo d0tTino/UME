@@ -206,6 +206,15 @@ class Dossier:
             with path.open("w", encoding="utf-8") as f:
                 f.write(text)
 
+    def snapshot(self) -> Path:
+        """Copy all YAML files into a timestamped history folder."""
+        ts = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        dest = self.root / "history" / ts
+        dest.mkdir(parents=True, exist_ok=True)
+        for yaml_file in self.root.glob("*.yaml"):
+            shutil.copy2(yaml_file, dest / yaml_file.name)
+        return dest
+
 
 # Helper functions
 

@@ -57,6 +57,10 @@ class AddSkillRequest(BaseModel):
     skill: str
 
 
+class SnapshotRequest(BaseModel):
+    dossier_id: str
+
+
 @router.get("/{dossier_id}")
 def view_dossier(dossier_id: str, role: str = Depends(deps.get_current_role)) -> Dict[str, object]:
     """Return information about ``dossier_id`` if the user has access."""
@@ -147,4 +151,18 @@ def get_skills(
     if not can_read_projects(role, dossier.shareable):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "skills": list_skills(dossier)}
+
+
+@router.post("/snapshot")
+def snapshot_endpoint(
+    req: SnapshotRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    dest = dossier.snapshot()
+    return {"status": "ok", "path": str(dest)}
 
