@@ -2,7 +2,14 @@ from fastapi.testclient import TestClient
 
 from ume.api import app
 from ume.config import settings
-from ume.dossier import Dossier, list_projects, list_skills, list_memories
+from ume.dossier import (
+    Dossier,
+    add_project,
+    add_reflection,
+    list_projects,
+    list_skills,
+    list_memories,
+)
 
 
 def _token(client: TestClient) -> str:
@@ -190,4 +197,70 @@ def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
         headers=headers,
     )
     assert res.status_code == 403
+
+
+def test_projects_viewer_forbidden(tmp_path, monkeypatch):
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    dossier = Dossier.init_dossier(tmp_path / "d6")
+    add_project(dossier, "p6")
+    dossier.shareable_projects = False
+    dossier.save()
+
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get("/dossier/projects/d6", headers=headers)
+    assert res.status_code == 403
+
+
+def test_projects_viewer_allowed(tmp_path, monkeypatch):
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    dossier = Dossier.init_dossier(tmp_path / "d7")
+    add_project(dossier, "p7")
+    dossier.shareable_projects = True
+    dossier.save()
+
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get("/dossier/projects/d7", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["projects"] == ["p7"]
+
+
+def test_reflections_viewer_forbidden(tmp_path, monkeypatch):
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    dossier = Dossier.init_dossier(tmp_path / "d8")
+    add_reflection(dossier, "r8")
+    dossier.shareable_reflections = False
+    dossier.save()
+
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get("/dossier/reflections/d8", headers=headers)
+    assert res.status_code == 403
+
+
+def test_reflections_viewer_allowed(tmp_path, monkeypatch):
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    dossier = Dossier.init_dossier(tmp_path / "d9")
+    add_reflection(dossier, "r9")
+    dossier.shareable_reflections = True
+    dossier.save()
+
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get("/dossier/reflections/d9", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["reflections"] == ["r9"]
 

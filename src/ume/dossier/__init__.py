@@ -11,7 +11,7 @@ import json
 
 from filelock import FileLock
 
-import yaml  # type: ignore
+import yaml
 
 try:
     from cryptography.fernet import Fernet

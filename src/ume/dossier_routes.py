@@ -203,6 +203,7 @@ def get_reflections(
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
     if not can_read_reflections(role, dossier.shareable_reflections):
+
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
 

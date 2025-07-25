@@ -76,6 +76,7 @@ def _read_lines(path: str) -> List[str]:
             assert _fernet is not None
             try:
                 text = cast(str, _fernet.decrypt(raw).decode())
+
             except Exception as exc:
                 logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                 return []
@@ -96,6 +97,7 @@ def _read_lines(path: str) -> List[str]:
                 assert _fernet is not None
                 try:
                     text = cast(str, _fernet.decrypt(raw).decode())
+
                 except Exception as exc:
                     logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                     return []
