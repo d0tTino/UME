@@ -8,7 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .policy import can_read_projects, can_modify_telemetry
+from .policy import (
+    can_read_projects,
+    can_read_reflections,
+    can_modify_telemetry,
+)
 
 from .dossier import (
     Dossier,
@@ -185,7 +189,7 @@ def get_projects(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable):
+    if not can_read_projects(role, dossier.shareable_projects):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "projects": list_projects(dossier)}
 
@@ -198,7 +202,7 @@ def get_reflections(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable):
+    if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
 

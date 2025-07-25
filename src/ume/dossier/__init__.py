@@ -16,7 +16,7 @@ import yaml  # type: ignore
 try:
     from cryptography.fernet import Fernet
 except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None  # type: ignore[misc, assignment]
+    Fernet = None
 
 from ..config import settings
 
