@@ -11,6 +11,7 @@ from ume.dossier import (
     add_memory,
     add_value,
     add_skill,
+    list_reflections,
     list_projects,
     list_skills,
     list_memories,
@@ -54,6 +55,7 @@ def test_dossier_init_and_helpers(tmp_path):
     assert reloaded.knowledge[0]["links"] == [rid]
     assert reloaded.knowledge[0]["id"] == mid
     assert reloaded.values == ["honesty"]
+    assert list_reflections(reloaded) == ["thinking"]
     assert list_memories(reloaded) == ["fact"]
     assert list_skills(reloaded) == ["python"]
     assert reloaded.projects[0]["id"] == pid

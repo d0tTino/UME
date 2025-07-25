@@ -101,6 +101,13 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     )
     assert res.status_code == 200
 
+    res = client.post(
+        "/dossier/add-project",
+        json={"dossier_id": "d4", "project_id": "p4"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
     dossier = Dossier.load(tmp_path / "d4")
     assert dossier.reflections[0]["text"] == "thinking"
     assert "id" in dossier.reflections[0]
@@ -123,6 +130,14 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     res = client.get("/dossier/skills/d4", headers=headers)
     assert res.status_code == 200
     assert res.json()["skills"] == ["python"]
+
+    res = client.get("/dossier/projects/d4", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["projects"] == ["p4"]
+
+    res = client.get("/dossier/reflections/d4", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["reflections"] == ["thinking"]
 
     res = client.get("/dossier/memories/d4", headers=headers)
     assert res.status_code == 200

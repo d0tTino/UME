@@ -18,6 +18,7 @@ from .dossier import (
     add_value,
     add_skill,
     list_projects,
+    list_reflections,
     list_skills,
     list_memories,
     update_preferences,
@@ -169,6 +170,32 @@ def add_skill_endpoint(
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     add_skill(dossier, req.skill)
     return {"status": "ok"}
+
+
+@router.get("/projects/{dossier_id}")
+def get_projects(
+    dossier_id: str, role: str = Depends(deps.get_current_role)
+) -> Dict[str, object]:
+    path = _dossier_path(dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    if not can_read_projects(role, dossier.shareable):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return {"dossier_id": dossier_id, "projects": list_projects(dossier)}
+
+
+@router.get("/reflections/{dossier_id}")
+def get_reflections(
+    dossier_id: str, role: str = Depends(deps.get_current_role)
+) -> Dict[str, object]:
+    path = _dossier_path(dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    if not can_read_projects(role, dossier.shareable):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
 
 
 @router.get("/skills/{dossier_id}")

@@ -45,6 +45,12 @@ ume dossier add-skill user123 python
 # List skills
 ume dossier list-skills user123
 
+# List projects
+ume dossier list-projects user123
+
+# List reflections
+ume dossier list-reflections user123
+
 # Add a memory
 ume dossier add-memory user123 "remember this"
 
@@ -77,6 +83,14 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 # List skills
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/dossier/skills/user123
+
+# List projects
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/dossier/projects/user123
+
+# List reflections
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/dossier/reflections/user123
 
 # Add a memory
 curl -X POST -H "Authorization: Bearer $TOKEN" \
