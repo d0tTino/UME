@@ -98,6 +98,10 @@ from .resources import (
 from .dag_service import DAGService
 from .resource_scheduler import ResourceScheduler, ScheduledTask
 from .dossier import Dossier
+from .dossier.scheduler import (
+    start_dossier_snapshot_scheduler,
+    stop_dossier_snapshot_scheduler,
+)
 
 # Import the API lazily via __getattr__ to avoid circular imports during
 # initialization. The ``api`` module will be loaded on first attribute access.
@@ -139,6 +143,8 @@ __all__ = [
     "stop_vector_age_scheduler",
     "start_ledger_compaction_scheduler",
     "stop_ledger_compaction_scheduler",
+    "start_dossier_snapshot_scheduler",
+    "stop_dossier_snapshot_scheduler",
     "validate_event_dict",
     "GraphSchema",
     "load_default_schema",

@@ -60,6 +60,32 @@ def _snapshot_schedule(interval: int) -> None:
         print("Snapshot scheduler stopped.")
 
 
+def _dossier_snapshot_schedule(interval: int) -> None:
+    """Run periodic dossier snapshotting until interrupted."""
+    from ume.dossier import Dossier
+    from ume.dossier.scheduler import (
+        start_dossier_snapshot_scheduler,
+        stop_dossier_snapshot_scheduler,
+    )
+
+    dossier = Dossier.load()
+    thread, stop = start_dossier_snapshot_scheduler(dossier, interval_seconds=interval)
+    history = dossier.root / "history"
+    print(
+        f"Snapshots will be written to {history} every {interval} seconds."
+    )
+    print("Press Ctrl+C to stop.")
+    try:
+        while thread.is_alive():
+            thread.join(timeout=1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop()
+        stop_dossier_snapshot_scheduler()
+        print("Dossier snapshot scheduler stopped.")
+
+
 def _dossier_view(dossier_id: str) -> None:
     """Fetch and display dossier details from the running API."""
     base_url = "http://localhost:8000"
@@ -348,6 +374,10 @@ def main() -> None:
     list_skills_p.add_argument("dossier_id")
     snap_p = dossier_sub.add_parser("snapshot", help="Snapshot dossier")
     snap_p.add_argument("dossier_id")
+    sched_p = dossier_sub.add_parser(
+        "snapshot-schedule", help="Periodically snapshot dossier"
+    )
+    sched_p.add_argument("--interval", type=int, default=60)
     for p in (up_parser, quick_parser):
         p.add_argument(
             "--no-confirm",
@@ -403,6 +433,8 @@ def main() -> None:
                 _dossier_list_reflections(args.dossier_id)
             elif args.dossier_cmd == "snapshot":
                 _dossier_snapshot(args.dossier_id)
+            elif args.dossier_cmd == "snapshot-schedule":
+                _dossier_snapshot_schedule(args.interval)
             return
 
         configure_logging()

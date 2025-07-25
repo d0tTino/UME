@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple, Optional
 try:
     from cryptography.fernet import Fernet
 except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None
+    Fernet = None  # type: ignore[misc, assignment]
 
 from .config import settings
 
@@ -21,7 +21,7 @@ class EventLedger:
         self.db_path = db_path or settings.UME_EVENT_LEDGER_PATH
         self.encryption_enabled = settings.UME_ENCRYPTION_ENABLED
         if self.encryption_enabled:
-            if not (Fernet and settings.UME_ENCRYPTION_KEY):
+            if Fernet is None or not settings.UME_ENCRYPTION_KEY:
                 raise ValueError("Encryption enabled but cryptography not available or key not set")
             self._fernet = Fernet(settings.UME_ENCRYPTION_KEY.encode())
             self._plain_path = self.db_path + ".dec"
