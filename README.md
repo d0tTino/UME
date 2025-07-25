@@ -969,6 +969,12 @@ curl -X POST http://localhost:8000/snapshot/save \
   -d '{"path":"ume_backup.json"}'
 ```
 
+To archive the dossier at regular intervals:
+
+```bash
+ume dossier snapshot-schedule --interval 300
+```
+
 ## Graph Analytics with Neo4j GDS
 
 When using `Neo4jGraph` with the `use_gds=True` option, UME can delegate graph

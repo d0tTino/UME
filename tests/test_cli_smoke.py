@@ -566,6 +566,98 @@ def test_cli_snapshot_schedule(
         sys.modules.pop(mod, None)
 
 
+def test_cli_dossier_snapshot_schedule(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import importlib
+    import ume.dossier.scheduler as sched
+
+    stub = types.ModuleType("ume")
+    stub.PersistentGraph = object
+    stub.RoleBasedGraphAdapter = object
+    stub.enable_snapshot_autosave_and_restore = lambda *_, **__: None
+    stub.parse_event = lambda *_: None
+    stub.apply_event_to_graph = lambda *_: None
+    stub.load_graph_into_existing = lambda *_: None
+    stub.snapshot_graph_to_file = lambda *_: None
+    stub.ProcessingError = Exception
+    stub.EventError = Exception
+    stub.SnapshotError = Exception
+    stub.IGraphAdapter = object
+    stub.log_audit_entry = lambda *_: None
+    stub.get_audit_entries = lambda *_: []
+    stub.DEFAULT_SCHEMA_MANAGER = object()
+    bench = types.ModuleType("ume.benchmarks")
+    bench.benchmark_vector_store = lambda *_: None
+    feder = types.ModuleType("ume.federation")
+    feder.MirrorMakerDriver = object  # type: ignore[assignment]
+    cli_pkg = types.ModuleType("ume.cli")
+    compose_pkg = types.ModuleType("ume.cli.compose")
+    compose_pkg._compose_down = lambda *_, **__: None
+    compose_pkg._compose_ps = lambda *_, **__: None
+    compose_pkg._quickstart = lambda *_, **__: None
+    cli_pkg.compose = compose_pkg
+    prompt_pkg = types.ModuleType("ume.cli.prompt")
+    prompt_pkg.UMEPrompt = object
+    prompt_pkg.create_graph_adapter = lambda *_, **__: None
+    sys.modules["ume"] = stub
+    sys.modules["ume.benchmarks"] = bench
+    sys.modules["ume.federation"] = feder
+    dossier_mod = types.ModuleType("ume.dossier")
+    class DummyDossier:
+        root = Path("/tmp")
+
+        @classmethod
+        def load(cls):
+            return cls()
+
+    dossier_mod.Dossier = DummyDossier
+    dossier_mod.scheduler = sched
+    sys.modules["ume.dossier"] = dossier_mod
+    sys.modules["ume.dossier.scheduler"] = sched
+    sys.modules["ume.cli"] = cli_pkg
+    sys.modules["ume.cli.compose"] = compose_pkg
+    sys.modules["ume.cli.prompt"] = prompt_pkg
+
+    import ume_cli as cli
+    importlib.reload(cli)
+
+    called: dict[str, object] = {}
+
+    class DummyThread:
+        def is_alive(self) -> bool:
+            return False
+
+        def join(self, timeout: float | None = None) -> None:
+            pass
+
+    def fake_start(dossier: object, interval_seconds: int) -> tuple[DummyThread, callable]:
+        called["interval"] = interval_seconds
+        return DummyThread(), lambda: None
+
+    monkeypatch.setattr(sched, "start_dossier_snapshot_scheduler", fake_start)
+    monkeypatch.setattr(sched, "stop_dossier_snapshot_scheduler", lambda: None)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "dossier", "snapshot-schedule", "--interval", "1"]
+    cli.main()
+    out = capsys.readouterr().out
+    sys.argv = argv
+
+    assert called["interval"] == 1
+    assert "Snapshots will be written" in out
+
+    for mod in [
+        "ume.cli.compose",
+        "ume.cli",
+        "ume.dossier.scheduler",
+        "ume.federation",
+        "ume.benchmarks",
+        "ume",
+    ]:
+        sys.modules.pop(mod, None)
+
+
 def test_cli_env_file_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

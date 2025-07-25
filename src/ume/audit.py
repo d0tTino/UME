@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .config import settings
 import json
 import time
@@ -5,12 +7,12 @@ import hmac
 import hashlib
 import logging
 import os
-from typing import List, Dict, cast
+from typing import Dict, List
 
 try:
     from cryptography.fernet import Fernet
 except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None
+    Fernet = None  # type: ignore[misc, assignment]
 
 try:
     import boto3
@@ -24,8 +26,9 @@ logger = logging.getLogger(__name__)
 AUDIT_LOG_PATH = settings.UME_AUDIT_LOG_PATH
 SIGNING_KEY = settings.UME_AUDIT_SIGNING_KEY.encode()
 ENCRYPTION_ENABLED = settings.UME_ENCRYPTION_ENABLED
+_fernet: Fernet | None
 if ENCRYPTION_ENABLED:
-    if not (Fernet and settings.UME_ENCRYPTION_KEY):
+    if Fernet is None or not settings.UME_ENCRYPTION_KEY:
         raise ValueError("Encryption enabled but cryptography not available or key not set")
     _fernet = Fernet(settings.UME_ENCRYPTION_KEY.encode())
 else:
@@ -70,8 +73,9 @@ def _read_lines(path: str) -> List[str]:
             return []
 
         if ENCRYPTION_ENABLED:
+            assert _fernet is not None
             try:
-                text = cast(bytes, _fernet.decrypt(raw)).decode()
+                text = _fernet.decrypt(raw).decode()
             except Exception as exc:
                 logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                 return []
@@ -89,8 +93,9 @@ def _read_lines(path: str) -> List[str]:
                     raw = f.read()
                 if not raw:
                     return []
+                assert _fernet is not None
                 try:
-                    text = cast(bytes, _fernet.decrypt(raw)).decode()
+                    text = _fernet.decrypt(raw).decode()
                 except Exception as exc:
                     logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                     return []
@@ -109,6 +114,7 @@ def _write_lines(path: str, lines: List[str]) -> None:
     data = "\n".join(lines) + "\n"
     payload: bytes
     if ENCRYPTION_ENABLED:
+        assert _fernet is not None
         payload = _fernet.encrypt(data.encode())
     else:
         payload = data.encode()

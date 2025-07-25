@@ -11,18 +11,19 @@ import json
 
 from filelock import FileLock
 
-import yaml
+import yaml  # type: ignore
 
 try:
     from cryptography.fernet import Fernet
 except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None
+    Fernet = None  # type: ignore[misc, assignment]
 
 from ..config import settings
 
 ENCRYPTION_ENABLED = settings.UME_ENCRYPTION_ENABLED
+_fernet: Fernet | None
 if ENCRYPTION_ENABLED:
-    if not (Fernet and settings.UME_ENCRYPTION_KEY):
+    if Fernet is None or not settings.UME_ENCRYPTION_KEY:
         raise ValueError(
             "Encryption enabled but cryptography not available or key not set"
         )
@@ -161,6 +162,7 @@ class Dossier:
         lock = FileLock(str(log_dir / ".activity.lock"))
         with lock:
             if ENCRYPTION_ENABLED:
+                assert _fernet is not None
                 token = _fernet.encrypt(data.encode()).decode()
                 with log_path.open("a", encoding="utf-8") as f:
                     f.write(token + "\n")
@@ -171,6 +173,7 @@ class Dossier:
             # Daily CSV log
             csv_path = log_dir / f"{now.date().isoformat()}.csv"
             if ENCRYPTION_ENABLED:
+                assert _fernet is not None
                 csv_token = _fernet.encrypt(data.encode()).decode()
                 with csv_path.open("a", encoding="utf-8") as f:
                     f.write(csv_token + "\n")
@@ -212,6 +215,7 @@ class Dossier:
                 raw = f.read()
             if not raw:
                 return None
+            assert _fernet is not None
             data = _fernet.decrypt(raw).decode()
             return yaml.safe_load(data) or None
         else:
@@ -222,6 +226,7 @@ class Dossier:
     def _write_yaml(path: Path, data: Any) -> None:
         text = yaml.safe_dump(data)
         if ENCRYPTION_ENABLED:
+            assert _fernet is not None
             payload = _fernet.encrypt(text.encode())
             with path.open("wb") as f:
                 f.write(payload)
