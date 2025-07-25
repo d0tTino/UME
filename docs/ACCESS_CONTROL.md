@@ -54,14 +54,14 @@ Without the `UserService` role the command raises `AccessDeniedError`.
 
 ## Dossier Endpoint RBAC
 
-API routes under `/dossier` use their own role checks. Two roles are
+API routes under `/dossier` use their own role checks. Three roles are
 implemented today:
 
 - **ProjectManager** – allowed to view any dossier and attach new projects.
 - **Viewer** – allowed to view dossier information but not modify it.
+- **TelemetryAdmin** – allowed to create snapshots and update activity logs.
 
-A future **TelemetryAdmin** role will enable privileged updates to telemetry
-files stored in each dossier. The HTTP server reads the current role from the
+The HTTP server reads the current role from the
 OAuth token via `UME_OAUTH_ROLE`. Command line tools can specify `UME_ROLE` to
 emulate the same restrictions.
 

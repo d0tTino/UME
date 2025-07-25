@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .policy import can_read_projects
+from .policy import can_read_projects, can_modify_telemetry
 
 from .dossier import (
     Dossier,
@@ -68,6 +68,11 @@ class AddSkillRequest(BaseModel):
 
 class SnapshotRequest(BaseModel):
     dossier_id: str
+
+
+class AddActivityRequest(BaseModel):
+    dossier_id: str
+    payload: Dict[str, Any]
 
 
 @router.get("/{dossier_id}")
@@ -228,7 +233,7 @@ def get_memories(
 def snapshot_endpoint(
     req: SnapshotRequest, role: str = Depends(deps.get_current_role)
 ) -> Dict[str, str]:
-    if role != "ProjectManager":
+    if not can_modify_telemetry(role):
         raise HTTPException(status_code=403, detail="Not authorized")
     path = _dossier_path(req.dossier_id)
     if not path.exists():
@@ -236,4 +241,19 @@ def snapshot_endpoint(
     dossier = Dossier.load(path)
     dest = dossier.snapshot()
     return {"status": "ok", "path": str(dest)}
+
+
+@router.post("/add-activity")
+def add_activity_endpoint(
+    req: AddActivityRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    """Append an activity entry to the dossier telemetry log."""
+    if not can_modify_telemetry(role):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    dossier.add_activity(req.payload)
+    return {"status": "ok"}
 
