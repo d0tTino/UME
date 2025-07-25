@@ -256,3 +256,25 @@ def test_dossier_snapshot(tmp_path: Path):
             "json": {"dossier_id": "d7"},
         }
     ]
+
+
+def test_dossier_add_skill_and_list(tmp_path: Path):
+    proc1, req1 = _run_cli(tmp_path, ["dossier", "add-skill", "d8", "go"])
+    proc2, req2 = _run_cli(tmp_path, ["dossier", "list-skills", "d8"])
+
+    assert proc1.returncode == 0
+    assert proc2.returncode == 0
+    assert req1 == [
+        {
+            "method": "POST",
+            "url": "http://localhost:8000/dossier/add-skill",
+            "json": {"dossier_id": "d8", "skill": "go"},
+        }
+    ]
+    assert req2 == [
+        {
+            "method": "GET",
+            "url": "http://localhost:8000/dossier/skills/d8",
+            "json": None,
+        }
+    ]
