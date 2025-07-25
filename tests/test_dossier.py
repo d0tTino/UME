@@ -168,3 +168,12 @@ def test_add_activity_multiple_files(tmp_path, monkeypatch):
         "telemetry/2023-01-02.csv",
     }
     assert set(meta.get("telemetry_files", [])) == expected
+
+
+def test_dossier_snapshot(tmp_path):
+    dossier = Dossier.init_dossier(tmp_path)
+    snap_dir = dossier.snapshot()
+    assert snap_dir.parent == tmp_path / "history"
+    originals = {p.name for p in tmp_path.glob("*.yaml")}
+    copies = {p.name for p in snap_dir.glob("*.yaml")}
+    assert originals == copies

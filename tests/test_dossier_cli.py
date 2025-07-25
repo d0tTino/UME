@@ -66,6 +66,10 @@ async def add_skill(payload: dict):
 async def list_skills(dossier_id: str):
     return {'dossier_id': dossier_id, 'skills': ['s1']}
 
+@app.post('/dossier/snapshot')
+async def snapshot(payload: dict):
+    return {'dossier_id': payload['dossier_id'], 'path': '/d/h'}
+
 client = TestClient(app)
 
 def _wrap(method):
@@ -198,5 +202,18 @@ def test_dossier_list_skills(tmp_path: Path):
             "method": "GET",
             "url": "http://localhost:8000/dossier/skills/d6",
             "json": None,
+        }
+    ]
+
+
+def test_dossier_snapshot(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "snapshot", "d7"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d7", "path": "/d/h"}
+    assert requests == [
+        {
+            "method": "POST",
+            "url": "http://localhost:8000/dossier/snapshot",
+            "json": {"dossier_id": "d7"},
         }
     ]

@@ -90,6 +90,20 @@ UME_ENCRYPTION_ENABLED=true UME_ENCRYPTION_KEY=<key> \
   poetry run python scripts/migrate_dossier.py --encrypt ~/.ume_dossier
 ```
 
+## Dossier Snapshots
+
+Use `Dossier.snapshot()` to archive the current YAML files. A folder named
+`history/<timestamp>` is created inside the dossier directory containing
+copies of all YAML files. Snapshots can also be created via the API or CLI:
+
+```bash
+curl -X POST -H "Authorization: Bearer <token>" \
+  -d '{"dossier_id":"example"}' \
+  http://localhost:8000/dossier/snapshot
+
+ume dossier snapshot example
+```
+
 ## Watcher Hooks
 
 Importing `ume.watchers` automatically registers the `dossier_activity_hook`. When active, file events collected by watchers are appended to `telemetry/activity.log` inside the user's dossier.
