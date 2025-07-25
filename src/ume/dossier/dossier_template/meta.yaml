@@ -1,3 +1,5 @@
 schema_version: 1
 shareable: false
+shareable_projects: false
+shareable_reflections: false
 telemetry_files: []

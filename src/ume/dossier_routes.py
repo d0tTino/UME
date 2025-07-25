@@ -76,9 +76,14 @@ def view_dossier(dossier_id: str, role: str = Depends(deps.get_current_role)) ->
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable):
+    if not can_read_projects(role, dossier.shareable_projects):
         raise HTTPException(status_code=403, detail="Not authorized")
-    return {"dossier_id": dossier_id, "projects": list_projects(dossier), "shareable": dossier.shareable}
+    return {
+        "dossier_id": dossier_id,
+        "projects": list_projects(dossier),
+        "shareable_projects": dossier.shareable_projects,
+        "shareable_reflections": dossier.shareable_reflections,
+    }
 
 
 @router.post("/add-project")
@@ -94,7 +99,12 @@ def add_project(req: AddProjectRequest, role: str = Depends(deps.get_current_rol
     dossier_add_project(dossier, req.project_id)
     return cast(
         Dict[str, object],
-        {"dossier_id": req.dossier_id, "projects": list_projects(dossier), "shareable": dossier.shareable},
+        {
+            "dossier_id": req.dossier_id,
+            "projects": list_projects(dossier),
+            "shareable_projects": dossier.shareable_projects,
+            "shareable_reflections": dossier.shareable_reflections,
+        },
     )
 
 
@@ -169,7 +179,7 @@ def get_skills(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable):
+    if not can_read_projects(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "skills": list_skills(dossier)}
 
@@ -182,7 +192,7 @@ def get_memories(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable):
+    if not can_read_projects(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "memories": list_memories(dossier)}
 
