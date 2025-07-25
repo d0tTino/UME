@@ -33,6 +33,12 @@ def _load_plain(root: Path) -> dict[str, Any]:
     return {
         "schema_version": int(meta.get("schema_version", 1)),
         "shareable": bool(meta.get("shareable", False)),
+        "shareable_projects": bool(
+            meta.get("shareable_projects", meta.get("shareable", False))
+        ),
+        "shareable_reflections": bool(
+            meta.get("shareable_reflections", meta.get("shareable", False))
+        ),
         "telemetry_files": meta.get("telemetry_files", []),
         "profile": profile,
         "projects": projects,
@@ -60,6 +66,8 @@ def migrate_dossier(path: Path, *, encrypt: bool = False) -> None:
     dossier = dossier_mod.Dossier(path)
     dossier.schema_version = dossier_mod.Dossier.schema_version
     dossier.shareable = data["shareable"]
+    dossier.shareable_projects = data["shareable_projects"]
+    dossier.shareable_reflections = data["shareable_reflections"]
     dossier.profile = data["profile"]
     dossier.projects = data["projects"]
     dossier.preferences = data["preferences"]

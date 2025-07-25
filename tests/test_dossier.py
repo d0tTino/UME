@@ -27,6 +27,8 @@ def test_dossier_init_and_helpers(tmp_path):
     dossier = Dossier.init_dossier(tmp_path)
     assert dossier.schema_version == Dossier.schema_version
     assert dossier.shareable is False
+    assert dossier.shareable_projects is False
+    assert dossier.shareable_reflections is False
 
     pid = add_project(dossier, "demo", attachments=["file.txt"])
 
@@ -37,6 +39,8 @@ def test_dossier_init_and_helpers(tmp_path):
     update_preferences(dossier, theme="dark")
 
     dossier.shareable = True
+    dossier.shareable_projects = True
+    dossier.shareable_reflections = True
     dossier.save()
 
     reloaded = Dossier.load(tmp_path)
@@ -58,6 +62,8 @@ def test_dossier_init_and_helpers(tmp_path):
     uuid.UUID(reloaded.projects[0]["id"])
     uuid.UUID(reloaded.reflections[0]["id"])
     assert reloaded.shareable is True
+    assert reloaded.shareable_projects is True
+    assert reloaded.shareable_reflections is True
 
 
 def test_dossier_env_load(tmp_path, monkeypatch):

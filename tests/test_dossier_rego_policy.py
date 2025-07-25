@@ -24,10 +24,15 @@ def test_access_control_rego() -> None:
     interp = Interpreter()
     interp.add_module("dossier.rego", policy)
 
-    assert _eval(interp, "can_read_projects", role="ProjectManager", metadata={"shareable": False})
-    assert _eval(interp, "can_read_projects", role="Viewer", metadata={"shareable": False})
-    assert _eval(interp, "can_read_projects", role="Other", metadata={"shareable": True})
-    assert not _eval(interp, "can_read_projects", role="Other", metadata={"shareable": False})
+    assert _eval(interp, "can_read_projects", role="ProjectManager", metadata={"shareable_projects": False})
+    assert _eval(interp, "can_read_projects", role="Viewer", metadata={"shareable_projects": False})
+    assert _eval(interp, "can_read_projects", role="Other", metadata={"shareable_projects": True})
+    assert not _eval(interp, "can_read_projects", role="Other", metadata={"shareable_projects": False})
+
+    assert _eval(interp, "can_read_reflections", role="ProjectManager", metadata={"shareable_reflections": False})
+    assert _eval(interp, "can_read_reflections", role="Viewer", metadata={"shareable_reflections": False})
+    assert _eval(interp, "can_read_reflections", role="Other", metadata={"shareable_reflections": True})
+    assert not _eval(interp, "can_read_reflections", role="Other", metadata={"shareable_reflections": False})
 
     assert _eval(interp, "allow_add_project", role="ProjectManager")
     assert not _eval(interp, "allow_add_project", role="Viewer")

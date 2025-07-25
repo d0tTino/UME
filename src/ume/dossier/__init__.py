@@ -38,6 +38,8 @@ class Dossier:
     root: Path
     schema_version: int = 1
     shareable: bool = False
+    shareable_projects: bool = False
+    shareable_reflections: bool = False
     profile: dict[str, Any] = field(default_factory=dict)
     projects: list[dict[str, Any]] = field(default_factory=list)
     preferences: dict[str, Any] = field(default_factory=dict)
@@ -77,6 +79,8 @@ class Dossier:
                 {
                     "schema_version": self.schema_version,
                     "shareable": self.shareable,
+                    "shareable_projects": self.shareable_projects,
+                    "shareable_reflections": self.shareable_reflections,
                     "telemetry_files": self.telemetry_files,
                 },
             )
@@ -95,6 +99,12 @@ class Dossier:
         meta = self._read_yaml(self.root / "meta.yaml") or {}
         self.schema_version = int(meta.get("schema_version", self.schema_version))
         self.shareable = bool(meta.get("shareable", self.shareable))
+        self.shareable_projects = bool(
+            meta.get("shareable_projects", meta.get("shareable", self.shareable))
+        )
+        self.shareable_reflections = bool(
+            meta.get("shareable_reflections", meta.get("shareable", self.shareable))
+        )
         self.telemetry_files = meta.get("telemetry_files", [])
         self.profile = self._read_yaml(self.root / "profile.yaml") or {}
         proj = self._read_yaml(self.root / "projects.yaml") or {}
@@ -187,6 +197,8 @@ class Dossier:
                     {
                         "schema_version": self.schema_version,
                         "shareable": self.shareable,
+                        "shareable_projects": self.shareable_projects,
+                        "shareable_reflections": self.shareable_reflections,
                         "telemetry_files": self.telemetry_files,
                     },
                 )

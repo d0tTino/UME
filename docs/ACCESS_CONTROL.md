@@ -96,11 +96,11 @@ The following snippet demonstrates how dossier permissions could be expressed in
 ```rego
 package ume.dossier
 
-# Allow reading projects if the dossier is shareable or the caller has a valid role
+# Allow reading projects if that section is shareable or the caller has a valid role
 default can_read_projects = false
 
 can_read_projects {
-    input.metadata.shareable
+    input.metadata.shareable_projects
 }
 
 can_read_projects {
@@ -108,6 +108,21 @@ can_read_projects {
 }
 
 can_read_projects {
+    input.role == "Viewer"
+}
+
+# Allow reading reflections if that section is shareable or the caller has a valid role
+default can_read_reflections = false
+
+can_read_reflections {
+    input.metadata.shareable_reflections
+}
+
+can_read_reflections {
+    input.role == "ProjectManager"
+}
+
+can_read_reflections {
     input.role == "Viewer"
 }
 
