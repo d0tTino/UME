@@ -8,10 +8,12 @@ from ume.dossier import (
     Dossier,
     add_project,
     add_reflection,
+    add_memory,
     add_value,
     add_skill,
     list_projects,
     list_skills,
+    list_memories,
     update_preferences,
 )
 
@@ -29,6 +31,7 @@ def test_dossier_init_and_helpers(tmp_path):
     pid = add_project(dossier, "demo", attachments=["file.txt"])
 
     rid = add_reflection(dossier, "thinking", links=[pid], attachments=["img.png"])
+    mid = add_memory(dossier, "fact", links=[rid])
     add_value(dossier, "honesty")
     add_skill(dossier, "python")
     update_preferences(dossier, theme="dark")
@@ -43,7 +46,11 @@ def test_dossier_init_and_helpers(tmp_path):
     assert reloaded.reflections[0]["id"] == rid
     assert reloaded.reflections[0]["links"] == [pid]
     assert reloaded.reflections[0]["attachments"] == ["img.png"]
+    assert reloaded.knowledge[0]["text"] == "fact"
+    assert reloaded.knowledge[0]["links"] == [rid]
+    assert reloaded.knowledge[0]["id"] == mid
     assert reloaded.values == ["honesty"]
+    assert list_memories(reloaded) == ["fact"]
     assert list_skills(reloaded) == ["python"]
     assert reloaded.projects[0]["id"] == pid
     assert reloaded.projects[0]["links"] == []

@@ -50,6 +50,10 @@ async def add_project(payload: dict):
 async def add_reflection(payload: dict):
     return {'dossier_id': payload['dossier_id'], 'reflection': payload['text']}
 
+@app.post('/dossier/add-memory')
+async def add_memory(payload: dict):
+    return {'dossier_id': payload['dossier_id'], 'memory': payload['text']}
+
 @app.post('/dossier/set-pref')
 async def set_pref(payload: dict):
     return {'dossier_id': payload['dossier_id'], 'key': payload['key'], 'value': payload['value']}
@@ -65,6 +69,10 @@ async def add_skill(payload: dict):
 @app.get('/dossier/skills/{dossier_id}')
 async def list_skills(dossier_id: str):
     return {'dossier_id': dossier_id, 'skills': ['s1']}
+
+@app.get('/dossier/memories/{dossier_id}')
+async def list_memories(dossier_id: str):
+    return {'dossier_id': dossier_id, 'memories': ['m1']}
 
 @app.post('/dossier/snapshot')
 async def snapshot(payload: dict):
@@ -148,6 +156,24 @@ def test_dossier_add_reflection(tmp_path: Path):
     ]
 
 
+def test_dossier_add_memory(tmp_path: Path):
+    proc, requests = _run_cli(
+        tmp_path, ["dossier", "add-memory", "d2", "fact"]
+    )
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {
+        "dossier_id": "d2",
+        "memory": "fact",
+    }
+    assert requests == [
+        {
+            "method": "POST",
+            "url": "http://localhost:8000/dossier/add-memory",
+            "json": {"dossier_id": "d2", "text": "fact"},
+        }
+    ]
+
+
 def test_dossier_set_pref(tmp_path: Path):
     proc, requests = _run_cli(
         tmp_path, ["dossier", "set-pref", "d3", "theme", "dark"]
@@ -201,6 +227,19 @@ def test_dossier_list_skills(tmp_path: Path):
         {
             "method": "GET",
             "url": "http://localhost:8000/dossier/skills/d6",
+            "json": None,
+        }
+    ]
+
+
+def test_dossier_list_memories(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "list-memories", "d8"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d8", "memories": ["m1"]}
+    assert requests == [
+        {
+            "method": "GET",
+            "url": "http://localhost:8000/dossier/memories/d8",
             "json": None,
         }
     ]

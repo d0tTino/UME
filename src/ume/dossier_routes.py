@@ -14,10 +14,12 @@ from .dossier import (
     Dossier,
     add_project as dossier_add_project,
     add_reflection,
+    add_memory,
     add_value,
     add_skill,
     list_projects,
     list_skills,
+    list_memories,
     update_preferences,
 )
 
@@ -36,6 +38,12 @@ class AddProjectRequest(BaseModel):
 
 
 class AddReflectionRequest(BaseModel):
+    dossier_id: str
+    text: str
+    links: list[str] | None = None
+
+
+class AddMemoryRequest(BaseModel):
     dossier_id: str
     text: str
     links: list[str] | None = None
@@ -103,6 +111,19 @@ def add_reflection_endpoint(
     return {"status": "ok"}
 
 
+@router.post("/add-memory")
+def add_memory_endpoint(
+    req: AddMemoryRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    """Append a knowledge entry to the dossier."""
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
+    add_memory(dossier, req.text, req.links)
+    return {"status": "ok"}
+
+
 @router.post("/set-pref")
 def set_preference(
     req: SetPreferenceRequest, role: str = Depends(deps.get_current_role)
@@ -151,6 +172,19 @@ def get_skills(
     if not can_read_projects(role, dossier.shareable):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "skills": list_skills(dossier)}
+
+
+@router.get("/memories/{dossier_id}")
+def get_memories(
+    dossier_id: str, role: str = Depends(deps.get_current_role)
+) -> Dict[str, object]:
+    path = _dossier_path(dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    if not can_read_projects(role, dossier.shareable):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return {"dossier_id": dossier_id, "memories": list_memories(dossier)}
 
 
 @router.post("/snapshot")

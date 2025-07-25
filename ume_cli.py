@@ -187,6 +187,44 @@ def _dossier_list_skills(dossier_id: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_add_memory(dossier_id: str, text: str) -> None:
+    """Send a request to append a memory entry."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id, "text": text}
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/add-memory",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
+def _dossier_list_memories(dossier_id: str) -> None:
+    """Fetch and print the memory list."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    try:
+        resp = httpx.get(
+            f"{base_url}/dossier/memories/{dossier_id}",
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def _dossier_snapshot(dossier_id: str) -> None:
     """Request a dossier snapshot from the API."""
     base_url = "http://localhost:8000"
@@ -247,6 +285,9 @@ def main() -> None:
     refl_p = dossier_sub.add_parser("add-reflection", help="Add a reflection entry")
     refl_p.add_argument("dossier_id")
     refl_p.add_argument("text")
+    mem_p = dossier_sub.add_parser("add-memory", help="Add a knowledge entry")
+    mem_p.add_argument("dossier_id")
+    mem_p.add_argument("text")
     pref_p = dossier_sub.add_parser("set-pref", help="Set a preference key")
     pref_p.add_argument("dossier_id")
     pref_p.add_argument("key")
@@ -257,6 +298,8 @@ def main() -> None:
     skill_p = dossier_sub.add_parser("add-skill", help="Add a skill entry")
     skill_p.add_argument("dossier_id")
     skill_p.add_argument("skill")
+    list_mem_p = dossier_sub.add_parser("list-memories", help="List knowledge entries")
+    list_mem_p.add_argument("dossier_id")
     list_skills_p = dossier_sub.add_parser("list-skills", help="List skills")
     list_skills_p.add_argument("dossier_id")
     snap_p = dossier_sub.add_parser("snapshot", help="Snapshot dossier")
@@ -298,12 +341,16 @@ def main() -> None:
                 _dossier_add_project(args.dossier_id, args.project_id)
             elif args.dossier_cmd == "add-reflection":
                 _dossier_add_reflection(args.dossier_id, args.text)
+            elif args.dossier_cmd == "add-memory":
+                _dossier_add_memory(args.dossier_id, args.text)
             elif args.dossier_cmd == "set-pref":
                 _dossier_set_pref(args.dossier_id, args.key, args.value)
             elif args.dossier_cmd == "add-value":
                 _dossier_add_value(args.dossier_id, args.value)
             elif args.dossier_cmd == "add-skill":
                 _dossier_add_skill(args.dossier_id, args.skill)
+            elif args.dossier_cmd == "list-memories":
+                _dossier_list_memories(args.dossier_id)
             elif args.dossier_cmd == "list-skills":
                 _dossier_list_skills(args.dossier_id)
             elif args.dossier_cmd == "snapshot":

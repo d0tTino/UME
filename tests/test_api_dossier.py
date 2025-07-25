@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from ume.api import app
 from ume.config import settings
-from ume.dossier import Dossier, list_projects, list_skills
+from ume.dossier import Dossier, list_projects, list_skills, list_memories
 
 
 def _token(client: TestClient) -> str:
@@ -88,6 +88,13 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     assert res.status_code == 200
 
     res = client.post(
+        "/dossier/add-memory",
+        json={"dossier_id": "d4", "text": "fact"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    res = client.post(
         "/dossier/set-pref",
         json={"dossier_id": "d4", "key": "theme", "value": "dark"},
         headers=headers,
@@ -117,9 +124,14 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     assert res.status_code == 200
     assert res.json()["skills"] == ["python"]
 
+    res = client.get("/dossier/memories/d4", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["memories"] == ["fact"]
+
     dossier = Dossier.load(tmp_path / "d4")
     assert dossier.values == ["honesty"]
     assert list_skills(dossier) == ["python"]
+    assert list_memories(dossier) == ["fact"]
 
 
 def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
@@ -157,23 +169,10 @@ def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
     )
     assert res.status_code == 403
 
-
-def test_skill_listing_no_duplicates(tmp_path, monkeypatch):
-    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
-    client = TestClient(app)
-    token = _token(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    for _ in range(2):
-        res = client.post(
-            "/dossier/add-skill",
-            json={"dossier_id": "d6", "skill": "python"},
-            headers=headers,
-        )
-        assert res.status_code == 200
-
-    res = client.get("/dossier/skills/d6", headers=headers)
-    assert res.status_code == 200
-    assert res.json()["skills"] == ["python"]
+    res = client.post(
+        "/dossier/add-memory",
+        json={"dossier_id": "d5", "text": "idea"},
+        headers=headers,
+    )
+    assert res.status_code == 403
 

@@ -11,6 +11,7 @@ A newly initialized dossier contains:
 - `projects.yaml` – list of active projects
 - `preferences.yaml` – arbitrary key/value settings
 - `reflections.yaml` – journal style reflections
+- `knowledge.yaml` – saved knowledge or memories
 - `values.yaml` – list of personal values
 - `skills.yaml` – list of personal skills
 - `telemetry/` – directory for captured traces
@@ -43,6 +44,12 @@ ume dossier add-skill user123 python
 
 # List skills
 ume dossier list-skills user123
+
+# Add a memory
+ume dossier add-memory user123 "remember this"
+
+# List memories
+ume dossier list-memories user123
 ```
 
 ## API Examples
@@ -70,6 +77,15 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 # List skills
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/dossier/skills/user123
+
+# Add a memory
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -d '{"dossier_id":"user123","text":"remember this"}' \
+  http://localhost:8000/dossier/add-memory
+
+# List memories
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/dossier/memories/user123
 ```
 
 ## Migrating Existing Dossiers

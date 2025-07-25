@@ -42,6 +42,7 @@ class Dossier:
     projects: list[dict[str, Any]] = field(default_factory=list)
     preferences: dict[str, Any] = field(default_factory=dict)
     reflections: list[dict[str, Any]] = field(default_factory=list)
+    knowledge: list[dict[str, Any]] = field(default_factory=list)
     values: list[str] = field(default_factory=list)
     skills: list[str] = field(default_factory=list)
     telemetry_files: list[str] = field(default_factory=list)
@@ -83,6 +84,7 @@ class Dossier:
             self._write_yaml(self.root / "projects.yaml", {"projects": self.projects})
             self._write_yaml(self.root / "preferences.yaml", self.preferences)
             self._write_yaml(self.root / "reflections.yaml", self.reflections)
+            self._write_yaml(self.root / "knowledge.yaml", self.knowledge)
             self._write_yaml(self.root / "values.yaml", self.values)
             self._write_yaml(self.root / "skills.yaml", self.skills)
 
@@ -102,6 +104,7 @@ class Dossier:
             self.projects = proj
         self.preferences = self._read_yaml(self.root / "preferences.yaml") or {}
         self.reflections = self._read_yaml(self.root / "reflections.yaml") or []
+        self.knowledge = self._read_yaml(self.root / "knowledge.yaml") or []
         self.values = self._read_yaml(self.root / "values.yaml") or []
         self.skills = self._read_yaml(self.root / "skills.yaml") or []
 
@@ -125,6 +128,14 @@ class Dossier:
             r.setdefault("attachments", [])
             normalized_reflections.append(r)
         self.reflections = normalized_reflections
+
+        normalized_knowledge = []
+        for k in self.knowledge:
+            k.setdefault("id", str(uuid4()))
+            k.setdefault("links", [])
+            k.setdefault("attachments", [])
+            normalized_knowledge.append(k)
+        self.knowledge = normalized_knowledge
 
     def add_activity(self, payload: dict[str, Any]) -> None:
         """Append ``payload`` to ``telemetry/activity.log`` if allowed."""
@@ -282,3 +293,27 @@ def add_skill(dossier: Dossier, skill: str) -> None:
 
 def list_skills(dossier: Dossier) -> list[str]:
     return list(dossier.skills)
+
+
+def add_memory(
+    dossier: Dossier,
+    text: str,
+    links: list[str] | None = None,
+    attachments: list[str] | None = None,
+) -> str:
+    """Append a knowledge entry and return its id."""
+    entry_id = str(uuid4())
+    entry = {
+        "id": entry_id,
+        "text": text,
+        "timestamp": datetime.utcnow().isoformat(),
+        "links": links or [],
+        "attachments": attachments or [],
+    }
+    dossier.knowledge.append(entry)
+    dossier.save()
+    return entry_id
+
+
+def list_memories(dossier: Dossier) -> list[str]:
+    return [m.get("text", "") for m in dossier.knowledge]
