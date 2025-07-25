@@ -951,6 +951,24 @@ ume> exit
 Goodbye!
 ```
 
+### Working with the Dossier
+
+The dossier directory (default `~/.ume_dossier`) is seeded from the YAML files in
+`src/ume/dossier/dossier_template/` such as `skills.yaml` and `values.yaml`.
+Use the CLI or API to add entries and snapshot the graph when needed.
+
+```bash
+# Add a value and a skill via the CLI
+ume dossier add-value user123 curiosity
+ume dossier add-skill user123 python
+
+# Trigger a snapshot through the API
+curl -X POST http://localhost:8000/snapshot/save \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"path":"ume_backup.json"}'
+```
+
 ## Graph Analytics with Neo4j GDS
 
 When using `Neo4jGraph` with the `use_gds=True` option, UME can delegate graph

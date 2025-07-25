@@ -60,10 +60,26 @@ Delete an edge.
 ### POST `/snapshot/save`
 Write the entire graph state to a JSON file.
 - **Body**: `{"path": "file.json"}`
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/snapshot/save \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"path":"backup.json"}'
+```
 
 ### POST `/snapshot/load`
 Replace the current graph with the contents of a snapshot file.
 - **Body**: `{"path": "file.json"}`
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/snapshot/load \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"path":"backup.json"}'
+```
 
 ### GET `/ledger/events`
 List entries in the event ledger.
@@ -184,6 +200,30 @@ curl -X POST http://localhost:8000/dossier/add-project \
   -H "Content-Type: application/json" \
   -d '{"dossier_id":"example","project_id":"p1"}'
 ```
+
+### POST `/dossier/add-value`
+Add a personal value entry to the dossier.
+
+```bash
+curl -X POST http://localhost:8000/dossier/add-value \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"dossier_id":"example","value":"curiosity"}'
+```
+
+### POST `/dossier/add-skill`
+Add a skill entry to the dossier.
+
+```bash
+curl -X POST http://localhost:8000/dossier/add-skill \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"dossier_id":"example","skill":"python"}'
+```
+
+The dossier directory is initialized from template files located under
+`src/ume/dossier/dossier_template/` which include `skills.yaml` and
+`values.yaml`.
 
 ## API Documentation
 
