@@ -8,6 +8,9 @@ An `env.example` file with the following contents is included at the project roo
 # Path where the CLI stores its SQLite database
 UME_CLI_DB=./ume.db
 
+# Directory for the YAML dossier (user profile)
+UME_DOSSIER_PATH=~/.ume_dossier
+
 # Location for audit log entries
 UME_AUDIT_LOG_PATH=./audit.log
 
@@ -36,6 +39,8 @@ LLM_FERRY_API_KEY=
 # Number of hours of events to include in Angel Bridge summaries
 ANGEL_BRIDGE_LOOKBACK_HOURS=24
 ```
+
+Set `UME_DOSSIER_PATH` to change where UME stores user dossier files if you want to relocate them from the default location.
 
 UME requires **Python 3.10** or newer. If your system Python is older than 3.10,
 consider using [pyenv](https://github.com/pyenv/pyenv) or running in a
