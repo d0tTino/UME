@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple, Optional
 try:
     from cryptography.fernet import Fernet
 except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None  # type: ignore[misc, assignment]
+    Fernet = None
 
 from .config import settings
 

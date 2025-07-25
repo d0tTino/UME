@@ -7,7 +7,7 @@ def can_read_projects(role: str, shareable: bool = False) -> bool:
     """Return ``True`` if ``role`` may view dossier projects."""
     if shareable:
         return True
-    return role in {"ProjectManager", "Viewer"}
+    return role == "ProjectManager"
 
 
 def can_read_reflections(role: str, shareable: bool = False) -> bool:

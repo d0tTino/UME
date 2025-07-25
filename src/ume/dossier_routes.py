@@ -185,7 +185,7 @@ def get_projects(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable):
+    if not can_read_projects(role, dossier.shareable_projects):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "projects": list_projects(dossier)}
 
@@ -198,7 +198,7 @@ def get_reflections(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable):
+    if not can_read_projects(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
 
