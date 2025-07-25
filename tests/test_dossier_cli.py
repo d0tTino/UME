@@ -66,6 +66,14 @@ async def add_value(payload: dict):
 async def add_skill(payload: dict):
     return {'dossier_id': payload['dossier_id'], 'skill': payload['skill']}
 
+@app.get('/dossier/projects/{dossier_id}')
+async def list_projects(dossier_id: str):
+    return {'dossier_id': dossier_id, 'projects': ['p1']}
+
+@app.get('/dossier/reflections/{dossier_id}')
+async def list_reflections(dossier_id: str):
+    return {'dossier_id': dossier_id, 'reflections': ['r1']}
+
 @app.get('/dossier/skills/{dossier_id}')
 async def list_skills(dossier_id: str):
     return {'dossier_id': dossier_id, 'skills': ['s1']}
@@ -275,6 +283,34 @@ def test_dossier_add_skill_and_list(tmp_path: Path):
         {
             "method": "GET",
             "url": "http://localhost:8000/dossier/skills/d8",
+            "json": None,
+        }
+    ]
+
+
+def test_list_projects(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "list-projects", "d9"])
+
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d9", "projects": ["p1"]}
+    assert requests == [
+        {
+            "method": "GET",
+            "url": "http://localhost:8000/dossier/projects/d9",
+            "json": None,
+        }
+    ]
+
+
+def test_list_reflections(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "list-reflections", "d10"])
+
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d10", "reflections": ["r1"]}
+    assert requests == [
+        {
+            "method": "GET",
+            "url": "http://localhost:8000/dossier/reflections/d10",
             "json": None,
         }
     ]

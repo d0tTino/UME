@@ -269,6 +269,11 @@ def add_reflection(
     dossier.save()
     return entry_id
 
+
+def list_reflections(dossier: Dossier) -> list[str]:
+    """Return a list of reflection texts."""
+    return [r.get("text", "") for r in dossier.reflections]
+
 def list_projects(dossier: Dossier) -> list[str]:
     return [p.get("name", "") for p in dossier.projects]
 

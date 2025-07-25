@@ -187,6 +187,42 @@ def _dossier_list_skills(dossier_id: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_list_projects(dossier_id: str) -> None:
+    """Fetch and print the project list."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    try:
+        resp = httpx.get(
+            f"{base_url}/dossier/projects/{dossier_id}",
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
+def _dossier_list_reflections(dossier_id: str) -> None:
+    """Fetch and print the reflection list."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    try:
+        resp = httpx.get(
+            f"{base_url}/dossier/reflections/{dossier_id}",
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def _dossier_add_memory(dossier_id: str, text: str) -> None:
     """Send a request to append a memory entry."""
     base_url = "http://localhost:8000"
@@ -298,6 +334,14 @@ def main() -> None:
     skill_p = dossier_sub.add_parser("add-skill", help="Add a skill entry")
     skill_p.add_argument("dossier_id")
     skill_p.add_argument("skill")
+    list_proj_p = dossier_sub.add_parser(
+        "list-projects", help="List projects"
+    )
+    list_proj_p.add_argument("dossier_id")
+    list_refl_p = dossier_sub.add_parser(
+        "list-reflections", help="List reflections"
+    )
+    list_refl_p.add_argument("dossier_id")
     list_mem_p = dossier_sub.add_parser("list-memories", help="List knowledge entries")
     list_mem_p.add_argument("dossier_id")
     list_skills_p = dossier_sub.add_parser("list-skills", help="List skills")
@@ -353,6 +397,10 @@ def main() -> None:
                 _dossier_list_memories(args.dossier_id)
             elif args.dossier_cmd == "list-skills":
                 _dossier_list_skills(args.dossier_id)
+            elif args.dossier_cmd == "list-projects":
+                _dossier_list_projects(args.dossier_id)
+            elif args.dossier_cmd == "list-reflections":
+                _dossier_list_reflections(args.dossier_id)
             elif args.dossier_cmd == "snapshot":
                 _dossier_snapshot(args.dossier_id)
             return
