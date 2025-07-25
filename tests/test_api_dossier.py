@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from ume.api import app
 from ume.config import settings
-from ume.dossier import Dossier, list_projects, list_skills
+from ume.dossier import Dossier, list_projects, list_skills, list_memories
 
 
 def _token(client: TestClient) -> str:
@@ -88,6 +88,13 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     assert res.status_code == 200
 
     res = client.post(
+        "/dossier/add-memory",
+        json={"dossier_id": "d4", "text": "fact"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    res = client.post(
         "/dossier/set-pref",
         json={"dossier_id": "d4", "key": "theme", "value": "dark"},
         headers=headers,
@@ -117,9 +124,14 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     assert res.status_code == 200
     assert res.json()["skills"] == ["python"]
 
+    res = client.get("/dossier/memories/d4", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["memories"] == ["fact"]
+
     dossier = Dossier.load(tmp_path / "d4")
     assert dossier.values == ["honesty"]
     assert list_skills(dossier) == ["python"]
+    assert list_memories(dossier) == ["fact"]
 
 
 def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
@@ -153,6 +165,13 @@ def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
     res = client.post(
         "/dossier/add-skill",
         json={"dossier_id": "d5", "skill": "python"},
+        headers=headers,
+    )
+    assert res.status_code == 403
+
+    res = client.post(
+        "/dossier/add-memory",
+        json={"dossier_id": "d5", "text": "idea"},
         headers=headers,
     )
     assert res.status_code == 403
