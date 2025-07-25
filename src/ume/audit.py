@@ -7,12 +7,12 @@ import hmac
 import hashlib
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, cast
 
 try:
     from cryptography.fernet import Fernet
 except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None  # type: ignore[misc, assignment]
+    Fernet = None
 
 try:
     import boto3
@@ -75,7 +75,7 @@ def _read_lines(path: str) -> List[str]:
         if ENCRYPTION_ENABLED:
             assert _fernet is not None
             try:
-                text = _fernet.decrypt(raw).decode()
+                text = cast(bytes, _fernet.decrypt(raw)).decode()
             except Exception as exc:
                 logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                 return []
@@ -95,7 +95,7 @@ def _read_lines(path: str) -> List[str]:
                     return []
                 assert _fernet is not None
                 try:
-                    text = _fernet.decrypt(raw).decode()
+                    text = cast(bytes, _fernet.decrypt(raw)).decode()
                 except Exception as exc:
                     logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                     return []
