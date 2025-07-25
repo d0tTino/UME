@@ -177,3 +177,53 @@ def test_dossier_snapshot(tmp_path):
     originals = {p.name for p in tmp_path.glob("*.yaml")}
     copies = {p.name for p in snap_dir.glob("*.yaml")}
     assert originals == copies
+
+
+def test_add_knowledge_and_listing(tmp_path):
+    dossier = Dossier.init_dossier(tmp_path)
+    add_value(dossier, "integrity")
+    add_value(dossier, "integrity")
+    add_skill(dossier, "rust")
+    add_skill(dossier, "rust")
+
+    assert dossier.values == ["integrity"]
+    assert list_skills(dossier) == ["rust"]
+
+    loaded = Dossier.load(tmp_path)
+    assert loaded.values == ["integrity"]
+    assert list_skills(loaded) == ["rust"]
+
+
+def test_encrypted_knowledge_roundtrip(tmp_path, monkeypatch):
+    import importlib
+
+    try:
+        from cryptography.fernet import Fernet
+    except Exception:
+        pytest.skip("cryptography not available")
+
+    from ume.config.loader import load_settings
+
+    key = Fernet.generate_key().decode()
+    monkeypatch.setenv("UME_ENCRYPTION_ENABLED", "true")
+    monkeypatch.setenv("UME_ENCRYPTION_KEY", key)
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+
+    import ume.config as cfg
+    load_settings.cache_clear()
+    importlib.reload(cfg)
+    import ume.dossier as dossier_mod
+    importlib.reload(dossier_mod)
+
+    dossier = dossier_mod.Dossier.init_dossier(tmp_path)
+    dossier_mod.add_value(dossier, "transparency")
+    dossier_mod.add_skill(dossier, "go")
+
+    raw_v = (tmp_path / "values.yaml").read_bytes()
+    raw_s = (tmp_path / "skills.yaml").read_bytes()
+    assert b"transparency" not in raw_v
+    assert b"go" not in raw_s
+
+    reloaded = dossier_mod.Dossier.load(tmp_path)
+    assert "transparency" in reloaded.values
+    assert "go" in reloaded.skills

@@ -157,3 +157,23 @@ def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
     )
     assert res.status_code == 403
 
+
+def test_skill_listing_no_duplicates(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    for _ in range(2):
+        res = client.post(
+            "/dossier/add-skill",
+            json={"dossier_id": "d6", "skill": "python"},
+            headers=headers,
+        )
+        assert res.status_code == 200
+
+    res = client.get("/dossier/skills/d6", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["skills"] == ["python"]
+
