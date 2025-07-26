@@ -957,7 +957,9 @@ The dossier directory (default `~/.ume_dossier`) is seeded from the YAML files i
 `src/ume/dossier/dossier_template/` such as `skills.yaml` and `values.yaml`.
 Use the CLI or API to add entries and snapshot the graph when needed.
 
+# Initialize a dossier for a new user
 ```bash
+ume dossier init user123
 # Add a value and a skill via the CLI
 ume dossier add-value user123 curiosity
 ume dossier add-skill user123 python
