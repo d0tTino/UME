@@ -86,6 +86,16 @@ def _dossier_snapshot_schedule(interval: int) -> None:
         print("Dossier snapshot scheduler stopped.")
 
 
+def _dossier_init(dossier_id: str) -> None:
+    """Initialize a dossier directory for ``dossier_id``."""
+    from ume.dossier import Dossier
+
+    base = Path(os.environ.get("UME_DOSSIER_PATH", "~/.ume_dossier")).expanduser()
+    path = base / dossier_id
+    dossier = Dossier.init_dossier(path)
+    print(f"Dossier '{dossier_id}' initialized at {dossier.root}")
+
+
 def _dossier_view(dossier_id: str) -> None:
     """Fetch and display dossier details from the running API."""
     base_url = "http://localhost:8000"
@@ -350,6 +360,8 @@ def main() -> None:
     mem_p = dossier_sub.add_parser("add-memory", help="Add a knowledge entry")
     mem_p.add_argument("dossier_id")
     mem_p.add_argument("text")
+    init_p = dossier_sub.add_parser("init", help="Initialize a new dossier")
+    init_p.add_argument("dossier_id")
     pref_p = dossier_sub.add_parser("set-pref", help="Set a preference key")
     pref_p.add_argument("dossier_id")
     pref_p.add_argument("key")
@@ -411,6 +423,8 @@ def main() -> None:
         if args.command == "dossier":
             if args.dossier_cmd == "view":
                 _dossier_view(args.dossier_id)
+            elif args.dossier_cmd == "init":
+                _dossier_init(args.dossier_id)
             elif args.dossier_cmd == "add-project":
                 _dossier_add_project(args.dossier_id, args.project_id)
             elif args.dossier_cmd == "add-reflection":
