@@ -44,6 +44,7 @@ def test_documented_routes_exist() -> None:
     actual = {
         (m, _normalize(route.path))
         for route in app.router.routes
+        if route.methods
         for m in route.methods
         if m in {"GET", "POST", "DELETE", "PATCH", "PUT"}
     }

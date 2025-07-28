@@ -49,6 +49,7 @@ opentelemetry-api = "*"
 opentelemetry-sdk = "*"
 opentelemetry-exporter-otlp = "*"
 graphene = "^3.4.3"
+starlette-graphene3 = "^0.6.0"
 
 
 

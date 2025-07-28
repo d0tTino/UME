@@ -86,6 +86,44 @@ services:
       timeout: 5s
       retries: 5
 
+  ingestion-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    command: uvicorn ume.ingestion_api:app --host 0.0.0.0 --port 8001
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f uvicorn || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  graph-consumer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    command: poetry run python src/ume/consumer_demo.py
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f consumer_demo.py || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   prometheus:
     image: prom/prometheus
     volumes:
