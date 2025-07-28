@@ -125,13 +125,17 @@ def _dossier_add_project(dossier_id: str, project_id: str) -> None:
         print(f"Request failed: {exc}")
 
 
-def _dossier_add_reflection(dossier_id: str, text: str) -> None:
+def _dossier_add_reflection(
+    dossier_id: str, text: str, attachments: list[str] | None = None
+) -> None:
     """Send a request to append a reflection."""
     base_url = "http://localhost:8000"
     headers = {}
     if settings.UME_API_TOKEN:
         headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
     payload = {"dossier_id": dossier_id, "text": text}
+    if attachments:
+        payload["attachments"] = attachments
     try:
         resp = httpx.post(
             f"{base_url}/dossier/add-reflection",
@@ -277,13 +281,17 @@ def _dossier_list_reflections(dossier_id: str) -> None:
         print(f"Request failed: {exc}")
 
 
-def _dossier_add_memory(dossier_id: str, text: str) -> None:
+def _dossier_add_memory(
+    dossier_id: str, text: str, attachments: list[str] | None = None
+) -> None:
     """Send a request to append a memory entry."""
     base_url = "http://localhost:8000"
     headers = {}
     if settings.UME_API_TOKEN:
         headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
     payload = {"dossier_id": dossier_id, "text": text}
+    if attachments:
+        payload["attachments"] = attachments
     try:
         resp = httpx.post(
             f"{base_url}/dossier/add-memory",
@@ -375,9 +383,21 @@ def main() -> None:
     refl_p = dossier_sub.add_parser("add-reflection", help="Add a reflection entry")
     refl_p.add_argument("dossier_id")
     refl_p.add_argument("text")
+    refl_p.add_argument(
+        "--attach",
+        action="append",
+        default=[],
+        help="Attachment for the reflection (repeatable)",
+    )
     mem_p = dossier_sub.add_parser("add-memory", help="Add a knowledge entry")
     mem_p.add_argument("dossier_id")
     mem_p.add_argument("text")
+    mem_p.add_argument(
+        "--attach",
+        action="append",
+        default=[],
+        help="Attachment for the memory (repeatable)",
+    )
     init_p = dossier_sub.add_parser("init", help="Initialize a new dossier")
     init_p.add_argument("dossier_id")
     pref_p = dossier_sub.add_parser("set-pref", help="Set a preference key")
@@ -448,9 +468,9 @@ def main() -> None:
             elif args.dossier_cmd == "add-project":
                 _dossier_add_project(args.dossier_id, args.project_id)
             elif args.dossier_cmd == "add-reflection":
-                _dossier_add_reflection(args.dossier_id, args.text)
+                _dossier_add_reflection(args.dossier_id, args.text, args.attach)
             elif args.dossier_cmd == "add-memory":
-                _dossier_add_memory(args.dossier_id, args.text)
+                _dossier_add_memory(args.dossier_id, args.text, args.attach)
             elif args.dossier_cmd == "set-pref":
                 _dossier_set_pref(args.dossier_id, args.key, args.value)
             elif args.dossier_cmd == "add-value":

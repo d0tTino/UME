@@ -92,14 +92,22 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
 
     res = client.post(
         "/dossier/add-reflection",
-        json={"dossier_id": "d4", "text": "thinking"},
+        json={
+            "dossier_id": "d4",
+            "text": "thinking",
+            "attachments": ["img.png"],
+        },
         headers=headers,
     )
     assert res.status_code == 200
 
     res = client.post(
         "/dossier/add-memory",
-        json={"dossier_id": "d4", "text": "fact"},
+        json={
+            "dossier_id": "d4",
+            "text": "fact",
+            "attachments": ["doc.pdf"],
+        },
         headers=headers,
     )
     assert res.status_code == 200
@@ -120,7 +128,9 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
 
     dossier = Dossier.load(tmp_path / "d4")
     assert dossier.reflections[0]["text"] == "thinking"
+    assert dossier.reflections[0]["attachments"] == ["img.png"]
     assert "id" in dossier.reflections[0]
+    assert dossier.knowledge[0]["attachments"] == ["doc.pdf"]
     assert dossier.preferences["theme"] == "dark"
 
     res = client.post(
