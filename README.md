@@ -13,6 +13,7 @@ The engine is built from a few key components:
 - **FastAPI API** (`src/ume/api.py`)
   - HTTP service exposing graph queries and analytics endpoints.
   - Enforces role-based access to graph operations.
+  - Provides a GraphQL endpoint at `/graphql` for advanced queries.
   - **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
     - Define a common interface for manipulating different graph backends.
     - Includes adapters for in-memory, SQLite, Postgres, Redis, and Neo4j storage as well as RBAC wrappers.
