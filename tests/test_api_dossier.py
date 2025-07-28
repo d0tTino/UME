@@ -276,7 +276,7 @@ def test_reflections_viewer_allowed(tmp_path, monkeypatch):
 
 
 def test_skills_values_memories_viewer_allowed(tmp_path, monkeypatch):
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     dossier = Dossier.init_dossier(tmp_path / "d10")
     add_skill(dossier, "python")
     add_value(dossier, "honesty")
