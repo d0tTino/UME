@@ -18,6 +18,7 @@ except Exception:  # pragma: no cover - cryptography optional
     Fernet = None
 
 from ..config import settings
+from ..audit import log_audit_entry
 
 ENCRYPTION_ENABLED = settings.UME_ENCRYPTION_ENABLED
 _fernet: Fernet | None
@@ -263,6 +264,7 @@ def add_project(
     }
     dossier.projects.append(entry)
     dossier.save()
+    log_audit_entry(settings.UME_AGENT_ID, f"add_project {dossier.root.name} {entry_id}")
     return entry_id
 
 
@@ -282,19 +284,26 @@ def add_reflection(
     }
     dossier.reflections.append(entry)
     dossier.save()
+    log_audit_entry(settings.UME_AGENT_ID, f"add_reflection {dossier.root.name} {entry_id}")
     return entry_id
 
 
 def list_reflections(dossier: Dossier) -> list[str]:
     """Return a list of reflection texts."""
-    return [r.get("text", "") for r in dossier.reflections]
+    texts = [r.get("text", "") for r in dossier.reflections]
+    log_audit_entry(settings.UME_AGENT_ID, f"list_reflections {dossier.root.name}")
+    return texts
 
 def list_projects(dossier: Dossier) -> list[str]:
-    return [p.get("name", "") for p in dossier.projects]
+    names = [p.get("name", "") for p in dossier.projects]
+    log_audit_entry(settings.UME_AGENT_ID, f"list_projects {dossier.root.name}")
+    return names
 
 def update_preferences(dossier: Dossier, **prefs: Any) -> None:
     dossier.preferences.update(prefs)
     dossier.save()
+    keys = ",".join(prefs.keys())
+    log_audit_entry(settings.UME_AGENT_ID, f"update_preferences {dossier.root.name} {keys}")
 
 
 def add_value(dossier: Dossier, value: str) -> None:
@@ -302,11 +311,14 @@ def add_value(dossier: Dossier, value: str) -> None:
     if value not in dossier.values:
         dossier.values.append(value)
         dossier.save()
+        log_audit_entry(settings.UME_AGENT_ID, f"add_value {dossier.root.name} {value}")
 
 
 def list_values(dossier: Dossier) -> list[str]:
     """Return the list of values recorded in ``dossier``."""
-    return list(dossier.values)
+    vals = list(dossier.values)
+    log_audit_entry(settings.UME_AGENT_ID, f"list_values {dossier.root.name}")
+    return vals
 
 
 def add_skill(dossier: Dossier, skill: str) -> None:
@@ -314,10 +326,13 @@ def add_skill(dossier: Dossier, skill: str) -> None:
     if skill not in dossier.skills:
         dossier.skills.append(skill)
         dossier.save()
+        log_audit_entry(settings.UME_AGENT_ID, f"add_skill {dossier.root.name} {skill}")
 
 
 def list_skills(dossier: Dossier) -> list[str]:
-    return list(dossier.skills)
+    skills = list(dossier.skills)
+    log_audit_entry(settings.UME_AGENT_ID, f"list_skills {dossier.root.name}")
+    return skills
 
 
 def add_memory(
@@ -337,8 +352,11 @@ def add_memory(
     }
     dossier.knowledge.append(entry)
     dossier.save()
+    log_audit_entry(settings.UME_AGENT_ID, f"add_memory {dossier.root.name} {entry_id}")
     return entry_id
 
 
 def list_memories(dossier: Dossier) -> list[str]:
-    return [m.get("text", "") for m in dossier.knowledge]
+    texts = [m.get("text", "") for m in dossier.knowledge]
+    log_audit_entry(settings.UME_AGENT_ID, f"list_memories {dossier.root.name}")
+    return texts
