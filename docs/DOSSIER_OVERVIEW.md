@@ -18,6 +18,17 @@ A newly initialized dossier contains:
 
 You can create the folder manually or call `Dossier.init_dossier(path)` from Python to copy the template files.
 
+### Shareable Flags
+
+The `meta.yaml` file contains three boolean flags that control which parts of a
+dossier can be exposed to other roles:
+
+- `shareable` – mark the entire dossier as shareable.
+- `shareable_projects` – allow anyone to view `projects.yaml` when set to `true`.
+- `shareable_reflections` – allow anyone to view `reflections.yaml` when set to `true`.
+
+These defaults can be adjusted by editing `meta.yaml` after initialization.
+
 ## Linking Entries
 
 Projects and reflections are stored as objects that include a generated `id` field using `uuid4`.  Entries may reference other items by listing their IDs in a `links` array.  Helper functions automatically create the IDs and accept lists of related entry IDs when adding new records.
@@ -26,6 +37,10 @@ Projects and reflections are stored as objects that include a generated `id` fie
 
 Dossier API routes enforce role-based access. `ProjectManager` can add projects while `Viewer` may only read.
 To secure audit logs, ledger files, and the dossier itself, enable encryption by setting `UME_ENCRYPTION_ENABLED=true` and defining a base64 key in `UME_ENCRYPTION_KEY`. When enabled, the YAML files and telemetry logs in `UME_DOSSIER_PATH` are stored encrypted on disk. Additional notes on key management can be found in [SECURITY_NOTES.md](SECURITY_NOTES.md).
+
+### Audit Logging
+
+Every dossier action writes a signed entry to the audit log defined by `UME_AUDIT_LOG_PATH`. Entries include the timestamp, reason, and agent ID from `UME_AGENT_ID`.
 
 ## CLI Examples
 
@@ -59,6 +74,18 @@ ume dossier add-memory user123 "remember this"
 
 # List memories
 ume dossier list-memories user123
+```
+
+### Viewing Audit Entries
+
+After performing dossier actions you can inspect the audit log using Python:
+
+```bash
+python - <<'EOF'
+from ume import get_audit_entries
+for e in get_audit_entries()[-5:]:
+    print(e)
+EOF
 ```
 
 ## API Examples
