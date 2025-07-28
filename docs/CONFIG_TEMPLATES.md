@@ -80,7 +80,18 @@ Valid values for `UME_GRAPH_BACKEND` are:
 | `UME_ROLE` | *(unset)* | Optional role for the CLI. |
 | `UME_API_ROLE` | *(unset)* | Optional role applied by the API server. |
 | `UME_RATE_LIMIT_REDIS` | *(unset)* | Redis URL for API rate limiting. |
-| `UME_VECTOR_BACKEND` | `faiss` | Vector store backend (`faiss`, `chroma`, or plugin such as `memory`). |
+| `UME_VECTOR_BACKEND` | `faiss` | Vector store backend (`faiss`, `chroma`, `milvus`, or plugin such as `memory`). |
+
+Valid values for `UME_VECTOR_BACKEND` are:
+
+- `faiss` – local FAISS index written to `UME_VECTOR_INDEX`.
+- `chroma` – lightweight in-memory backend.
+- `milvus` – remote Milvus database service.
+- `memory` – example plugin backend for testing.
+
+When using `milvus`, set `UME_MILVUS_URI` to the server endpoint. Optional
+`UME_MILVUS_USER` and `UME_MILVUS_PASSWORD` may be provided when authentication
+is enabled.
 | `UME_VECTOR_DIM` | `1536` | Dimension of embedding vectors. |
 | `UME_VECTOR_INDEX` | `vectors.faiss` | Vector index file path. |
 | `UME_VECTOR_USE_GPU` | `False` | Whether to build the index on a GPU. |
