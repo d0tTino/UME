@@ -4,12 +4,15 @@ import json
 import sqlite3
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:  # pragma: no cover - typing import
     from cryptography.fernet import Fernet
-except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None
+else:  # pragma: no cover - cryptography optional
+    try:
+        from cryptography.fernet import Fernet  # type: ignore
+    except Exception:
+        Fernet = None  # type: ignore[assignment]
 
 from .config import settings
 

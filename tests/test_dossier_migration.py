@@ -81,6 +81,7 @@ def test_migrate_preserves_lists(
     )
     (root / "values.yaml").write_text(yaml.safe_dump(["integrity"]))
     (root / "skills.yaml").write_text(yaml.safe_dump(["rust"]))
+    (root / "goals.yaml").write_text(yaml.safe_dump(["x"]))
 
     env = os.environ.copy()
     key = None
@@ -103,6 +104,7 @@ def test_migrate_preserves_lists(
         assert b"fact" not in (root / "knowledge.yaml").read_bytes()
         assert b"integrity" not in (root / "values.yaml").read_bytes()
         assert b"rust" not in (root / "skills.yaml").read_bytes()
+        assert b"x" not in (root / "goals.yaml").read_bytes()
         assert key is not None
         monkeypatch.setenv("UME_ENCRYPTION_ENABLED", "true")
         monkeypatch.setenv("UME_ENCRYPTION_KEY", key)
@@ -117,4 +119,5 @@ def test_migrate_preserves_lists(
     assert dossier.knowledge[0]["text"] == "fact"
     assert dossier.values == ["integrity"]
     assert dossier.skills == ["rust"]
+    assert dossier.goals == ["x"]
     assert dossier.schema_version == Dossier.schema_version

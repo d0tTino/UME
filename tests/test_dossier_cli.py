@@ -78,6 +78,10 @@ async def add_value(payload: dict):
 async def add_skill(payload: dict):
     return {'dossier_id': payload['dossier_id'], 'skill': payload['skill']}
 
+@app.post('/dossier/add-goal')
+async def add_goal(payload: dict):
+    return {'dossier_id': payload['dossier_id'], 'goal': payload['goal']}
+
 @app.get('/dossier/projects/{dossier_id}')
 async def list_projects(dossier_id: str):
     return {'dossier_id': dossier_id, 'projects': ['p1']}
@@ -93,6 +97,10 @@ async def list_skills(dossier_id: str):
 @app.get('/dossier/values/{dossier_id}')
 async def list_values(dossier_id: str):
     return {'dossier_id': dossier_id, 'values': ['v1']}
+
+@app.get('/dossier/goals/{dossier_id}')
+async def list_goals(dossier_id: str):
+    return {'dossier_id': dossier_id, 'goals': ['g1']}
 
 @app.get('/dossier/memories/{dossier_id}')
 async def list_memories(dossier_id: str):
@@ -384,6 +392,32 @@ def test_list_reflections(tmp_path: Path):
         {
             "method": "GET",
             "url": "http://localhost:8000/dossier/reflections/d10",
+            "json": None,
+        }
+    ]
+
+
+def test_dossier_add_goal(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "add-goal", "d1", "g1"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d1", "goal": "g1"}
+    assert requests == [
+        {
+            "method": "POST",
+            "url": "http://localhost:8000/dossier/add-goal",
+            "json": {"dossier_id": "d1", "goal": "g1"},
+        }
+    ]
+
+
+def test_dossier_list_goals(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "list-goals", "d2"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d2", "goals": ["g1"]}
+    assert requests == [
+        {
+            "method": "GET",
+            "url": "http://localhost:8000/dossier/goals/d2",
             "json": None,
         }
     ]

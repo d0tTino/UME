@@ -12,9 +12,11 @@ from ume.dossier import (
     add_memory,
     add_value,
     add_skill,
+    add_goal,
     list_reflections,
     list_projects,
     list_skills,
+    list_goals,
     list_memories,
     update_preferences,
 )
@@ -41,6 +43,7 @@ def test_dossier_init_and_helpers(tmp_path):
     mid = add_memory(dossier, "fact", links=[rid])
     add_value(dossier, "honesty")
     add_skill(dossier, "python")
+    add_goal(dossier, "improve")
     update_preferences(dossier, theme="dark")
 
     dossier.shareable = True
@@ -65,6 +68,7 @@ def test_dossier_init_and_helpers(tmp_path):
     assert list_reflections(reloaded) == ["thinking"]
     assert list_memories(reloaded) == ["fact"]
     assert list_skills(reloaded) == ["python"]
+    assert list_goals(reloaded) == ["improve"]
     assert reloaded.projects[0]["id"] == pid
     assert reloaded.projects[0]["links"] == []
     assert reloaded.projects[0]["attachments"] == ["file.txt"]
@@ -217,13 +221,17 @@ def test_add_knowledge_and_listing(tmp_path):
     add_value(dossier, "integrity")
     add_skill(dossier, "rust")
     add_skill(dossier, "rust")
+    add_goal(dossier, "x")
+    add_goal(dossier, "x")
 
     assert dossier.values == ["integrity"]
     assert list_skills(dossier) == ["rust"]
+    assert list_goals(dossier) == ["x"]
 
     loaded = Dossier.load(tmp_path)
     assert loaded.values == ["integrity"]
     assert list_skills(loaded) == ["rust"]
+    assert list_goals(loaded) == ["x"]
 
 
 def test_encrypted_knowledge_roundtrip(tmp_path, monkeypatch):
@@ -250,15 +258,19 @@ def test_encrypted_knowledge_roundtrip(tmp_path, monkeypatch):
     dossier = dossier_mod.Dossier.init_dossier(tmp_path)
     dossier_mod.add_value(dossier, "transparency")
     dossier_mod.add_skill(dossier, "go")
+    dossier_mod.add_goal(dossier, "g")
 
     raw_v = (tmp_path / "values.yaml").read_bytes()
     raw_s = (tmp_path / "skills.yaml").read_bytes()
+    raw_g = (tmp_path / "goals.yaml").read_bytes()
     assert b"transparency" not in raw_v
     assert b"go" not in raw_s
+    assert raw_g.strip() != b"g"
 
     reloaded = dossier_mod.Dossier.load(tmp_path)
     assert "transparency" in reloaded.values
     assert "go" in reloaded.skills
+    assert "g" in reloaded.goals
 
     # Reset encryption settings and reload modules
     monkeypatch.delenv("UME_ENCRYPTION_ENABLED", raising=False)
