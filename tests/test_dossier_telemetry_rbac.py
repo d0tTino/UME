@@ -13,7 +13,7 @@ def _client(role: str):
 
 
 def test_snapshot_permission(tmp_path, monkeypatch):
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     Dossier.init_dossier(tmp_path / "d1")
 
     client = _client("ProjectManager")
@@ -26,7 +26,7 @@ def test_snapshot_permission(tmp_path, monkeypatch):
 
 
 def test_add_activity_permission(tmp_path, monkeypatch):
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     Dossier.init_dossier(tmp_path / "d2")
 
     client = _client("Viewer")

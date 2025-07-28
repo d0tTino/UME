@@ -9,6 +9,7 @@ An `env.example` file with the following contents is included at the project roo
 UME_CLI_DB=./ume.db
 
 # Directory for the YAML dossier (user profile)
+# Defaults to ~/.ume_dossier when unset
 UME_DOSSIER_PATH=~/.ume_dossier
 
 # Location for audit log entries

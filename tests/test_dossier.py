@@ -4,6 +4,7 @@ from datetime import datetime
 import yaml
 import pytest
 import uuid
+from ume.config import settings
 from ume.dossier import (
     Dossier,
     add_project,
@@ -70,7 +71,7 @@ def test_dossier_init_and_helpers(tmp_path):
 
 def test_dossier_env_load(tmp_path, monkeypatch):
     Dossier.init_dossier(tmp_path)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     dossier = Dossier.load()
     assert dossier.root == tmp_path
 
@@ -131,7 +132,7 @@ def test_dossier_encryption_roundtrip(tmp_path, monkeypatch):
     key = Fernet.generate_key().decode()
     monkeypatch.setenv("UME_ENCRYPTION_ENABLED", "true")
     monkeypatch.setenv("UME_ENCRYPTION_KEY", key)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
 
     import ume.config as cfg
     load_settings.cache_clear()
@@ -153,6 +154,13 @@ def test_dossier_encryption_roundtrip(tmp_path, monkeypatch):
     importlib.reload(dossier_mod)
     reloaded = dossier_mod.Dossier.load(tmp_path)
     assert reloaded.profile["name"] == "Alice"
+
+    # Reset encryption settings and reload modules to avoid cross-test effects
+    monkeypatch.delenv("UME_ENCRYPTION_ENABLED", raising=False)
+    monkeypatch.delenv("UME_ENCRYPTION_KEY", raising=False)
+    load_settings.cache_clear()
+    importlib.reload(cfg)
+    importlib.reload(dossier_mod)
 
 
 def test_add_activity_multiple_files(tmp_path, monkeypatch):
@@ -222,7 +230,7 @@ def test_encrypted_knowledge_roundtrip(tmp_path, monkeypatch):
     key = Fernet.generate_key().decode()
     monkeypatch.setenv("UME_ENCRYPTION_ENABLED", "true")
     monkeypatch.setenv("UME_ENCRYPTION_KEY", key)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
 
     import ume.config as cfg
     load_settings.cache_clear()
@@ -242,3 +250,10 @@ def test_encrypted_knowledge_roundtrip(tmp_path, monkeypatch):
     reloaded = dossier_mod.Dossier.load(tmp_path)
     assert "transparency" in reloaded.values
     assert "go" in reloaded.skills
+
+    # Reset encryption settings and reload modules
+    monkeypatch.delenv("UME_ENCRYPTION_ENABLED", raising=False)
+    monkeypatch.delenv("UME_ENCRYPTION_KEY", raising=False)
+    load_settings.cache_clear()
+    importlib.reload(cfg)
+    importlib.reload(dossier_mod)

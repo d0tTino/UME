@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -53,8 +52,7 @@ class Dossier:
     @classmethod
     def load(cls, root: str | Path | None = None) -> "Dossier":
         """Load dossier from ``root`` or ``UME_DOSSIER_PATH``."""
-        default = os.environ.get("UME_DOSSIER_PATH", "~/.ume_dossier")
-        path_str = str(root) if root is not None else default
+        path_str = str(root) if root is not None else settings.UME_DOSSIER_PATH
         path = Path(path_str).expanduser()
         obj = cls(path)
         obj._ensure_dirs()

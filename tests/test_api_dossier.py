@@ -22,7 +22,7 @@ def _token(client: TestClient) -> str:
 
 def test_add_and_view_dossier(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     client = TestClient(app)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -41,7 +41,7 @@ def test_add_and_view_dossier(tmp_path, monkeypatch):
 
 def test_add_project_forbidden(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     client = TestClient(app)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -55,7 +55,7 @@ def test_add_project_forbidden(tmp_path, monkeypatch):
 
 def test_view_missing(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     client = TestClient(app)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -65,7 +65,7 @@ def test_view_missing(tmp_path, monkeypatch):
 
 def test_dossier_persists_after_restart(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     client = TestClient(app)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -82,7 +82,7 @@ def test_dossier_persists_after_restart(tmp_path, monkeypatch):
 
 def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     client = TestClient(app)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -162,7 +162,7 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
 
 def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     client = TestClient(app)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -204,7 +204,7 @@ def test_reflection_and_pref_forbidden(tmp_path, monkeypatch):
 
 
 def test_projects_viewer_forbidden(tmp_path, monkeypatch):
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     dossier = Dossier.init_dossier(tmp_path / "d6")
     add_project(dossier, "p6")
     dossier.shareable_projects = False
@@ -220,7 +220,7 @@ def test_projects_viewer_forbidden(tmp_path, monkeypatch):
 
 
 def test_projects_viewer_allowed(tmp_path, monkeypatch):
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     dossier = Dossier.init_dossier(tmp_path / "d7")
     add_project(dossier, "p7")
     dossier.shareable_projects = True
@@ -237,7 +237,7 @@ def test_projects_viewer_allowed(tmp_path, monkeypatch):
 
 
 def test_reflections_viewer_forbidden(tmp_path, monkeypatch):
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     dossier = Dossier.init_dossier(tmp_path / "d8")
     add_reflection(dossier, "r8")
     dossier.shareable_reflections = False
@@ -253,7 +253,7 @@ def test_reflections_viewer_forbidden(tmp_path, monkeypatch):
 
 
 def test_reflections_viewer_allowed(tmp_path, monkeypatch):
-    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
     dossier = Dossier.init_dossier(tmp_path / "d9")
     add_reflection(dossier, "r9")
     dossier.shareable_reflections = True
