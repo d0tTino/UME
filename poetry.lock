@@ -5162,6 +5162,23 @@ anyio = ">=3.6.2,<5"
 full = ["httpx (>=0.27.0,<0.29.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.18)", "pyyaml"]
 
 [[package]]
+name = "starlette-graphene3"
+version = "0.6.0"
+description = "Use Graphene v3 on Starlette"
+optional = false
+python-versions = ">=3.7,<4.0"
+groups = ["main"]
+files = [
+    {file = "starlette-graphene3-0.6.0.tar.gz", hash = "sha256:cbe4ca397b24013d5b3161dd4144e9b3e836af0ef01a625bb6113946fc7d36d9"},
+    {file = "starlette_graphene3-0.6.0-py3-none-any.whl", hash = "sha256:193ff6e0900a3259ccf76b534cd84eaa2feefcaf92652b3b0f54fc784c80ce14"},
+]
+
+[package.dependencies]
+graphene = ">=3.0b6"
+graphql-core = ">=3.1,<3.3"
+starlette = ">=0.14.1"
+
+[[package]]
 name = "structlog"
 version = "25.4.0"
 description = "Structured Logging for Python"
@@ -6150,4 +6167,4 @@ vector = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "675ec79d1f6d77958d6b62978b3bd427dc1fda8a01cf3bbc35b5a611b6fd8959"
+content-hash = "71f9e78505e2c122508779246f90491924ceb55c8f15c7e88bcb3300b37b3069"
