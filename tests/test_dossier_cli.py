@@ -48,11 +48,19 @@ async def add_project(payload: dict):
 
 @app.post('/dossier/add-reflection')
 async def add_reflection(payload: dict):
-    return {'dossier_id': payload['dossier_id'], 'reflection': payload['text']}
+    return {
+        'dossier_id': payload['dossier_id'],
+        'reflection': payload['text'],
+        'attachments': payload.get('attachments', []),
+    }
 
 @app.post('/dossier/add-memory')
 async def add_memory(payload: dict):
-    return {'dossier_id': payload['dossier_id'], 'memory': payload['text']}
+    return {
+        'dossier_id': payload['dossier_id'],
+        'memory': payload['text'],
+        'attachments': payload.get('attachments', []),
+    }
 
 @app.post('/dossier/set-pref')
 async def set_pref(payload: dict):
@@ -152,36 +160,64 @@ def test_dossier_add_project(tmp_path: Path):
 
 def test_dossier_add_reflection(tmp_path: Path):
     proc, requests = _run_cli(
-        tmp_path, ["dossier", "add-reflection", "d2", "thinking"]
+        tmp_path,
+        [
+            "dossier",
+            "add-reflection",
+            "d2",
+            "thinking",
+            "--attach",
+            "img.png",
+            "--attach",
+            "notes.txt",
+        ],
     )
     assert proc.returncode == 0
     assert json.loads(proc.stdout) == {
         "dossier_id": "d2",
         "reflection": "thinking",
+        "attachments": ["img.png", "notes.txt"],
     }
     assert requests == [
         {
             "method": "POST",
             "url": "http://localhost:8000/dossier/add-reflection",
-            "json": {"dossier_id": "d2", "text": "thinking"},
+            "json": {
+                "dossier_id": "d2",
+                "text": "thinking",
+                "attachments": ["img.png", "notes.txt"],
+            },
         }
     ]
 
 
 def test_dossier_add_memory(tmp_path: Path):
     proc, requests = _run_cli(
-        tmp_path, ["dossier", "add-memory", "d2", "fact"]
+        tmp_path,
+        [
+            "dossier",
+            "add-memory",
+            "d2",
+            "fact",
+            "--attach",
+            "doc.pdf",
+        ],
     )
     assert proc.returncode == 0
     assert json.loads(proc.stdout) == {
         "dossier_id": "d2",
         "memory": "fact",
+        "attachments": ["doc.pdf"],
     }
     assert requests == [
         {
             "method": "POST",
             "url": "http://localhost:8000/dossier/add-memory",
-            "json": {"dossier_id": "d2", "text": "fact"},
+            "json": {
+                "dossier_id": "d2",
+                "text": "fact",
+                "attachments": ["doc.pdf"],
+            },
         }
     ]
 

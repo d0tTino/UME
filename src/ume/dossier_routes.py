@@ -52,12 +52,14 @@ class AddReflectionRequest(BaseModel):
     dossier_id: str
     text: str
     links: list[str] | None = None
+    attachments: list[str] | None = None
 
 
 class AddMemoryRequest(BaseModel):
     dossier_id: str
     text: str
     links: list[str] | None = None
+    attachments: list[str] | None = None
 
 
 class SetPreferenceRequest(BaseModel):
@@ -141,7 +143,7 @@ def add_reflection_endpoint(
         raise HTTPException(status_code=403, detail="Not authorized")
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
-    add_reflection(dossier, req.text, req.links)
+    add_reflection(dossier, req.text, req.links, req.attachments)
     log_audit_entry(settings.UME_AGENT_ID, f"add_reflection {req.dossier_id}")
     return {"status": "ok"}
 
@@ -155,7 +157,7 @@ def add_memory_endpoint(
         raise HTTPException(status_code=403, detail="Not authorized")
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
-    add_memory(dossier, req.text, req.links)
+    add_memory(dossier, req.text, req.links, req.attachments)
     log_audit_entry(settings.UME_AGENT_ID, f"add_memory {req.dossier_id}")
     return {"status": "ok"}
 
