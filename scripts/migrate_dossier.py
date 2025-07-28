@@ -26,6 +26,9 @@ def _load_plain(root: Path) -> dict[str, Any]:
     projects = _read_yaml(root / "projects.yaml") or {}
     preferences = _read_yaml(root / "preferences.yaml") or {}
     reflections = _read_yaml(root / "reflections.yaml") or []
+    knowledge = _read_yaml(root / "knowledge.yaml") or []
+    values = _read_yaml(root / "values.yaml") or []
+    skills = _read_yaml(root / "skills.yaml") or []
 
     if isinstance(projects, dict):
         projects = projects.get("projects", [])
@@ -44,6 +47,9 @@ def _load_plain(root: Path) -> dict[str, Any]:
         "projects": projects,
         "preferences": preferences,
         "reflections": reflections,
+        "knowledge": knowledge,
+        "values": values,
+        "skills": skills,
     }
 
 
@@ -72,6 +78,9 @@ def migrate_dossier(path: Path, *, encrypt: bool = False) -> None:
     dossier.projects = data["projects"]
     dossier.preferences = data["preferences"]
     dossier.reflections = data["reflections"]
+    dossier.knowledge = data["knowledge"]
+    dossier.values = data["values"]
+    dossier.skills = data["skills"]
     dossier.telemetry_files = data["telemetry_files"]
     dossier.save()
     print(f"Migrated dossier at {path}")
