@@ -30,6 +30,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_AGENT_ID: str = "SYSTEM"
     UME_EMBED_MODEL: str = "all-MiniLM-L6-v2"
     UME_CLI_DB: str = "ume_graph.db"
+    UME_DOSSIER_PATH: str = "~/.ume_dossier"
     UME_ROLE: str | None = None
     UME_API_ROLE: str | None = None
     UME_RATE_LIMIT_REDIS: str | None = None

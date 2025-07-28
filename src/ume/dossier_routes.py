@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any, Dict, cast
 
@@ -8,11 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .policy import (
-    can_modify_telemetry,
-    can_read_projects,
-    can_read_reflections,
-)
+from .policy import can_modify_telemetry, can_read_projects
+from .config import settings
+
 
 from .dossier import (
     Dossier,
@@ -34,7 +31,7 @@ router = APIRouter(prefix="/dossier")
 
 def _dossier_path(dossier_id: str) -> Path:
     """Return the filesystem path for ``dossier_id``."""
-    base = Path(os.environ.get("UME_DOSSIER_PATH", "~/.ume_dossier")).expanduser()
+    base = Path(settings.UME_DOSSIER_PATH).expanduser()
     return base / dossier_id
 
 

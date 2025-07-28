@@ -886,7 +886,7 @@ Pass `--show-warnings` to display Python warnings or `--warnings-log <file>` to
 log them for debugging.
 
 You can set `UME_CLI_DB` to override where the CLI stores its SQLite database.
-You can set `UME_DOSSIER_PATH` to change where the YAML dossier files are stored (default `~/.ume_dossier`).
+You can set `UME_DOSSIER_PATH` to change where the YAML dossier files are stored. The value defaults to `~/.ume_dossier` when unset.
 If you define `UME_ROLE`, the CLI will run with that role's permissions and
 display an informational message at startup.
 
