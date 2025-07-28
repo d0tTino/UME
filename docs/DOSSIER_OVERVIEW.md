@@ -74,6 +74,9 @@ ume dossier list-reflections user123
 # Add a memory
 ume dossier add-memory user123 "remember this"
 
+# Update shareable flags
+ume dossier set-shareable user123 --projects true
+
 # List memories
 ume dossier list-memories user123
 ```
@@ -131,6 +134,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 curl -X POST -H "Authorization: Bearer $TOKEN" \
   -d '{"dossier_id":"user123","text":"remember this"}' \
   http://localhost:8000/dossier/add-memory
+
+# Set shareable flags
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -d '{"dossier_id":"user123","shareable_projects":true}' \
+  http://localhost:8000/dossier/set-shareable
 
 # List memories
 curl -H "Authorization: Bearer $TOKEN" \

@@ -165,6 +165,27 @@ def _dossier_set_pref(dossier_id: str, key: str, value: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_set_shareable(dossier_id: str, **flags: str) -> None:
+    """Send a request to update shareable flags."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload: dict[str, object] = {"dossier_id": dossier_id}
+    payload.update(flags)
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/set-shareable",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def _dossier_add_value(dossier_id: str, value: str) -> None:
     """Send a request to append a value."""
     base_url = "http://localhost:8000"
@@ -384,6 +405,14 @@ def main() -> None:
     pref_p.add_argument("dossier_id")
     pref_p.add_argument("key")
     pref_p.add_argument("value")
+    share_p = dossier_sub.add_parser("set-shareable", help="Update shareable flags")
+    share_p.add_argument("dossier_id")
+    share_p.add_argument("--shareable", choices=["true", "false"])
+    share_p.add_argument("--projects", dest="shareable_projects", choices=["true", "false"])
+    share_p.add_argument("--reflections", dest="shareable_reflections", choices=["true", "false"])
+    share_p.add_argument("--skills", dest="shareable_skills", choices=["true", "false"])
+    share_p.add_argument("--values", dest="shareable_values", choices=["true", "false"])
+    share_p.add_argument("--memories", dest="shareable_memories", choices=["true", "false"])
     val_p = dossier_sub.add_parser("add-value", help="Add a value entry")
     val_p.add_argument("dossier_id")
     val_p.add_argument("value")
@@ -453,6 +482,20 @@ def main() -> None:
                 _dossier_add_memory(args.dossier_id, args.text)
             elif args.dossier_cmd == "set-pref":
                 _dossier_set_pref(args.dossier_id, args.key, args.value)
+            elif args.dossier_cmd == "set-shareable":
+                flags = {}
+                for name in [
+                    "shareable",
+                    "shareable_projects",
+                    "shareable_reflections",
+                    "shareable_skills",
+                    "shareable_values",
+                    "shareable_memories",
+                ]:
+                    val = getattr(args, name)
+                    if val is not None:
+                        flags[name] = val == "true"
+                _dossier_set_shareable(args.dossier_id, **flags)
             elif args.dossier_cmd == "add-value":
                 _dossier_add_value(args.dossier_id, args.value)
             elif args.dossier_cmd == "add-skill":

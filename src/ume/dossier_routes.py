@@ -32,6 +32,7 @@ from .dossier import (
     list_skills,
     list_memories,
     update_preferences,
+    update_shareable_flags,
 )
 
 router = APIRouter(prefix="/dossier")
@@ -64,6 +65,16 @@ class SetPreferenceRequest(BaseModel):
     dossier_id: str
     key: str
     value: Any
+
+
+class SetShareableRequest(BaseModel):
+    dossier_id: str
+    shareable: bool | None = None
+    shareable_projects: bool | None = None
+    shareable_reflections: bool | None = None
+    shareable_skills: bool | None = None
+    shareable_values: bool | None = None
+    shareable_memories: bool | None = None
 
 
 class AddValueRequest(BaseModel):
@@ -171,6 +182,28 @@ def set_preference(
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     update_preferences(dossier, **{req.key: req.value})
     log_audit_entry(settings.UME_AGENT_ID, f"set_pref {req.dossier_id} {req.key}")
+    return {"status": "ok"}
+
+
+@router.post("/set-shareable")
+def set_shareable(
+    req: SetShareableRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    """Update shareable flags in ``meta.yaml``."""
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
+    flags = {
+        k: v
+        for k, v in req.dict().items()
+        if k != "dossier_id" and v is not None
+    }
+    update_shareable_flags(dossier, **flags)
+    log_audit_entry(
+        settings.UME_AGENT_ID,
+        f"set_shareable {req.dossier_id} {','.join(flags.keys())}",
+    )
     return {"status": "ok"}
 
 

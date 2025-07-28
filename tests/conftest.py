@@ -67,6 +67,8 @@ class _DummyMetric:  # pragma: no cover - simple stub
 prom_stub.Counter = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Histogram = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Gauge = _DummyMetric  # type: ignore[attr-defined]
+prom_stub.generate_latest = lambda *_: b""
+prom_stub.CONTENT_TYPE_LATEST = "text/plain"
 
 if importlib.util.find_spec("prometheus_client") is None:
     sys.modules.setdefault("prometheus_client", prom_stub)
