@@ -223,6 +223,24 @@ def _dossier_list_skills(dossier_id: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_list_values(dossier_id: str) -> None:
+    """Fetch and print the value list."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    try:
+        resp = httpx.get(
+            f"{base_url}/dossier/values/{dossier_id}",
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def _dossier_list_projects(dossier_id: str) -> None:
     """Fetch and print the project list."""
     base_url = "http://localhost:8000"
@@ -384,6 +402,8 @@ def main() -> None:
     list_mem_p.add_argument("dossier_id")
     list_skills_p = dossier_sub.add_parser("list-skills", help="List skills")
     list_skills_p.add_argument("dossier_id")
+    list_values_p = dossier_sub.add_parser("list-values", help="List values")
+    list_values_p.add_argument("dossier_id")
     snap_p = dossier_sub.add_parser("snapshot", help="Snapshot dossier")
     snap_p.add_argument("dossier_id")
     sched_p = dossier_sub.add_parser(
@@ -441,6 +461,8 @@ def main() -> None:
                 _dossier_list_memories(args.dossier_id)
             elif args.dossier_cmd == "list-skills":
                 _dossier_list_skills(args.dossier_id)
+            elif args.dossier_cmd == "list-values":
+                _dossier_list_values(args.dossier_id)
             elif args.dossier_cmd == "list-projects":
                 _dossier_list_projects(args.dossier_id)
             elif args.dossier_cmd == "list-reflections":

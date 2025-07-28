@@ -306,6 +306,11 @@ def add_value(dossier: Dossier, value: str) -> None:
         dossier.save()
 
 
+def list_values(dossier: Dossier) -> list[str]:
+    """Return the list of values recorded in ``dossier``."""
+    return list(dossier.values)
+
+
 def add_skill(dossier: Dossier, skill: str) -> None:
     """Append a skill string if not present."""
     if skill not in dossier.skills:
