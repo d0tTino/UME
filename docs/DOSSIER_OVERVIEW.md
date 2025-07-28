@@ -39,6 +39,9 @@ ume dossier add-project user123 projectA
 # Add a personal value
 ume dossier add-value user123 honesty
 
+# List values
+ume dossier list-values user123
+
 # Add a skill
 ume dossier add-skill user123 python
 
@@ -75,6 +78,9 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
   -d '{"dossier_id":"user123","value":"honesty"}' \
   http://localhost:8000/dossier/add-value
 
+# List values
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/dossier/values/user123
 # Add a skill
 curl -X POST -H "Authorization: Bearer $TOKEN" \
   -d '{"dossier_id":"user123","skill":"python"}' \
@@ -100,6 +106,17 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 # List memories
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/dossier/memories/user123
+```
+
+## Listing Values
+
+The `/dossier/values/{id}` route returns the list of personal values stored in a dossier.
+Use `ume dossier list-values <id>` to fetch them via the CLI.
+
+```bash
+ume dossier list-values user123
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/dossier/values/user123
 ```
 
 ## Migrating Existing Dossiers
