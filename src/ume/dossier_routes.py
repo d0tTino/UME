@@ -8,11 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .policy import (
-    can_read_projects,
-    can_read_reflections,
-    can_modify_telemetry,
-)
+from .policy import can_modify_telemetry, can_read_projects
 
 from .dossier import (
     Dossier,
@@ -23,6 +19,7 @@ from .dossier import (
     add_skill,
     list_projects,
     list_reflections,
+    list_values,
     list_skills,
     list_memories,
     update_preferences,
@@ -202,8 +199,7 @@ def get_reflections(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_reflections(role, dossier.shareable_reflections):
-
+    if not can_read_projects(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
 
@@ -219,6 +215,19 @@ def get_skills(
     if not can_read_projects(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "skills": list_skills(dossier)}
+
+
+@router.get("/values/{dossier_id}")
+def get_values(
+    dossier_id: str, role: str = Depends(deps.get_current_role)
+) -> Dict[str, object]:
+    path = _dossier_path(dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    if not can_read_projects(role, dossier.shareable_reflections):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return {"dossier_id": dossier_id, "values": list_values(dossier)}
 
 
 @router.get("/memories/{dossier_id}")

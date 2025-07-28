@@ -150,6 +150,10 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     assert res.status_code == 200
     assert res.json()["memories"] == ["fact"]
 
+    res = client.get("/dossier/values/d4", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["values"] == ["honesty"]
+
     dossier = Dossier.load(tmp_path / "d4")
     assert dossier.values == ["honesty"]
     assert list_skills(dossier) == ["python"]

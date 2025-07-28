@@ -78,6 +78,10 @@ async def list_reflections(dossier_id: str):
 async def list_skills(dossier_id: str):
     return {'dossier_id': dossier_id, 'skills': ['s1']}
 
+@app.get('/dossier/values/{dossier_id}')
+async def list_values(dossier_id: str):
+    return {'dossier_id': dossier_id, 'values': ['v1']}
+
 @app.get('/dossier/memories/{dossier_id}')
 async def list_memories(dossier_id: str):
     return {'dossier_id': dossier_id, 'memories': ['m1']}
@@ -235,6 +239,19 @@ def test_dossier_list_skills(tmp_path: Path):
         {
             "method": "GET",
             "url": "http://localhost:8000/dossier/skills/d6",
+            "json": None,
+        }
+    ]
+
+
+def test_dossier_list_values(tmp_path: Path):
+    proc, requests = _run_cli(tmp_path, ["dossier", "list-values", "d11"])
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"dossier_id": "d11", "values": ["v1"]}
+    assert requests == [
+        {
+            "method": "GET",
+            "url": "http://localhost:8000/dossier/values/d11",
             "json": None,
         }
     ]
