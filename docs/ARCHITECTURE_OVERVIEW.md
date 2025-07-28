@@ -162,3 +162,28 @@ fetch('/graph/dump', { headers: { Authorization: 'Bearer TOKEN' } })
     // pass data.nodes and data.edges to vis-network
   });
 ```
+
+## GraphQL Endpoint
+
+UME exposes a GraphQL API at `/graphql`. Submit a `POST` request with a JSON body containing a `query` field. The request must include the usual bearer token.
+
+Example request using `curl`:
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ node(id: \"alpha\") { id attributes } }"}'
+```
+
+An example query to retrieve a node and its edges:
+```graphql
+{
+  node(id: "alpha") {
+    id
+    edges {
+      target
+      label
+    }
+  }
+}
+```
