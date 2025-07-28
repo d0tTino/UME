@@ -31,6 +31,9 @@ def test_dossier_init_and_helpers(tmp_path):
     assert dossier.shareable is False
     assert dossier.shareable_projects is False
     assert dossier.shareable_reflections is False
+    assert dossier.shareable_skills is False
+    assert dossier.shareable_values is False
+    assert dossier.shareable_memories is False
 
     pid = add_project(dossier, "demo", attachments=["file.txt"])
 
@@ -43,6 +46,9 @@ def test_dossier_init_and_helpers(tmp_path):
     dossier.shareable = True
     dossier.shareable_projects = True
     dossier.shareable_reflections = True
+    dossier.shareable_skills = True
+    dossier.shareable_values = True
+    dossier.shareable_memories = True
     dossier.save()
 
     reloaded = Dossier.load(tmp_path)
@@ -67,6 +73,9 @@ def test_dossier_init_and_helpers(tmp_path):
     assert reloaded.shareable is True
     assert reloaded.shareable_projects is True
     assert reloaded.shareable_reflections is True
+    assert reloaded.shareable_skills is True
+    assert reloaded.shareable_values is True
+    assert reloaded.shareable_memories is True
 
 
 def test_dossier_env_load(tmp_path, monkeypatch):

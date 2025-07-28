@@ -126,6 +126,51 @@ can_read_reflections {
     input.role == "Viewer"
 }
 
+# Allow reading skills if that section is shareable or the caller has a valid role
+default can_read_skills = false
+
+can_read_skills {
+    input.metadata.shareable_skills
+}
+
+can_read_skills {
+    input.role == "ProjectManager"
+}
+
+can_read_skills {
+    input.role == "Viewer"
+}
+
+# Allow reading values if that section is shareable or the caller has a valid role
+default can_read_values = false
+
+can_read_values {
+    input.metadata.shareable_values
+}
+
+can_read_values {
+    input.role == "ProjectManager"
+}
+
+can_read_values {
+    input.role == "Viewer"
+}
+
+# Allow reading memories if that section is shareable or the caller has a valid role
+default can_read_memories = false
+
+can_read_memories {
+    input.metadata.shareable_memories
+}
+
+can_read_memories {
+    input.role == "ProjectManager"
+}
+
+can_read_memories {
+    input.role == "Viewer"
+}
+
 allow_add_project {
     input.role == "ProjectManager"
 }

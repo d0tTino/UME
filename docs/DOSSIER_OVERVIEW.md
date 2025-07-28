@@ -7,6 +7,8 @@ The user dossier is a lightweight collection of YAML files that track basic prof
 A newly initialized dossier contains:
 
 - `meta.yaml` – schema version metadata and shareable flags
+  (`shareable_projects`, `shareable_reflections`,
+  `shareable_skills`, `shareable_values`, `shareable_memories`)
 - `profile.yaml` – basic user details (name, email)
 - `projects.yaml` – list of active projects
 - `preferences.yaml` – arbitrary key/value settings
