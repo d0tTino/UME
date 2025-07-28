@@ -13,6 +13,7 @@ from .policy import (
     can_read_reflections,
 )
 from .config import settings
+from .audit import log_audit_entry
 
 
 from .dossier import (
@@ -90,6 +91,7 @@ def view_dossier(dossier_id: str, role: str = Depends(deps.get_current_role)) ->
     dossier = Dossier.load(path)
     if not can_read_projects(role, dossier.shareable_projects):
         raise HTTPException(status_code=403, detail="Not authorized")
+    log_audit_entry(settings.UME_AGENT_ID, f"view_dossier {dossier_id}")
     return {
         "dossier_id": dossier_id,
         "projects": list_projects(dossier),
@@ -109,6 +111,7 @@ def add_project(req: AddProjectRequest, role: str = Depends(deps.get_current_rol
     else:
         dossier = Dossier.init_dossier(path)
     dossier_add_project(dossier, req.project_id)
+    log_audit_entry(settings.UME_AGENT_ID, f"add_project {req.project_id}")
     return cast(
         Dict[str, object],
         {
@@ -130,6 +133,7 @@ def add_reflection_endpoint(
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     add_reflection(dossier, req.text, req.links)
+    log_audit_entry(settings.UME_AGENT_ID, f"add_reflection {req.dossier_id}")
     return {"status": "ok"}
 
 
@@ -143,6 +147,7 @@ def add_memory_endpoint(
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     add_memory(dossier, req.text, req.links)
+    log_audit_entry(settings.UME_AGENT_ID, f"add_memory {req.dossier_id}")
     return {"status": "ok"}
 
 
@@ -156,6 +161,7 @@ def set_preference(
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     update_preferences(dossier, **{req.key: req.value})
+    log_audit_entry(settings.UME_AGENT_ID, f"set_pref {req.dossier_id} {req.key}")
     return {"status": "ok"}
 
 
@@ -168,6 +174,7 @@ def add_value_endpoint(
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     add_value(dossier, req.value)
+    log_audit_entry(settings.UME_AGENT_ID, f"add_value {req.dossier_id}")
     return {"status": "ok"}
 
 
@@ -180,6 +187,7 @@ def add_skill_endpoint(
     path = _dossier_path(req.dossier_id)
     dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
     add_skill(dossier, req.skill)
+    log_audit_entry(settings.UME_AGENT_ID, f"add_skill {req.dossier_id}")
     return {"status": "ok"}
 
 
@@ -193,7 +201,9 @@ def get_projects(
     dossier = Dossier.load(path)
     if not can_read_projects(role, dossier.shareable_projects):
         raise HTTPException(status_code=403, detail="Not authorized")
-    return {"dossier_id": dossier_id, "projects": list_projects(dossier)}
+    result = {"dossier_id": dossier_id, "projects": list_projects(dossier)}
+    log_audit_entry(settings.UME_AGENT_ID, f"get_projects {dossier_id}")
+    return result
 
 
 @router.get("/reflections/{dossier_id}")
@@ -206,7 +216,9 @@ def get_reflections(
     dossier = Dossier.load(path)
     if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
-    return {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
+    result = {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
+    log_audit_entry(settings.UME_AGENT_ID, f"get_reflections {dossier_id}")
+    return result
 
 
 @router.get("/skills/{dossier_id}")
@@ -219,7 +231,9 @@ def get_skills(
     dossier = Dossier.load(path)
     if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
-    return {"dossier_id": dossier_id, "skills": list_skills(dossier)}
+    result = {"dossier_id": dossier_id, "skills": list_skills(dossier)}
+    log_audit_entry(settings.UME_AGENT_ID, f"get_skills {dossier_id}")
+    return result
 
 
 @router.get("/values/{dossier_id}")
@@ -232,7 +246,9 @@ def get_values(
     dossier = Dossier.load(path)
     if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
-    return {"dossier_id": dossier_id, "values": list_values(dossier)}
+    result = {"dossier_id": dossier_id, "values": list_values(dossier)}
+    log_audit_entry(settings.UME_AGENT_ID, f"get_values {dossier_id}")
+    return result
 
 
 @router.get("/memories/{dossier_id}")
@@ -245,7 +261,9 @@ def get_memories(
     dossier = Dossier.load(path)
     if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
-    return {"dossier_id": dossier_id, "memories": list_memories(dossier)}
+    result = {"dossier_id": dossier_id, "memories": list_memories(dossier)}
+    log_audit_entry(settings.UME_AGENT_ID, f"get_memories {dossier_id}")
+    return result
 
 
 @router.post("/snapshot")
@@ -259,6 +277,7 @@ def snapshot_endpoint(
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
     dest = dossier.snapshot()
+    log_audit_entry(settings.UME_AGENT_ID, f"snapshot {req.dossier_id}")
     return {"status": "ok", "path": str(dest)}
 
 
@@ -274,5 +293,6 @@ def add_activity_endpoint(
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
     dossier.add_activity(req.payload)
+    log_audit_entry(settings.UME_AGENT_ID, f"add_activity {req.dossier_id}")
     return {"status": "ok"}
 
