@@ -6,6 +6,9 @@ from ume.dossier import (
     Dossier,
     add_project,
     add_reflection,
+    add_skill,
+    add_value,
+    add_memory,
     list_projects,
     list_skills,
     list_memories,
@@ -236,7 +239,7 @@ def test_projects_viewer_allowed(tmp_path, monkeypatch):
     assert res.json()["projects"] == ["p7"]
 
 
-def test_reflections_viewer_forbidden(tmp_path, monkeypatch):
+def test_reflections_viewer_allowed_by_role(tmp_path, monkeypatch):
     monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
     dossier = Dossier.init_dossier(tmp_path / "d8")
     add_reflection(dossier, "r8")
@@ -249,10 +252,11 @@ def test_reflections_viewer_forbidden(tmp_path, monkeypatch):
     headers = {"Authorization": f"Bearer {token}"}
 
     res = client.get("/dossier/reflections/d8", headers=headers)
-    assert res.status_code == 403
+    assert res.status_code == 200
+    assert res.json()["reflections"] == ["r8"]
 
 
-def test_reflections_viewer_allowed(tmp_path, monkeypatch):
+def test_reflections_viewer_allowed_shareable(tmp_path, monkeypatch):
     monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
     dossier = Dossier.init_dossier(tmp_path / "d9")
     add_reflection(dossier, "r9")
@@ -267,4 +271,31 @@ def test_reflections_viewer_allowed(tmp_path, monkeypatch):
     res = client.get("/dossier/reflections/d9", headers=headers)
     assert res.status_code == 200
     assert res.json()["reflections"] == ["r9"]
+
+
+def test_skills_values_memories_viewer_allowed(tmp_path, monkeypatch):
+    monkeypatch.setenv("UME_DOSSIER_PATH", str(tmp_path))
+    dossier = Dossier.init_dossier(tmp_path / "d10")
+    add_skill(dossier, "python")
+    add_value(dossier, "honesty")
+    add_memory(dossier, "fact")
+    dossier.shareable_reflections = False
+    dossier.save()
+
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get("/dossier/skills/d10", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["skills"] == ["python"]
+
+    res = client.get("/dossier/values/d10", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["values"] == ["honesty"]
+
+    res = client.get("/dossier/memories/d10", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["memories"] == ["fact"]
 

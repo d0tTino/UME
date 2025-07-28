@@ -8,7 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .policy import can_modify_telemetry, can_read_projects
+from .policy import (
+    can_modify_telemetry,
+    can_read_projects,
+    can_read_reflections,
+)
 
 from .dossier import (
     Dossier,
@@ -199,7 +203,7 @@ def get_reflections(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable_reflections):
+    if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "reflections": list_reflections(dossier)}
 
@@ -212,7 +216,7 @@ def get_skills(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable_reflections):
+    if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "skills": list_skills(dossier)}
 
@@ -225,7 +229,7 @@ def get_values(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable_reflections):
+    if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "values": list_values(dossier)}
 
@@ -238,7 +242,7 @@ def get_memories(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_projects(role, dossier.shareable_reflections):
+    if not can_read_reflections(role, dossier.shareable_reflections):
         raise HTTPException(status_code=403, detail="Not authorized")
     return {"dossier_id": dossier_id, "memories": list_memories(dossier)}
 
