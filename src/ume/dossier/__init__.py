@@ -324,6 +324,25 @@ def update_preferences(dossier: Dossier, **prefs: Any) -> None:
     log_audit_entry(settings.UME_AGENT_ID, f"update_preferences {dossier.root.name} {keys}")
 
 
+def update_shareable_flags(dossier: Dossier, **flags: Any) -> None:
+    """Update shareable booleans and persist ``meta.yaml``."""
+    valid = {
+        "shareable",
+        "shareable_projects",
+        "shareable_reflections",
+        "shareable_skills",
+        "shareable_values",
+        "shareable_memories",
+    }
+    updates = {k: bool(v) for k, v in flags.items() if k in valid}
+    for key, value in updates.items():
+        setattr(dossier, key, value)
+    if updates:
+        dossier.save()
+        keys = ",".join(updates.keys())
+        log_audit_entry(settings.UME_AGENT_ID, f"update_shareable {dossier.root.name} {keys}")
+
+
 def add_value(dossier: Dossier, value: str) -> None:
     """Append a value string if not present."""
     if value not in dossier.values:

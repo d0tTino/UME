@@ -1,5 +1,31 @@
 from fastapi.testclient import TestClient
 
+import sys
+import types
+
+class _DummyLimiter:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+    async def __call__(self, *args, **kwargs):
+        return None
+
+    @classmethod
+    async def init(cls, *args, **kwargs):
+        return None
+
+sys.modules["fastapi_limiter"] = type("m", (), {"FastAPILimiter": _DummyLimiter})
+sys.modules[
+    "fastapi_limiter.depends"
+] = type("m", (), {"RateLimiter": _DummyLimiter})
+sys.modules.setdefault("sse_starlette", type("m", (), {}))
+sys.modules.setdefault(
+    "sse_starlette.sse",
+    type("m", (), {"EventSourceResponse": object}),
+)
+sys.modules["grpc._utilities"] = type("m", (), {"first_version_is_lower": lambda *_: False})
+sys.modules["grpc"] = type("m", (), {"__version__": "1.0"})
+
 from ume.api import app
 from ume.config import settings
 from ume.dossier import (
@@ -310,4 +336,38 @@ def test_skills_values_memories_viewer_allowed(tmp_path, monkeypatch):
     res = client.get("/dossier/memories/d10", headers=headers)
     assert res.status_code == 200
     assert res.json()["memories"] == ["fact"]
+
+
+def test_set_shareable_endpoint(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "ProjectManager", raising=False)
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.post(
+        "/dossier/set-shareable",
+        json={"dossier_id": "d11", "shareable_projects": True},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    dossier = Dossier.load(tmp_path / "d11")
+    assert dossier.shareable_projects is True
+
+
+def test_set_shareable_forbidden(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "UME_OAUTH_ROLE", "Viewer", raising=False)
+    monkeypatch.setattr(settings, "UME_DOSSIER_PATH", str(tmp_path), raising=False)
+    Dossier.init_dossier(tmp_path / "d12")
+    client = TestClient(app)
+    token = _token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.post(
+        "/dossier/set-shareable",
+        json={"dossier_id": "d12", "shareable_projects": True},
+        headers=headers,
+    )
+    assert res.status_code == 403
 

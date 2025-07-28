@@ -66,6 +66,10 @@ async def add_memory(payload: dict):
 async def set_pref(payload: dict):
     return {'dossier_id': payload['dossier_id'], 'key': payload['key'], 'value': payload['value']}
 
+@app.post('/dossier/set-shareable')
+async def set_shareable(payload: dict):
+    return {'status': 'ok'}
+
 @app.post('/dossier/add-value')
 async def add_value(payload: dict):
     return {'dossier_id': payload['dossier_id'], 'value': payload['value']}
@@ -237,6 +241,22 @@ def test_dossier_set_pref(tmp_path: Path):
             "method": "POST",
             "url": "http://localhost:8000/dossier/set-pref",
             "json": {"dossier_id": "d3", "key": "theme", "value": "dark"},
+        }
+    ]
+
+
+def test_dossier_set_shareable(tmp_path: Path):
+    proc, requests = _run_cli(
+        tmp_path,
+        ["dossier", "set-shareable", "d4", "--projects", "true"],
+    )
+    assert proc.returncode == 0
+    assert json.loads(proc.stdout) == {"status": "ok"}
+    assert requests == [
+        {
+            "method": "POST",
+            "url": "http://localhost:8000/dossier/set-shareable",
+            "json": {"dossier_id": "d4", "shareable_projects": True},
         }
     ]
 
