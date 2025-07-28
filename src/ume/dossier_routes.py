@@ -7,7 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .policy import can_modify_telemetry, can_read_projects
+from .policy import (
+    can_modify_telemetry,
+    can_read_projects,
+    can_read_reflections,
+)
 from .config import settings
 
 
