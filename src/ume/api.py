@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover - allow tests without opentelemetry instal
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
+from starlette_graphene3 import GraphQLApp, make_graphiql_handler
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from .retention import (
@@ -50,6 +51,7 @@ from .snapshot_routes import router as snapshot_router
 from .ledger_routes import router as ledger_router
 from .dossier_routes import router as dossier_router
 from .consent_ledger import consent_ledger  # noqa: F401
+from .graphql_api import schema as graphql_schema
 
 from . import api_deps
 
@@ -93,6 +95,14 @@ app.include_router(feedback_router)
 app.include_router(snapshot_router)
 app.include_router(ledger_router)
 app.include_router(dossier_router)
+app.add_route(
+    "/graphql",
+    GraphQLApp(
+        graphql_schema,
+        on_get=make_graphiql_handler(),
+        context_value=lambda request: {"app": app},
+    ),
+)
 
 
 
