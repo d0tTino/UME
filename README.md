@@ -962,6 +962,7 @@ Use the CLI or API to add entries and snapshot the graph when needed.
 ume dossier init user123
 # Add a value and a skill via the CLI
 ume dossier add-value user123 curiosity
+ume dossier list-values user123
 ume dossier add-skill user123 python
 
 # Trigger a snapshot through the API
