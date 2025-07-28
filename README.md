@@ -955,6 +955,9 @@ Goodbye!
 
 The dossier directory (default `~/.ume_dossier`) is seeded from the YAML files in
 `src/ume/dossier/dossier_template/` such as `skills.yaml` and `values.yaml`.
+Set `UME_DOSSIER_PATH` to store dossiers elsewhere.  Each dossier's
+`meta.yaml` contains flags like `shareable_projects` and
+`shareable_reflections` that control which sections can be viewed by other roles.
 Use the CLI or API to add entries and snapshot the graph when needed.
 
 # Initialize a dossier for a new user
@@ -976,6 +979,16 @@ To archive the dossier at regular intervals:
 
 ```bash
 ume dossier snapshot-schedule --interval 300
+```
+
+You can inspect the audit log to verify these actions:
+
+```bash
+python - <<'EOF'
+from ume import get_audit_entries
+for e in get_audit_entries()[-5:]:
+    print(e)
+EOF
 ```
 
 ## Graph Analytics with Neo4j GDS
