@@ -41,6 +41,9 @@ class Dossier:
     shareable: bool = False
     shareable_projects: bool = False
     shareable_reflections: bool = False
+    shareable_skills: bool = False
+    shareable_values: bool = False
+    shareable_memories: bool = False
     profile: dict[str, Any] = field(default_factory=dict)
     projects: list[dict[str, Any]] = field(default_factory=list)
     preferences: dict[str, Any] = field(default_factory=dict)
@@ -81,6 +84,9 @@ class Dossier:
                     "shareable": self.shareable,
                     "shareable_projects": self.shareable_projects,
                     "shareable_reflections": self.shareable_reflections,
+                    "shareable_skills": self.shareable_skills,
+                    "shareable_values": self.shareable_values,
+                    "shareable_memories": self.shareable_memories,
                     "telemetry_files": self.telemetry_files,
                 },
             )
@@ -104,6 +110,15 @@ class Dossier:
         )
         self.shareable_reflections = bool(
             meta.get("shareable_reflections", meta.get("shareable", self.shareable))
+        )
+        self.shareable_skills = bool(
+            meta.get("shareable_skills", meta.get("shareable", self.shareable))
+        )
+        self.shareable_values = bool(
+            meta.get("shareable_values", meta.get("shareable", self.shareable))
+        )
+        self.shareable_memories = bool(
+            meta.get("shareable_memories", meta.get("shareable", self.shareable))
         )
         self.telemetry_files = meta.get("telemetry_files", [])
         self.profile = self._read_yaml(self.root / "profile.yaml") or {}
@@ -201,6 +216,9 @@ class Dossier:
                         "shareable": self.shareable,
                         "shareable_projects": self.shareable_projects,
                         "shareable_reflections": self.shareable_reflections,
+                        "shareable_skills": self.shareable_skills,
+                        "shareable_values": self.shareable_values,
+                        "shareable_memories": self.shareable_memories,
                         "telemetry_files": self.telemetry_files,
                     },
                 )

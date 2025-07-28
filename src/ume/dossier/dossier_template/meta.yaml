@@ -2,4 +2,7 @@ schema_version: 1
 shareable: false
 shareable_projects: false
 shareable_reflections: false
+shareable_skills: false
+shareable_values: false
+shareable_memories: false
 telemetry_files: []

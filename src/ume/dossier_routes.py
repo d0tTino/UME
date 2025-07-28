@@ -11,6 +11,9 @@ from .policy import (
     can_modify_telemetry,
     can_read_projects,
     can_read_reflections,
+    can_read_skills,
+    can_read_values,
+    can_read_memories,
 )
 from .config import settings
 from .audit import log_audit_entry
@@ -97,6 +100,9 @@ def view_dossier(dossier_id: str, role: str = Depends(deps.get_current_role)) ->
         "projects": list_projects(dossier),
         "shareable_projects": dossier.shareable_projects,
         "shareable_reflections": dossier.shareable_reflections,
+        "shareable_skills": dossier.shareable_skills,
+        "shareable_values": dossier.shareable_values,
+        "shareable_memories": dossier.shareable_memories,
     }
 
 
@@ -119,6 +125,9 @@ def add_project(req: AddProjectRequest, role: str = Depends(deps.get_current_rol
             "projects": list_projects(dossier),
             "shareable_projects": dossier.shareable_projects,
             "shareable_reflections": dossier.shareable_reflections,
+            "shareable_skills": dossier.shareable_skills,
+            "shareable_values": dossier.shareable_values,
+            "shareable_memories": dossier.shareable_memories,
         },
     )
 
@@ -229,7 +238,7 @@ def get_skills(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_reflections(role, dossier.shareable_reflections):
+    if not can_read_skills(role, dossier.shareable_skills):
         raise HTTPException(status_code=403, detail="Not authorized")
     result = {"dossier_id": dossier_id, "skills": list_skills(dossier)}
     log_audit_entry(settings.UME_AGENT_ID, f"get_skills {dossier_id}")
@@ -244,7 +253,7 @@ def get_values(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_reflections(role, dossier.shareable_reflections):
+    if not can_read_values(role, dossier.shareable_values):
         raise HTTPException(status_code=403, detail="Not authorized")
     result = {"dossier_id": dossier_id, "values": list_values(dossier)}
     log_audit_entry(settings.UME_AGENT_ID, f"get_values {dossier_id}")
@@ -259,7 +268,7 @@ def get_memories(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Dossier not found")
     dossier = Dossier.load(path)
-    if not can_read_reflections(role, dossier.shareable_reflections):
+    if not can_read_memories(role, dossier.shareable_memories):
         raise HTTPException(status_code=403, detail="Not authorized")
     result = {"dossier_id": dossier_id, "memories": list_memories(dossier)}
     log_audit_entry(settings.UME_AGENT_ID, f"get_memories {dossier_id}")
