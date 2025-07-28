@@ -230,6 +230,26 @@ def _dossier_add_skill(dossier_id: str, skill: str) -> None:
         print(f"Request failed: {exc}")
 
 
+def _dossier_add_goal(dossier_id: str, goal: str) -> None:
+    """Send a request to append a goal."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    payload = {"dossier_id": dossier_id, "goal": goal}
+    try:
+        resp = httpx.post(
+            f"{base_url}/dossier/add-goal",
+            json=payload,
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
 def _dossier_list_skills(dossier_id: str) -> None:
     """Fetch and print the skill list."""
     base_url = "http://localhost:8000"
@@ -239,6 +259,24 @@ def _dossier_list_skills(dossier_id: str) -> None:
     try:
         resp = httpx.get(
             f"{base_url}/dossier/skills/{dossier_id}",
+            headers=headers,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        print(json.dumps(resp.json(), indent=2))
+    except httpx.HTTPError as exc:
+        print(f"Request failed: {exc}")
+
+
+def _dossier_list_goals(dossier_id: str) -> None:
+    """Fetch and print the goal list."""
+    base_url = "http://localhost:8000"
+    headers = {}
+    if settings.UME_API_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.UME_API_TOKEN}"
+    try:
+        resp = httpx.get(
+            f"{base_url}/dossier/goals/{dossier_id}",
             headers=headers,
             timeout=5,
         )
@@ -439,6 +477,9 @@ def main() -> None:
     skill_p = dossier_sub.add_parser("add-skill", help="Add a skill entry")
     skill_p.add_argument("dossier_id")
     skill_p.add_argument("skill")
+    goal_p = dossier_sub.add_parser("add-goal", help="Add a goal entry")
+    goal_p.add_argument("dossier_id")
+    goal_p.add_argument("goal")
     list_proj_p = dossier_sub.add_parser(
         "list-projects", help="List projects"
     )
@@ -453,6 +494,8 @@ def main() -> None:
     list_skills_p.add_argument("dossier_id")
     list_values_p = dossier_sub.add_parser("list-values", help="List values")
     list_values_p.add_argument("dossier_id")
+    list_goals_p = dossier_sub.add_parser("list-goals", help="List goals")
+    list_goals_p.add_argument("dossier_id")
     snap_p = dossier_sub.add_parser("snapshot", help="Snapshot dossier")
     snap_p.add_argument("dossier_id")
     sched_p = dossier_sub.add_parser(
@@ -520,12 +563,16 @@ def main() -> None:
                 _dossier_add_value(args.dossier_id, args.value)
             elif args.dossier_cmd == "add-skill":
                 _dossier_add_skill(args.dossier_id, args.skill)
+            elif args.dossier_cmd == "add-goal":
+                _dossier_add_goal(args.dossier_id, args.goal)
             elif args.dossier_cmd == "list-memories":
                 _dossier_list_memories(args.dossier_id)
             elif args.dossier_cmd == "list-skills":
                 _dossier_list_skills(args.dossier_id)
             elif args.dossier_cmd == "list-values":
                 _dossier_list_values(args.dossier_id)
+            elif args.dossier_cmd == "list-goals":
+                _dossier_list_goals(args.dossier_id)
             elif args.dossier_cmd == "list-projects":
                 _dossier_list_projects(args.dossier_id)
             elif args.dossier_cmd == "list-reflections":

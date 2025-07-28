@@ -11,11 +11,15 @@ import json
 from filelock import FileLock
 
 import yaml
+from typing import TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:  # pragma: no cover - typing import
     from cryptography.fernet import Fernet
-except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None
+else:  # pragma: no cover - cryptography optional
+    try:
+        from cryptography.fernet import Fernet  # type: ignore
+    except Exception:
+        Fernet = None  # type: ignore[assignment]
 
 from ..config import settings
 from ..audit import log_audit_entry
@@ -37,7 +41,7 @@ class Dossier:
     """User dossier backed by modular YAML files."""
 
     root: Path
-    schema_version: int = 1
+    schema_version: int = 2
     shareable: bool = False
     shareable_projects: bool = False
     shareable_reflections: bool = False
@@ -51,6 +55,7 @@ class Dossier:
     knowledge: list[dict[str, Any]] = field(default_factory=list)
     values: list[str] = field(default_factory=list)
     skills: list[str] = field(default_factory=list)
+    goals: list[str] = field(default_factory=list)
     telemetry_files: list[str] = field(default_factory=list)
 
     @classmethod
@@ -97,6 +102,7 @@ class Dossier:
             self._write_yaml(self.root / "knowledge.yaml", self.knowledge)
             self._write_yaml(self.root / "values.yaml", self.values)
             self._write_yaml(self.root / "skills.yaml", self.skills)
+            self._write_yaml(self.root / "goals.yaml", self.goals)
 
     def _ensure_dirs(self) -> None:
         (self.root / "telemetry").mkdir(parents=True, exist_ok=True)
@@ -132,6 +138,7 @@ class Dossier:
         self.knowledge = self._read_yaml(self.root / "knowledge.yaml") or []
         self.values = self._read_yaml(self.root / "values.yaml") or []
         self.skills = self._read_yaml(self.root / "skills.yaml") or []
+        self.goals = self._read_yaml(self.root / "goals.yaml") or []
 
         normalized_projects = []
         for p in self.projects:
@@ -370,6 +377,20 @@ def list_skills(dossier: Dossier) -> list[str]:
     skills = list(dossier.skills)
     log_audit_entry(settings.UME_AGENT_ID, f"list_skills {dossier.root.name}")
     return skills
+
+
+def add_goal(dossier: Dossier, goal: str) -> None:
+    """Append a goal string if not present."""
+    if goal not in dossier.goals:
+        dossier.goals.append(goal)
+        dossier.save()
+        log_audit_entry(settings.UME_AGENT_ID, f"add_goal {dossier.root.name} {goal}")
+
+
+def list_goals(dossier: Dossier) -> list[str]:
+    goals = list(dossier.goals)
+    log_audit_entry(settings.UME_AGENT_ID, f"list_goals {dossier.root.name}")
+    return goals
 
 
 def add_memory(

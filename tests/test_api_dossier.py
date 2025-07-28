@@ -1,7 +1,8 @@
+# ruff: noqa: E402
 from fastapi.testclient import TestClient
 
 import sys
-import types
+import types  # noqa: F401
 
 class _DummyLimiter:
     def __init__(self, *args, **kwargs) -> None:
@@ -34,9 +35,11 @@ from ume.dossier import (
     add_reflection,
     add_skill,
     add_value,
+    add_goal,
     add_memory,
     list_projects,
     list_skills,
+    list_goals,
     list_memories,
 )
 
@@ -173,6 +176,13 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     )
     assert res.status_code == 200
 
+    res = client.post(
+        "/dossier/add-goal",
+        json={"dossier_id": "d4", "goal": "finish"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
     res = client.get("/dossier/skills/d4", headers=headers)
     assert res.status_code == 200
     assert res.json()["skills"] == ["python"]
@@ -193,9 +203,14 @@ def test_reflection_and_pref_endpoints(tmp_path, monkeypatch):
     assert res.status_code == 200
     assert res.json()["values"] == ["honesty"]
 
+    res = client.get("/dossier/goals/d4", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["goals"] == ["finish"]
+
     dossier = Dossier.load(tmp_path / "d4")
     assert dossier.values == ["honesty"]
     assert list_skills(dossier) == ["python"]
+    assert list_goals(dossier) == ["finish"]
     assert list_memories(dossier) == ["fact"]
 
 
@@ -317,6 +332,7 @@ def test_skills_values_memories_viewer_allowed(tmp_path, monkeypatch):
     add_skill(dossier, "python")
     add_value(dossier, "honesty")
     add_memory(dossier, "fact")
+    add_goal(dossier, "achieve")
     dossier.shareable_reflections = False
     dossier.save()
 
@@ -332,6 +348,10 @@ def test_skills_values_memories_viewer_allowed(tmp_path, monkeypatch):
     res = client.get("/dossier/values/d10", headers=headers)
     assert res.status_code == 200
     assert res.json()["values"] == ["honesty"]
+
+    res = client.get("/dossier/goals/d10", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["goals"] == ["achieve"]
 
     res = client.get("/dossier/memories/d10", headers=headers)
     assert res.status_code == 200

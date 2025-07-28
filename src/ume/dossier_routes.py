@@ -26,10 +26,12 @@ from .dossier import (
     add_memory,
     add_value,
     add_skill,
+    add_goal,
     list_projects,
     list_reflections,
     list_values,
     list_skills,
+    list_goals,
     list_memories,
     update_preferences,
     update_shareable_flags,
@@ -87,6 +89,11 @@ class AddValueRequest(BaseModel):
 class AddSkillRequest(BaseModel):
     dossier_id: str
     skill: str
+
+
+class AddGoalRequest(BaseModel):
+    dossier_id: str
+    goal: str
 
 
 class SnapshotRequest(BaseModel):
@@ -235,6 +242,19 @@ def add_skill_endpoint(
     return {"status": "ok"}
 
 
+@router.post("/add-goal")
+def add_goal_endpoint(
+    req: AddGoalRequest, role: str = Depends(deps.get_current_role)
+) -> Dict[str, str]:
+    if role != "ProjectManager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    path = _dossier_path(req.dossier_id)
+    dossier = Dossier.load(path) if path.exists() else Dossier.init_dossier(path)
+    add_goal(dossier, req.goal)
+    log_audit_entry(settings.UME_AGENT_ID, f"add_goal {req.dossier_id}")
+    return {"status": "ok"}
+
+
 @router.get("/projects/{dossier_id}")
 def get_projects(
     dossier_id: str, role: str = Depends(deps.get_current_role)
@@ -292,6 +312,21 @@ def get_values(
         raise HTTPException(status_code=403, detail="Not authorized")
     result = {"dossier_id": dossier_id, "values": list_values(dossier)}
     log_audit_entry(settings.UME_AGENT_ID, f"get_values {dossier_id}")
+    return result
+
+
+@router.get("/goals/{dossier_id}")
+def get_goals(
+    dossier_id: str, role: str = Depends(deps.get_current_role)
+) -> Dict[str, object]:
+    path = _dossier_path(dossier_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dossier not found")
+    dossier = Dossier.load(path)
+    if not can_read_skills(role):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    result = {"dossier_id": dossier_id, "goals": list_goals(dossier)}
+    log_audit_entry(settings.UME_AGENT_ID, f"get_goals {dossier_id}")
     return result
 
 

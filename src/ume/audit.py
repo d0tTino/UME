@@ -7,12 +7,15 @@ import hmac
 import hashlib
 import logging
 import os
-from typing import Dict, List, cast
+from typing import Dict, List, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:  # pragma: no cover - typing import
     from cryptography.fernet import Fernet
-except Exception:  # pragma: no cover - cryptography optional
-    Fernet = None
+else:  # pragma: no cover - cryptography optional
+    try:
+        from cryptography.fernet import Fernet  # type: ignore
+    except Exception:
+        Fernet = None  # type: ignore[assignment]
 
 try:
     import boto3
@@ -75,18 +78,17 @@ def _read_lines(path: str) -> List[str]:
         if ENCRYPTION_ENABLED:
             assert _fernet is not None
             try:
-                text = cast(str, _fernet.decrypt(raw).decode())
-
+                decrypted: str = _fernet.decrypt(raw).decode()
             except Exception as exc:
                 logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                 return []
         else:
             try:
-                text = raw.decode()
+                decrypted = raw.decode()
             except UnicodeDecodeError as exc:
                 logger.error("Failed to decode audit log from %s: %s", path, exc)
                 return []
-        return text.splitlines()
+        return decrypted.splitlines()
     else:
         try:
             if ENCRYPTION_ENABLED:
@@ -96,12 +98,11 @@ def _read_lines(path: str) -> List[str]:
                     return []
                 assert _fernet is not None
                 try:
-                    text = cast(str, _fernet.decrypt(raw).decode())
-
+                    data_str: str = _fernet.decrypt(raw).decode()
                 except Exception as exc:
                     logger.error("Failed to decrypt audit log from %s: %s", path, exc)
                     return []
-                return text.splitlines()
+                return data_str.splitlines()
             else:
                 with open(path, "r", encoding="utf-8") as f:
                     return [line.rstrip("\n") for line in f]

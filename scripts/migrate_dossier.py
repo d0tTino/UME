@@ -34,12 +34,13 @@ def _load_plain(root: Path) -> dict[str, Any]:
     knowledge = _read_yaml(root / "knowledge.yaml") or []
     values = _read_yaml(root / "values.yaml") or []
     skills = _read_yaml(root / "skills.yaml") or []
+    goals = _read_yaml(root / "goals.yaml") or []
 
     if isinstance(projects, dict):
         projects = projects.get("projects", [])
 
     return {
-        "schema_version": int(meta.get("schema_version", 1)),
+        "schema_version": int(meta.get("schema_version", 2)),
         "shareable": bool(meta.get("shareable", False)),
         "shareable_projects": bool(
             meta.get("shareable_projects", meta.get("shareable", False))
@@ -55,6 +56,7 @@ def _load_plain(root: Path) -> dict[str, Any]:
         "knowledge": knowledge,
         "values": values,
         "skills": skills,
+        "goals": goals,
     }
 
 
@@ -86,6 +88,7 @@ def migrate_dossier(path: Path, *, encrypt: bool = False) -> None:
     dossier.knowledge = data["knowledge"]
     dossier.values = data["values"]
     dossier.skills = data["skills"]
+    dossier.goals = data["goals"]
     dossier.telemetry_files = data["telemetry_files"]
     dossier.save()
     print(f"Migrated dossier at {path}")
