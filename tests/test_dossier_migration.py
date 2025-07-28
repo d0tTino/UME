@@ -68,3 +68,53 @@ def test_migrate_with_encrypt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     dossier = dossier_mod.Dossier.load(root)
     assert dossier.schema_version == Dossier.schema_version
     assert dossier.profile["name"] == "Your Name"
+
+
+@pytest.mark.parametrize("encrypt", [False, True])
+def test_migrate_preserves_lists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, encrypt: bool
+) -> None:
+    root = _make_dossier(tmp_path)
+
+    (root / "knowledge.yaml").write_text(
+        yaml.safe_dump([{"text": "fact", "links": [], "attachments": []}])
+    )
+    (root / "values.yaml").write_text(yaml.safe_dump(["integrity"]))
+    (root / "skills.yaml").write_text(yaml.safe_dump(["rust"]))
+
+    env = os.environ.copy()
+    key = None
+    args = [sys.executable, str(SCRIPT_PATH)]
+    if encrypt:
+        try:
+            from cryptography.fernet import Fernet
+        except Exception:
+            pytest.skip("cryptography not available")
+        key = Fernet.generate_key().decode()
+        env["UME_ENCRYPTION_ENABLED"] = "true"
+        env["UME_ENCRYPTION_KEY"] = key
+        args.append("--encrypt")
+    args.append(str(root))
+
+    proc = subprocess.run(args, capture_output=True, text=True, env=env)
+    assert proc.returncode == 0
+
+    if encrypt:
+        assert b"fact" not in (root / "knowledge.yaml").read_bytes()
+        assert b"integrity" not in (root / "values.yaml").read_bytes()
+        assert b"rust" not in (root / "skills.yaml").read_bytes()
+        assert key is not None
+        monkeypatch.setenv("UME_ENCRYPTION_ENABLED", "true")
+        monkeypatch.setenv("UME_ENCRYPTION_KEY", key)
+
+    import ume.config as cfg
+    load_settings.cache_clear()
+    importlib.reload(cfg)
+    import ume.dossier as dossier_mod
+    importlib.reload(dossier_mod)
+    dossier = dossier_mod.Dossier.load(root)
+
+    assert dossier.knowledge[0]["text"] == "fact"
+    assert dossier.values == ["integrity"]
+    assert dossier.skills == ["rust"]
+    assert dossier.schema_version == Dossier.schema_version
