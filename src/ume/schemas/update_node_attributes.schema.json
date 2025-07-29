@@ -22,6 +22,18 @@
       "type": "string",
       "description": "Originating system of the event"
     },
+    "correlationId": {
+      "type": "string",
+      "description": "Identifier linking related events"
+    },
+    "subjectEntity": {
+      "type": "string",
+      "description": "Entity this event pertains to"
+    },
+    "sourceService": {
+      "type": "string",
+      "description": "Service originating the event"
+    },
     "node_id": {
       "type": "string",
       "description": "Identifier of the node to update"

@@ -13,6 +13,9 @@ def test_parse_event_valid():
         "timestamp": timestamp_now,
         "payload": {"key": "value", "num": 123},
         "source": "test_source",
+        "correlationId": "c123",
+        "subjectEntity": "user",
+        "sourceService": "tests",
     }
     event = parse_event(event_data)
     assert isinstance(event, Event)
@@ -21,6 +24,9 @@ def test_parse_event_valid():
     assert event.timestamp == timestamp_now
     assert event.payload == {"key": "value", "num": 123}
     assert event.source == "test_source"
+    assert event.correlation_id == "c123"
+    assert event.subject_entity == "user"
+    assert event.source_service == "tests"
 
 
 def test_parse_event_minimal_valid():
@@ -39,6 +45,9 @@ def test_parse_event_minimal_valid():
     assert event.event_id is not None  # Should be auto-generated
     assert isinstance(event.event_id, str)
     assert event.source is None  # Should default to None
+    assert event.correlation_id is None
+    assert event.subject_entity is None
+    assert event.source_service is None
 
 
 @pytest.mark.parametrize(
@@ -290,6 +299,33 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
                 "event_id": 123,
             },
             "Invalid type for 'event_id'",
+        ),
+        (
+            {
+                "event_type": "test",
+                "timestamp": int(time.time()),
+                "payload": {},
+                "correlationId": 1,
+            },
+            "Invalid type for 'correlationId'",
+        ),
+        (
+            {
+                "event_type": "test",
+                "timestamp": int(time.time()),
+                "payload": {},
+                "subjectEntity": 1,
+            },
+            "Invalid type for 'subjectEntity'",
+        ),
+        (
+            {
+                "event_type": "test",
+                "timestamp": int(time.time()),
+                "payload": {},
+                "sourceService": 1,
+            },
+            "Invalid type for 'sourceService'",
         ),
     ],
 )

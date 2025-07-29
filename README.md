@@ -86,7 +86,10 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
   "timestamp": 1678886400,
   "payload": {
     "message": "Hello from producer_demo!"
-  }
+  },
+  "correlationId": "demo-1",
+  "subjectEntity": "demo",
+  "sourceService": "producer_demo"
 }
 ```
 
@@ -95,6 +98,9 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
 *   `event_type` (string): Describes the kind of event. In the demo, this is hardcoded to `"demo_event"`.
 *   `timestamp` (integer): A Unix timestamp (seconds since epoch) indicating when the event was generated.
 *   `payload` (object): A JSON object containing the actual data of the event. The structure of the payload can vary depending on the event type. For the demo, it includes a simple `message`.
+*   `correlationId` (string, optional): Identifier used to link related events.
+*   `subjectEntity` (string, optional): The entity this event relates to.
+*   `sourceService` (string, optional): Name of the service emitting the event.
 
 All official event types such as `CREATE_NODE` or `CREATE_EDGE` have
 corresponding JSON Schema definitions under `src/ume/schemas`.  Producers
@@ -124,7 +130,8 @@ Used to create a new directed, labeled edge between two existing nodes.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label for the edge.
-**Optional Fields:** `event_id`, `source`, `payload`.
+**Optional Fields:** `event_id`, `source`, `payload`, `correlationId`,
+`subjectEntity`, `sourceService`.
 
 #### DELETE_EDGE Event
 
@@ -149,7 +156,8 @@ Used to remove a specific directed, labeled edge between two nodes.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label of the edge.
-**Optional Fields:** `event_id`, `source`, `payload`.
+**Optional Fields:** `event_id`, `source`, `payload`, `correlationId`,
+`subjectEntity`, `sourceService`.
 
 **Event Flow:** *(see the full diagram in [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md))*
 
@@ -660,27 +668,39 @@ This section outlines the basic programmatic steps to interact with the UME comp
 
     # Event to create node_A
     event_data_create_A = {
-        "event_type": "CREATE_NODE", "timestamp": int(time.time()),
-        "node_id": "node_A", # Field used by CREATE_NODE for the node to create
+        "event_type": "CREATE_NODE",
+        "timestamp": int(time.time()),
+        "node_id": "node_A",  # Field used by CREATE_NODE for the node to create
         "payload": {"name": "Alpha Node", "type": "concept"},
-        "source": "my_script"
+        "source": "my_script",
+        "correlationId": "demo-1",
+        "subjectEntity": "node",
+        "sourceService": "examples",
     }
 
     # Event to create node_B
     event_data_create_B = {
-        "event_type": "CREATE_NODE", "timestamp": int(time.time()) + 1,
-        "node_id": "node_B", # Field used by CREATE_NODE for the node to create
+        "event_type": "CREATE_NODE",
+        "timestamp": int(time.time()) + 1,
+        "node_id": "node_B",  # Field used by CREATE_NODE for the node to create
         "payload": {"name": "Beta Node", "value": 42},
-        "source": "my_script"
+        "source": "my_script",
+        "correlationId": "demo-1",
+        "subjectEntity": "node",
+        "sourceService": "examples",
     }
 
     # Event to create an edge from node_A to node_B
     event_data_create_edge_A_B = {
-        "event_type": "CREATE_EDGE", "timestamp": int(time.time()) + 2,
+        "event_type": "CREATE_EDGE",
+        "timestamp": int(time.time()) + 2,
         "node_id": "node_A",        # Source node for the edge
-        "target_node_id": "node_B", # Target node for the edge
+        "target_node_id": "node_B",  # Target node for the edge
         "label": "KNOWS",           # Label of the edge
-        "source": "my_script"
+        "source": "my_script",
+        "correlationId": "demo-1",
+        "subjectEntity": "edge",
+        "sourceService": "examples",
         # "payload" is optional for CREATE_EDGE, defaults to {}
     }
     ```

@@ -46,7 +46,11 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
 
 
 def validate_event_dict(event_data: Dict[str, Any]) -> None:
-    """Validate a raw event dictionary or envelope against its JSON schema."""
+    """Validate a raw event dictionary or envelope against its JSON schema.
+
+    Updated schemas include optional ``correlationId``, ``subjectEntity`` and
+    ``sourceService`` fields which will also be validated when present.
+    """
     if "event" in event_data and "schema_version" in event_data:
         validate(instance=event_data, schema=_load_envelope_schema())
         version = event_data["schema_version"]

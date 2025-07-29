@@ -41,6 +41,9 @@ class Event:
                                           (e.g., CREATE_EDGE, DELETE_EDGE). Defaults to None.
         label (Optional[str]): A label describing an edge or a relationship, used for edge-related events.
                                  Defaults to None.
+        correlation_id (Optional[str]): Optional ID to correlate related events.
+        subject_entity (Optional[str]): Entity this event refers to, if any.
+        source_service (Optional[str]): Name of the service emitting the event.
     """
 
     event_type: str
@@ -51,6 +54,9 @@ class Event:
     node_id: Optional[str] = None  # Source node for edges, or target for node ops
     target_node_id: Optional[str] = None  # Target node for edges
     label: Optional[str] = None  # Label for edges
+    correlation_id: Optional[str] = None
+    subject_entity: Optional[str] = None
+    source_service: Optional[str] = None
 
 
 class EventError(ValueError):
@@ -70,7 +76,9 @@ def parse_event(data: Dict[str, Any]) -> Event:
                 - For "CREATE_NODE", "UPDATE_NODE_ATTRIBUTES": "node_id" (str), "payload" (dict).
                 - For "CREATE_EDGE", "DELETE_EDGE": "node_id" (source, str),
                   "target_node_id" (str), "label" (str).
-              Optional common keys: "event_id" (str), "source" (str).
+              Optional common keys: "event_id" (str), "source" (str),
+                "correlationId" (str), "subjectEntity" (str),
+                "sourceService" (str).
               "payload" (dict) is optional for edge events, defaulting to {}.
 
     Returns:
@@ -102,6 +110,17 @@ def parse_event(data: Dict[str, Any]) -> Event:
 
     # Validate optional event_id type
     event_id_val = data.get("event_id")
+
+    # Get potential values, to be validated by type-specific logic or used if optional
+    node_id_val = data.get("node_id")
+    target_node_id_val = data.get("target_node_id")
+    label_val = data.get("label")
+    correlation_id_val = data.get("correlationId")
+    subject_entity_val = data.get("subjectEntity")
+    source_service_val = data.get("sourceService")
+    # Default payload to {} if not present; specific event types might require it later
+    payload_val = data.get("payload", {})
+
     if event_id_val is not None and not isinstance(event_id_val, str):
         msg = (
             f"Invalid type for 'event_id': expected str, got {type(event_id_val).__name__}"
@@ -109,12 +128,26 @@ def parse_event(data: Dict[str, Any]) -> Event:
         logger.error(msg)
         raise EventError(msg)
 
-    # Get potential values, to be validated by type-specific logic or used if optional
-    node_id_val = data.get("node_id")
-    target_node_id_val = data.get("target_node_id")
-    label_val = data.get("label")
-    # Default payload to {} if not present; specific event types might require it later
-    payload_val = data.get("payload", {})
+    if correlation_id_val is not None and not isinstance(correlation_id_val, str):
+        msg = (
+            f"Invalid type for 'correlationId': expected str, got {type(correlation_id_val).__name__}"
+        )
+        logger.error(msg)
+        raise EventError(msg)
+
+    if subject_entity_val is not None and not isinstance(subject_entity_val, str):
+        msg = (
+            f"Invalid type for 'subjectEntity': expected str, got {type(subject_entity_val).__name__}"
+        )
+        logger.error(msg)
+        raise EventError(msg)
+
+    if source_service_val is not None and not isinstance(source_service_val, str):
+        msg = (
+            f"Invalid type for 'sourceService': expected str, got {type(source_service_val).__name__}"
+        )
+        logger.error(msg)
+        raise EventError(msg)
 
     if event_type in [
         EventType.CREATE_NODE.value,
@@ -181,4 +214,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
         node_id=node_id_val,
         target_node_id=target_node_id_val,
         label=label_val,
+        correlation_id=correlation_id_val,
+        subject_entity=subject_entity_val,
+        source_service=source_service_val,
     )
