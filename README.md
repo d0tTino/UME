@@ -591,6 +591,17 @@ curl "http://localhost:8000/ledger/events?start=0&end=10&limit=5" \
 The response is a JSON array where each item includes the ``offset`` and the
 original event payload.
 
+### Migrate Events to the New Schema
+Existing events can be rewritten using the latest schema version. Run the
+migration helper and redirect the output to a file:
+
+```bash
+poetry run python -m ume.migrate_events --source ledger > migrated_events.json
+```
+
+Pass ``--source kafka`` to read from your configured Kafka topics instead of the
+local ledger. Each migrated event envelope is printed on a single line as JSON.
+
 ## Configuration Templates
 
 Sample configuration files for common environments are provided in
