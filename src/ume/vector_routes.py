@@ -67,6 +67,8 @@ def api_semantic_search(
     vector = generate_embedding(req.query)
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
+    if req.k <= 0:
+        raise HTTPException(status_code=400, detail="k must be positive")
     ids = store.query(vector, k=req.k)
     nodes = []
     for node_id in ids:
