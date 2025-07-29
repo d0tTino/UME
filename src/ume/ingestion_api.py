@@ -11,7 +11,7 @@ from confluent_kafka import Producer, KafkaException
 from .config import settings
 from .schema_utils import validate_event_dict
 from .logging_utils import configure_logging
-from .utils import ssl_config
+from .utils import ssl_config, event_to_snake
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ async def post_event(request: Request) -> JSONResponse:
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
     try:
-        validate_event_dict(data)
+        validate_event_dict(event_to_snake(data))
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

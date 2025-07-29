@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any, Dict, Tuple, List, cast
-from ..utils import ssl_config
+from ..utils import ssl_config, event_to_snake, event_to_camel
 from ..logging_utils import configure_logging
 
 from confluent_kafka import Consumer, Producer, KafkaException, KafkaError
@@ -93,7 +93,8 @@ def run_privacy_agent() -> None:
 
             raw_bytes = msg.value()
             try:
-                data = json.loads(raw_bytes.decode("utf-8"))
+                data_camel = json.loads(raw_bytes.decode("utf-8"))
+                data = event_to_snake(data_camel)
                 validate_event_dict(data)
             except (json.JSONDecodeError, ValidationError) as exc:
                 logger.error("Invalid event received: %s", exc)
@@ -134,7 +135,7 @@ def run_privacy_agent() -> None:
                 try:
                     producer.produce(
                         QUARANTINE_TOPIC,
-                        value=json.dumps({"error": str(exc), "event": data}).encode(
+                        value=json.dumps({"error": str(exc), "event": event_to_camel(data)}).encode(
                             "utf-8"
                         ),
                     )
@@ -150,7 +151,7 @@ def run_privacy_agent() -> None:
             dest_topic = CLEAN_TOPIC if (has_consent or not (user_id and scope)) else QUARANTINE_TOPIC
 
             try:
-                producer.produce(dest_topic, value=json.dumps(data).encode("utf-8"))
+                producer.produce(dest_topic, value=json.dumps(event_to_camel(data)).encode("utf-8"))
                 pending += 1
                 try:
                     event_ledger.append(msg.offset(), data)

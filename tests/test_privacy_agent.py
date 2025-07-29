@@ -93,9 +93,9 @@ class FakeProducer:
 def test_privacy_agent_end_to_end(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "n1",
+        "nodeId": "n1",
         "payload": payload,
     }
     msg = FakeMessage(json.dumps(event).encode("utf-8"))
@@ -134,9 +134,9 @@ def test_privacy_agent_end_to_end(privacy_agent, monkeypatch):
 def test_privacy_agent_periodic_flush(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "n1",
+        "nodeId": "n1",
         "payload": payload,
     }
     msgs = [FakeMessage(json.dumps(event).encode("utf-8")) for _ in range(3)]
@@ -174,9 +174,9 @@ def test_privacy_agent_audit_log_written(tmp_path, monkeypatch):
 
     payload = {"email": "user@example.com"}
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "n1",
+        "nodeId": "n1",
         "payload": payload,
     }
     msg = FakeMessage(json.dumps(event).encode("utf-8"))
@@ -235,9 +235,9 @@ def test_invalid_json_goes_to_quarantine(privacy_agent, monkeypatch):
 def test_policy_violation_goes_to_quarantine(privacy_agent, monkeypatch):
     payload = {"node_id": "n1"}
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "n1",
+        "nodeId": "n1",
         "payload": payload,
     }
     msg = FakeMessage(json.dumps(event).encode("utf-8"))
@@ -265,5 +265,5 @@ def test_policy_violation_goes_to_quarantine(privacy_agent, monkeypatch):
     assert len(quarantine) == 1
     data = json.loads(quarantine[0].decode("utf-8"))
     assert data["error"] == "denied"
-    assert data["event"]["node_id"] == "n1"
+    assert data["event"]["nodeId"] == "n1"
     assert not any(topic == privacy_agent.CLEAN_TOPIC for topic, _ in producer.produced)

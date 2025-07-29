@@ -33,6 +33,7 @@ def client(monkeypatch):
 def test_post_event_publishes_to_kafka(client):
     test_client, prod = client
     event = {"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
+
     res = test_client.post("/events", json=event)
     assert res.status_code == 202
     assert prod.produced == [
