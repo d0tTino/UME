@@ -75,7 +75,7 @@ types-pyyaml = {version = "^6.0.12.20250516", allow-prereleases = true}
 
 [tool.poetry.extras]
 vector = ["faiss-gpu"]
-embedding = ["sentence-transformers"]
+embedding = ["sentence-transformers", "tiktoken"]
 policy = ["regopy"]
 integrations = []
 grpc_server = ["grpcio"]
