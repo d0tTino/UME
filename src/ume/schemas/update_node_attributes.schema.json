@@ -8,6 +8,7 @@
   "properties": {
     "eventType": {
       "type": "string",
+      "minLength": 1,
       "description": "Type of event"
     },
     "timestamp": {

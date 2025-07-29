@@ -93,11 +93,17 @@ def parse_event(data: Dict[str, Any]) -> Event:
     if "eventType" not in data:
         logger.error("Missing required event field: eventType")
         raise EventError("Missing required event field: eventType")
-    event_type = data["eventType"]
-    if not isinstance(event_type, str):
-        msg = f"Invalid type for 'eventType': expected str, got {type(event_type).__name__}"
+    event_type_raw = data["eventType"]
+    if not isinstance(event_type_raw, str):
+        msg = f"Invalid type for 'eventType': expected str, got {type(event_type_raw).__name__}"
         logger.error(msg)
         raise EventError(msg)
+    # Map to the known EventType enum when possible but allow arbitrary strings
+    event_type: EventType | str
+    try:
+        event_type = EventType(event_type_raw)
+    except ValueError:
+        event_type = event_type_raw
 
     if "timestamp" not in data:
         logger.error("Missing required event field: timestamp")
@@ -161,8 +167,8 @@ def parse_event(data: Dict[str, Any]) -> Event:
         raise EventError(msg)
 
     if event_type in [
-        EventType.CREATE_NODE.value,
-        EventType.UPDATE_NODE_ATTRIBUTES.value,
+        EventType.CREATE_NODE,
+        EventType.UPDATE_NODE_ATTRIBUTES,
     ]:
         if "node_id" not in data:  # Must be present in data
             msg = f"Missing required field 'node_id' for {event_type} event."
@@ -185,9 +191,9 @@ def parse_event(data: Dict[str, Any]) -> Event:
             raise EventError(msg)
 
     elif event_type in [
-        EventType.CREATE_EDGE.value,
-        EventType.DELETE_EDGE.value,
-        EventType.CREATE_ONTOLOGY_RELATION.value,
+        EventType.CREATE_EDGE,
+        EventType.DELETE_EDGE,
+        EventType.CREATE_ONTOLOGY_RELATION,
     ]:
         required_fields_for_edge = {"node_id", "target_node_id", "label"}
         missing_fields = required_fields_for_edge - data.keys()

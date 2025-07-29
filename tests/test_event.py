@@ -61,6 +61,16 @@ def test_parse_event_custom_type():
     assert event.payload == {"archive": True}
 
 
+def test_parse_event_custom_type_minimal():
+    """Unknown event types should parse with minimal required fields."""
+    ts = int(time.time())
+    data = {"eventType": "document.artifact.archived", "timestamp": ts}
+    event = parse_event(data)
+    assert event.event_type == "document.artifact.archived"
+    assert event.timestamp == ts
+    assert event.payload == {}
+
+
 @pytest.mark.parametrize(
     "event_type, extra_data",
     [
