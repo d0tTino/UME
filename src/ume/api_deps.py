@@ -15,6 +15,7 @@ from fastapi.security import OAuth2PasswordBearer
 from .config import settings
 from .rbac_adapter import RoleBasedGraphAdapter
 from .graph_adapter import IGraphAdapter
+from .async_graph_adapter import IAsyncGraphAdapter
 from .query import Neo4jQueryEngine
 from . import VectorStore
 
@@ -129,7 +130,7 @@ async def get_entity(
 ) -> Dict[str, Any]:
     """Return attributes for node ``id`` if its ``type`` matches."""
     func = getattr(graph, "get_node")
-    if inspect.iscoroutinefunction(func):
+    if inspect.iscoroutinefunction(func) or isinstance(graph, IAsyncGraphAdapter):
         attrs = await func(id)  # type: ignore[misc]
     else:
         attrs = func(id)
