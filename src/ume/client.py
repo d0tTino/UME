@@ -53,11 +53,11 @@ class UMEClient:
     def produce_event(self, event: Event) -> None:
         """Serialize and send an Event to the configured topic."""
         data_dict = {
-            "event_id": event.event_id,
-            "event_type": event.event_type,
+            "eventId": event.event_id,
+            "eventType": event.event_type,
             "timestamp": event.timestamp,
             "payload": event.payload,
-            "source": event.source,
+            "sourceService": event.source,
             "node_id": event.node_id,
             "target_node_id": event.target_node_id,
             "label": event.label,
@@ -209,11 +209,11 @@ class UMEClient:
 
         payload = MessageToDict(meta.payload)
         return {
-            "event_id": meta.event_id,
-            "event_type": meta.event_type,
+            "eventId": meta.event_id,
+            "eventType": meta.event_type,
             "timestamp": meta.timestamp,
             "payload": payload,
-            "source": meta.source or None,
+            "sourceService": meta.source or None,
             "node_id": meta.node_id or None,
             "target_node_id": meta.target_node_id or None,
             "label": meta.label or None,

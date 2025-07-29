@@ -60,11 +60,11 @@ def main() -> None:
 
     # Convert Event object to dict for JSON serialization
     data_dict = {
-        "event_id": event_to_send.event_id,
-        "event_type": event_to_send.event_type,
+        "eventId": event_to_send.event_id,
+        "eventType": event_to_send.event_type,
         "timestamp": event_to_send.timestamp,
         "payload": event_to_send.payload,
-        "source": event_to_send.source,
+        "sourceService": event_to_send.source,
     }
 
     try:

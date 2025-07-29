@@ -91,7 +91,7 @@ class UMEPrompt(Cmd):
             node_id, json_attrs = parts
             attributes = json.loads(json_attrs)
             event_data = {
-                "event_type": "CREATE_NODE",
+                "eventType": "CREATE_NODE",
                 "node_id": node_id,
                 "payload": {"node_id": node_id, "attributes": attributes},
                 "timestamp": self._get_timestamp(),
@@ -115,7 +115,7 @@ class UMEPrompt(Cmd):
                 return
             source_id, target_id, label = parts
             event_data = {
-                "event_type": "CREATE_EDGE",
+                "eventType": "CREATE_EDGE",
                 "node_id": source_id,
                 "target_node_id": target_id,
                 "label": label,
@@ -140,7 +140,7 @@ class UMEPrompt(Cmd):
                 return
             source_id, target_id, label = parts
             event_data = {
-                "event_type": "DELETE_EDGE",
+                "eventType": "DELETE_EDGE",
                 "node_id": source_id,
                 "target_node_id": target_id,
                 "label": label,

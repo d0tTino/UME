@@ -37,11 +37,11 @@ class DevLogHandler(FileSystemEventHandler):  # type: ignore[misc]
             payload={"node_id": str(event.src_path), "attributes": payload},
         )
         data = {
-            "event_id": evt.event_id,
-            "event_type": evt.event_type,
+            "eventId": evt.event_id,
+            "eventType": evt.event_type,
             "timestamp": evt.timestamp,
             "payload": evt.payload,
-            "source": evt.source,
+            "sourceService": evt.source,
             "node_id": evt.node_id,
             "target_node_id": evt.target_node_id,
             "label": evt.label,

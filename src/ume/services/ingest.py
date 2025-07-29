@@ -95,11 +95,11 @@ def envelope_to_event_dict(envelope: Any) -> Dict[str, Any]:
         raise EventError("Envelope missing payload")
 
     return {
-        "event_id": meta.event_id,
-        "event_type": meta.event_type,
+        "eventId": meta.event_id,
+        "eventType": meta.event_type,
         "timestamp": meta.timestamp,
         "payload": MessageToDict(meta.payload),
-        "source": meta.source or None,
+        "sourceService": meta.source or None,
         "node_id": meta.node_id or None,
         "target_node_id": meta.target_node_id or None,
         "label": meta.label or None,

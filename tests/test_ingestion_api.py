@@ -32,7 +32,7 @@ def client(monkeypatch):
 
 def test_post_event_publishes_to_kafka(client):
     test_client, prod = client
-    event = {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
+    event = {"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
     res = test_client.post("/events", json=event)
     assert res.status_code == 202
     assert prod.produced == [
@@ -43,7 +43,7 @@ def test_post_event_publishes_to_kafka(client):
 
 def test_invalid_event_returns_400(client):
     test_client, prod = client
-    res = test_client.post("/events", json={"event_type": "CREATE_NODE"})
+    res = test_client.post("/events", json={"eventType": "CREATE_NODE"})
     assert res.status_code == 400
     assert prod.produced == []
 
