@@ -102,6 +102,7 @@ from .dossier.scheduler import (
     start_dossier_snapshot_scheduler,
     stop_dossier_snapshot_scheduler,
 )
+from .tokenization import tokenize
 
 # Import the API lazily via __getattr__ to avoid circular imports during
 # initialization. The ``api`` module will be loaded on first attribute access.
@@ -186,6 +187,7 @@ __all__ = [
     "ResourceScheduler",
     "ScheduledTask",
     "Dossier",
+    "tokenize",
 
 
 ]
