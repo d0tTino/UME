@@ -216,6 +216,26 @@ def parse_event(data: Dict[str, Any]) -> Event:
             logger.error(msg)
             raise EventError(msg)
 
+    else:
+        # Unknown event types: validate optional fields if provided
+        if "payload" in data and not isinstance(payload_val, dict):
+            msg = (
+                f"Invalid type for 'payload': expected dict, got {type(payload_val).__name__}"
+            )
+            logger.error(msg)
+            raise EventError(msg)
+        for optional_name, optional_value in [
+            ("node_id", node_id_val),
+            ("target_node_id", target_node_id_val),
+            ("label", label_val),
+        ]:
+            if optional_value is not None and not isinstance(optional_value, str):
+                msg = (
+                    f"Invalid type for '{optional_name}': expected str, got {type(optional_value).__name__}"
+                )
+                logger.error(msg)
+                raise EventError(msg)
+
     return Event(
         event_id=event_id_val if event_id_val is not None else str(uuid.uuid4()),
         event_type=event_type,

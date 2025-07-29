@@ -48,6 +48,19 @@ def test_parse_event_minimal_valid():
     assert event.source_service is None
 
 
+def test_parse_event_custom_type():
+    """Ensure custom event types parse without strict checks."""
+    timestamp_now = int(time.time())
+    data = {
+        "eventType": "document.artifact.archived",
+        "timestamp": timestamp_now,
+        "payload": {"archive": True},
+    }
+    event = parse_event(data)
+    assert event.event_type == "document.artifact.archived"
+    assert event.payload == {"archive": True}
+
+
 @pytest.mark.parametrize(
     "event_type, extra_data",
     [

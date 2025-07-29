@@ -7,8 +7,8 @@
   "required": ["eventType", "timestamp", "node_id", "target_node_id", "label"],
   "properties": {
     "eventType": {
-      "const": "CREATE_EDGE",
-      "description": "Must be the literal string 'CREATE_EDGE'"
+      "type": "string",
+      "description": "Type of event"
     },
     "timestamp": {
       "type": "integer",
