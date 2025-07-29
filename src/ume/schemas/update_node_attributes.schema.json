@@ -7,8 +7,8 @@
   "required": ["eventType", "timestamp", "node_id", "payload"],
   "properties": {
     "eventType": {
-      "const": "UPDATE_NODE_ATTRIBUTES",
-      "description": "Must be the literal string 'UPDATE_NODE_ATTRIBUTES'"
+      "type": "string",
+      "description": "Type of event"
     },
     "timestamp": {
       "type": "integer",
