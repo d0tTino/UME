@@ -27,14 +27,14 @@ app = FastAPI(
 )
 
 
-@app.on_event("startup")  # type: ignore[misc]
+@app.on_event("startup")
 def _init_producer() -> None:
     """Initialize the Kafka producer."""
     global producer
     producer = Producer(producer_conf)
 
 
-@app.post("/events", status_code=202)  # type: ignore[misc]
+@app.post("/events", status_code=202)
 async def post_event(request: Request) -> JSONResponse:
     """Validate the request body and publish it to Kafka."""
     try:
@@ -61,7 +61,7 @@ async def post_event(request: Request) -> JSONResponse:
     return JSONResponse(status_code=202, content={"status": "accepted"})
 
 
-@app.on_event("shutdown")  # type: ignore[misc]
+@app.on_event("shutdown")
 def _close_producer() -> None:
     if producer is None:
         return
