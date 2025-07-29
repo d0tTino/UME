@@ -6,6 +6,8 @@ from ume import MockGraph
 def setup_module(_):
     g = MockGraph()
     g.add_node("a", {"x": 1})
+    g.add_node("b", {"y": 2})
+    g.add_edge("a", "b", "ab")
     configure_graph(g)
 
 
@@ -15,6 +17,15 @@ def test_query_nodes() -> None:
     assert res.status_code == 200
     data = res.json()["data"]["nodes"]
     assert {"id": "a", "attributes": {"x": 1}} in data
+    assert {"id": "b", "attributes": {"y": 2}} in data
+
+
+def test_query_edges() -> None:
+    client = TestClient(app)
+    res = client.post("/graphql", json={"query": "{ edges { source target label } }"})
+    assert res.status_code == 200
+    data = res.json()["data"]["edges"]
+    assert {"source": "a", "target": "b", "label": "ab"} in data
 
 
 def test_create_node_mutation() -> None:
@@ -26,8 +37,24 @@ def test_create_node_mutation() -> None:
     )
     res = client.post(
         "/graphql",
-        json={"query": mutation, "variables": {"id": "b", "attrs": {"y": 2}}},
+        json={"query": mutation, "variables": {"id": "c", "attrs": {"z": 3}}},
     )
     assert res.status_code == 200
     assert res.json()["data"]["createNode"]["ok"] is True
-    assert app.state.graph.get_node("b") == {"y": 2}
+    assert app.state.graph.get_node("c") == {"z": 3}
+
+
+def test_create_edge_mutation() -> None:
+    client = TestClient(app)
+    mutation = (
+        "mutation($s: String!, $t: String!, $lbl: String!) {"
+        "  createEdge(source: $s, target: $t, label: $lbl) { ok }"
+        "}"
+    )
+    res = client.post(
+        "/graphql",
+        json={"query": mutation, "variables": {"s": "b", "t": "a", "lbl": "ba"}},
+    )
+    assert res.status_code == 200
+    assert res.json()["data"]["createEdge"]["ok"] is True
+    assert ("b", "a", "ba") in app.state.graph.get_all_edges()
