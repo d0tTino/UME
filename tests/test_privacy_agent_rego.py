@@ -57,9 +57,9 @@ class FakeProducer:
 
 def test_rego_policy_denies_event(monkeypatch):
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "forbidden",
+        "nodeId": "forbidden",
         "payload": {"node_id": "forbidden", "attributes": {}},
     }
     msg = FakeMessage(json.dumps(event).encode("utf-8"))
@@ -104,9 +104,9 @@ def _setup_agent(monkeypatch: pytest.MonkeyPatch, consumer: FakeConsumer, produc
 
 def test_event_without_consent_goes_to_quarantine(monkeypatch: pytest.MonkeyPatch) -> None:
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "n1",
+        "nodeId": "n1",
         "payload": {"node_id": "n1", "user_id": "u1", "scope": "profile", "attributes": {}},
     }
     msg = FakeMessage(json.dumps(event).encode("utf-8"))
@@ -125,9 +125,9 @@ def test_event_without_consent_goes_to_quarantine(monkeypatch: pytest.MonkeyPatc
 
 def test_event_with_consent_published(monkeypatch: pytest.MonkeyPatch) -> None:
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "n2",
+        "nodeId": "n2",
         "payload": {"node_id": "n2", "user_id": "u1", "scope": "profile", "attributes": {}},
     }
     msg = FakeMessage(json.dumps(event).encode("utf-8"))

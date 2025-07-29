@@ -52,22 +52,22 @@ def test_graph_consumer_applies_events(tmp_path, monkeypatch: pytest.MonkeyPatch
     ledger = EventLedger(str(tmp_path / "ledger.db"))
     events = [
         {
-            "event_type": "CREATE_NODE",
+            "eventType": "CREATE_NODE",
             "timestamp": 1,
-            "node_id": "n1",
+            "nodeId": "n1",
             "payload": {"node_id": "n1"},
         },
         {
-            "event_type": "CREATE_NODE",
+            "eventType": "CREATE_NODE",
             "timestamp": 1,
-            "node_id": "n2",
+            "nodeId": "n2",
             "payload": {"node_id": "n2"},
         },
         {
-            "event_type": "CREATE_EDGE",
+            "eventType": "CREATE_EDGE",
             "timestamp": 1,
-            "node_id": "n1",
-            "target_node_id": "n2",
+            "nodeId": "n1",
+            "targetNodeId": "n2",
             "label": "RELATES_TO",
             "payload": {},
         },

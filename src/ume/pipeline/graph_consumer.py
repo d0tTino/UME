@@ -9,7 +9,7 @@ from confluent_kafka import Consumer, KafkaException, KafkaError
 from jsonschema import ValidationError
 
 from ..config import settings
-from ..utils import ssl_config
+from ..utils import ssl_config, event_to_snake
 from ..event import parse_event, EventError
 from ..processing import apply_event_to_graph, ProcessingError
 from ..schema_utils import validate_event_dict
@@ -73,7 +73,8 @@ def run_graph_consumer(
                 continue
 
             try:
-                data = json.loads(msg.value().decode("utf-8"))
+                data_camel = json.loads(msg.value().decode("utf-8"))
+                data = event_to_snake(data_camel)
                 validate_event_dict(data)
                 payload = data["event"] if "event" in data else data
                 event = parse_event(payload)

@@ -85,7 +85,7 @@ def test_invalid_json_skips_message(monkeypatch):
 
 
 def test_validation_error_skips_message(monkeypatch):
-    event = {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
+    event = {"eventType": "CREATE_NODE", "timestamp": 1, "nodeId": "n1", "payload": {}}
     msg = type("Msg", (), {"error": lambda self: None, "value": lambda self: json.dumps(event).encode("utf-8")})()
     consumer = FakeConsumer([msg])
     producer = FakeProducer()

@@ -61,9 +61,9 @@ class FakeProducer:
 
 def test_privacy_agent_writes_to_ledger_and_replay(tmp_path, monkeypatch):
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": 1,
-        "node_id": "n1",
+        "nodeId": "n1",
         "payload": {"node_id": "n1"},
     }
     msg = FakeMessage(json.dumps(event).encode("utf-8"), offset=5)
