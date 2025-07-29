@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any, Dict, Tuple, List, cast
-from ..utils import ssl_config, event_to_snake, event_to_camel
+from ..utils import ssl_config, event_to_snake, event_to_camel, tokenize
 from ..logging_utils import configure_logging
 
 from confluent_kafka import Consumer, Producer, KafkaException, KafkaError
@@ -146,6 +146,13 @@ def run_privacy_agent() -> None:
 
             original_payload = data.get("payload", {})
             redacted_payload, was_redacted = redact_event_payload(original_payload)
+            tokens: List[str] = []
+            for key in ("name", "text", "content"):
+                val = redacted_payload.get(key)
+                if isinstance(val, str):
+                    tokens.extend(tokenize(val))
+            if tokens:
+                redacted_payload["tokens"] = tokens
             data["payload"] = redacted_payload
 
             dest_topic = CLEAN_TOPIC if (has_consent or not (user_id and scope)) else QUARANTINE_TOPIC

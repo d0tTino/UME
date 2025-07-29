@@ -354,6 +354,15 @@ async def api_get_document(
     return {"id": document_id, "content": doc.get("content", "")}
 
 
+@router.get("/entities/{type}/{id}")
+async def api_get_entity(
+    id: str,
+    entity: Dict[str, Any] = Depends(deps.get_entity),
+) -> Dict[str, Any]:
+    """Return node ``id`` if its ``type`` matches the path parameter."""
+    return {"id": id, "attributes": entity}
+
+
 @router.post("/events")
 async def api_post_event(
     req: EventRequest,

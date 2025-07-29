@@ -6167,4 +6167,4 @@ vector = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "71f9e78505e2c122508779246f90491924ceb55c8f15c7e88bcb3300b37b3069"
+content-hash = "bd27b9a645b952971eaf1abcfaa8e2a8b4539d46224e1fdde14e5aac65d2c5c8"

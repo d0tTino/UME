@@ -306,7 +306,6 @@ def test_dashboard_endpoints(monkeypatch: MonkeyPatch) -> None:
     assert res_events.status_code == 200
     assert isinstance(res_events.json(), list)
 
-
 def test_semantic_search(monkeypatch: MonkeyPatch) -> None:
     import numpy as np
     import sys
@@ -354,6 +353,7 @@ def test_semantic_search_invalid_dimension(monkeypatch: MonkeyPatch) -> None:
     assert res.json()["detail"] == "Invalid vector dimension"
 
 
+
 @pytest.mark.parametrize(  # type: ignore[misc]
     "method,path,body,params",
     [
@@ -378,6 +378,7 @@ def test_semantic_search_invalid_dimension(monkeypatch: MonkeyPatch) -> None:
         ("get", "/metrics/summary", None, None),
         ("get", "/dashboard/stats", None, None),
         ("get", "/dashboard/recent_events", None, None),
+        ("get", "/entities/T/x", None, None),
         ("get", "/vectors/benchmark", None, None),
         ("get", "/recall", None, [("query", "test")]),
     ],
