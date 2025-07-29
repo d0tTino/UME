@@ -1,5 +1,6 @@
 import os
 import threading
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -43,6 +44,40 @@ class LimitingConsumer(KafkaConsumer):
         if msg is not None and not msg.error():
             self.count += 1
         return msg
+
+
+class DummyMessage:
+    def __init__(self, value: bytes, offset: int) -> None:
+        self._value = value
+        self._offset = offset
+
+    def value(self) -> bytes:  # pragma: no cover - simple accessor
+        return self._value
+
+    def error(self):  # pragma: no cover - simple accessor
+        return None
+
+    def offset(self) -> int:  # pragma: no cover - simple accessor
+        return self._offset
+
+
+class DummyConsumer:
+    def __init__(self, messages: list[DummyMessage]) -> None:
+        self.messages = messages
+        self.index = 0
+
+    def subscribe(self, topics):  # pragma: no cover - simple stub
+        self.topics = topics
+
+    def poll(self, timeout: float = 1.0):
+        if self.index >= len(self.messages):
+            raise KeyboardInterrupt
+        msg = self.messages[self.index]
+        self.index += 1
+        return msg
+
+    def close(self) -> None:  # pragma: no cover - simple stub
+        pass
 
 
 @pytest.mark.integration
@@ -118,3 +153,25 @@ def test_pipeline_end_to_end(tmp_path, monkeypatch):
     ledger.close()
     unregister_listener(listener)
     container.stop()
+
+
+def test_generic_events_go_to_ledger(tmp_path, monkeypatch, caplog):
+    msg_data = {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}}
+    msg = DummyMessage(json.dumps(msg_data).encode("utf-8"), 0)
+    consumer = DummyConsumer([msg])
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+
+    monkeypatch.setattr(graph_consumer, "Consumer", lambda conf: consumer)
+    monkeypatch.setattr(graph_consumer, "ssl_config", lambda: {})
+    monkeypatch.setattr(graph_consumer, "event_ledger", ledger)
+
+    graph = MockGraph()
+    with caplog.at_level("WARNING"):
+        graph_consumer.run_graph_consumer(graph, group_id="g")
+
+    assert ledger.range() == [
+        (0, {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}})
+    ]
+    assert ledger.last_processed_offset == 0
+    assert not graph.get_all_node_ids()
+    assert any("Unknown event type" in rec.message for rec in caplog.records)

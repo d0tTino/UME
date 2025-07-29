@@ -9,8 +9,8 @@ from confluent_kafka import Consumer, KafkaException, KafkaError
 from jsonschema import ValidationError
 
 from ..config import settings
-from ..utils import ssl_config, event_to_snake
-from ..event import parse_event, EventError
+from ..utils import ssl_config, event_to_snake, event_to_camel
+from ..event import parse_event, EventError, EventType
 from ..processing import apply_event_to_graph, ProcessingError
 from ..schema_utils import validate_event_dict
 from ..event_ledger import event_ledger
@@ -75,12 +75,31 @@ def run_graph_consumer(
             try:
                 data_camel = json.loads(msg.value().decode("utf-8"))
                 data = event_to_snake(data_camel)
-                validate_event_dict(data)
                 payload = data["event"] if "event" in data else data
-                event = parse_event(payload)
-            except (json.JSONDecodeError, ValidationError, EventError) as exc:
+                payload_camel = event_to_camel(payload)
+                event = parse_event(payload_camel)
+            except (json.JSONDecodeError, EventError) as exc:
                 logger.error("Invalid event skipped: %s", exc)
                 continue
+
+            if event.event_type not in {e.value for e in EventType}:
+                try:
+                    event_ledger.append(msg.offset(), payload_camel)
+                except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
+                    logger.error("Ledger append failed: %s", exc)
+                try:
+                    event_ledger.update_bookmark(msg.offset())
+                except Exception as exc:  # pragma: no cover - unexpected errors
+                    logger.error("Failed to update bookmark: %s", exc)
+                logger.warning("Unknown event type '%s' skipped", event.event_type)
+                continue
+
+            try:
+                validate_event_dict(data)
+            except ValidationError as exc:
+                logger.error("Invalid event skipped: %s", exc)
+                continue
+
             try:
                 apply_event_to_graph(event, graph)
             except ProcessingError as exc:
