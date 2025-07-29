@@ -353,6 +353,36 @@ def test_semantic_search_invalid_dimension(monkeypatch: MonkeyPatch) -> None:
     assert res.json()["detail"] == "Invalid vector dimension"
 
 
+def test_get_entity_endpoint() -> None:
+    g = MockGraph()
+    g.add_node("ent1", {"type": "T", "value": 1})
+    configure_graph(g)
+    client = TestClient(app)
+    token = _token(client)
+    res = client.get(
+        "/entities/T/ent1",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == {
+        "id": "ent1",
+        "attributes": {"type": "T", "value": 1},
+    }
+
+
+def test_get_entity_endpoint_not_found() -> None:
+    g = MockGraph()
+    g.add_node("ent2", {"type": "T"})
+    configure_graph(g)
+    client = TestClient(app)
+    token = _token(client)
+    res = client.get(
+        "/entities/X/ent2",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 404
+
+
 
 @pytest.mark.parametrize(  # type: ignore[misc]
     "method,path,body,params",
