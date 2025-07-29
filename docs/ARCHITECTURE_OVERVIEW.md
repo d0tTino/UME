@@ -83,7 +83,8 @@ flowchart LR
 graph TD
     Ingest(Ingestion API) --> RawEvents[ume-raw-events]
     RawEvents --> PrivacyAgent
-    PrivacyAgent --> PolicyDSL[Policy DSL]
+    PrivacyAgent --> Tokenize[Tokenize Text]
+    Tokenize --> PolicyDSL[Policy DSL]
     PolicyDSL --> CleanEvents[ume-clean-events]
     CleanEvents --> Projection(Projection Engine)
     Projection --> Adapter
@@ -91,9 +92,11 @@ graph TD
     Adapter --> VectorStore[(Vector Store)]
 ```
 
-Incoming events are streamed through Redpanda topics. The Privacy Agent applies
-rules defined in the Policy DSL before forwarding sanitized events to the graph
-adapter layer.
+Incoming events are streamed through Redpanda topics. The Privacy Agent first
+redacts sensitive content and tokenizes any `name`, `text`, or `content`
+fields. These tokens are stored in the payload so downstream processors can
+generate embeddings. After tokenization the Policy DSL is evaluated and the
+resulting sanitized events are forwarded to the graph adapter layer.
 
 ## Event Ledger
 
@@ -105,6 +108,12 @@ On startup the API launches a scheduler that periodically calls
 `UME_LEDGER_OFFSET_WINDOW` offsets from the latest processed bookmark. The
 interval between compaction runs is configurable via
 `UME_LEDGER_COMPACTION_INTERVAL`.
+
+Each ledger entry preserves the original `eventType` string. The event parser
+maps known constants to the :class:`~ume.event.EventType` enum but allows
+arbitrary values to pass through unchanged. This flexibility lets producers
+introduce new event categories without requiring a code update. Custom types are
+stored and replayed like built-in events.
 
 ## Policy DSL Flow
 
