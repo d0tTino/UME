@@ -175,7 +175,7 @@ Producer --> ume-raw-events --> Privacy Agent --> ume-clean-events
 3. A graph consumer reads sanitized events and applies them via the configured **Graph Adapter**.
 4. The adapter persists nodes and edges to the chosen backend, such as SQLite or Neo4j, and writes embeddings to a vector store.
 
-When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals.
+When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals. The same fields are tokenized and the resulting tokens are saved under a `tokens` attribute for search. If the optional [tiktoken](https://github.com/openai/tiktoken) library is installed, it provides OpenAI-compatible tokenization.
 
 This pipeline demonstrates how UME transforms incoming events into a persistent knowledge graph.
 
@@ -343,7 +343,7 @@ This wrapper installs Poetry, Node.js and Docker if they are missing, installs P
 git clone https://github.com/d0tTino/universal-memory-engine.git
 cd universal-memory-engine
 poetry install --with dev
-# Include optional embedding dependencies to run the full test suite
+# Include optional embedding dependencies (sentence-transformers and tiktoken) to run the full test suite
 poetry install --with embedding
 poetry run python -m spacy download en_core_web_lg
 ```
@@ -564,6 +564,7 @@ curl -X POST http://localhost:8000/events \
 ```
 
 The event is validated and immediately applied to the configured graph adapter.
+Any `name`, `text`, or `content` attributes in the payload are tokenized and stored under `"tokens"`.
 
 ### Recall Nodes
 Use the `/recall` endpoint to retrieve the nearest nodes for a search query or
@@ -581,6 +582,16 @@ To stream results as they are found, use `/recall/stream` with an SSE client:
 ```bash
 curl -N "http://localhost:8000/recall/stream?query=demo&k=3" \
   -H "Authorization: Bearer <token>"
+```
+
+### Semantic Search
+Submit free-form text and receive the most relevant nodes:
+
+```bash
+curl -X POST http://localhost:8000/search/semantic \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"demo","k":3}'
 ```
 
 ### Interpreting Recall Metrics
@@ -602,6 +613,14 @@ curl "http://localhost:8000/ledger/events?start=0&end=10&limit=5" \
 
 The response is a JSON array where each item includes the ``offset`` and the
 original event payload.
+
+### Retrieve an Entity
+Fetch a node by type and ID:
+
+```bash
+curl -X GET http://localhost:8000/entities/user/n1 \
+  -H "Authorization: Bearer <token>"
+```
 
 ### Migrate Events to the New Schema
 Existing events can be rewritten using the latest schema version. Run the
@@ -1074,6 +1093,7 @@ dependencies with:
 ```bash
 poetry install --with embedding
 ```
+This installs `sentence-transformers` and `tiktoken` for advanced tokenization.
 
 ## Vector Store
 

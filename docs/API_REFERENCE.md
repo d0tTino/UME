@@ -64,6 +64,14 @@ Create an edge.
 ### DELETE `/edges/{source}/{target}/{label}`
 Delete an edge.
 
+### GET `/entities/{type}/{id}`
+Return node `id` if its `type` attribute matches `type`.
+
+```bash
+curl -X GET http://localhost:8000/entities/user/u1 \
+  -H "Authorization: Bearer <token>"
+```
+
 ### POST `/snapshot/save`
 Write the entire graph state to a JSON file.
 - **Body**: `{"path": "file.json"}`
@@ -118,6 +126,17 @@ Add a vector to the in-memory index.
 Search for nearest vectors.
 - **Query parameters**: repeated `vector` values forming the query vector and optional `k` (defaults to 5).
 
+### POST `/search/semantic`
+Return the `k` nearest nodes to a text query.
+- **Body**: `{"query": "text", "k": 5}`
+
+```bash
+curl -X POST http://localhost:8000/search/semantic \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"hello","k":2}'
+```
+
 ### GET `/vectors/benchmark`
 Run a synthetic benchmark against the vector store.
 - **Query parameters**: `use_gpu` (boolean, default `false`), `num_vectors` (default `1000`), `num_queries` (default `100`).
@@ -144,6 +163,8 @@ Validate and apply an event to the graph. This endpoint is also available as
 - `target_node_id` – ID of the target node when applicable
 - `label` – edge label if the event involves an edge
 - `payload` – any additional structured data
+
+Text values under `name`, `text` or `content` in a node's attributes are tokenized and stored in a `"tokens"` field. The tokenizer uses `tiktoken` when available.
 
 Example request:
 
