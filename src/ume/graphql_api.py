@@ -36,6 +36,7 @@ class EdgeType(graphene.ObjectType):
 class Query(graphene.ObjectType):
     node = graphene.Field(NodeType, id=graphene.String(required=True))
     nodes = graphene.List(NodeType)
+    edges = graphene.List(EdgeType)
 
     async def resolve_node(self, info: graphene.ResolveInfo, id: str) -> NodeType | None:
         graph = info.context["app"].state.graph
@@ -56,6 +57,13 @@ class Query(graphene.ObjectType):
             data = await _maybe_call(graph, "get_node", nid)
             result.append(NodeType(id=nid, attributes=data or {}))
         return result
+
+    async def resolve_edges(self, info: graphene.ResolveInfo) -> list[EdgeType]:
+        graph = info.context["app"].state.graph
+        if graph is None:
+            return []
+        edges = await _maybe_call(graph, "get_all_edges")
+        return [EdgeType(source=s, target=t, label=lbl) for s, t, lbl in edges]
 
 
 class CreateNode(graphene.Mutation):
