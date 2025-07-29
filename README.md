@@ -7,6 +7,8 @@ The primary motivation behind UME is to equip AI agents with a form of persisten
 
 ## Core Modules
 The engine is built from a few key components:
+- **Ingestion API** (`src/ume/ingestion_api.py`)
+  - Validates incoming events and publishes them to Kafka (`ume-raw-events`).
 - **Privacy Agent** (`src/ume/pipeline/privacy_agent.py`)
   - Redacts personally identifiable information (PII) from incoming events using Presidio.
   - Forwards sanitized events to downstream Kafka topics.
@@ -24,10 +26,12 @@ The engine is built from a few key components:
     environment settings. The backend is selected via `UME_VECTOR_BACKEND`.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
+- **Projection Engine** (`src/ume/consumer_demo.py`)
+  - Consumes sanitized events from Kafka and applies them to the graph via the configured adapter.
 
 ### Event Flow
 ```
-Producer --> ume-raw-events --> Privacy Agent --> ume-clean-events --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j)
+Ingestion API --> ume-raw-events --> Privacy Agent --> ume-clean-events --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j)
 ```
 
 ## Project Setup
