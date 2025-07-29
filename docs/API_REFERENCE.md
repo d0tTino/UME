@@ -14,6 +14,13 @@ mirror the `/snapshot/save` and `/snapshot/load` HTTP endpoints. Both accept a
 `SnapshotPath` message containing the target file path and return an empty
 response on success.
 
+## Ingestion API
+
+The standalone ingestion service listens on port `8001` and publishes raw events to Kafka.
+
+### POST `/events` (ingestion)
+Validate the request body and forward the event to the `ume-raw-events` topic.
+
 ## Endpoints
 
 ### GET `/query`
@@ -158,6 +165,18 @@ curl -X POST http://localhost:8000/events/batch \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '[{"event_type":"CREATE_NODE","timestamp":1,"node_id":"n1","payload":{"node_id":"n1"}}]'
+```
+
+### POST `/graphql`
+Execute a GraphQL query against the graph.
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ node(id: \"n1\") { id } }"}'
 ```
 
 ### GET `/recall`

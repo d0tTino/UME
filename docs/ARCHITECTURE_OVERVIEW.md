@@ -4,19 +4,19 @@ This diagram illustrates how events flow through UME and how graph data and vect
 
 ```mermaid
 graph TD
-    Producer(Event Producer) --> RawEvents[ume-raw-events]
+    Ingest(Ingestion API) --> RawEvents[ume-raw-events]
     RawEvents --> PrivacyAgent(Privacy Agent)
     PrivacyAgent --> CleanEvents[ume-clean-events]
-    CleanEvents --> GraphConsumer(Graph Consumer)
-    GraphConsumer --> Adapter(Graph Adapter)
+    CleanEvents --> Projection(Projection Engine)
+    Projection --> Adapter(Graph Adapter)
     Adapter --> GraphDB[(Graph Storage)]
     Adapter --> VectorStore[(Vector Store)]
 ```
 
-Events originate from producers and are first written to the `ume-raw-events` topic. The Privacy Agent sanitizes sensitive
-content before forwarding messages to `ume-clean-events`. A graph consumer processes these events through the configured
-Graph Adapter. The adapter persists the knowledge graph to the chosen backend (SQLite, Neo4j, etc.) and stores
-embeddings in a dedicated vector store.
+Events enter the system through the **Ingestion API**, which publishes them to the `ume-raw-events` Kafka topic. The
+Privacy Agent sanitizes sensitive content before forwarding messages to `ume-clean-events`. The **Projection Engine** then
+consumes these sanitized events and applies them via the configured Graph Adapter. The adapter persists the knowledge
+graph to the chosen backend (SQLite, Neo4j, etc.) and stores embeddings in a dedicated vector store.
 
 When querying, the API can perform a similarity search against the vector store to retrieve relevant nodes and
 then issue graph queries to traverse relationships.
@@ -33,10 +33,12 @@ queries. The diagram below highlights how these core modules connect.
 
 ```mermaid
 graph TD
-    PrivacyAgent(Privacy Agent) --> Adapter(Graph Adapter)
+    Ingest(Ingestion API) --> Kafka[(Kafka)]
+    Kafka --> Projection(Projection Engine)
+    Projection --> Adapter(Graph Adapter)
     Adapter --> GraphDB[(Graph Storage)]
     Adapter --> VectorStore[(Vector Store)]
-    API(FastAPI Service) --> Adapter
+    API(FastAPI & GraphQL) --> Adapter
     API --> VectorStore
 ```
 
@@ -79,11 +81,12 @@ flowchart LR
 
 ```mermaid
 graph TD
-    Producer(Event Producer) --> RawEvents[ume-raw-events]
+    Ingest(Ingestion API) --> RawEvents[ume-raw-events]
     RawEvents --> PrivacyAgent
     PrivacyAgent --> PolicyDSL[Policy DSL]
     PolicyDSL --> CleanEvents[ume-clean-events]
-    CleanEvents --> Adapter
+    CleanEvents --> Projection(Projection Engine)
+    Projection --> Adapter
     Adapter --> GraphDB[(Graph Storage)]
     Adapter --> VectorStore[(Vector Store)]
 ```
@@ -165,7 +168,7 @@ fetch('/graph/dump', { headers: { Authorization: 'Bearer TOKEN' } })
 
 ## GraphQL Endpoint
 
-UME exposes a GraphQL API at `/graphql`. Submit a `POST` request with a JSON body containing a `query` field. The request must include the usual bearer token.
+The main API exposes both REST and GraphQL interfaces. Submit GraphQL queries to `/graphql` with a JSON body containing a `query` field. The request must include the usual bearer token.
 
 Example request using `curl`:
 ```bash
