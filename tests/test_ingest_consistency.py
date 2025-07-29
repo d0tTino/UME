@@ -78,25 +78,25 @@ def test_http_vs_grpc_ingest_consistency():
         object.__setattr__(settings, "UME_GRPC_TOKEN", None)
     events = [
         {
-            "event_type": "CREATE_NODE",
+            "eventType": "CREATE_NODE",
             "timestamp": 1,
             "node_id": "n1",
             "payload": {"node_id": "n1", "attributes": {"name": "Alice"}},
         },
         {
-            "event_type": "UPDATE_NODE_ATTRIBUTES",
+            "eventType": "UPDATE_NODE_ATTRIBUTES",
             "timestamp": 2,
             "node_id": "n1",
             "payload": {"node_id": "n1", "attributes": {"age": 30}},
         },
         {
-            "event_type": "CREATE_NODE",
+            "eventType": "CREATE_NODE",
             "timestamp": 3,
             "node_id": "n2",
             "payload": {"node_id": "n2", "attributes": {"name": "Bob"}},
         },
         {
-            "event_type": "CREATE_EDGE",
+            "eventType": "CREATE_EDGE",
             "timestamp": 4,
             "node_id": "n1",
             "target_node_id": "n2",

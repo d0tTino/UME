@@ -148,7 +148,7 @@ def test_consume_events(monkeypatch):
     data = {
         "schema_version": client.DEFAULT_VERSION,
         "event": {
-            "event_type": "CREATE_NODE",
+            "eventType": "CREATE_NODE",
             "timestamp": 1,
             "payload": {"text": "hi"},
             "node_id": "n",

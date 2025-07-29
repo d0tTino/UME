@@ -60,8 +60,8 @@ def validate_event_dict(event_data: Dict[str, Any]) -> None:
             raise ValidationError("invalid schema_version") from exc
         event_data = event_data["event"]
 
-    event_type = event_data.get("event_type")
+    event_type = event_data.get("eventType")
     if not isinstance(event_type, str):
-        raise ValidationError("event_type missing or not a string")
+        raise ValidationError("eventType missing or not a string")
     schema = _load_schema(event_type)
     validate(instance=event_data, schema=schema)

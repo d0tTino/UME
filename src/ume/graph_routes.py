@@ -93,15 +93,15 @@ class SnapshotPathRequest(BaseModel):
 class EventRequest(BaseModel):
     """Schema for a single event."""
 
-    event_type: str
+    eventType: str
     timestamp: int
-    event_id: str | None = None
-    source: str | None = None
+    eventId: str | None = None
+    sourceService: str | None = None
     node_id: str | None = None
     target_node_id: str | None = None
     label: str | None = None
     payload: Dict[str, Any] | None = None
-
+    
 
 @router.get("/query")
 def run_cypher(

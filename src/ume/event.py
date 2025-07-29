@@ -42,7 +42,8 @@ class Event:
         label (Optional[str]): A label describing an edge or a relationship, used for edge-related events.
                                  Defaults to None.
         correlation_id (Optional[str]): Optional ID to correlate related events.
-        subject_entity (Optional[str]): Entity this event refers to, if any.
+        subject_entity (Optional[Dict[str, str]]): Entity this event refers to as an object
+            with ``id`` and ``type`` keys.
         source_service (Optional[str]): Name of the service emitting the event.
     """
 
@@ -55,7 +56,7 @@ class Event:
     target_node_id: Optional[str] = None  # Target node for edges
     label: Optional[str] = None  # Label for edges
     correlation_id: Optional[str] = None
-    subject_entity: Optional[str] = None
+    subject_entity: Optional[Dict[str, str]] = None
     source_service: Optional[str] = None
 
 
@@ -71,14 +72,13 @@ def parse_event(data: Dict[str, Any]) -> Event:
 
     Args:
         data (Dict[str, Any]): A dictionary potentially representing an event.
-              Common expected keys: "event_type", "timestamp".
+              Common expected keys: "eventType", "timestamp".
               Type-specific keys:
                 - For "CREATE_NODE", "UPDATE_NODE_ATTRIBUTES": "node_id" (str), "payload" (dict).
                 - For "CREATE_EDGE", "DELETE_EDGE": "node_id" (source, str),
                   "target_node_id" (str), "label" (str).
-              Optional common keys: "event_id" (str), "source" (str),
-                "correlationId" (str), "subjectEntity" (str),
-                "sourceService" (str).
+              Optional common keys: "eventId" (str), "sourceService" (str),
+                "correlationId" (str), "subjectEntity" (object with ``id`` and ``type``).
               "payload" (dict) is optional for edge events, defaulting to {}.
 
     Returns:
@@ -90,12 +90,12 @@ def parse_event(data: Dict[str, Any]) -> Event:
     logger.debug("Parsing event data: %s", data)
 
     # Basic presence and type checks for common fields
-    if "event_type" not in data:
-        logger.error("Missing required event field: event_type")
-        raise EventError("Missing required event field: event_type")
-    event_type = data["event_type"]
+    if "eventType" not in data:
+        logger.error("Missing required event field: eventType")
+        raise EventError("Missing required event field: eventType")
+    event_type = data["eventType"]
     if not isinstance(event_type, str):
-        msg = f"Invalid type for 'event_type': expected str, got {type(event_type).__name__}"
+        msg = f"Invalid type for 'eventType': expected str, got {type(event_type).__name__}"
         logger.error(msg)
         raise EventError(msg)
 
@@ -109,7 +109,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
         raise EventError(msg)
 
     # Validate optional event_id type
-    event_id_val = data.get("event_id")
+    event_id_val = data.get("eventId")
 
     # Get potential values, to be validated by type-specific logic or used if optional
     node_id_val = data.get("node_id")
@@ -123,7 +123,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
 
     if event_id_val is not None and not isinstance(event_id_val, str):
         msg = (
-            f"Invalid type for 'event_id': expected str, got {type(event_id_val).__name__}"
+            f"Invalid type for 'eventId': expected str, got {type(event_id_val).__name__}"
         )
         logger.error(msg)
         raise EventError(msg)
@@ -135,12 +135,23 @@ def parse_event(data: Dict[str, Any]) -> Event:
         logger.error(msg)
         raise EventError(msg)
 
-    if subject_entity_val is not None and not isinstance(subject_entity_val, str):
-        msg = (
-            f"Invalid type for 'subjectEntity': expected str, got {type(subject_entity_val).__name__}"
-        )
-        logger.error(msg)
-        raise EventError(msg)
+    if subject_entity_val is not None:
+        if not isinstance(subject_entity_val, dict):
+            msg = (
+                f"Invalid type for 'subjectEntity': expected object, got {type(subject_entity_val).__name__}"
+            )
+            logger.error(msg)
+            raise EventError(msg)
+        if not {"id", "type"} <= subject_entity_val.keys():
+            msg = "subjectEntity must contain 'id' and 'type'"
+            logger.error(msg)
+            raise EventError(msg)
+        if not isinstance(subject_entity_val.get("id"), str) or not isinstance(
+            subject_entity_val.get("type"), str
+        ):
+            msg = "subjectEntity 'id' and 'type' must be strings"
+            logger.error(msg)
+            raise EventError(msg)
 
     if source_service_val is not None and not isinstance(source_service_val, str):
         msg = (
@@ -210,7 +221,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
         event_type=event_type,
         timestamp=timestamp,
         payload=payload_val,  # Use payload_val which is defaulted to {} or the actual value
-        source=data.get("source"),
+        source=data.get("sourceService"),
         node_id=node_id_val,
         target_node_id=target_node_id_val,
         label=label_val,
