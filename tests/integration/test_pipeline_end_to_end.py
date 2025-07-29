@@ -175,3 +175,28 @@ def test_generic_events_go_to_ledger(tmp_path, monkeypatch, caplog):
     assert ledger.last_processed_offset == 0
     assert not graph.get_all_node_ids()
     assert any("Unknown event type" in rec.message for rec in caplog.records)
+
+
+def test_generic_enveloped_events_go_to_ledger(tmp_path, monkeypatch, caplog):
+    envelope = {
+        "schema_version": "1.0.0",
+        "event": {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}},
+    }
+    msg = DummyMessage(json.dumps(envelope).encode("utf-8"), 0)
+    consumer = DummyConsumer([msg])
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+
+    monkeypatch.setattr(graph_consumer, "Consumer", lambda conf: consumer)
+    monkeypatch.setattr(graph_consumer, "ssl_config", lambda: {})
+    monkeypatch.setattr(graph_consumer, "event_ledger", ledger)
+
+    graph = MockGraph()
+    with caplog.at_level("WARNING"):
+        graph_consumer.run_graph_consumer(graph, group_id="g")
+
+    assert ledger.range() == [
+        (0, {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}})
+    ]
+    assert ledger.last_processed_offset == 0
+    assert not graph.get_all_node_ids()
+    assert any("Unknown event type" in rec.message for rec in caplog.records)
