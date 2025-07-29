@@ -353,6 +353,28 @@ def test_semantic_search_invalid_dimension(monkeypatch: MonkeyPatch) -> None:
     assert res.json()["detail"] == "Invalid vector dimension"
 
 
+def test_semantic_search_invalid_k(monkeypatch: MonkeyPatch) -> None:
+    import numpy as np
+    import sys
+
+    sys.modules["numpy"] = np
+    monkeypatch.setattr(settings, "UME_LEDGER_COMPACTION_INTERVAL", 0.01, raising=False)
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [1.0, 0.0])
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    configure_graph(MockGraph())
+    store = app.state.vector_store
+    store.add("a", [1.0, 0.0])
+    with TestClient(app) as client:
+        token = _token(client)
+        res = client.post(
+            "/search/semantic",
+            json={"query": "foo", "k": 0},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert res.status_code == 400
+    assert res.json()["detail"] == "k must be positive"
+
+
 
 @pytest.mark.parametrize(  # type: ignore[misc]
     "method,path,body,params",
