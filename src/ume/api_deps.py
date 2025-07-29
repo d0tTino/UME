@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 import time
 import threading
+import inspect
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any
 
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -119,4 +120,20 @@ def get_vector_store() -> VectorStore:
     if store is None:
         raise HTTPException(status_code=500, detail="Vector store not configured")
     return store
+
+
+async def get_entity(
+    type: str,
+    id: str,
+    graph: IGraphAdapter = Depends(get_graph),
+) -> Dict[str, Any]:
+    """Return attributes for node ``id`` if its ``type`` matches."""
+    func = getattr(graph, "get_node")
+    if inspect.iscoroutinefunction(func):
+        attrs = await func(id)  # type: ignore[misc]
+    else:
+        attrs = func(id)
+    if attrs is None or attrs.get("type") != type:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return attrs
 
