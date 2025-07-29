@@ -307,6 +307,53 @@ def test_dashboard_endpoints(monkeypatch: MonkeyPatch) -> None:
     assert isinstance(res_events.json(), list)
 
 
+def test_semantic_search(monkeypatch: MonkeyPatch) -> None:
+    import numpy as np
+    import sys
+
+    sys.modules["numpy"] = np
+    monkeypatch.setattr(settings, "UME_LEDGER_COMPACTION_INTERVAL", 0.01, raising=False)
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [1.0, 0.0])
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    g = MockGraph()
+    g.add_node("a", {"val": 1})
+    g.add_node("b", {"val": 2})
+    configure_graph(g)
+    store = app.state.vector_store
+    store.add("a", [1.0, 0.0])
+    store.add("b", [0.0, 1.0])
+    with TestClient(app) as client:
+        token = _token(client)
+        res = client.post(
+            "/search/semantic",
+            json={"query": "foo", "k": 1},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert res.status_code == 200
+    assert res.json() == {"nodes": [{"id": "a", "attributes": {"val": 1}}]}
+
+
+def test_semantic_search_invalid_dimension(monkeypatch: MonkeyPatch) -> None:
+    import numpy as np
+    import sys
+
+    sys.modules["numpy"] = np
+    monkeypatch.setattr(settings, "UME_LEDGER_COMPACTION_INTERVAL", 0.01, raising=False)
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [0.0, 1.0])
+    configure_vector_store(VectorStore(dim=2, use_gpu=False))
+    configure_graph(MockGraph())
+    app.state.vector_store.dim = 3
+    with TestClient(app) as client:
+        token = _token(client)
+        res = client.post(
+            "/search/semantic",
+            json={"query": "foo", "k": 1},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert res.status_code == 400
+    assert res.json()["detail"] == "Invalid vector dimension"
+
+
 @pytest.mark.parametrize(  # type: ignore[misc]
     "method,path,body,params",
     [
@@ -326,6 +373,7 @@ def test_dashboard_endpoints(monkeypatch: MonkeyPatch) -> None:
             None,
             [("vector", 0.0), ("vector", 0.0)],
         ),
+        ("post", "/search/semantic", {"query": "x", "k": 1}, None),
         ("get", "/metrics", None, None),
         ("get", "/metrics/summary", None, None),
         ("get", "/dashboard/stats", None, None),

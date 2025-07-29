@@ -51,6 +51,31 @@ def api_search_vectors(
     return {"ids": ids}
 
 
+class SemanticSearchRequest(BaseModel):
+    query: str
+    k: int = 5
+
+
+@router.post("/search/semantic")
+def api_semantic_search(
+    req: SemanticSearchRequest,
+    _: str = Depends(deps.get_current_role),
+    store: VectorStore = Depends(deps.get_vector_store),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+) -> Dict[str, Any]:
+    """Return attributes for the ``k`` nearest nodes to ``req.query``."""
+    vector = generate_embedding(req.query)
+    if len(vector) != store.dim:
+        raise HTTPException(status_code=400, detail="Invalid vector dimension")
+    ids = store.query(vector, k=req.k)
+    nodes = []
+    for node_id in ids:
+        attrs = graph.get_node(node_id)
+        if attrs is not None:
+            nodes.append({"id": node_id, "attributes": attrs})
+    return {"nodes": nodes}
+
+
 @router.get("/recall")
 def api_recall(
     query: str | None = Query(None),
