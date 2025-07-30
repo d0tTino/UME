@@ -93,7 +93,7 @@ def test_integration_clients(tmp_path) -> None:
                 c._client = httpx.Client(base_url=str(client.base_url), transport=client._transport)  # type: ignore[attr-defined]
                 c.send_events([event])
                 result = c.recall({"vector": vec, "k": 1})
-            assert graph.get_node(nid) == {"text": nid}
+            assert graph.get_node(nid) == {"text": nid, "tokens": [nid]}
             assert "nodes" in result
 
 
@@ -126,8 +126,8 @@ async def test_async_langgraph_and_letta(tmp_path) -> None:
             ])
             result2 = await lt.recall({"vector": [0.0, 1.0], "k": 1})
 
-        assert graph.get_node("n1") == {"text": "n1"}
-        assert graph.get_node("n2") == {"text": "n2"}
+        assert graph.get_node("n1") == {"text": "n1", "tokens": ["n1"]}
+        assert graph.get_node("n2") == {"text": "n2", "tokens": ["n2"]}
         assert "nodes" in result1
         assert "nodes" in result2
 

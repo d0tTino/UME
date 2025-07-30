@@ -35,6 +35,21 @@ def test_apply_create_node_event_success(graph: PersistentGraph):
     assert graph.node_count == 1
 
 
+def test_create_node_adds_tokens_from_text(graph: PersistentGraph) -> None:
+    """CREATE_NODE with a text field should store tokens."""
+    node_id = "node_text"
+    event = Event(
+        event_type=EventType.CREATE_NODE,
+        timestamp=int(time.time()),
+        payload={"node_id": node_id, "attributes": {"text": "Alpha Beta"}},
+    )
+    apply_event_to_graph(event, graph)
+    assert graph.get_node(node_id) == {
+        "text": "Alpha Beta",
+        "tokens": ["alpha", "beta"],
+    }
+
+
 def test_apply_create_node_event_no_attributes(graph: PersistentGraph):
     """Test successfully creating a new node with no initial attributes."""
     node_id = "node_no_attr"

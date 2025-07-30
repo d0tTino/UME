@@ -102,6 +102,7 @@ app.add_route(
         on_get=make_graphiql_handler(),
         context_value=lambda request: {"app": app},
     ),
+    methods=["GET", "POST"],
 )
 
 

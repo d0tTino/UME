@@ -7,6 +7,17 @@ from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .graph_schema import load_default_schema
 from .utils import tokenize
 
+
+def _add_tokens(attrs: dict[str, object]) -> None:
+    """Tokenize textual fields and store the tokens list if any."""
+    tokens: list[str] = []
+    for key in ("name", "text", "content"):
+        val = attrs.get(key)
+        if isinstance(val, str):
+            tokens.extend(tokenize(val))
+    if tokens:
+        attrs["tokens"] = tokens
+
 DEFAULT_VERSION = load_default_schema().version
 
 
@@ -77,13 +88,7 @@ def apply_event_to_graph(
             schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
             schema.validate_node_type(str(node_type))
 
-        tokens: list[str] = []
-        for key in ("name", "text", "content"):
-            val = attributes.get(key)
-            if isinstance(val, str):
-                tokens.extend(tokenize(val))
-        if tokens:
-            attributes["tokens"] = tokens
+        _add_tokens(attributes)
 
         graph.add_node(node_id, attributes)  # Call adapter's add_node
         for listener in get_registered_listeners():
@@ -115,13 +120,7 @@ def apply_event_to_graph(
                 f"'attributes' dictionary cannot be empty for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
             )
 
-        tokens = []
-        for key in ("name", "text", "content"):
-            val = attributes.get(key)
-            if isinstance(val, str):
-                tokens.extend(tokenize(val))
-        if tokens:
-            attributes["tokens"] = tokens
+        _add_tokens(attributes)
 
         graph.update_node(node_id, attributes)  # Call adapter's update_node
         for listener in get_registered_listeners():
