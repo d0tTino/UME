@@ -166,8 +166,8 @@ async def _start_token_cleanup() -> None:
 
     _, stop = start_ledger_compaction_scheduler(
         event_ledger,
-        interval_seconds=settings.UME_LEDGER_COMPACTION_INTERVAL,
-        offset_window=settings.UME_LEDGER_OFFSET_WINDOW,
+        interval_seconds=getattr(settings, "UME_LEDGER_COMPACTION_INTERVAL", 24 * 3600),
+        offset_window=getattr(settings, "UME_LEDGER_OFFSET_WINDOW", 1000),
     )
     _ledger_compaction_stop = stop
 

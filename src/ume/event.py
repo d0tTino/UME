@@ -103,11 +103,10 @@ def parse_event(data: Dict[str, Any]) -> Event:
         logger.error(msg)
         raise EventError(msg)
     # Map to the known EventType enum when possible but allow arbitrary strings
-    event_type: EventType | str
     try:
-        event_type = EventType(event_type_raw)
+        event_type = EventType(event_type)
     except ValueError:
-        event_type = event_type_raw
+        pass
 
     if "timestamp" not in data:
         logger.error("Missing required event field: timestamp")
