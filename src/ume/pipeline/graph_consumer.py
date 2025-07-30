@@ -25,6 +25,7 @@ BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
 NODE_TOPIC = settings.KAFKA_NODE_TOPIC
 EDGE_TOPIC = settings.KAFKA_EDGE_TOPIC
 DEFAULT_GROUP_ID = settings.KAFKA_GROUP_ID
+VALID_EVENT_TYPES = {e.value for e in EventType}
 
 
 def run_graph_consumer(
@@ -82,7 +83,7 @@ def run_graph_consumer(
                 logger.error("Invalid event skipped: %s", exc)
                 continue
 
-            if event.event_type not in {e.value for e in EventType}:
+            if event.event_type not in VALID_EVENT_TYPES:
                 try:
                     event_ledger.append(msg.offset(), payload_camel)
                 except ValueError as exc:  # pragma: no cover - unlikely duplicate offset

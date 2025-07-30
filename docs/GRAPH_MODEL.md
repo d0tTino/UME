@@ -55,6 +55,19 @@ Each edge is directed and labeled and may carry optional properties in the
 future.  At minimum an edge stores the source node ID, target node ID and
 its label.
 
+## Event Sourcing
+
+Events entering the system contain an `eventType` string describing the
+operation (for example `CREATE_NODE` or `DELETE_EDGE`). The parser attempts to
+map this value to the :class:`~ume.event.EventType` enumeration but preserves the
+original text when the value is unknown. This allows custom event categories to
+flow through the pipeline and be stored in the ledger without schema changes.
+
+During sanitization the Privacy Agent tokenizes common text fields such as
+`name`, `text` and `content`. The resulting list of tokens is attached to the
+event payload under the `tokens` key so that downstream components can create
+vector embeddings consistently.
+
 ## Versioning
 
 The schema is expected to evolve.  Node and edge type definitions should be
