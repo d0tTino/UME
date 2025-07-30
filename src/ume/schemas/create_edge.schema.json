@@ -12,11 +12,10 @@
       "description": "Type of event"
     },
     "timestamp": {
-      "anyOf": [
-        {"type": "integer"},
-        {"type": "string", "format": "date-time"}
-      ],
-      "description": "Unix timestamp or ISO8601 string when the event occurred"
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the event occurred in ISO 8601 format"
+
     },
     "eventId": {
       "type": "string",
