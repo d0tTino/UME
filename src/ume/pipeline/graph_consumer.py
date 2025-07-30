@@ -76,6 +76,10 @@ def run_graph_consumer(
             try:
                 data_camel = json.loads(msg.value().decode("utf-8"))
                 data = event_to_snake(data_camel)
+                validation_data = dict(data)
+                if "event_type" in validation_data:
+                    validation_data["eventType"] = validation_data.pop("event_type")
+                validate_event_dict(validation_data)
                 payload = data["event"] if "event" in data else data
                 payload_camel = event_to_camel(payload)
                 event = parse_event(payload_camel)

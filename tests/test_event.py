@@ -128,10 +128,10 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
             {"eventType": 123, "timestamp": int(time.time()), "payload": {}},
             "Invalid type for 'eventType'",
         ),
-        # Case 6: Invalid type for 'timestamp' (str instead of int)
+        # Case 6: Invalid timestamp format
         (
-            {"eventType": "test", "timestamp": "not-an-int", "payload": {}},
-            "Invalid type for 'timestamp'",
+            {"eventType": "test", "timestamp": "2023-13-01T00:00:00Z", "payload": {}},
+            "Invalid timestamp format",
         ),
         # Case 7: Invalid type for 'payload' (str instead of dict)
         (
