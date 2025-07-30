@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Optional, TYPE_CHECKING
 
@@ -138,8 +139,17 @@ class EventLedger:
             with open(self._plain_path, "rb") as f:
                 data = f.read()
             encrypted = self._fernet.encrypt(data)
-            with open(self.db_path, "wb") as f:
-                f.write(encrypted)
+            tmp_dir = Path(self.db_path).parent
+            tmp_file = tempfile.NamedTemporaryFile(
+                "wb", delete=False, dir=tmp_dir
+            )
+            try:
+                with tmp_file:
+                    tmp_file.write(encrypted)
+                os.replace(tmp_file.name, self.db_path)
+            finally:
+                if os.path.exists(tmp_file.name):
+                    os.remove(tmp_file.name)
             if os.path.exists(self._plain_path):
                 os.remove(self._plain_path)
 
