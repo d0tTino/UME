@@ -200,6 +200,24 @@ curl -X POST http://localhost:8000/graphql \
   -d '{"query":"{ node(id: \"n1\") { id } }"}'
 ```
 
+Another query returns all nodes with their attributes:
+
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ nodes { id attributes } }"}'
+```
+
+And to retrieve every edge in the graph:
+
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ edges { source target label } }"}'
+```
+
 ### GET `/recall`
 Retrieve attribute data for the `k` nearest nodes to a query.
 

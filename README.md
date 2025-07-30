@@ -622,6 +622,25 @@ curl -X GET http://localhost:8000/entities/user/n1 \
   -H "Authorization: Bearer <token>"
 ```
 
+### GraphQL Queries
+Use the GraphQL endpoint at `/graphql` for advanced retrievals. List all nodes:
+
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ nodes { id attributes } }"}'
+```
+
+Fetch every edge in the graph:
+
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ edges { source target label } }"}'
+```
+
 ### Migrate Events to the New Schema
 Existing events can be rewritten using the latest schema version. Run the
 migration helper and redirect the output to a file:
