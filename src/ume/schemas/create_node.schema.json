@@ -15,6 +15,7 @@
       "type": "string",
       "format": "date-time",
       "description": "Timestamp when the event occurred in ISO 8601 format"
+
     },
     "eventId": {
       "type": "string",

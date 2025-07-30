@@ -94,7 +94,7 @@ def test_privacy_agent_end_to_end(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
         "eventType": "CREATE_NODE",
-        "timestamp": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
         "nodeId": "n1",
         "payload": payload,
     }
@@ -135,7 +135,7 @@ def test_privacy_agent_periodic_flush(privacy_agent, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
         "eventType": "CREATE_NODE",
-        "timestamp": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
         "nodeId": "n1",
         "payload": payload,
     }
@@ -175,7 +175,7 @@ def test_privacy_agent_audit_log_written(tmp_path, monkeypatch):
     payload = {"email": "user@example.com"}
     event = {
         "eventType": "CREATE_NODE",
-        "timestamp": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
         "nodeId": "n1",
         "payload": payload,
     }
@@ -236,7 +236,7 @@ def test_policy_violation_goes_to_quarantine(privacy_agent, monkeypatch):
     payload = {"node_id": "n1"}
     event = {
         "eventType": "CREATE_NODE",
-        "timestamp": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
         "nodeId": "n1",
         "payload": payload,
     }
