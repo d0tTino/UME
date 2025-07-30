@@ -106,7 +106,10 @@ def run_privacy_agent() -> None:
             try:
                 data_camel = json.loads(raw_bytes.decode("utf-8"))
                 data = event_to_snake(data_camel)
-                validate_event_dict(data)
+                validation_data = dict(data)
+                if "event_type" in validation_data:
+                    validation_data["eventType"] = validation_data.pop("event_type")
+                validate_event_dict(validation_data)
             except (json.JSONDecodeError, ValidationError) as exc:
                 logger.error("Invalid event received: %s", exc)
                 try:

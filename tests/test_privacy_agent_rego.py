@@ -58,7 +58,7 @@ class FakeProducer:
 def test_rego_policy_denies_event(monkeypatch):
     event = {
         "eventType": "CREATE_NODE",
-        "timestamp": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
         "nodeId": "forbidden",
         "payload": {"node_id": "forbidden", "attributes": {}},
     }
@@ -105,7 +105,7 @@ def _setup_agent(monkeypatch: pytest.MonkeyPatch, consumer: FakeConsumer, produc
 def test_event_without_consent_goes_to_quarantine(monkeypatch: pytest.MonkeyPatch) -> None:
     event = {
         "eventType": "CREATE_NODE",
-        "timestamp": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
         "nodeId": "n1",
         "payload": {"node_id": "n1", "user_id": "u1", "scope": "profile", "attributes": {}},
     }
@@ -126,7 +126,7 @@ def test_event_without_consent_goes_to_quarantine(monkeypatch: pytest.MonkeyPatc
 def test_event_with_consent_published(monkeypatch: pytest.MonkeyPatch) -> None:
     event = {
         "eventType": "CREATE_NODE",
-        "timestamp": 1,
+        "timestamp": "2023-01-01T00:00:00Z",
         "nodeId": "n2",
         "payload": {"node_id": "n2", "user_id": "u1", "scope": "profile", "attributes": {}},
     }
