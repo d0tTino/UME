@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Any, Optional
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,8 @@ def parse_event(data: Dict[str, Any]) -> Event:
 
     Args:
         data (Dict[str, Any]): A dictionary potentially representing an event.
-              Common expected keys: "eventType", "timestamp".
+              Common expected keys: "eventType", "timestamp" (integer Unix
+              timestamp or ISO 8601 formatted string).
               Type-specific keys:
                 - For "CREATE_NODE", "UPDATE_NODE_ATTRIBUTES": "node_id" (str), "payload" (dict).
                 - For "CREATE_EDGE", "DELETE_EDGE": "node_id" (source, str),
@@ -111,9 +113,21 @@ def parse_event(data: Dict[str, Any]) -> Event:
     if "timestamp" not in data:
         logger.error("Missing required event field: timestamp")
         raise EventError("Missing required event field: timestamp")
-    timestamp = data["timestamp"]
-    if not isinstance(timestamp, int):
-        msg = f"Invalid type for 'timestamp': expected int, got {type(timestamp).__name__}"
+    timestamp_raw = data["timestamp"]
+    if isinstance(timestamp_raw, int):
+        timestamp_int = timestamp_raw
+    elif isinstance(timestamp_raw, str):
+        try:
+            dt = datetime.fromisoformat(timestamp_raw.replace("Z", "+00:00"))
+        except ValueError:
+            msg = "Invalid ISO 8601 timestamp format"
+            logger.error(msg)
+            raise EventError(msg)
+        timestamp_int = int(dt.timestamp())
+    else:
+        msg = (
+            f"Invalid type for 'timestamp': expected int or ISO 8601 string, got {type(timestamp_raw).__name__}"
+        )
         logger.error(msg)
         raise EventError(msg)
 
@@ -248,7 +262,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
     return Event(
         event_id=event_id_val if event_id_val is not None else str(uuid.uuid4()),
         event_type=event_type,
-        timestamp=timestamp,
+        timestamp=timestamp_int,
         payload=payload_val,  # Use payload_val which is defaulted to {} or the actual value
         source=data.get("sourceService"),
         node_id=node_id_val,

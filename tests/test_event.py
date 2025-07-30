@@ -1,6 +1,7 @@
 # tests/test_event.py
 import pytest
 import time
+from datetime import datetime, timezone
 from ume import Event, EventType, parse_event, EventError  # EventType constants
 
 
@@ -71,6 +72,24 @@ def test_parse_event_custom_type_minimal():
     assert event.payload == {}
 
 
+def test_parse_event_timestamp_iso8601():
+    """Parsing accepts ISO 8601 timestamp strings."""
+    ts = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    data = {"eventType": "test", "timestamp": ts.isoformat(), "payload": {}}
+    event = parse_event(data)
+    assert event.timestamp == int(ts.timestamp())
+
+
+def test_parse_event_timestamp_iso8601_z():
+    """ISO 8601 with trailing 'Z' is supported."""
+    ts = datetime(2024, 5, 6, 7, 8, 9, tzinfo=timezone.utc)
+    iso_z = ts.isoformat().replace("+00:00", "Z")
+    data = {"eventType": "test", "timestamp": iso_z, "payload": {}}
+    event = parse_event(data)
+    assert event.timestamp == int(ts.timestamp())
+
+
+
 @pytest.mark.parametrize(
     "event_type, extra_data",
     [
@@ -128,10 +147,10 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
             {"eventType": 123, "timestamp": int(time.time()), "payload": {}},
             "Invalid type for 'eventType'",
         ),
-        # Case 6: Invalid type for 'timestamp' (str instead of int)
+        # Case 6: Invalid ISO 8601 timestamp string
         (
-            {"eventType": "test", "timestamp": "not-an-int", "payload": {}},
-            "Invalid type for 'timestamp'",
+            {"eventType": "test", "timestamp": "bad-date", "payload": {}},
+            "Invalid ISO 8601 timestamp format",
         ),
         # Case 7: Invalid type for 'payload' (str instead of dict)
         (
