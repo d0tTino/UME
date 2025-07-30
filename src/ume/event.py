@@ -90,10 +90,13 @@ def parse_event(data: Dict[str, Any]) -> Event:
     logger.debug("Parsing event data: %s", data)
 
     # Basic presence and type checks for common fields
-    if "eventType" not in data:
+    if "eventType" in data:
+        event_type = data["eventType"]
+    elif "event_type" in data:
+        event_type = data["event_type"]
+    else:
         logger.error("Missing required event field: eventType")
         raise EventError("Missing required event field: eventType")
-    event_type = data["eventType"]
     if not isinstance(event_type, str):
         msg = f"Invalid type for 'eventType': expected str, got {type(event_type).__name__}"
         logger.error(msg)

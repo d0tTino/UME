@@ -22,6 +22,17 @@ from ..event_ledger import event_ledger
 from ..plugins.alignment import load_plugins, get_plugins, PolicyViolationError
 
 
+def _add_tokens(attrs: Dict[str, object]) -> None:
+    """Tokenize textual fields and store the tokens list if any."""
+    tokens: List[str] = []
+    for key in ("name", "text", "content"):
+        val = attrs.get(key)
+        if isinstance(val, str):
+            tokens.extend(tokenize(val))
+    if tokens:
+        attrs["tokens"] = tokens
+
+
 configure_logging()
 logger = logging.getLogger(__name__)
 
@@ -146,13 +157,7 @@ def run_privacy_agent() -> None:
 
             original_payload = data.get("payload", {})
             redacted_payload, was_redacted = redact_event_payload(original_payload)
-            tokens: List[str] = []
-            for key in ("name", "text", "content"):
-                val = redacted_payload.get(key)
-                if isinstance(val, str):
-                    tokens.extend(tokenize(val))
-            if tokens:
-                redacted_payload["tokens"] = tokens
+            _add_tokens(redacted_payload)
             data["payload"] = redacted_payload
 
             dest_topic = CLEAN_TOPIC if (has_consent or not (user_id and scope)) else QUARANTINE_TOPIC

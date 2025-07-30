@@ -54,7 +54,7 @@ def test_post_event_success(client_and_graph):
     }
     res = client.post("/events", json=event, headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 200
-    assert g.get_node("n1") == {"text": "hi"}
+    assert g.get_node("n1") == {"text": "hi", "tokens": ["hi"]}
 
 
 def test_post_event_invalid(client_and_graph):
@@ -100,8 +100,8 @@ def test_post_events_batch(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert g.get_node("n1") == {"text": "a"}
-    assert g.get_node("n2") == {"text": "b"}
+    assert g.get_node("n1") == {"text": "a", "tokens": ["a"]}
+    assert g.get_node("n2") == {"text": "b", "tokens": ["b"]}
 
 
 def test_post_events_batch_invalid(client_and_graph) -> None:
@@ -140,7 +140,7 @@ def test_store_event_success(client_and_graph) -> None:
     }
     res = client.post("/store", json=event, headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 200
-    assert g.get_node("n3") == {"text": "store"}
+    assert g.get_node("n3") == {"text": "store", "tokens": ["store"]}
 
 
 def test_store_events_batch(client_and_graph) -> None:
@@ -166,5 +166,5 @@ def test_store_events_batch(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert g.get_node("n4") == {"text": "x"}
-    assert g.get_node("n5") == {"text": "y"}
+    assert g.get_node("n4") == {"text": "x", "tokens": ["x"]}
+    assert g.get_node("n5") == {"text": "y", "tokens": ["y"]}

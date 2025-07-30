@@ -6,6 +6,17 @@ from types import TracebackType
 
 import httpx
 import json
+from ..utils import event_to_camel
+
+
+def _camel_event(e: Mapping[str, Any]) -> dict[str, Any]:
+    """Convert ``event_type`` to ``eventType`` while keeping other keys snake_case."""
+    data = event_to_camel(dict(e))
+    if "nodeId" in data:
+        data["node_id"] = data.pop("nodeId")
+    if "targetNodeId" in data:
+        data["target_node_id"] = data.pop("targetNodeId")
+    return data
 
 
 class IntegrationError(Exception):
@@ -25,7 +36,7 @@ class BaseClient:
 
     def send_events(self, events: Iterable[Mapping[str, Any]]) -> None:
         headers = self._auth_headers()
-        events_list = list(events)
+        events_list = [_camel_event(e) for e in events]
         if not events_list:
             return
         try:
@@ -44,7 +55,7 @@ class BaseClient:
     def store_events(self, events: Iterable[Mapping[str, Any]]) -> None:
         """Alias for :meth:`send_events` that uses the ``/store`` endpoint."""
         headers = self._auth_headers()
-        events_list = list(events)
+        events_list = [_camel_event(e) for e in events]
         if not events_list:
             return
         try:
@@ -130,7 +141,7 @@ class AsyncBaseClient:
 
     async def send_events(self, events: Iterable[Mapping[str, Any]]) -> None:
         headers = self._auth_headers()
-        events_list = list(events)
+        events_list = [_camel_event(e) for e in events]
         if not events_list:
             return
         try:
@@ -149,7 +160,7 @@ class AsyncBaseClient:
     async def store_events(self, events: Iterable[Mapping[str, Any]]) -> None:
         """Alias for :meth:`send_events` that uses the ``/store`` endpoint."""
         headers = self._auth_headers()
-        events_list = list(events)
+        events_list = [_camel_event(e) for e in events]
         if not events_list:
             return
         try:
