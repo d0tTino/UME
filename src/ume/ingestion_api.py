@@ -10,6 +10,7 @@ from confluent_kafka import Producer, KafkaException
 
 from .config import settings
 from .schema_utils import validate_event_dict
+from .metrics import INGEST_EVENTS_TOTAL
 from .logging_utils import configure_logging
 from .utils import ssl_config, event_to_snake
 
@@ -27,14 +28,14 @@ app = FastAPI(
 )
 
 
-@app.on_event("startup")  # type: ignore[misc]
+@app.on_event("startup")
 def _init_producer() -> None:
     """Initialize the Kafka producer."""
     global producer
     producer = Producer(producer_conf)
 
 
-@app.post("/events", status_code=202)  # type: ignore[misc]
+@app.post("/events", status_code=202)
 async def post_event(request: Request) -> JSONResponse:
     """Validate the request body and publish it to Kafka."""
     try:
@@ -42,7 +43,8 @@ async def post_event(request: Request) -> JSONResponse:
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
     try:
-        validate_event_dict(event_to_snake(data))
+        snake_data = event_to_snake(data)
+        validate_event_dict(data)
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -54,6 +56,7 @@ async def post_event(request: Request) -> JSONResponse:
             json.dumps(data).encode("utf-8"),
         )
         producer.poll(0)  # Trigger delivery callbacks without blocking
+        INGEST_EVENTS_TOTAL.labels(event_type=snake_data["event_type"]).inc()
     except KafkaException as exc:
         logger.error("Failed to produce event: %s", exc)
         raise HTTPException(status_code=500, detail="Failed to publish event")
@@ -61,7 +64,7 @@ async def post_event(request: Request) -> JSONResponse:
     return JSONResponse(status_code=202, content={"status": "accepted"})
 
 
-@app.on_event("shutdown")  # type: ignore[misc]
+@app.on_event("shutdown")
 def _close_producer() -> None:
     if producer is None:
         return

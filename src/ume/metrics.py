@@ -30,6 +30,19 @@ STALE_VECTOR_COUNT = Gauge(
     "Current number of vectors exceeding the freshness limit",
 )
 
+# Ingestion metrics
+INGEST_EVENTS_TOTAL = Counter(
+    "ume_ingest_events_total",
+    "Number of ingested events by type",
+    ["event_type"],
+)
+
+# Endpoint latency metrics
+SEMANTIC_SEARCH_LATENCY = Histogram(
+    "ume_semantic_search_latency_seconds",
+    "Latency of /search/semantic in seconds",
+)
+
 # Recall metrics
 RECALL_SCORE = Histogram(
     "ume_recall_score",
@@ -75,4 +88,6 @@ __all__ = [
     "RECALL_LATENCY",
     "RECALL_LATENCY_MS",
     "LEDGER_COMPACTED_BYTES",
+    "INGEST_EVENTS_TOTAL",
+    "SEMANTIC_SEARCH_LATENCY",
 ]

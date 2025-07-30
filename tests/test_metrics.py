@@ -1,4 +1,5 @@
 import pytest
+from pytest import MonkeyPatch
 from fastapi.testclient import TestClient
 import importlib.util
 import os
@@ -106,6 +107,8 @@ REQUEST_LATENCY = metrics_module.REQUEST_LATENCY
 RECALL_LATENCY = metrics_module.RECALL_LATENCY
 RECALL_LATENCY_MS = metrics_module.RECALL_LATENCY_MS
 LEDGER_COMPACTED_BYTES = metrics_module.LEDGER_COMPACTED_BYTES
+INGEST_EVENTS_TOTAL = metrics_module.INGEST_EVENTS_TOTAL
+SEMANTIC_SEARCH_LATENCY = metrics_module.SEMANTIC_SEARCH_LATENCY
 
 spec_graph = importlib.util.spec_from_file_location("ume.graph", root / "src" / "ume" / "graph.py")
 assert spec_graph and spec_graph.loader
@@ -168,9 +171,11 @@ def _token(client: TestClient) -> str:
 def reset_metrics() -> Generator[None, None, None]:
     REQUEST_COUNT.clear()
     REQUEST_LATENCY.clear()
+    INGEST_EVENTS_TOTAL.clear()
     yield
     REQUEST_COUNT.clear()
     REQUEST_LATENCY.clear()
+    INGEST_EVENTS_TOTAL.clear()
 
 
 def _count_samples() -> List[Sample]:
@@ -204,6 +209,23 @@ def _recall_latency_ms_counts() -> List[float]:
     return [
         s.value
         for m in RECALL_LATENCY_MS.collect()
+        for s in m.samples
+        if s.name.endswith("_count")
+    ]
+
+
+def _ingest_event_count(event_type: str) -> float:
+    for m in INGEST_EVENTS_TOTAL.collect():
+        for s in m.samples:
+            if s.name.endswith("_total") and s.labels.get("event_type") == event_type:
+                return float(s.value)
+    return 0.0
+
+
+def _semantic_latency_counts() -> List[float]:
+    return [
+        s.value
+        for m in SEMANTIC_SEARCH_LATENCY.collect()
         for s in m.samples
         if s.name.endswith("_count")
     ]
@@ -279,3 +301,49 @@ def test_ledger_compacted_bytes_metric_recorded() -> None:
     tok = _token(client)
     client.get("/metrics", headers={"Authorization": f"Bearer {tok}"})
     assert _ledger_compacted_bytes() == 123
+
+
+def test_ingest_events_counter_increment(monkeypatch: MonkeyPatch) -> None:
+    from ume import ingestion_api as ingestion_api_mod
+
+    class FakeProducer:
+        def __init__(self) -> None:
+            self.produced: list[tuple[str, bytes]] = []
+
+        def produce(self, topic: str, value: bytes) -> None:
+            self.produced.append((topic, value))
+
+        def poll(self, _: int) -> None:
+            pass
+
+        def flush(self) -> None:
+            pass
+
+    prod = FakeProducer()
+    monkeypatch.setattr(ingestion_api_mod, "Producer", lambda conf: prod)
+    with TestClient(ingestion_api_mod.app) as client:
+        before = _ingest_event_count("CREATE_NODE")
+        event = {"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {}}
+        res = client.post("/events", json=event)
+        assert res.status_code == 202
+        assert _ingest_event_count("CREATE_NODE") == before + 1
+
+
+def test_semantic_search_latency_metric_recorded(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda _: [1.0, 0.0])
+    configure_vector_store(DummyVectorStore(dim=2))
+    app.state.vector_store = DummyVectorStore(dim=2)
+    g = MockGraph()
+    g.add_node("a", {"val": 1})
+    configure_graph(g)
+    app.state.vector_store.add("a", [1.0, 0.0])
+    with TestClient(app) as client:
+        tok = _token(client)
+        before = sum(_semantic_latency_counts())
+        res = client.post(
+            "/search/semantic",
+            json={"query": "foo", "k": 1},
+            headers={"Authorization": f"Bearer {tok}"},
+        )
+        assert res.status_code == 200
+        assert sum(_semantic_latency_counts()) > before

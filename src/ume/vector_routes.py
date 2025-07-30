@@ -13,8 +13,13 @@ from pydantic import BaseModel
 from . import api_deps as deps
 from .vector_store import VectorStore
 from .graph_adapter import IGraphAdapter
-from .embedding import generate_embedding
-from .metrics import RECALL_SCORE, RECALL_LATENCY, RECALL_LATENCY_MS
+from . import embedding
+from .metrics import (
+    RECALL_SCORE,
+    RECALL_LATENCY,
+    RECALL_LATENCY_MS,
+    SEMANTIC_SEARCH_LATENCY,
+)
 
 router = APIRouter()
 
@@ -64,7 +69,8 @@ def api_semantic_search(
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Return attributes for the ``k`` nearest nodes to ``req.query``."""
-    vector = generate_embedding(req.query)
+    start = time.perf_counter()
+    vector = embedding.generate_embedding(req.query)
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
     if req.k <= 0:
@@ -75,6 +81,7 @@ def api_semantic_search(
         attrs = graph.get_node(node_id)
         if attrs is not None:
             nodes.append({"id": node_id, "attributes": attrs})
+    SEMANTIC_SEARCH_LATENCY.observe(time.perf_counter() - start)
     return {"nodes": nodes}
 
 
@@ -91,7 +98,7 @@ def api_recall(
     if query is None and vector is None:
         raise HTTPException(status_code=400, detail="query or vector required")
     if vector is None and query is not None:
-        vector = generate_embedding(query)
+        vector = embedding.generate_embedding(query)
     assert vector is not None
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
@@ -127,7 +134,7 @@ async def api_recall_stream(
     if query is None and vector is None:
         raise HTTPException(status_code=400, detail="query or vector required")
     if vector is None and query is not None:
-        vector = generate_embedding(query)
+        vector = embedding.generate_embedding(query)
     assert vector is not None
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
