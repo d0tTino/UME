@@ -1,6 +1,5 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
 import os
-import re
 
 
 def ssl_config() -> Dict[str, str]:
@@ -54,10 +53,4 @@ def event_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-_TOKEN_RE = re.compile(r"\b\w+\b")
-
-
-def tokenize(text: str) -> List[str]:
-    """Return a list of lowercase tokens from ``text``."""
-    return _TOKEN_RE.findall(text.lower())
 

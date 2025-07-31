@@ -31,7 +31,7 @@ def test_apply_create_node_event_success(graph: PersistentGraph):
     apply_event_to_graph(event, graph)
     assert graph.node_exists(node_id)
     stored = graph.get_node(node_id)
-    assert stored == {**attributes, "tokens": ["test", "node"]}
+    assert stored == {**attributes, "tokens": ["Test", "Node"]}
     assert graph.node_count == 1
 
 
@@ -46,7 +46,7 @@ def test_create_node_adds_tokens_from_text(graph: PersistentGraph) -> None:
     apply_event_to_graph(event, graph)
     assert graph.get_node(node_id) == {
         "text": "Alpha Beta",
-        "tokens": ["alpha", "beta"],
+        "tokens": ["Alpha", "Beta"],
     }
 
 
@@ -132,7 +132,7 @@ def test_update_node_adds_tokens(graph: PersistentGraph) -> None:
         payload={"node_id": node_id, "attributes": {"content": "Hello world"}},
     )
     apply_event_to_graph(event, graph)
-    assert graph.get_node(node_id) == {"content": "Hello world", "tokens": ["hello", "world"]}
+    assert graph.get_node(node_id) == {"content": "Hello world", "tokens": ["Hello", "world"]}
 
 
 def test_apply_update_node_attributes_node_not_exists(graph: PersistentGraph):
