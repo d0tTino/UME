@@ -103,10 +103,28 @@ List entries in the event ledger.
 ### GET `/ledger/replay`
 Return a snapshot of the graph reconstructed from ledger events.
 - **Query parameters**: optional `end_offset`, optional `end_timestamp`.
+Example request:
+
+```bash
+curl -X GET -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/ledger/replay?end_offset=50"
+```
+
+If `end_timestamp` is supplied, replay stops once an event newer than the
+timestamp is encountered.
 
 ### GET `/graph/history`
 Return a snapshot of the graph as it existed at a past point in time.
 - **Query parameters**: optional `offset`, optional `timestamp`.
+Example request:
+
+```bash
+curl -X GET -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/graph/history?timestamp=1725000000"
+```
+
+This endpoint rebuilds the graph up to the provided cutoff and returns it as
+JSON.
 
 ### GET `/policies`
 List available Rego policy files.
