@@ -26,6 +26,17 @@ from ume.cli.compose import (
 quickstart = _quickstart
 from ume.cli.prompt import UMEPrompt, create_graph_adapter
 
+
+def _ledger_replay(end_offset: int | None, end_timestamp: int | None) -> None:
+    """Print a graph snapshot reconstructed from the event ledger."""
+
+    from ume.replay import snapshot_from_event_ledger
+
+    snapshot = snapshot_from_event_ledger(
+        end_offset=end_offset, end_timestamp=end_timestamp
+    )
+    print(json.dumps(snapshot, indent=2))
+
 # Detect if a lightweight stub was injected for testing.
 _UME_STUB = not hasattr(ume, "__file__")
 
@@ -432,6 +443,12 @@ def main() -> None:
     )
     snap_parser.add_argument("--interval", type=int, default=60)
 
+    replay_parser = sub.add_parser(
+        "ledger-replay", help="Output a snapshot built from the ledger"
+    )
+    replay_parser.add_argument("--end-offset", type=int)
+    replay_parser.add_argument("--end-timestamp", type=int)
+
     dossier_parser = sub.add_parser("dossier", help="Manage dossiers")
     dossier_sub = dossier_parser.add_subparsers(dest="dossier_cmd")
     view_p = dossier_sub.add_parser("view", help="View a dossier")
@@ -531,6 +548,9 @@ def main() -> None:
             return
         if args.command == "snapshot-schedule":
             _snapshot_schedule(args.interval)
+            return
+        if args.command == "ledger-replay":
+            _ledger_replay(args.end_offset, args.end_timestamp)
             return
         if args.command == "dossier":
             if args.dossier_cmd == "view":

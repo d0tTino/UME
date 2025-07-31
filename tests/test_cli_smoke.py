@@ -566,6 +566,76 @@ def test_cli_snapshot_schedule(
         sys.modules.pop(mod, None)
 
 
+def test_cli_ledger_replay(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    import importlib
+    import types
+    from ume.event_ledger import EventLedger
+
+    stub = types.ModuleType("ume")
+    stub.PersistentGraph = object
+    stub.RoleBasedGraphAdapter = object
+    stub.enable_snapshot_autosave_and_restore = lambda *_, **__: None
+    stub.parse_event = lambda *_: None
+    stub.apply_event_to_graph = lambda *_: None
+    stub.load_graph_into_existing = lambda *_: None
+    stub.snapshot_graph_to_file = lambda *_: None
+    stub.ProcessingError = Exception
+    stub.EventError = Exception
+    stub.SnapshotError = Exception
+    stub.IGraphAdapter = object
+    stub.log_audit_entry = lambda *_: None
+    stub.get_audit_entries = lambda *_: []
+    stub.DEFAULT_SCHEMA_MANAGER = object()
+    bench = types.ModuleType("ume.benchmarks")
+    bench.benchmark_vector_store = lambda *_: None
+    feder = types.ModuleType("ume.federation")
+    feder.MirrorMakerDriver = object  # type: ignore[assignment]
+    cli_pkg = types.ModuleType("ume.cli")
+    compose_pkg = types.ModuleType("ume.cli.compose")
+    compose_pkg._compose_down = lambda *_, **__: None
+    compose_pkg._compose_ps = lambda *_, **__: None
+    compose_pkg._quickstart = lambda *_, **__: None
+    cli_pkg.compose = compose_pkg
+    prompt_pkg = types.ModuleType("ume.cli.prompt")
+    prompt_pkg.UMEPrompt = object
+    prompt_pkg.create_graph_adapter = lambda *_, **__: None
+
+    event_mod = types.ModuleType("ume.event_ledger")
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    ledger.append(0, {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "a", "payload": {"node_id": "a"}})
+    event_mod.EventLedger = EventLedger
+    event_mod.event_ledger = ledger
+
+    sys.modules["ume"] = stub
+    sys.modules["ume.benchmarks"] = bench
+    sys.modules["ume.federation"] = feder
+    sys.modules["ume.cli"] = cli_pkg
+    sys.modules["ume.cli.compose"] = compose_pkg
+    sys.modules["ume.cli.prompt"] = prompt_pkg
+    sys.modules["ume.event_ledger"] = event_mod
+
+    import ume_cli as cli
+    importlib.reload(cli)
+
+    argv = sys.argv[:]
+    sys.argv = ["ume-cli", "ledger-replay", "--end-offset", "0"]
+    cli.main()
+    out = capsys.readouterr().out
+    sys.argv = argv
+
+    assert "\"a\"" in out
+
+    for mod in [
+        "ume.cli.compose",
+        "ume.cli",
+        "ume.federation",
+        "ume.benchmarks",
+        "ume.event_ledger",
+        "ume",
+    ]:
+        sys.modules.pop(mod, None)
+
+
 def test_cli_dossier_snapshot_schedule(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
