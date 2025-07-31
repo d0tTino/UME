@@ -86,7 +86,7 @@ Valid values for `UME_VECTOR_BACKEND` are:
 
 - `faiss` – local FAISS index written to `UME_VECTOR_INDEX`.
 - `chroma` – lightweight in-memory backend.
-- `milvus` – remote Milvus database service.
+- `milvus` – remote Milvus database service (requires optional `pymilvus` package; falls back to `chroma` if missing).
 - `memory` – example plugin backend for testing.
 
 When using `milvus`, set `UME_MILVUS_URI` to the server endpoint. Optional

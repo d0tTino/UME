@@ -23,6 +23,19 @@ try:  # optional dependency
 except Exception:  # pragma: no cover - optional dependency missing
     faiss = None
 
+try:  # optional dependency for MilvusBackend
+    from pymilvus import (
+        Collection,
+        CollectionSchema,
+        FieldSchema,
+        DataType,
+        connections,
+        utility,
+    )
+except Exception:  # pragma: no cover - optional dependency missing
+    Collection = None
+    CollectionSchema = FieldSchema = DataType = connections = utility = None
+
 logger = logging.getLogger(__name__)
 
 _BACKENDS: Dict[str, type[VectorBackend]] = {}
@@ -522,8 +535,154 @@ class ChromaBackend(VectorBackend):
             return dict(self.vector_ts)
 
 
+class MilvusBackend(VectorBackend):
+    """Backend using a Milvus server when ``pymilvus`` is installed."""
+
+    def __init__(
+        self,
+        dim: int,
+        *,
+        uri: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        collection: str = "ume_vectors",
+        query_latency_metric: Histogram | None = None,
+        index_size_metric: Gauge | None = None,
+    ) -> None:
+        self.dim = dim
+        self.query_latency_metric = query_latency_metric
+        self.index_size_metric = index_size_metric
+        if Collection is None:
+            logger.warning(
+                "pymilvus not installed, using ChromaBackend fallback"
+            )
+            self._fallback = ChromaBackend(
+                dim,
+                query_latency_metric=query_latency_metric,
+                index_size_metric=index_size_metric,
+            )
+            return
+
+        uri = uri or getattr(settings, "UME_MILVUS_URI", None)
+        user = user or getattr(settings, "UME_MILVUS_USER", None)
+        password = password or getattr(settings, "UME_MILVUS_PASSWORD", None)
+        connections.connect(uri=uri, user=user, password=password)
+
+        if not utility.has_collection(collection):
+            fields = [
+                FieldSchema(
+                    name="id",
+                    dtype=DataType.VARCHAR,
+                    is_primary=True,
+                    auto_id=False,
+                    max_length=64,
+                ),
+                FieldSchema(
+                    name="vector",
+                    dtype=DataType.FLOAT_VECTOR,
+                    dim=dim,
+                ),
+            ]
+            schema = CollectionSchema(fields)
+            self.collection = Collection(collection, schema=schema)
+            self.collection.create_index(
+                "vector",
+                {"index_type": "HNSW", "metric_type": "L2"},
+            )
+        else:
+            self.collection = Collection(collection)
+        self.collection.load()
+        self.vector_ts: Dict[str, int] = {}
+
+    @property
+    def _backend(self) -> VectorBackend | None:
+        return getattr(self, "_fallback", None)
+
+    def add(self, item_id: str, vector: list[float], *, persist: bool = False) -> None:
+        if self._backend:
+            self._backend.add(item_id, vector, persist=persist)
+            return
+        self.collection.insert([[item_id], [vector]])
+        self.vector_ts[item_id] = int(time.time())
+        if persist:
+            self.collection.flush()
+
+    def add_many(self, vectors: Dict[str, list[float]], *, persist: bool = False) -> None:
+        if self._backend:
+            self._backend.add_many(vectors, persist=persist)
+            return
+        if not vectors:
+            return
+        ids = list(vectors.keys())
+        vecs = list(vectors.values())
+        self.collection.insert([ids, vecs])
+        now = int(time.time())
+        for vid in ids:
+            self.vector_ts[vid] = now
+        if persist:
+            self.collection.flush()
+
+    def delete(self, item_id: str) -> None:
+        if self._backend:
+            self._backend.delete(item_id)
+            return
+        self.collection.delete(f"id == '{item_id}'")
+        self.vector_ts.pop(item_id, None)
+
+    def query(self, vector: list[float], k: int = 5) -> list[str]:
+        if self._backend:
+            return self._backend.query(vector, k=k)
+        start = time.perf_counter()
+        res = self.collection.search(
+            [vector],
+            "vector",
+            param={"metric_type": "L2", "params": {"nprobe": 10}},
+            limit=k,
+            output_fields=["id"],
+        )
+        result = [hit.id for hit in res[0]] if res else []
+        if self.query_latency_metric is not None:
+            self.query_latency_metric.observe(time.perf_counter() - start)
+        if self.index_size_metric is not None:
+            self.index_size_metric.set(len(self.vector_ts))
+        return result
+
+    def save(self, path: str | None = None) -> None:  # pragma: no cover - remote
+        if self._backend:
+            self._backend.save(path)
+        else:
+            self.collection.flush()
+
+    def load(self, path: str | None = None) -> None:  # pragma: no cover - remote
+        if self._backend:
+            self._backend.load(path)
+        else:
+            self.collection.load()
+
+    def close(self) -> None:  # pragma: no cover - remote
+        if self._backend:
+            self._backend.close()
+        else:
+            try:
+                self.collection.flush()
+            finally:
+                connections.disconnect("default")
+
+    def get_vector_timestamps(self) -> Dict[str, int]:
+        if self._backend:
+            return self._backend.get_vector_timestamps()
+        return dict(self.vector_ts)
+
+    def expire_vectors(self, max_age_seconds: int) -> None:
+        cutoff = int(time.time()) - max_age_seconds
+        to_delete = [k for k, ts in self.vector_ts.items() if ts < cutoff]
+        for vid in to_delete:
+            self.delete(vid)
+
+
 register_backend("faiss", FaissBackend)
 register_backend("chroma", ChromaBackend)
+register_backend("milvus", MilvusBackend)
 
 # Load any third-party backends exposed via entry points
 try:  # pragma: no cover - import side effects
