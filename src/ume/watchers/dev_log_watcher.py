@@ -4,6 +4,7 @@ import json
 import logging
 import signal
 import time
+from datetime import datetime, timezone
 from types import FrameType
 from pathlib import Path
 from typing import Iterable
@@ -32,7 +33,7 @@ class DevLogHandler(FileSystemEventHandler):  # type: ignore[misc]
         payload = {"path": event.src_path}
         evt = Event(
             event_type=EventType.CREATE_NODE,
-            timestamp=int(time.time()),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             node_id=str(event.src_path),
             payload={"node_id": str(event.src_path), "attributes": payload},
         )

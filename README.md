@@ -87,7 +87,7 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
 ```json
 {
   "event_type": "demo_event",
-  "timestamp": 1678886400,
+  "timestamp": "2024-03-15T12:00:00Z",
   "payload": {
     "message": "Hello from producer_demo!"
   },
@@ -100,7 +100,7 @@ The events exchanged in the demo have a simple JSON structure. Here's an example
 **Fields:**
 
 *   `event_type` (string): Describes the kind of event. In the demo, this is hardcoded to `"demo_event"`.
-*   `timestamp` (integer): A Unix timestamp (seconds since epoch) indicating when the event was generated.
+*   `timestamp` (string): ISO 8601 timestamp indicating when the event was generated.
 *   `payload` (object): A JSON object containing the actual data of the event. The structure of the payload can vary depending on the event type. For the demo, it includes a simple `message`.
 *   `correlationId` (string, optional): Identifier used to link related events.
 *   `subjectEntity` (string, optional): The entity this event relates to.
@@ -119,7 +119,7 @@ Used to create a new directed, labeled edge between two existing nodes.
 ```json
 {
   "event_type": "CREATE_EDGE",
-  "timestamp": 1678954321,
+  "timestamp": "2024-03-15T12:05:21Z",
   "event_id": "evt_edge_create_001",
   "source": "application_A",
   "node_id": "source_node_alpha",    // ID of the source node
@@ -130,7 +130,7 @@ Used to create a new directed, labeled edge between two existing nodes.
 ```
 **Required Fields in Data for `parse_event`:**
 *   `event_type`: Must be "CREATE_EDGE".
-*   `timestamp`: Integer Unix timestamp.
+*   `timestamp`: ISO 8601 timestamp string.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label for the edge.
@@ -145,7 +145,7 @@ Used to remove a specific directed, labeled edge between two nodes.
 ```json
 {
   "event_type": "DELETE_EDGE",
-  "timestamp": 1678954322,
+  "timestamp": "2024-03-15T12:05:22Z",
   "event_id": "evt_edge_delete_001",
   "source": "application_B",
   "node_id": "source_node_alpha",    // ID of the source node
@@ -156,7 +156,7 @@ Used to remove a specific directed, labeled edge between two nodes.
 ```
 **Required Fields in Data for `parse_event`:**
 *   `event_type`: Must be "DELETE_EDGE".
-*   `timestamp`: Integer Unix timestamp.
+*   `timestamp`: ISO 8601 timestamp string.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label of the edge.
@@ -486,7 +486,7 @@ Basic usage:
 from ume.integrations import LangGraph
 
 client = LangGraph()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+client.send_events([{"event_type": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 ```
 
@@ -560,7 +560,7 @@ body must follow the schema expected by `ume.parse_event`.
 curl -X POST http://localhost:8000/events \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1", "payload": {"node_id": "n1", "attributes": {"name": "demo"}}}'
+  -d '{"event_type": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1", "payload": {"node_id": "n1", "attributes": {"name": "demo"}}}'
 ```
 
 The event is validated and immediately applied to the configured graph adapter.
@@ -706,12 +706,12 @@ This section outlines the basic programmatic steps to interact with the UME comp
 2.  **Define Event Data Dictionaries:**
     Event data is typically prepared as Python dictionaries.
     ```python
-    import time # Required for timestamp
+    from datetime import datetime, timezone # Required for timestamp
 
     # Event to create node_A
     event_data_create_A = {
         "event_type": "CREATE_NODE",
-        "timestamp": int(time.time()),
+        "timestamp": "2024-01-01T00:00:00Z",
         "node_id": "node_A",  # Field used by CREATE_NODE for the node to create
         "payload": {"name": "Alpha Node", "type": "concept"},
         "source": "my_script",
@@ -723,7 +723,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
     # Event to create node_B
     event_data_create_B = {
         "event_type": "CREATE_NODE",
-        "timestamp": int(time.time()) + 1,
+        "timestamp": "2024-01-01T00:00:01Z",
         "node_id": "node_B",  # Field used by CREATE_NODE for the node to create
         "payload": {"name": "Beta Node", "value": 42},
         "source": "my_script",
@@ -735,7 +735,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
     # Event to create an edge from node_A to node_B
     event_data_create_edge_A_B = {
         "event_type": "CREATE_EDGE",
-        "timestamp": int(time.time()) + 2,
+        "timestamp": "2024-01-01T00:00:02Z",
         "node_id": "node_A",        # Source node for the edge
         "target_node_id": "node_B",  # Target node for the edge
         "label": "KNOWS",           # Label of the edge
@@ -907,7 +907,7 @@ with UMEClient(settings) as client:
     # Example event dictionary (CREATE_NODE)
     event = {
         "event_type": "CREATE_NODE",
-        "timestamp": int(time.time()),
+        "timestamp": "2024-01-01T00:00:00Z",
         "node_id": "demo_node",
         "payload": {"name": "Demo"},
         "source": "umeclient_example",
