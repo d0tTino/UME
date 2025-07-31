@@ -1,6 +1,6 @@
 from ume.event_ledger import EventLedger
 from ume.persistent_graph import PersistentGraph
-from ume.replay import replay_from_ledger
+from ume.replay import replay_from_ledger, build_graph_from_ledger
 import pytest
 
 
@@ -103,3 +103,40 @@ def test_bookmark_persists_between_instances(tmp_path):
 
     ledger3 = EventLedger(path)
     assert ledger3.last_processed_offset == 4
+
+
+def test_build_graph_from_ledger_roundtrip(tmp_path):
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    ledger.append(
+        0,
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "a",
+            "payload": {"node_id": "a"},
+        },
+    )
+    ledger.append(
+        1,
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 2,
+            "node_id": "b",
+            "payload": {"node_id": "b"},
+        },
+    )
+    ledger.append(
+        2,
+        {
+            "event_type": "CREATE_EDGE",
+            "timestamp": 3,
+            "node_id": "a",
+            "target_node_id": "b",
+            "label": "LINKS_TO",
+            "payload": {},
+        },
+    )
+
+    graph = build_graph_from_ledger(ledger)
+    assert set(graph.get_all_node_ids()) == {"a", "b"}
+    assert ("a", "b", "LINKS_TO") in graph.get_all_edges()
