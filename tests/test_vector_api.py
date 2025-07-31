@@ -207,3 +207,55 @@ def test_recall_stream(store_cls, monkeypatch) -> None:
             assert res.status_code == 200
             lines = [line for line in res.iter_lines() if line.startswith("data:")]
         assert lines
+
+
+def test_semantic_search_async_adapter(store_cls, monkeypatch) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+    from ume.async_graph_adapter import AsyncGraphAdapterWrapper
+
+    graph = AsyncGraphAdapterWrapper(MockGraph())
+    graph._adapter.add_node("a", {"val": 1})  # type: ignore[attr-defined]
+    configure_graph(graph)
+    store = app.state.vector_store
+    store.add("a", [1.0, 0.0])
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda q: [1.0, 0.0])
+    client = TestClient(app)
+    token = client.post(
+        "/auth/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    ).json()["access_token"]
+    res = client.post(
+        "/search/semantic",
+        json={"query": "foo", "k": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"nodes": [{"id": "a", "attributes": {"val": 1}}]}
+
+
+def test_recall_async_adapter(store_cls, monkeypatch) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+    from ume.async_graph_adapter import AsyncGraphAdapterWrapper
+
+    graph = AsyncGraphAdapterWrapper(MockGraph())
+    graph._adapter.add_node("a", {"val": 1})  # type: ignore[attr-defined]
+    configure_graph(graph)
+    store = app.state.vector_store
+    store.add("a", [1.0, 0.0])
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda q: [1.0, 0.0])
+    client = TestClient(app)
+    token = client.post(
+        "/auth/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    ).json()["access_token"]
+    res = client.get(
+        "/recall",
+        params={"query": "foo", "k": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"nodes": [{"id": "a", "attributes": {"val": 1}}]}

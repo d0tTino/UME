@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, AsyncGenerator
 import asyncio
+import inspect
 import json
 import math
 import time
@@ -13,6 +14,7 @@ from pydantic import BaseModel
 from . import api_deps as deps
 from .vector_store import VectorStore
 from .graph_adapter import IGraphAdapter
+from .graph_routes import _maybe_call
 from . import embedding
 from .metrics import (
     RECALL_SCORE,
@@ -62,7 +64,7 @@ class SemanticSearchRequest(BaseModel):
 
 
 @router.post("/search/semantic")
-def api_semantic_search(
+async def api_semantic_search(
     req: SemanticSearchRequest,
     _: str = Depends(deps.get_current_role),
     store: VectorStore = Depends(deps.get_vector_store),
@@ -78,7 +80,9 @@ def api_semantic_search(
     ids = store.query(vector, k=req.k)
     nodes = []
     for node_id in ids:
-        attrs = graph.get_node(node_id)
+        attrs = await _maybe_call(graph, "get_node", node_id)
+        if inspect.isawaitable(attrs):
+            attrs = await attrs
         if attrs is not None:
             nodes.append({"id": node_id, "attributes": attrs})
     SEMANTIC_SEARCH_LATENCY.observe(time.perf_counter() - start)
@@ -86,7 +90,7 @@ def api_semantic_search(
 
 
 @router.get("/recall")
-def api_recall(
+async def api_recall(
     query: str | None = Query(None),
     vector: List[float] | None = Query(None),
     k: int = 5,
@@ -106,7 +110,9 @@ def api_recall(
     ids = store.query(vector, k=k)
     nodes = []
     for node_id in ids:
-        attrs = graph.get_node(node_id)
+        attrs = await _maybe_call(graph, "get_node", node_id)
+        if inspect.isawaitable(attrs):
+            attrs = await attrs
         if attrs is not None:
             emb = attrs.get("embedding")
             if isinstance(emb, list) and len(emb) == len(vector):
@@ -143,7 +149,9 @@ async def api_recall_stream(
         start = time.perf_counter()
         ids = store.query(vector, k=k)
         for node_id in ids:
-            attrs = graph.get_node(node_id)
+            attrs = await _maybe_call(graph, "get_node", node_id)
+            if inspect.isawaitable(attrs):
+                attrs = await attrs
             if attrs is not None:
                 emb = attrs.get("embedding")
                 if isinstance(emb, list) and len(emb) == len(vector):
