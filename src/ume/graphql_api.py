@@ -64,6 +64,15 @@ class Query(graphene.ObjectType):
         since_timestamp=graphene.Int(),
         description="Find a path between two nodes",
     )
+    documents_by_topic = graphene.List(
+        NodeType,
+        topic=graphene.String(required=True),
+        entity=graphene.String(),
+        description=(
+            "Return document nodes connected to the given topic. "
+            "If `entity` is provided only documents linked to that entity are returned."
+        ),
+    )
 
     async def resolve_node(self, info: graphene.ResolveInfo, id: str) -> NodeType | None:
         graph = info.context["app"].state.graph
@@ -113,6 +122,34 @@ class Query(graphene.ObjectType):
             edge_label,
             since_timestamp,
         )
+
+    async def resolve_documents_by_topic(
+        self,
+        info: graphene.ResolveInfo,
+        topic: str,
+        entity: str | None = None,
+    ) -> list[NodeType]:
+        graph = info.context["app"].state.graph
+        if graph is None:
+            return []
+        try:
+            doc_ids = await _maybe_call(graph, "find_connected_nodes", topic)
+        except Exception:
+            return []
+        results: list[NodeType] = []
+        for doc_id in doc_ids:
+            data = await _maybe_call(graph, "get_node", doc_id)
+            if data is None:
+                continue
+            if entity is not None:
+                try:
+                    ents = await _maybe_call(graph, "find_connected_nodes", doc_id)
+                except Exception:
+                    continue
+                if entity not in ents:
+                    continue
+            results.append(NodeType(id=doc_id, attributes=data))
+        return results
 
 
 class CreateNode(graphene.Mutation):
