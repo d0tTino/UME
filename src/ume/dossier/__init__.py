@@ -10,7 +10,7 @@ import json
 
 from filelock import FileLock
 
-import yaml  # type: ignore
+import yaml
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - typing import

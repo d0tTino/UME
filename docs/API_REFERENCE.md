@@ -236,6 +236,15 @@ curl -X POST http://localhost:8000/graphql \
   -d '{"query":"{ edges { source target label } }"}'
 ```
 
+To list documents related to a topic (optionally filtered by entity):
+
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ documentsByTopic(topic: \"t1\", entity: \"e1\") { id } }"}'
+```
+
 ### GET `/recall`
 Retrieve attribute data for the `k` nearest nodes to a query.
 
