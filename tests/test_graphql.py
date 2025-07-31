@@ -58,3 +58,20 @@ def test_create_edge_mutation() -> None:
     assert res.status_code == 200
     assert res.json()["data"]["createEdge"]["ok"] is True
     assert ("b", "a", "ba") in app.state.graph.get_all_edges()
+
+
+def test_edges_for_node() -> None:
+    client = TestClient(app)
+    query = "{ node(id: \"a\") { edges { source target label } } }"
+    res = client.post("/graphql", json={"query": query})
+    assert res.status_code == 200
+    edges = res.json()["data"]["node"]["edges"]
+    assert edges == [{"source": "a", "target": "b", "label": "ab"}]
+
+
+def test_path_query() -> None:
+    client = TestClient(app)
+    query = "{ path(source: \"a\", target: \"b\") }"
+    res = client.post("/graphql", json={"query": query})
+    assert res.status_code == 200
+    assert res.json()["data"]["path"] == ["a", "b"]

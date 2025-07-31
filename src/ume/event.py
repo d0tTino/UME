@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Dict, Any, Optional
 from datetime import datetime
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -118,18 +117,21 @@ def parse_event(data: Dict[str, Any]) -> Event:
     if "timestamp" not in data:
         logger.error("Missing required event field: timestamp")
         raise EventError("Missing required event field: timestamp")
-    timestamp = data["timestamp"]
-    if isinstance(timestamp, str):
+    timestamp_raw = data["timestamp"]
+    if isinstance(timestamp_raw, str):
         try:
-            datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            dt = datetime.fromisoformat(timestamp_raw.replace("Z", "+00:00"))
         except ValueError:
             msg = "Invalid timestamp format"
             logger.error(msg)
             raise EventError(msg)
-    elif not isinstance(timestamp, int):
+        timestamp_int = int(dt.timestamp())
+    elif isinstance(timestamp_raw, int):
+        timestamp_int = timestamp_raw
+    else:
         msg = (
             "Invalid type for 'timestamp': expected int or ISO 8601 string, "
-            f"got {type(timestamp).__name__}"
+            f"got {type(timestamp_raw).__name__}"
 
         )
         logger.error(msg)
