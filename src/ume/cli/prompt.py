@@ -7,6 +7,7 @@ import logging
 import shlex
 import sys
 import time
+from datetime import datetime, timezone, timedelta
 from cmd import Cmd
 from pathlib import Path
 
@@ -64,7 +65,7 @@ class UMEPrompt(Cmd):
             enable_snapshot_autosave_and_restore(
                 base_graph, settings.UME_SNAPSHOT_PATH, 24 * 3600
             )
-        self.current_timestamp = int(time.time())
+        self.current_timestamp = datetime.now(timezone.utc)
         self.peer_cluster: str | None = None
         self.mm_topics: list[str] = [settings.KAFKA_RAW_EVENTS_TOPIC]
         self.mm_driver: "MirrorMakerDriver | None" = None
@@ -76,9 +77,9 @@ class UMEPrompt(Cmd):
         except Exception as e:  # pragma: no cover - logging failure shouldn't crash
             logging.getLogger(__name__).error("Audit log failure: %s", e)
 
-    def _get_timestamp(self) -> int:
-        self.current_timestamp += 1
-        return self.current_timestamp
+    def _get_timestamp(self) -> str:
+        self.current_timestamp += timedelta(seconds=1)
+        return self.current_timestamp.isoformat()
 
     # ----- Node commands -----
     def do_new_node(self, arg: str) -> None:

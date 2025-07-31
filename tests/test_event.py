@@ -1,17 +1,18 @@
 # tests/test_event.py
 import pytest
-import time
 from datetime import datetime, timezone
 from ume import Event, EventType, parse_event, EventError  # EventType constants
+
+ISO_TS = datetime.now(timezone.utc).isoformat()
 
 
 def test_parse_event_valid():
     """Test parsing a valid event dictionary."""
-    timestamp_now = int(time.time())
+    ts = datetime.now(timezone.utc)
     event_data = {
         "eventId": "test-id-123",
         "eventType": "test_event",
-        "timestamp": timestamp_now,
+        "timestamp": ts.isoformat(),
         "payload": {"key": "value", "num": 123},
         "sourceService": "test_source",
         "correlationId": "c123",
@@ -21,7 +22,7 @@ def test_parse_event_valid():
     assert isinstance(event, Event)
     assert event.event_id == "test-id-123"
     assert event.event_type == "test_event"
-    assert event.timestamp == timestamp_now
+    assert event.timestamp == int(ts.timestamp())
     assert event.payload == {"key": "value", "num": 123}
     assert event.source == "test_source"
     assert event.correlation_id == "c123"
@@ -30,16 +31,16 @@ def test_parse_event_valid():
 
 def test_parse_event_minimal_valid():
     """Test parsing a minimal valid event dictionary (event_id and source generated)."""
-    timestamp_now = int(time.time())
+    ts = datetime.now(timezone.utc)
     event_data = {
         "eventType": "minimal_event",
-        "timestamp": timestamp_now,
+        "timestamp": ts.isoformat(),
         "payload": {"data": "minimal_data"},
     }
     event = parse_event(event_data)
     assert isinstance(event, Event)
     assert event.event_type == "minimal_event"
-    assert event.timestamp == timestamp_now
+    assert event.timestamp == int(ts.timestamp())
     assert event.payload == {"data": "minimal_data"}
     assert event.event_id is not None  # Should be auto-generated
     assert isinstance(event.event_id, str)
@@ -51,10 +52,10 @@ def test_parse_event_minimal_valid():
 
 def test_parse_event_custom_type():
     """Ensure custom event types parse without strict checks."""
-    timestamp_now = int(time.time())
+    ts = datetime.now(timezone.utc)
     data = {
         "eventType": "document.artifact.archived",
-        "timestamp": timestamp_now,
+        "timestamp": ts.isoformat(),
         "payload": {"archive": True},
     }
     event = parse_event(data)
@@ -64,11 +65,11 @@ def test_parse_event_custom_type():
 
 def test_parse_event_custom_type_minimal():
     """Unknown event types should parse with minimal required fields."""
-    ts = int(time.time())
-    data = {"eventType": "document.artifact.archived", "timestamp": ts}
+    ts = datetime.now(timezone.utc)
+    data = {"eventType": "document.artifact.archived", "timestamp": ts.isoformat()}
     event = parse_event(data)
     assert event.event_type == "document.artifact.archived"
-    assert event.timestamp == ts
+    assert event.timestamp == int(ts.timestamp())
     assert event.payload == {}
 
 
@@ -99,10 +100,10 @@ def test_parse_event_timestamp_iso8601_z():
 )
 def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
     """Test parsing valid CREATE_EDGE and DELETE_EDGE events."""
-    timestamp_now = int(time.time())
+    ts = datetime.now(timezone.utc)
     event_data = {
         "eventType": event_type.value,
-        "timestamp": timestamp_now,
+        "timestamp": ts.isoformat(),
         "node_id": "s1",  # Source node
         **extra_data,  # Adds target_node_id and label
         # payload is optional for these, parse_event defaults to {}
@@ -110,7 +111,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
     event = parse_event(event_data)
     assert isinstance(event, Event)
     assert event.event_type == event_type
-    assert event.timestamp == timestamp_now
+    assert event.timestamp == int(ts.timestamp())
     assert event.node_id == "s1"
     assert event.target_node_id == extra_data["target_node_id"]
     assert event.label == extra_data["label"]
@@ -131,7 +132,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         # Case 1: Missing all required fields
         ({}, "Missing required event field: eventType"),
         # Case 2: Missing 'event_type'
-        ({"timestamp": 123, "payload": {}}, "Missing required event field: eventType"),
+        ({"timestamp": ISO_TS, "payload": {}}, "Missing required event field: eventType"),
         # Case 3: Missing 'timestamp'
         (
             {"eventType": "test", "payload": {}},
@@ -139,12 +140,12 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         ),
         # Case 4: Missing 'payload' for CREATE_NODE
         (
-            {"eventType": "CREATE_NODE", "timestamp": 123, "node_id": "n1"},
+            {"eventType": "CREATE_NODE", "timestamp": ISO_TS, "node_id": "n1"},
             "Missing required field 'payload' for CREATE_NODE event.",
         ),
         # Case 5: Invalid type for 'eventType' (int instead of str)
         (
-            {"eventType": 123, "timestamp": int(time.time()), "payload": {}},
+            {"eventType": 123, "timestamp": ISO_TS, "payload": {}},
             "Invalid type for 'eventType'",
         ),
         # Case 6: Invalid timestamp format
@@ -157,7 +158,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": "t1",
                 "label": "L",
@@ -170,7 +171,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "label": "L",
             },
@@ -180,7 +181,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": "t1",
             },
@@ -190,7 +191,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": 123,
                 "label": "L",
@@ -201,7 +202,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": "t1",
                 "label": 123,
@@ -212,7 +213,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "target_node_id": "t1",
                 "label": "L",
             },
@@ -222,7 +223,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": "t1",
                 "label": "L",
@@ -235,7 +236,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "DELETE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "label": "L",
             },
@@ -245,7 +246,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "DELETE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": "t1",
             },
@@ -255,7 +256,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "DELETE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": 123,
                 "label": "L",
@@ -266,7 +267,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "DELETE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": "t1",
                 "label": 123,
@@ -277,7 +278,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "DELETE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "target_node_id": "t1",
                 "label": "L",
             },
@@ -287,7 +288,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "DELETE_EDGE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "s1",
                 "target_node_id": "t1",
                 "label": "L",
@@ -299,7 +300,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_NODE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "n1",
                 "payload": "not-a-dict",
             },
@@ -308,7 +309,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "UPDATE_NODE_ATTRIBUTES",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "n1",
                 "payload": "not-a-dict",
             },
@@ -318,7 +319,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "CREATE_NODE",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "n1",
             },
             "Missing required field 'payload' for CREATE_NODE event",
@@ -326,7 +327,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "UPDATE_NODE_ATTRIBUTES",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "node_id": "n1",
             },
             "Missing required field 'payload' for UPDATE_NODE_ATTRIBUTES event",
@@ -335,7 +336,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "test",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "payload": {},
                 "eventId": 123,
             },
@@ -344,7 +345,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "test",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "payload": {},
                 "correlationId": 1,
             },
@@ -353,7 +354,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "test",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "payload": {},
                 "subjectEntity": 1,
             },
@@ -362,7 +363,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         (
             {
                 "eventType": "test",
-                "timestamp": int(time.time()),
+                "timestamp": ISO_TS,
                 "payload": {},
                 "sourceService": 1,
             },
@@ -382,7 +383,7 @@ def test_parse_event_invalid_inputs(bad_input: dict, expected_message_part: str)
 
 def test_event_creation_default_id():
     """Test that Event dataclass generates a default UUID for event_id."""
-    event = Event(event_type="test", timestamp=int(time.time()), payload={})
+    event = Event(event_type="test", timestamp=ISO_TS, payload={})
     assert event.event_id is not None
     assert isinstance(event.event_id, str)
     # A simple check for UUID-like structure (36 chars, with hyphens)

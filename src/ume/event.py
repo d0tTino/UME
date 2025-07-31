@@ -74,8 +74,8 @@ def parse_event(data: Dict[str, Any]) -> Event:
 
     Args:
         data (Dict[str, Any]): A dictionary potentially representing an event.
-              Common expected keys: "eventType", "timestamp" (integer Unix
-              timestamp or ISO 8601 formatted string).
+              Common expected keys: "eventType", "timestamp" (ISO 8601
+              formatted string).
               Type-specific keys:
                 - For "CREATE_NODE", "UPDATE_NODE_ATTRIBUTES": "node_id" (str), "payload" (dict).
                 - For "CREATE_EDGE", "DELETE_EDGE": "node_id" (source, str),
@@ -118,24 +118,20 @@ def parse_event(data: Dict[str, Any]) -> Event:
         logger.error("Missing required event field: timestamp")
         raise EventError("Missing required event field: timestamp")
     timestamp_raw = data["timestamp"]
-    if isinstance(timestamp_raw, str):
-        try:
-            dt = datetime.fromisoformat(timestamp_raw.replace("Z", "+00:00"))
-        except ValueError:
-            msg = "Invalid timestamp format"
-            logger.error(msg)
-            raise EventError(msg)
-        timestamp_int = int(dt.timestamp())
-    elif isinstance(timestamp_raw, int):
-        timestamp_int = timestamp_raw
-    else:
+    if not isinstance(timestamp_raw, str):
         msg = (
-            "Invalid type for 'timestamp': expected int or ISO 8601 string, "
+            "Invalid type for 'timestamp': expected ISO 8601 string, "
             f"got {type(timestamp_raw).__name__}"
-
         )
         logger.error(msg)
         raise EventError(msg)
+    try:
+        dt = datetime.fromisoformat(timestamp_raw.replace("Z", "+00:00"))
+    except ValueError:
+        msg = "Invalid timestamp format"
+        logger.error(msg)
+        raise EventError(msg)
+    timestamp_int = int(dt.timestamp())
 
     # Validate optional event_id type
     event_id_val = data.get("eventId")
