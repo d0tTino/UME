@@ -51,6 +51,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_VECTOR_USE_GPU: bool = False
     UME_VECTOR_GPU_MEM_MB: int = 256
     UME_VECTOR_MAX_AGE_DAYS: int = 90
+    UME_MILVUS_URI: str = "http://localhost:19530"
+    UME_MILVUS_USER: str | None = None
+    UME_MILVUS_PASSWORD: str | None = None
 
     # Neo4j connection for optional gRPC server
     NEO4J_URI: str = "bolt://localhost:7687"
