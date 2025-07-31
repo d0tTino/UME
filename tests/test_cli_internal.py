@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
+
 import pytest
+from ume.event_ledger import EventLedger
+from ume.replay import build_graph_from_ledger
 
 
 @pytest.mark.xfail(reason="RoleBasedGraphAdapter behaves unexpectedly in this environment")
@@ -109,3 +112,40 @@ def test_up_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     cli.main()
 
     assert calls == ["up", "up"]
+
+
+def test_build_graph_from_ledger_cli(tmp_path: Path) -> None:
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    ledger.append(
+        0,
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "x",
+            "payload": {"node_id": "x"},
+        },
+    )
+    ledger.append(
+        1,
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 2,
+            "node_id": "y",
+            "payload": {"node_id": "y"},
+        },
+    )
+    ledger.append(
+        2,
+        {
+            "event_type": "CREATE_EDGE",
+            "timestamp": 3,
+            "node_id": "x",
+            "target_node_id": "y",
+            "label": "LINKS_TO",
+            "payload": {},
+        },
+    )
+
+    graph = build_graph_from_ledger(ledger)
+    assert set(graph.get_all_node_ids()) == {"x", "y"}
+    assert ("x", "y", "LINKS_TO") in graph.get_all_edges()
