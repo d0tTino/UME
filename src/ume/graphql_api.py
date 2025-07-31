@@ -23,6 +23,24 @@ class NodeType(graphene.ObjectType):
 
     id = graphene.String(required=True)
     attributes = GenericScalar()
+    edges = graphene.List(
+        lambda: EdgeType,
+        label=graphene.String(),
+        description="Edges originating from this node",
+    )
+
+    async def resolve_edges(
+        self, info: graphene.ResolveInfo, label: str | None = None
+    ) -> list["EdgeType"]:
+        graph = info.context["app"].state.graph
+        if graph is None:
+            return []
+        all_edges = await _maybe_call(graph, "get_all_edges")
+        result = []
+        for src, tgt, lbl in all_edges:
+            if src == self.id and (label is None or lbl == label):
+                result.append(EdgeType(source=src, target=tgt, label=lbl))
+        return result
 
 
 class EdgeType(graphene.ObjectType):
@@ -37,6 +55,15 @@ class Query(graphene.ObjectType):
     node = graphene.Field(NodeType, id=graphene.String(required=True))
     nodes = graphene.List(NodeType)
     edges = graphene.List(EdgeType)
+    path = graphene.List(
+        graphene.String,
+        source=graphene.String(required=True),
+        target=graphene.String(required=True),
+        max_depth=graphene.Int(),
+        edge_label=graphene.String(),
+        since_timestamp=graphene.Int(),
+        description="Find a path between two nodes",
+    )
 
     async def resolve_node(self, info: graphene.ResolveInfo, id: str) -> NodeType | None:
         graph = info.context["app"].state.graph
@@ -64,6 +91,28 @@ class Query(graphene.ObjectType):
             return []
         edges = await _maybe_call(graph, "get_all_edges")
         return [EdgeType(source=s, target=t, label=lbl) for s, t, lbl in edges]
+
+    async def resolve_path(
+        self,
+        info: graphene.ResolveInfo,
+        source: str,
+        target: str,
+        max_depth: int | None = None,
+        edge_label: str | None = None,
+        since_timestamp: int | None = None,
+    ) -> list[str]:
+        graph = info.context["app"].state.graph
+        if graph is None:
+            return []
+        return await _maybe_call(
+            graph,
+            "constrained_path",
+            source,
+            target,
+            max_depth,
+            edge_label,
+            since_timestamp,
+        )
 
 
 class CreateNode(graphene.Mutation):
