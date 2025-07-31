@@ -163,6 +163,30 @@ snapshot = build_graph_from_ledger(ledger, end_timestamp=1_725_000_000)
 The `/ledger/replay` API wraps this helper and returns a JSON snapshot of the
 graph state.
 
+To update an existing graph in place, use ``replay_from_ledger`` specifying a
+``start_offset``. This allows applications to store a bookmark and resume event
+processing from the last applied offset:
+
+```python
+from ume.replay import replay_from_ledger
+
+last = replay_from_ledger(graph, ledger, start_offset=stored_offset)
+```
+
+### Restoring historical state
+
+Because the ledger is append-only, you can rebuild the graph as it looked at any
+previous moment by providing ``end_offset`` or ``end_timestamp`` when calling
+``build_graph_from_ledger``. The ``/graph/history`` API exposes this capability
+over HTTP:
+
+```bash
+curl -X GET -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/graph/history?timestamp=1725000000"
+```
+
+The returned JSON snapshot reflects all events up to the requested cutoff.
+
 ## Snapshot scheduler
 
 Call :func:`ume.enable_periodic_snapshot` to write the graph to
