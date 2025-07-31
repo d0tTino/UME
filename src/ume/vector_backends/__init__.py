@@ -524,6 +524,12 @@ class ChromaBackend(VectorBackend):
 
 register_backend("faiss", FaissBackend)
 register_backend("chroma", ChromaBackend)
+try:  # optional dependency
+    from .milvus import MilvusBackend
+except Exception:  # pragma: no cover - optional dependency missing
+    MilvusBackend = None  # type: ignore
+else:  # pragma: no cover - optional dependency present
+    register_backend("milvus", MilvusBackend)
 
 # Load any third-party backends exposed via entry points
 try:  # pragma: no cover - import side effects
