@@ -47,7 +47,7 @@ class AngelBridge:
             try:
                 with UMEClient(settings) as client:
                     for event in client.consume_events(timeout=0.5):
-                        if event.timestamp >= cutoff:
+                        if int(event.timestamp) >= cutoff:
                             events.append(
                                 {
                                     "event_type": event.event_type,

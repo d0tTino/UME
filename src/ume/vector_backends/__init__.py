@@ -684,6 +684,7 @@ register_backend("faiss", FaissBackend)
 register_backend("chroma", ChromaBackend)
 register_backend("milvus", MilvusBackend)
 
+
 # Load any third-party backends exposed via entry points
 try:  # pragma: no cover - import side effects
     load_entrypoints()
