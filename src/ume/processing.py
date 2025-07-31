@@ -5,7 +5,7 @@ from ._internal.listeners import get_registered_listeners
 from .plugins.alignment import get_plugins
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .graph_schema import load_default_schema
-from .utils import tokenize
+from .tokenization import tokenize
 
 
 def _add_tokens(attrs: dict[str, object]) -> None:

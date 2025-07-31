@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any, Dict, Tuple, List, cast
-from ..utils import ssl_config, event_to_snake, event_to_camel, tokenize
+from ..utils import ssl_config, event_to_snake, event_to_camel
+from ..tokenization import tokenize
 from ..logging_utils import configure_logging
 
 from confluent_kafka import Consumer, Producer, KafkaException, KafkaError
