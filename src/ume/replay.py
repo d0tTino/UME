@@ -51,3 +51,34 @@ def build_graph_from_ledger(
         end_timestamp=end_timestamp,
     )
     return graph
+
+
+def graph_from_event_ledger(
+    *,
+    end_offset: int | None = None,
+    end_timestamp: int | None = None,
+    db_path: str | None = ":memory:",
+    graph: IGraphAdapter | None = None,
+) -> IGraphAdapter:
+    """Rebuild a graph from the global :data:`event_ledger`."""
+
+    from .event_ledger import event_ledger
+
+    return build_graph_from_ledger(
+        event_ledger,
+        graph=graph,
+        end_offset=end_offset,
+        end_timestamp=end_timestamp,
+        db_path=db_path,
+    )
+
+
+def snapshot_from_event_ledger(
+    *, end_offset: int | None = None, end_timestamp: int | None = None
+) -> dict[str, object]:
+    """Return a snapshot built from :data:`event_ledger`."""
+
+    graph = graph_from_event_ledger(
+        end_offset=end_offset, end_timestamp=end_timestamp
+    )
+    return graph.dump()
