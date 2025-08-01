@@ -17,6 +17,10 @@ class EventType(str, Enum):
     CREATE_EDGE = "CREATE_EDGE"
     DELETE_EDGE = "DELETE_EDGE"
     CREATE_ONTOLOGY_RELATION = "CREATE_ONTOLOGY_RELATION"
+    RESEARCH_JOB_STARTED = "RESEARCH_JOB_STARTED"
+    DATA_SOURCE_QUERIED = "DATA_SOURCE_QUERIED"
+    ENTITY_DISCOVERED = "ENTITY_DISCOVERED"
+    DOCUMENT_ARCHIVED = "DOCUMENT_ARCHIVED"
 
 
 @dataclass(frozen=True)
@@ -188,6 +192,8 @@ def parse_event(data: Dict[str, Any]) -> Event:
     if event_type in [
         EventType.CREATE_NODE,
         EventType.UPDATE_NODE_ATTRIBUTES,
+        EventType.RESEARCH_JOB_STARTED,
+        EventType.DOCUMENT_ARCHIVED,
     ]:
         if "node_id" not in data:  # Must be present in data
             msg = f"Missing required field 'node_id' for {event_type_str} event."
@@ -213,6 +219,8 @@ def parse_event(data: Dict[str, Any]) -> Event:
         EventType.CREATE_EDGE,
         EventType.DELETE_EDGE,
         EventType.CREATE_ONTOLOGY_RELATION,
+        EventType.DATA_SOURCE_QUERIED,
+        EventType.ENTITY_DISCOVERED,
     ]:
         required_fields_for_edge = {"node_id", "target_node_id", "label"}
         missing_fields = required_fields_for_edge - data.keys()

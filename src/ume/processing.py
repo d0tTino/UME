@@ -40,9 +40,14 @@ def apply_event_to_graph(
       `node_id` (str) and `attributes` (dict).
     - "UPDATE_NODE_ATTRIBUTES": Updates an existing node's attributes. Requires
       `event.payload` to contain `node_id` (str) and `attributes` (non-empty dict).
+    - "RESEARCH_JOB_STARTED": Alias of CREATE_NODE for job nodes.
+    - "DOCUMENT_ARCHIVED": Alias of UPDATE_NODE_ATTRIBUTES, marking a document archived.
     - "CREATE_EDGE": Creates a directed, labeled edge between two existing nodes.
       Requires `event.node_id` (source), `event.target_node_id` (target), and
       `event.label` (all strings).
+    - "DATA_SOURCE_QUERIED": Alias of CREATE_EDGE for connecting jobs to data sources.
+    - "ENTITY_DISCOVERED": Creates a node for the discovered entity (if needed)
+      and an edge from the job to that entity.
     - "DELETE_EDGE": Removes a specific edge. Requires `event.node_id` (source),
       `event.target_node_id` (target), and `event.label` (all strings).
 
@@ -62,7 +67,7 @@ def apply_event_to_graph(
     """
     for plugin in get_plugins():
         plugin.validate(event)
-    if event.event_type == EventType.CREATE_NODE:
+    if event.event_type in (EventType.CREATE_NODE, EventType.RESEARCH_JOB_STARTED):
         node_id = event.payload.get("node_id")
         if not node_id:
             raise ProcessingError(
@@ -94,7 +99,7 @@ def apply_event_to_graph(
         for listener in get_registered_listeners():
             listener.on_node_created(node_id, attributes)
 
-    elif event.event_type == EventType.UPDATE_NODE_ATTRIBUTES:
+    elif event.event_type in (EventType.UPDATE_NODE_ATTRIBUTES, EventType.DOCUMENT_ARCHIVED):
         node_id = event.payload.get("node_id")
         if not node_id:
             raise ProcessingError(
@@ -115,6 +120,8 @@ def apply_event_to_graph(
             raise ProcessingError(
                 f"'attributes' must be a dictionary for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
             )
+        if event.event_type == EventType.DOCUMENT_ARCHIVED and "archived" not in attributes:
+            attributes["archived"] = True
         if not attributes:
             raise ProcessingError(
                 f"'attributes' dictionary cannot be empty for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
@@ -126,7 +133,7 @@ def apply_event_to_graph(
         for listener in get_registered_listeners():
             listener.on_node_updated(node_id, attributes)
 
-    elif event.event_type == EventType.CREATE_EDGE:
+    elif event.event_type in (EventType.CREATE_EDGE, EventType.DATA_SOURCE_QUERIED, EventType.ENTITY_DISCOVERED):
         # parse_event should have validated presence and type of node_id, target_node_id, label
         source_node_id = event.node_id
         target_node_id = event.target_node_id
@@ -152,6 +159,16 @@ def apply_event_to_graph(
         assert isinstance(label, str)
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
         schema.validate_edge_label(label)
+        if event.event_type == EventType.ENTITY_DISCOVERED and not graph.node_exists(target_node_id):
+            attrs = event.payload.get("attributes", {})
+            if not isinstance(attrs, dict):
+                raise ProcessingError(
+                    f"'attributes' must be a dictionary for ENTITY_DISCOVERED event: {event.event_id}"
+                )
+            _add_tokens(attrs)
+            graph.add_node(target_node_id, attrs)
+            for listener in get_registered_listeners():
+                listener.on_node_created(target_node_id, attrs)
         graph.add_edge(source_node_id, target_node_id, label)
         for listener in get_registered_listeners():
             listener.on_edge_created(source_node_id, target_node_id, label)

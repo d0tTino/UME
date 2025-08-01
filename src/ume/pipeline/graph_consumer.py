@@ -9,7 +9,7 @@ from confluent_kafka import Consumer, KafkaException, KafkaError
 from jsonschema import ValidationError
 
 from ..config import settings
-from ..utils import ssl_config, event_to_snake, event_to_camel
+from ..utils import ssl_config, event_to_snake
 from ..event import parse_event, EventError, EventType
 from ..processing import apply_event_to_graph, ProcessingError
 from ..schema_utils import validate_event_dict
@@ -25,6 +25,8 @@ BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
 NODE_TOPIC = settings.KAFKA_NODE_TOPIC
 EDGE_TOPIC = settings.KAFKA_EDGE_TOPIC
 DEFAULT_GROUP_ID = settings.KAFKA_GROUP_ID
+# Include newly introduced event types such as RESEARCH_JOB_STARTED and
+# ENTITY_DISCOVERED so the consumer treats them as first-class events.
 VALID_EVENT_TYPES = {e.value for e in EventType}
 
 
@@ -81,15 +83,14 @@ def run_graph_consumer(
                     validation_data["eventType"] = validation_data.pop("event_type")
                 validate_event_dict(validation_data)
                 payload = data["event"] if "event" in data else data
-                payload_camel = event_to_camel(payload)
-                event = parse_event(payload_camel)
+                event = parse_event(payload)
             except (json.JSONDecodeError, EventError) as exc:
                 logger.error("Invalid event skipped: %s", exc)
                 continue
 
             if event.event_type not in VALID_EVENT_TYPES:
                 try:
-                    event_ledger.append(msg.offset(), payload_camel)
+                    event_ledger.append(msg.offset(), payload)
                 except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
                     logger.error("Ledger append failed: %s", exc)
                 try:

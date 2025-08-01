@@ -405,3 +405,64 @@ def test_apply_delete_edge_event_invalid_field_types_propagates_error(
         ProcessingError, match="Invalid event structure for DELETE_EDGE"
     ):
         apply_event_to_graph(event_bad_label_type, graph)
+
+
+def test_apply_research_job_started_creates_node(graph: PersistentGraph) -> None:
+    event = Event(
+        event_type=EventType.RESEARCH_JOB_STARTED,
+        timestamp=int(time.time()),
+        payload={"node_id": "job1", "attributes": {"status": "started"}},
+    )
+    apply_event_to_graph(event, graph)
+    assert graph.node_exists("job1")
+    assert graph.get_node("job1") == {"status": "started"}
+
+
+def test_apply_data_source_queried_adds_edge(graph: PersistentGraph, monkeypatch: pytest.MonkeyPatch) -> None:
+    from ume.graph_schema import GraphSchema, EdgeLabel
+    from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
+    schema = GraphSchema(version="1.0.0", edge_labels={"RELATES_TO": EdgeLabel("RELATES_TO", "1.0.0")})
+    monkeypatch.setattr(DEFAULT_SCHEMA_MANAGER, "get_schema", lambda v: schema)
+    graph.add_node("job1", {})
+    graph.add_node("ds1", {})
+    event = Event(
+        event_type=EventType.DATA_SOURCE_QUERIED,
+        timestamp=int(time.time()),
+        node_id="job1",
+        target_node_id="ds1",
+        label="RELATES_TO",
+        payload={},
+    )
+    apply_event_to_graph(event, graph)
+    assert ("job1", "ds1", "RELATES_TO") in graph.get_all_edges()
+
+
+def test_apply_entity_discovered_creates_node_and_edge(graph: PersistentGraph, monkeypatch: pytest.MonkeyPatch) -> None:
+    from ume.graph_schema import GraphSchema, EdgeLabel
+    from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
+    schema = GraphSchema(version="1.0.0", edge_labels={"RELATES_TO": EdgeLabel("RELATES_TO", "1.0.0")})
+    monkeypatch.setattr(DEFAULT_SCHEMA_MANAGER, "get_schema", lambda v: schema)
+    graph.add_node("job1", {})
+    event = Event(
+        event_type=EventType.ENTITY_DISCOVERED,
+        timestamp=int(time.time()),
+        node_id="job1",
+        target_node_id="ent1",
+        label="RELATES_TO",
+        payload={"attributes": {"name": "E1"}},
+    )
+    apply_event_to_graph(event, graph)
+    assert graph.node_exists("ent1")
+    assert graph.get_node("ent1") == {"name": "E1", "tokens": ["E1"]}
+    assert ("job1", "ent1", "RELATES_TO") in graph.get_all_edges()
+
+
+def test_apply_document_archived_updates_node(graph: PersistentGraph) -> None:
+    graph.add_node("doc1", {"title": "D"})
+    event = Event(
+        event_type=EventType.DOCUMENT_ARCHIVED,
+        timestamp=int(time.time()),
+        payload={"node_id": "doc1", "attributes": {}},
+    )
+    apply_event_to_graph(event, graph)
+    assert graph.get_node("doc1") == {"title": "D", "archived": True}

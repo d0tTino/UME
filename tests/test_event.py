@@ -118,6 +118,69 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
     assert event.payload == {}  # Default empty payload
 
 
+def test_parse_event_research_job_started() -> None:
+    ts = datetime.now(timezone.utc)
+    data = {
+        "eventType": EventType.RESEARCH_JOB_STARTED.value,
+        "timestamp": ts.isoformat(),
+        "node_id": "job1",
+        "payload": {"node_id": "job1", "attributes": {"status": "started"}},
+    }
+    event = parse_event(data)
+    assert event.event_type == EventType.RESEARCH_JOB_STARTED
+    assert event.node_id == "job1"
+    assert event.payload == {"node_id": "job1", "attributes": {"status": "started"}}
+
+
+def test_parse_event_data_source_queried() -> None:
+    ts = datetime.now(timezone.utc)
+    data = {
+        "eventType": EventType.DATA_SOURCE_QUERIED.value,
+        "timestamp": ts.isoformat(),
+        "node_id": "job1",
+        "target_node_id": "ds1",
+        "label": "QUERIED",
+    }
+    event = parse_event(data)
+    assert event.event_type == EventType.DATA_SOURCE_QUERIED
+    assert event.node_id == "job1"
+    assert event.target_node_id == "ds1"
+    assert event.label == "QUERIED"
+    assert event.payload == {}
+
+
+def test_parse_event_entity_discovered() -> None:
+    ts = datetime.now(timezone.utc)
+    data = {
+        "eventType": EventType.ENTITY_DISCOVERED.value,
+        "timestamp": ts.isoformat(),
+        "node_id": "job1",
+        "target_node_id": "ent1",
+        "label": "DISCOVERED",
+        "payload": {"attributes": {"name": "E1"}},
+    }
+    event = parse_event(data)
+    assert event.event_type == EventType.ENTITY_DISCOVERED
+    assert event.node_id == "job1"
+    assert event.target_node_id == "ent1"
+    assert event.label == "DISCOVERED"
+    assert event.payload == {"attributes": {"name": "E1"}}
+
+
+def test_parse_event_document_archived() -> None:
+    ts = datetime.now(timezone.utc)
+    data = {
+        "eventType": EventType.DOCUMENT_ARCHIVED.value,
+        "timestamp": ts.isoformat(),
+        "node_id": "doc1",
+        "payload": {"node_id": "doc1", "attributes": {"archived": True}},
+    }
+    event = parse_event(data)
+    assert event.event_type == EventType.DOCUMENT_ARCHIVED
+    assert event.node_id == "doc1"
+    assert event.payload == {"node_id": "doc1", "attributes": {"archived": True}}
+
+
 # The following tests are now covered by test_parse_event_invalid_inputs:
 # - test_parse_event_missing_required_field
 # - test_parse_event_missing_multiple_required_fields

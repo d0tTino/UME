@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ENTITY_DISCOVERED event",
+  "description": "Schema for ENTITY_DISCOVERED events emitted by UME producers.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["eventType", "timestamp", "node_id", "target_node_id", "label", "payload"],
+  "properties": {
+    "eventType": {"type": "string", "minLength": 1, "description": "Type of event"},
+    "timestamp": {"type": "string", "format": "date-time", "description": "Timestamp when the event occurred in ISO 8601 format"},
+    "eventId": {"type": "string", "description": "Unique identifier for this event"},
+    "correlationId": {"type": "string", "description": "Identifier linking related events"},
+    "subjectEntity": {"type": "object", "required": ["id", "type"], "properties": {"id": {"type": "string"}, "type": {"type": "string"}}, "description": "Entity this event pertains to"},
+    "sourceService": {"type": "string", "description": "Originating system of the event"},
+    "node_id": {"type": "string", "description": "Job node identifier"},
+    "target_node_id": {"type": "string", "description": "Discovered entity identifier"},
+    "label": {"type": "string", "description": "Edge label"},
+    "payload": {"type": "object", "description": "Attributes for the discovered entity"}
+  }
+}
