@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UME Canonical Event",
+  "description": "Schema defining common fields for all UME events.",
+  "version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Type of event"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the event occurred in ISO 8601 format"
+    },
+    "eventId": {
+      "type": "string",
+      "description": "Unique identifier for this event"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Identifier linking related events"
+    },
+    "subjectEntity": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {"type": "string"},
+        "type": {"type": "string"}
+      },
+      "description": "Entity this event pertains to"
+    },
+    "sourceService": {
+      "type": "string",
+      "description": "Originating system of the event"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event payload"
+    }
+  },
+  "required": ["eventType", "timestamp"]
+}
