@@ -158,3 +158,37 @@ def test_milvus_backend_add_query_delete() -> None:
     assert backend.query([0.1, 0.2], k=1) == []
     backend.close()
     container.stop()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.environ.get("UME_DOCKER_TESTS"), reason="Docker tests disabled")
+def test_milvus_backend_roundtrip() -> None:
+    if not _real_testcontainers_available() or not _pymilvus_available():
+        pytest.skip("testcontainers or pymilvus not available")
+
+    from testcontainers.core.container import DockerContainer
+
+    image = "milvusdb/milvus:v2.4.0"
+    with DockerContainer(image).with_exposed_ports(19530) as container:
+        host = container.get_container_host_ip()
+        port = container.get_exposed_port(19530)
+        uri = f"{host}:{port}"
+
+        from pymilvus import MilvusClient
+
+        for _ in range(30):
+            try:
+                client = MilvusClient(uri=uri)
+                client.list_collections()
+                break
+            except Exception:
+                time.sleep(1)
+        else:
+            pytest.skip("Milvus failed to start")
+
+        backend = RealMilvusBackend(dim=2, uri=uri, collection="roundtrip_vectors")
+        backend.add("x", [0.5, 0.6], persist=True)
+        assert backend.query([0.5, 0.6], k=1) == ["x"]
+        backend.delete("x")
+        assert backend.query([0.5, 0.6], k=1) == []
+        backend.close()
