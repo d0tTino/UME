@@ -67,7 +67,7 @@ TOKEN_CLEANUP_INTERVAL = 60.0
 
 _token_cleanup_task: asyncio.Task | None = None
 _ledger_compaction_stop: Callable[[], None] | None = None
-_vector_listener: Any | None = None
+_vector_listener: VectorStoreListener | None = None
 
 
 logger = logging.getLogger(__name__)
