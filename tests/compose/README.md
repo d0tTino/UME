@@ -1,3 +1,4 @@
 The integration tests require Docker to pull the official `milvusdb/milvus` image.
 Ensure `testcontainers` and `pymilvus` are installed so that the Milvus container
-can be started during testing.
+can be started during testing. Set the environment variable `UME_DOCKER_TESTS=1`
+to enable these Docker-based tests.
