@@ -68,6 +68,44 @@ During sanitization the Privacy Agent tokenizes common text fields such as
 event payload under the `tokens` key so that downstream components can create
 vector embeddings consistently.
 
+### Canonical Event Fields
+
+| Field | Description |
+|-------|-------------|
+| `eventType` | The type of operation, e.g. `CREATE_NODE` or `ENTITY_DISCOVERED`. |
+| `timestamp` | ISO&nbsp;8601 time when the event occurred. |
+| `eventId` | Unique identifier for the event. |
+| `correlationId` | ID linking related events. |
+| `subjectEntity` | `{id, type}` describing the entity affected. |
+| `sourceService` | Originating service name. |
+| `payload` | Additional attributes specific to the event type. |
+
+#### Example: RESEARCH_JOB_STARTED
+
+```json
+{
+  "eventType": "RESEARCH_JOB_STARTED",
+  "timestamp": "2024-03-15T12:10:00Z",
+  "node_id": "job_123",
+  "payload": {"status": "running"}
+}
+```
+
+#### Example: DATA_SOURCE_QUERIED
+
+```json
+{
+  "eventType": "DATA_SOURCE_QUERIED",
+  "timestamp": "2024-03-15T12:11:00Z",
+  "node_id": "job_123",
+  "target_node_id": "source_456",
+  "label": "USED",
+  "payload": {}
+}
+```
+
+As events pass from the ingestion API through the Privacy Agent and into the projection engine, they retain this schema. The engine applies them to the graph and notifies listeners such as `VectorStoreListener`, which adds any embedded vectors to the configured index automatically.
+
 ## Versioning
 
 The schema is expected to evolve.  Node and edge type definitions should be
