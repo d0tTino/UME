@@ -13,10 +13,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ume import Event, EventType, MockGraph, apply_event_to_graph
 from ume.vector_store import VectorStoreListener
 from ume.vector_backends import get_backend
+from ume.config import settings
+from fastapi.testclient import TestClient
 
 FaissBackend = get_backend("faiss")
 from ume.api import configure_vector_store, app
 from ume._internal.listeners import register_listener, unregister_listener
+from ume.api import configure_graph
 from prometheus_client import Gauge, Histogram
 import logging
 import threading
@@ -361,6 +364,46 @@ def test_create_default_store_dimension_mismatch(monkeypatch: pytest.MonkeyPatch
     import ume.vector_store as vs
     importlib.reload(cfg)
     importlib.reload(vs)
+
+
+def _token(client):
+    res = client.post(
+        "/auth/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    )
+    return res.json()["access_token"]
+
+
+def test_events_endpoint_indexes_nodes(store_cls, monkeypatch: pytest.MonkeyPatch) -> None:
+    configure_graph(MockGraph())
+    store = store_cls(dim=2, use_gpu=False)
+    configure_vector_store(store)
+
+    with TestClient(app) as client:
+        token = _token(client)
+        from ume import event as event_mod
+        from ume.services import ingest as ingest_mod
+
+        original = event_mod.parse_event
+
+        def _patched_parse(data: dict) -> event_mod.Event:
+            if isinstance(data.get("timestamp"), int):
+                data = data.copy()
+                data["timestamp"] = "2023-01-01T00:00:00Z"
+            return original(data)
+
+        monkeypatch.setattr(event_mod, "parse_event", _patched_parse)
+        monkeypatch.setattr(ingest_mod, "parse_event", _patched_parse)
+
+        event = {
+            "eventType": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "n1",
+            "payload": {"node_id": "n1", "attributes": {"embedding": [1.0, 0.0]}},
+        }
+        res = client.post("/events", json=event, headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+    assert store.query([1.0, 0.0], k=1) == ["n1"]
 
 
 def test_create_default_store_dimension_autoset(monkeypatch: pytest.MonkeyPatch) -> None:
