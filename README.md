@@ -183,6 +183,17 @@ Used to create a new directed, labeled edge between two existing nodes.
 }
 ```
 
+```json
+{
+  "eventType": "CREATE_ONTOLOGY_RELATION",
+  "timestamp": "2024-03-15T12:14:00Z",
+  "node_id": "term_a",
+  "target_node_id": "term_b",
+  "label": "IS_A",
+  "payload": {}
+}
+```
+
 #### DELETE_EDGE Event
 
 Used to remove a specific directed, labeled edge between two nodes.
@@ -216,12 +227,11 @@ Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-eve
      --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j/Arango) & Vector Store
 ```
 
-1. `producer_demo.py` publishes raw events to the `ume-raw-events` Kafka topic.
-2. The **Privacy Agent** consumes these events, redacts PII, and forwards sanitized messages to `ume-clean-events`.
-3. A graph consumer reads sanitized events and applies them via the configured **Graph Adapter**.
-4. The adapter persists nodes and edges to the chosen backend, such as SQLite, Neo4j, or ArangoDB, and writes embeddings to a vector store.
-   When events contain an `embedding` attribute the `VectorStoreListener` automatically
-   indexes it for similarity search.
+1. `producer_demo.py` publishes raw events conforming to the canonical schema to the `ume-raw-events` Kafka topic.
+2. The **Privacy Agent** validates each event, redacts PII and forwards sanitized messages to `ume-clean-events`.
+3. The projection engine consumes these sanitized events and applies them to the graph via the configured **Graph Adapter**.
+4. The adapter persists nodes and edges to the chosen backend (SQLite, Neo4j, ArangoDB, ...). Listeners such as `VectorStoreListener` automatically
+   index any `embedding` vectors for similarity search.
 
 When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals. The same fields are tokenized and the resulting tokens are saved under a `tokens` attribute for search. If the optional [tiktoken](https://github.com/openai/tiktoken) library is installed, it provides OpenAI-compatible tokenization.
 
