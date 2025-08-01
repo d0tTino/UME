@@ -4,6 +4,7 @@ from .config import settings
 from .persistent_graph import PersistentGraph
 from .postgres_graph import PostgresGraph
 from .redis_graph_adapter import RedisGraphAdapter
+from .arango_graph import ArangoGraph
 from .rbac_adapter import RoleBasedGraphAdapter
 from typing import TYPE_CHECKING
 
@@ -35,6 +36,13 @@ def create_graph_adapter(
         base = PostgresGraph(db_path or settings.UME_DB_PATH)
     elif backend == "redis":
         base = RedisGraphAdapter(db_path or settings.UME_DB_PATH)
+    elif backend == "arango":
+        base = ArangoGraph(
+            settings.ARANGO_URL,
+            settings.ARANGO_USER,
+            settings.ARANGO_PASSWORD,
+            db_name=settings.ARANGO_DB_NAME,
+        )
     elif backend == "neo4j":
         base = Neo4jGraph(
             settings.NEO4J_URI,

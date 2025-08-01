@@ -18,7 +18,7 @@ The engine is built from a few key components:
   - Provides a GraphQL endpoint at `/graphql` for advanced queries.
   - **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
     - Define a common interface for manipulating different graph backends.
-    - Includes adapters for in-memory, SQLite, Postgres, Redis, and Neo4j storage as well as RBAC wrappers.
+    - Includes adapters for in-memory, SQLite, Postgres, Redis, Neo4j, and ArangoDB storage as well as RBAC wrappers.
     - The active backend is selected via `UME_GRAPH_BACKEND`.
 - **Vector Store** (`src/ume/vector_store.py`)
   - Maintains a vector index of node embeddings for similarity search.
@@ -31,7 +31,7 @@ The engine is built from a few key components:
 
 ### Event Flow
 ```
-Ingestion API --> ume-raw-events --> Privacy Agent --> ume-clean-events --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j)
+Ingestion API --> ume-raw-events --> Privacy Agent --> ume-clean-events --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j/Arango)
 ```
 
 ## Project Setup
@@ -167,13 +167,13 @@ Used to remove a specific directed, labeled edge between two nodes.
 
 ```
 Producer --> ume-raw-events --> Privacy Agent --> ume-clean-events
-     --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j) & Vector Store
+     --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j/Arango) & Vector Store
 ```
 
 1. `producer_demo.py` publishes raw events to the `ume-raw-events` Kafka topic.
 2. The **Privacy Agent** consumes these events, redacts PII, and forwards sanitized messages to `ume-clean-events`.
 3. A graph consumer reads sanitized events and applies them via the configured **Graph Adapter**.
-4. The adapter persists nodes and edges to the chosen backend, such as SQLite or Neo4j, and writes embeddings to a vector store.
+4. The adapter persists nodes and edges to the chosen backend, such as SQLite, Neo4j, or ArangoDB, and writes embeddings to a vector store.
 
 When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals. The same fields are tokenized and the resulting tokens are saved under a `tokens` attribute for search. If the optional [tiktoken](https://github.com/openai/tiktoken) library is installed, it provides OpenAI-compatible tokenization.
 
