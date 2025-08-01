@@ -18,6 +18,7 @@ from .graph import MockGraph
 from .persistent_graph import PersistentGraph
 from .postgres_graph import PostgresGraph
 from .redis_graph_adapter import RedisGraphAdapter
+from .arango_graph import ArangoGraph
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - used for type hints only
@@ -123,6 +124,7 @@ __all__ = [
     "PersistentGraph",
     "PostgresGraph",
     "RedisGraphAdapter",
+    "ArangoGraph",
     "Neo4jGraph",
     "IGraphAdapter",
     "RoleBasedGraphAdapter",

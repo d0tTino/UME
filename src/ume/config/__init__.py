@@ -55,6 +55,12 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_MILVUS_USER: str | None = None
     UME_MILVUS_PASSWORD: str | None = None
 
+    # ArangoDB connection
+    ARANGO_URL: str = "http://localhost:8529"
+    ARANGO_USER: str = "root"
+    ARANGO_PASSWORD: str = "password"
+    ARANGO_DB_NAME: str = "ume"
+
     # Neo4j connection for optional gRPC server
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"

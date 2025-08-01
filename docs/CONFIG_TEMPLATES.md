@@ -11,6 +11,11 @@ neo4j:
   uri: bolt://localhost:7687
   user: neo4j
   password: changeme
+arango:
+  url: http://localhost:8529
+  user: root
+  password: password
+  db: ume
 event_store:
   type: in-memory
 ```
@@ -22,6 +27,11 @@ neo4j:
   uri: bolt://staging-neo4j:7687
   user: neo4j
   password: secret
+arango:
+  url: http://staging-arango:8529
+  user: root
+  password: secret
+  db: ume
 event_store:
   type: kafka
   brokers:
@@ -35,6 +45,11 @@ neo4j:
   uri: bolt://neo4j.prod.example.com:7687
   user: neo4j
   password: prodpass
+arango:
+  url: http://arango.prod.example.com:8529
+  user: root
+  password: prodpass
+  db: ume
 event_store:
   type: kafka
   brokers:
@@ -59,7 +74,7 @@ below lists all available variables and their default values.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `UME_DB_PATH` | `ume_graph.db` | SQLite database used by `PersistentGraph`. |
-| `UME_GRAPH_BACKEND` | `sqlite` | Backend for graph storage (`sqlite`, `postgres`, `redis`, or `neo4j`). |
+| `UME_GRAPH_BACKEND` | `sqlite` | Backend for graph storage (`sqlite`, `postgres`, `redis`, `neo4j`, or `arango`). |
 
 Valid values for `UME_GRAPH_BACKEND` are:
 
@@ -67,6 +82,7 @@ Valid values for `UME_GRAPH_BACKEND` are:
 - `postgres` – PostgreSQL backend using `PostgresGraph`.
 - `redis` – Redis-backed `RedisGraphAdapter`.
 - `neo4j` – Neo4j graph database via `Neo4jGraph`.
+- `arango` – ArangoDB backend using `ArangoGraph`.
 | `UME_SNAPSHOT_PATH` | `ume_snapshot.json` | Path to graph snapshot file. |
 | `UME_SNAPSHOT_DIR` | `.` | Directory that snapshot APIs will accept paths from. |
 | `UME_AUDIT_LOG_PATH` | `audit.log` | Location of the audit log. |
