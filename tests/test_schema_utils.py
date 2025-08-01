@@ -71,3 +71,31 @@ def test_canonical_schema_invalid_payload_type(monkeypatch):
 
     assert "payload error" in str(exc.value)
     assert any(s.get("title") == "UME Canonical Event" for s in calls)
+
+
+def test_canonical_schema_missing_event_type(monkeypatch):
+    """Missing eventType should trigger canonical schema validation."""
+
+    def fake_validate(instance: dict, schema: dict) -> None:  # type: ignore[override]
+        if schema.get("title") == "UME Canonical Event" and "eventType" not in instance:
+            raise ValidationError("eventType required")
+
+    monkeypatch.setattr("ume.schema_utils.validate", fake_validate)
+
+    data = {"timestamp": "2024-01-01T00:00:00Z"}
+    with pytest.raises(ValidationError):
+        validate_event_dict(data)
+
+
+def test_canonical_schema_missing_timestamp(monkeypatch):
+    """Missing timestamp should trigger canonical schema validation."""
+
+    def fake_validate(instance: dict, schema: dict) -> None:  # type: ignore[override]
+        if schema.get("title") == "UME Canonical Event" and "timestamp" not in instance:
+            raise ValidationError("timestamp required")
+
+    monkeypatch.setattr("ume.schema_utils.validate", fake_validate)
+
+    data = {"eventType": "CREATE_NODE"}
+    with pytest.raises(ValidationError):
+        validate_event_dict(data)
