@@ -56,3 +56,22 @@ def test_path_via_research_job() -> None:
     assert res.status_code == 200
     assert res.json()["data"]["path"] == ["t1", "job1", "doc3"]
 
+
+def test_path_via_research_job_filtered_by_label() -> None:
+    g = MockGraph()
+    g.add_node("t1", {})
+    g.add_node("job1", {})
+    g.add_node("doc3", {})
+    g.add_edge("t1", "job1", "RELATES_TO")
+    g.add_edge("job1", "doc3", "RELATES_TO")
+    configure_graph(g)
+
+    client = TestClient(app)
+    query = (
+        "{ path(source: \"t1\", target: \"doc3\", maxDepth: 2,"
+        " edgeLabel: \"RELATES_TO\") }"
+    )
+    res = client.post("/graphql", json={"query": query})
+    assert res.status_code == 200
+    assert res.json()["data"]["path"] == ["t1", "job1", "doc3"]
+

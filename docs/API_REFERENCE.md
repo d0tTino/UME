@@ -246,7 +246,9 @@ curl -X POST http://localhost:8000/graphql \
 ```
 
 To locate documents gathered by a research job you can query the path from the
-topic node through the job to a document:
+topic node through the job to a document. The returned list shows each node
+encountered along the way and reveals which research job performed the
+collection:
 
 ```bash
 curl -X POST http://localhost:8000/graphql \
@@ -254,6 +256,9 @@ curl -X POST http://localhost:8000/graphql \
   -H "Content-Type: application/json" \
   -d '{"query":"{ path(source: \"t1\", target: \"doc3\", maxDepth: 2) }"}'
 ```
+
+This example would return `["t1", "job1", "doc3"]` when document `doc3`
+was discovered by research job `job1` for topic `t1`.
 
 ### GET `/recall`
 Retrieve attribute data for the `k` nearest nodes to a query.

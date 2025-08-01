@@ -44,6 +44,9 @@ Properties:
 - `REMEMBERS`: connects a `UserMemory` node to an `AgentIntent` that created it.
 - `ASSOCIATED_WITH`: Generic association between any two nodes.
 - `CAUSES`: Expresses a causal relationship from one event or context to another.
+- `LINKS_TO`: Represents a generic connection between nodes.
+- `CONNECTS_TO`: Used for network-style associations.
+- `RELATES_TO`: Indicates a topical relationship.
 - `NEW_LABEL`: Links research job nodes to the documents they discover.
 
 Example edge creation event:
