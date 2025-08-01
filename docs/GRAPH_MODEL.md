@@ -112,6 +112,58 @@ vector embeddings consistently.
 }
 ```
 
+#### Example: ENTITY_DISCOVERED
+
+```json
+{
+  "eventType": "ENTITY_DISCOVERED",
+  "timestamp": "2024-03-15T12:12:00Z",
+  "node_id": "job_123",
+  "target_node_id": "entity_789",
+  "label": "FOUND",
+  "payload": {"name": "Foo"}
+}
+```
+
+#### Example: DOCUMENT_ARCHIVED
+
+```json
+{
+  "eventType": "DOCUMENT_ARCHIVED",
+  "timestamp": "2024-03-15T12:13:00Z",
+  "node_id": "doc_1",
+  "payload": {"archived_by": "agent_42"}
+}
+```
+
+#### Example: CREATE_ONTOLOGY_RELATION
+
+```json
+{
+  "eventType": "CREATE_ONTOLOGY_RELATION",
+  "timestamp": "2024-03-15T12:14:00Z",
+  "node_id": "term_a",
+  "target_node_id": "term_b",
+  "label": "IS_A",
+  "payload": {}
+}
+```
+
+### Event Flow
+
+```
+Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-events
+    --> Projection Engine --> Graph Adapter --> Graph Storage & Vector Store
+```
+
+1. Producers emit events following the canonical schema above.
+2. The Privacy Agent validates and redacts sensitive data before forwarding to `ume-clean-events`.
+3. The projection engine processes sanitized events and updates the graph via the chosen adapter.
+4. `VectorStoreListener` automatically indexes any `embedding` vectors during this step.
+
+As events pass from ingestion through projection they retain the canonical schema, ensuring
+consistent processing across components.
+
 As events pass from the ingestion API through the Privacy Agent and into the projection engine, they retain this schema. The engine applies them to the graph and notifies listeners such as `VectorStoreListener`, which adds any embedded vectors to the configured index automatically.
 
 ## Versioning
