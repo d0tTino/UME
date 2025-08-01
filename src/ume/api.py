@@ -36,6 +36,8 @@ from .retention import (
 from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter  # noqa: F401
 from . import VectorStore, create_vector_store  # noqa: F401
+from .vector_store import VectorStoreListener
+from ._internal.listeners import register_listener, unregister_listener
 
 
 from .graph_routes import router as graph_router
@@ -65,6 +67,7 @@ TOKEN_CLEANUP_INTERVAL = 60.0
 
 _token_cleanup_task: asyncio.Task | None = None
 _ledger_compaction_stop: Callable[[], None] | None = None
+_vector_listener: Any | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -170,6 +173,27 @@ async def _start_token_cleanup() -> None:
         offset_window=getattr(settings, "UME_LEDGER_OFFSET_WINDOW", 1000),
     )
     _ledger_compaction_stop = stop
+
+
+@app.on_event("startup")
+def _register_vector_listener() -> None:
+    """Register VectorStoreListener for automatic indexing."""
+    global _vector_listener
+    store = getattr(app.state, "vector_store", None)
+    if store is None:
+        return
+    listener = VectorStoreListener(store)
+    register_listener(listener)
+    _vector_listener = listener
+
+
+@app.on_event("shutdown")
+def _unregister_vector_listener() -> None:
+    """Remove the VectorStoreListener if it was registered."""
+    global _vector_listener
+    if _vector_listener is not None:
+        unregister_listener(_vector_listener)
+        _vector_listener = None
 
 
 @app.on_event("shutdown")
