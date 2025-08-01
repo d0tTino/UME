@@ -18,7 +18,11 @@ from fastapi.testclient import TestClient
 
 FaissBackend = get_backend("faiss")
 from ume.api import configure_vector_store, app
-from ume._internal.listeners import register_listener, unregister_listener
+from ume._internal.listeners import (
+    register_listener,
+    unregister_listener,
+    get_registered_listeners,
+)
 from ume.api import configure_graph
 from prometheus_client import Gauge, Histogram
 import logging
@@ -404,6 +408,21 @@ def test_events_endpoint_indexes_nodes(store_cls, monkeypatch: pytest.MonkeyPatc
         res = client.post("/events", json=event, headers={"Authorization": f"Bearer {token}"})
         assert res.status_code == 200
     assert store.query([1.0, 0.0], k=1) == ["n1"]
+
+
+def test_listener_registered_on_startup(store_cls) -> None:
+    """VectorStoreListener is auto-registered and removed with app startup/shutdown."""
+    configure_graph(MockGraph())
+    store = store_cls(dim=2, use_gpu=False)
+    configure_vector_store(store)
+    before = get_registered_listeners()
+    with TestClient(app):
+        current = get_registered_listeners()
+        assert len(current) == len(before) + 1
+        assert any(
+            isinstance(listener, VectorStoreListener) for listener in current
+        )
+    assert get_registered_listeners() == before
 
 
 def test_create_default_store_dimension_autoset(monkeypatch: pytest.MonkeyPatch) -> None:
