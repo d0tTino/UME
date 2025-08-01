@@ -31,7 +31,8 @@ The engine is built from a few key components:
 
 ### Event Flow
 ```
-Ingestion API --> ume-raw-events --> Privacy Agent --> ume-clean-events --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j/Arango)
+Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-events
+    --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j/Arango) & Vector Store
 ```
 
 ## Project Setup
@@ -80,31 +81,34 @@ The current system consists of the following main components:
 
 ### Event Schema
 
-The events exchanged in the demo have a simple JSON structure. Here's an example and description of its fields:
+The events exchanged in UME follow a canonical schema. Each event contains a minimal
+set of common fields and any number of type‑specific attributes.
 
 **Example Event:**
 
 ```json
 {
-  "event_type": "demo_event",
+  "eventType": "DEMO_EVENT",
   "timestamp": "2024-03-15T12:00:00Z",
-  "payload": {
-    "message": "Hello from producer_demo!"
-  },
+  "payload": {"message": "Hello from producer_demo!"},
+  "eventId": "evt-123",
   "correlationId": "demo-1",
-  "subjectEntity": "demo",
+  "subjectEntity": {"id": "demo", "type": "example"},
   "sourceService": "producer_demo"
 }
 ```
 
-**Fields:**
+**Canonical Fields**
 
-*   `event_type` (string): Describes the kind of event. In the demo, this is hardcoded to `"demo_event"`.
-*   `timestamp` (string): ISO 8601 timestamp indicating when the event was generated.
-*   `payload` (object): A JSON object containing the actual data of the event. The structure of the payload can vary depending on the event type. For the demo, it includes a simple `message`.
-*   `correlationId` (string, optional): Identifier used to link related events.
-*   `subjectEntity` (string, optional): The entity this event relates to.
-*   `sourceService` (string, optional): Name of the service emitting the event.
+| Field | Description |
+|-------|-------------|
+| `eventType` | Type of event such as `CREATE_NODE` or `RESEARCH_JOB_STARTED`. |
+| `timestamp` | ISO&nbsp;8601 time when the event occurred. |
+| `eventId` | Unique identifier for this event. |
+| `correlationId` | Identifier linking related events. |
+| `subjectEntity` | Object with `id` and `type` describing the entity the event concerns. |
+| `sourceService` | Name of the service that emitted the event. |
+| `payload` | Event‑specific attributes. |
 
 All official event types such as `CREATE_NODE` or `CREATE_EDGE` have
 corresponding JSON Schema definitions under `src/ume/schemas`.  Producers
@@ -118,10 +122,10 @@ Used to create a new directed, labeled edge between two existing nodes.
 **Example JSON:**
 ```json
 {
-  "event_type": "CREATE_EDGE",
+  "eventType": "CREATE_EDGE",
   "timestamp": "2024-03-15T12:05:21Z",
-  "event_id": "evt_edge_create_001",
-  "source": "application_A",
+  "eventId": "evt_edge_create_001",
+  "sourceService": "application_A",
   "node_id": "source_node_alpha",    // ID of the source node
   "target_node_id": "target_node_beta",  // ID of the target node
   "label": "RELATES_TO"             // Label for the edge
@@ -129,13 +133,55 @@ Used to create a new directed, labeled edge between two existing nodes.
 }
 ```
 **Required Fields in Data for `parse_event`:**
-*   `event_type`: Must be "CREATE_EDGE".
+*   `eventType`: Must be "CREATE_EDGE".
 *   `timestamp`: ISO 8601 timestamp string.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label for the edge.
-**Optional Fields:** `event_id`, `source`, `payload`, `correlationId`,
-`subjectEntity`, `sourceService`.
+**Optional Fields:** `eventId`, `sourceService`, `payload`, `correlationId`,
+`subjectEntity`.
+
+#### Additional Event Examples
+
+```json
+{
+  "eventType": "RESEARCH_JOB_STARTED",
+  "timestamp": "2024-03-15T12:10:00Z",
+  "node_id": "job_123",
+  "payload": {"status": "running"}
+}
+```
+
+```json
+{
+  "eventType": "DATA_SOURCE_QUERIED",
+  "timestamp": "2024-03-15T12:11:00Z",
+  "node_id": "job_123",
+  "target_node_id": "source_456",
+  "label": "USED",
+  "payload": {}
+}
+```
+
+```json
+{
+  "eventType": "ENTITY_DISCOVERED",
+  "timestamp": "2024-03-15T12:12:00Z",
+  "node_id": "job_123",
+  "target_node_id": "entity_789",
+  "label": "FOUND",
+  "payload": {"name": "Foo"}
+}
+```
+
+```json
+{
+  "eventType": "DOCUMENT_ARCHIVED",
+  "timestamp": "2024-03-15T12:13:00Z",
+  "node_id": "doc_1",
+  "payload": {"archived_by": "agent_42"}
+}
+```
 
 #### DELETE_EDGE Event
 
@@ -144,10 +190,10 @@ Used to remove a specific directed, labeled edge between two nodes.
 **Example JSON:**
 ```json
 {
-  "event_type": "DELETE_EDGE",
+  "eventType": "DELETE_EDGE",
   "timestamp": "2024-03-15T12:05:22Z",
-  "event_id": "evt_edge_delete_001",
-  "source": "application_B",
+  "eventId": "evt_edge_delete_001",
+  "sourceService": "application_B",
   "node_id": "source_node_alpha",    // ID of the source node
   "target_node_id": "target_node_beta",  // ID of the target node
   "label": "RELATES_TO"             // Label of the edge to delete
@@ -155,25 +201,27 @@ Used to remove a specific directed, labeled edge between two nodes.
 }
 ```
 **Required Fields in Data for `parse_event`:**
-*   `event_type`: Must be "DELETE_EDGE".
+*   `eventType`: Must be "DELETE_EDGE".
 *   `timestamp`: ISO 8601 timestamp string.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label of the edge.
-**Optional Fields:** `event_id`, `source`, `payload`, `correlationId`,
-`subjectEntity`, `sourceService`.
+**Optional Fields:** `eventId`, `sourceService`, `payload`, `correlationId`,
+`subjectEntity`.
 
 **Event Flow:** *(see the full diagram in [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md))*
 
 ```
-Producer --> ume-raw-events --> Privacy Agent --> ume-clean-events
-     --> Graph Consumer --> Graph Adapter --> Storage (SQLite/Neo4j/Arango) & Vector Store
+Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-events
+     --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j/Arango) & Vector Store
 ```
 
 1. `producer_demo.py` publishes raw events to the `ume-raw-events` Kafka topic.
 2. The **Privacy Agent** consumes these events, redacts PII, and forwards sanitized messages to `ume-clean-events`.
 3. A graph consumer reads sanitized events and applies them via the configured **Graph Adapter**.
 4. The adapter persists nodes and edges to the chosen backend, such as SQLite, Neo4j, or ArangoDB, and writes embeddings to a vector store.
+   When events contain an `embedding` attribute the `VectorStoreListener` automatically
+   indexes it for similarity search.
 
 When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals. The same fields are tokenized and the resulting tokens are saved under a `tokens` attribute for search. If the optional [tiktoken](https://github.com/openai/tiktoken) library is installed, it provides OpenAI-compatible tokenization.
 
