@@ -245,6 +245,16 @@ curl -X POST http://localhost:8000/graphql \
   -d '{"query":"{ documentsByTopic(topic: \"t1\", entity: \"e1\") { id } }"}'
 ```
 
+To locate documents gathered by a research job you can query the path from the
+topic node through the job to a document:
+
+```bash
+curl -X POST http://localhost:8000/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ path(source: \"t1\", target: \"doc3\", maxDepth: 2) }"}'
+```
+
 ### GET `/recall`
 Retrieve attribute data for the `k` nearest nodes to a query.
 

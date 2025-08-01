@@ -40,3 +40,19 @@ def test_documents_by_topic_missing() -> None:
     assert res.status_code == 200
     assert res.json()["data"]["documentsByTopic"] == []
 
+
+def test_path_via_research_job() -> None:
+    g = MockGraph()
+    g.add_node("t1", {})
+    g.add_node("job1", {})
+    g.add_node("doc3", {})
+    g.add_edge("t1", "job1", "RELATES_TO")
+    g.add_edge("job1", "doc3", "RELATES_TO")
+    configure_graph(g)
+
+    client = TestClient(app)
+    query = "{ path(source: \"t1\", target: \"doc3\", maxDepth: 2) }"
+    res = client.post("/graphql", json={"query": query})
+    assert res.status_code == 200
+    assert res.json()["data"]["path"] == ["t1", "job1", "doc3"]
+

@@ -32,11 +32,19 @@ Properties:
 - `payload` *(object)*: Raw or processed perceptual data.
   Example: `{"image": "base64..."}`.
 
+### NewType
+Represents an additional concept introduced in schema version `2.0.0`.
+
+Properties:
+- `type_id` *(string, required)*: Unique identifier for the new entity.
+- Other attributes depend on the producer.
+
 ## Edge Labels
 
 - `REMEMBERS`: connects a `UserMemory` node to an `AgentIntent` that created it.
 - `ASSOCIATED_WITH`: Generic association between any two nodes.
 - `CAUSES`: Expresses a causal relationship from one event or context to another.
+- `NEW_LABEL`: Links research job nodes to the documents they discover.
 
 Example edge creation event:
 
