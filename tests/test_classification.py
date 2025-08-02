@@ -32,5 +32,11 @@ def test_ingest_event_classifies_and_persists_tags(monkeypatch) -> None:
 
     event = captured["event"]
     assert event.payload["classification"] == [
-        {"tag": "malware", "confidence": 1.0}
+        {
+            "tag": "malware",
+            "confidence": 1.0,
+            "domain": None,
+            "subdomain": None,
+            "sensitivity": None,
+        }
     ]

@@ -10,6 +10,7 @@ import logging
 from ..event import Event
 from .plugins import Classifier, get_classifier, register_classifier
 from .finance_client import FinanceClient, FinanceClientError
+from .tino_storm import TinoStormClassifier, TinoStormError
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,9 @@ class TagResult:
 
     tag: str
     confidence: float
+    domain: str | None = None
+    subdomain: str | None = None
+    sensitivity: str | None = None
 
 
 class KeywordClassifier:
@@ -54,8 +58,9 @@ class KeywordClassifier:
         return results
 
 
-# Register the default classifier for generic use
+# Register built-in classifiers
 register_classifier("default", KeywordClassifier())
+register_classifier("tino_storm", TinoStormClassifier())
 
 
 def classify_event(event: Event) -> List[TagResult]:
@@ -66,7 +71,14 @@ def classify_event(event: Event) -> List[TagResult]:
         classifier = get_classifier("default")
     results: List[TagResult] = []
     if classifier is not None:
-        results = classifier.classify(event.payload)
+        results.extend(classifier.classify(event.payload))
+
+    tino_classifier = get_classifier("tino_storm")
+    if tino_classifier is not None:
+        try:
+            results.extend(tino_classifier.classify(event.payload))
+        except TinoStormError as exc:  # pragma: no cover - network failures
+            logger.warning("Tino-storm classification failed: %s", exc)
 
     # Detect financial transactions and categorise via finance-engine
     payload = event.payload

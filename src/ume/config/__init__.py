@@ -112,6 +112,10 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # Finance engine
     FINANCE_ENGINE_URL: str = "http://finance-engine:8000"
 
+    # Tino-storm classifier
+    TINO_STORM_URL: str | None = None
+    TINO_STORM_LOCAL_MODEL: str | None = None
+
     # Angel Bridge
     ANGEL_BRIDGE_LOOKBACK_HOURS: int = 24
 
