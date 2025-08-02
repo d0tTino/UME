@@ -920,6 +920,11 @@ This section outlines the basic programmatic steps to interact with the UME comp
     if loaded_graph_adapter and loaded_graph_adapter.node_exists("node_A"):
         print(f"Node 'node_A' from loaded graph: {loaded_graph_adapter.get_node('node_A')}")
     ```
+7.  **Replay Graph from Ledger (Optional):**
+    Rebuild a graph directly from the event ledger for analysis:
+    ```bash
+    ume replay-graph --db-path replay.db --end-offset 100
+    ```
 This provides a basic flow for event handling and graph interaction within UME.
 
 ### Swapping Backends

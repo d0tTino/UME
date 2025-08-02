@@ -37,6 +37,18 @@ def _ledger_replay(end_offset: int | None, end_timestamp: int | None) -> None:
     )
     print(json.dumps(snapshot, indent=2))
 
+
+def _replay_graph(db_path: str | None, end_offset: int | None) -> None:
+    """Rebuild a graph from the event ledger and print a summary."""
+
+    from ume.replay import graph_from_event_ledger
+
+    graph = graph_from_event_ledger(db_path=db_path, end_offset=end_offset)
+    node_count = len(graph.get_all_node_ids())
+    edge_count = len(graph.get_all_edges())
+    location = f" at {db_path}" if db_path and db_path != ":memory:" else ""
+    print(f"Rebuilt graph{location} with {node_count} nodes and {edge_count} edges")
+
 # Detect if a lightweight stub was injected for testing.
 _UME_STUB = not hasattr(ume, "__file__")
 
@@ -449,6 +461,13 @@ def main() -> None:
     replay_parser.add_argument("--end-offset", type=int)
     replay_parser.add_argument("--end-timestamp", type=int)
 
+    replay_graph_parser = sub.add_parser(
+        "replay-graph",
+        help="Rebuild a graph from the event ledger",
+    )
+    replay_graph_parser.add_argument("--db-path", default=":memory:")
+    replay_graph_parser.add_argument("--end-offset", type=int)
+
     dossier_parser = sub.add_parser("dossier", help="Manage dossiers")
     dossier_sub = dossier_parser.add_subparsers(dest="dossier_cmd")
     view_p = dossier_sub.add_parser("view", help="View a dossier")
@@ -551,6 +570,9 @@ def main() -> None:
             return
         if args.command == "ledger-replay":
             _ledger_replay(args.end_offset, args.end_timestamp)
+            return
+        if args.command == "replay-graph":
+            _replay_graph(args.db_path, args.end_offset)
             return
         if args.command == "dossier":
             if args.dossier_cmd == "view":
