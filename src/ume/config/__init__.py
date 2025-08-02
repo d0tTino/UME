@@ -54,6 +54,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     UME_MILVUS_URI: str = "http://localhost:19530"
     UME_MILVUS_USER: str | None = None
     UME_MILVUS_PASSWORD: str | None = None
+    UME_PINECONE_API_KEY: str | None = None
+    UME_PINECONE_ENVIRONMENT: str | None = None
+    UME_PINECONE_INDEX: str = "ume-vectors"
 
     # ArangoDB connection
     ARANGO_URL: str = "http://localhost:8529"

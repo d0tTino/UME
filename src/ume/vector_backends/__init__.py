@@ -17,6 +17,7 @@ from ..config import settings
 from prometheus_client import Gauge, Histogram
 
 from ..vector_store import VectorBackend
+from typing import TYPE_CHECKING
 
 try:  # optional dependency
     import faiss
@@ -35,6 +36,14 @@ try:  # optional dependency for MilvusBackend
 except Exception:  # pragma: no cover - optional dependency missing
     Collection = None
     CollectionSchema = FieldSchema = DataType = connections = utility = None
+
+if TYPE_CHECKING:  # pragma: no cover - typing import
+    from .pinecone import PineconeBackend  # noqa: F401
+else:  # pragma: no cover - optional dependency
+    try:
+        from .pinecone import PineconeBackend  # type: ignore
+    except Exception:
+        PineconeBackend = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -683,6 +692,8 @@ class MilvusBackend(VectorBackend):
 register_backend("faiss", FaissBackend)
 register_backend("chroma", ChromaBackend)
 register_backend("milvus", MilvusBackend)
+if PineconeBackend is not None:
+    register_backend("pinecone", PineconeBackend)
 
 
 # Load any third-party backends exposed via entry points
