@@ -11,6 +11,7 @@ from ..event import Event, EventError, EventType, parse_event
 from ..processing import apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
+from ..classification import classify_event
 
 if TYPE_CHECKING:  # pragma: no cover - typing import for mypy
     from ume_client import events_pb2 as events_pb2_type
@@ -42,8 +43,18 @@ def apply_event(event: Event, graph: IGraphAdapter) -> None:
 
 
 def ingest_event(data: Dict[str, Any], graph: IGraphAdapter) -> None:
-    """Validate ``data`` and apply the resulting event to ``graph``."""
+    """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
     event = validate_event(data)
+
+    tag_results = classify_event(event)
+    event.payload["classification"] = [
+        {"tag": r.tag, "confidence": r.confidence} for r in tag_results
+    ]
+    if tag_results:
+        attributes = event.payload.setdefault("attributes", {})
+        attributes["tags"] = [r.tag for r in tag_results]
+        attributes["tag_confidence"] = [r.confidence for r in tag_results]
+
     apply_event(event, graph)
 
 
