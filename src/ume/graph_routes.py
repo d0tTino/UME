@@ -30,11 +30,13 @@ router = APIRouter()
 
 async def _maybe_call(graph: IGraphAdapter, name: str, *args: Any) -> Any:
     func = getattr(graph, name)
-    if inspect.iscoroutinefunction(func):
-        return await func(*args)
-    if isinstance(graph, IAsyncGraphAdapter):
-        return await func(*args)
-    return func(*args)
+    if inspect.iscoroutinefunction(func) or isinstance(graph, IAsyncGraphAdapter):
+        result = await func(*args)
+    else:
+        result = func(*args)
+    if inspect.isawaitable(result):
+        result = await result
+    return result
 
 
 class ShortestPathRequest(BaseModel):
