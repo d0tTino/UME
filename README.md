@@ -26,8 +26,11 @@ The engine is built from a few key components:
     environment settings. The backend is selected via `UME_VECTOR_BACKEND`.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
+  - Includes `replay-graph` to rebuild a graph from ledger events.
 - **Projection Engine** (`src/ume/projection_engine.py`)
-  - Consumes sanitized events from Kafka and applies them to the graph via the configured adapter.
+  - Long-running service that consumes sanitized events from Kafka and applies them to the graph via the configured adapter.
+  - Maintains the knowledge graph and forwards embeddings to the vector store.
+  - The graph can be rebuilt from the ledger using `ume replay-graph`.
 
 ### Event Flow
 ```
@@ -922,10 +925,12 @@ This section outlines the basic programmatic steps to interact with the UME comp
         print(f"Node 'node_A' from loaded graph: {loaded_graph_adapter.get_node('node_A')}")
     ```
 7.  **Replay Graph from Ledger (Optional):**
-    Rebuild a graph directly from the event ledger for analysis:
+    Rebuild the graph by applying events from the ledger:
     ```bash
     ume replay-graph --db-path replay.db --end-offset 100
     ```
+    This writes all events up to the specified offset into `replay.db`, recreating
+    the graph state on demand. Omit `--end-offset` to replay the entire ledger.
 This provides a basic flow for event handling and graph interaction within UME.
 
 ### Swapping Backends
@@ -1188,7 +1193,7 @@ index via `VectorStoreListener`.
 
 Set the following environment variables to configure the store:
 
-- `UME_VECTOR_BACKEND` – `faiss` (default) or `chroma`.
+- `UME_VECTOR_BACKEND` – `faiss` (default), `chroma`, or `pinecone`.
 - `UME_VECTOR_DIM` – dimension of the embedding vectors (default `1536`). This
   must match the output dimension of the configured embedding model. If set to
   `0`, the dimension will be detected automatically when the vector store is
@@ -1201,6 +1206,8 @@ operations (default `256`). Increase or decrease this to tune GPU memory usage
 when building the index.
   The same value can be passed to `VectorStore(gpu_mem_mb=...)` when
   constructing a store programmatically.
+- `UME_PINECONE_API_KEY`, `UME_PINECONE_ENVIRONMENT`, `UME_PINECONE_INDEX` –
+  required when `UME_VECTOR_BACKEND` is set to `pinecone`.
 
 If the file specified by `UME_VECTOR_INDEX` exists, it is loaded automatically
 when the store is created. New vectors are written back to this file whenever
@@ -1213,6 +1220,17 @@ poetry install --with vector
 ```
 
 See [Vector Store Benchmark](docs/VECTOR_BENCHMARKS.md) for sample GPU results.
+
+### Tokenizer Options
+
+Text fields are tokenized before embeddings are generated. UME uses the first
+available tokenizer library:
+
+- [`unitok`](https://pypi.org/project/unitok/)
+- [`tatitok`](https://pypi.org/project/tatitok/)
+- [`tiktoken`](https://github.com/openai/tiktoken)
+
+Install one of these packages to control tokenization behavior.
 
 ### Custom Backends
 

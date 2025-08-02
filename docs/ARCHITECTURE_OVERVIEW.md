@@ -14,9 +14,14 @@ graph TD
 ```
 
 Events enter the system through the **Ingestion API**, which publishes them to the `ume-raw-events` Kafka topic. The
-Privacy Agent sanitizes sensitive content before forwarding messages to `ume-clean-events`. The **Projection Engine** then
-consumes these sanitized events and applies them via the configured Graph Adapter. The adapter persists the knowledge
-graph to the chosen backend (SQLite, Neo4j, etc.) and stores embeddings in a dedicated vector store.
+Privacy Agent sanitizes sensitive content before forwarding messages to `ume-clean-events`. A dedicated **Projection Engine**
+service consumes these sanitized events, applies them via the configured Graph Adapter, and keeps the graph synchronized with
+the event stream. The adapter persists the knowledge graph to the chosen backend (SQLite, Neo4j, etc.) and stores embeddings in a vector store.
+
+The vector store backend is selected with `UME_VECTOR_BACKEND`. In addition to FAISS and Chroma, UME supports Pinecone by
+setting `UME_VECTOR_BACKEND=pinecone` and providing `UME_PINECONE_API_KEY`, `UME_PINECONE_ENVIRONMENT`, and `UME_PINECONE_INDEX`.
+Text fields are tokenized before embeddings are generated using whichever tokenizer library is installed (`unitok`,
+`tatitok`, or `tiktoken`).
 
 When querying, the API can perform a similarity search against the vector store to retrieve relevant nodes and
 then issue graph queries to traverse relationships.
@@ -25,6 +30,12 @@ When FAISS is compiled with GPU support, setting the environment variable
 `UME_VECTOR_USE_GPU=true` transfers the index to GPU memory. Benchmarks with
 100k vectors on an RTX 4080 show roughly a **5x** reduction in query latency
 compared to CPU search (see [Vector Store Benchmark](VECTOR_BENCHMARKS.md)).
+
+## Projection Engine Service
+
+The projection engine runs continuously as a consumer of `ume-clean-events`.
+Each event is parsed and applied to the graph through the adapter, keeping the
+persistent graph and vector store in sync with the event log.
 
 ## Component Interactions
 
@@ -102,7 +113,9 @@ resulting sanitized events are forwarded to the graph adapter layer.
 
 Sanitized events are appended to a lightweight ledger along with their
 Redpanda offsets. The ledger can be queried via the `/ledger/events` API and
-used with `ume.replay.replay_from_ledger()` to rebuild state from any offset.
+replayed with the `ume replay-graph` command to rebuild state from any offset.
+Run `ume replay-graph --db-path PATH [--end-offset N]` to apply ledger events
+into a fresh graph database.
 On startup the API launches a scheduler that periodically calls
 `event_ledger.compact()` to remove entries older than
 `UME_LEDGER_OFFSET_WINDOW` offsets from the latest processed bookmark. The
