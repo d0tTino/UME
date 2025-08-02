@@ -109,6 +109,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     # Tweet bot
     TWITTER_BEARER_TOKEN: str | None = None
 
+    # Finance engine
+    FINANCE_ENGINE_URL: str = "http://finance-engine:8000"
+
     # Angel Bridge
     ANGEL_BRIDGE_LOOKBACK_HOURS: int = 24
 
