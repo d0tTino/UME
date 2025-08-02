@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, AsyncGenerator
 import asyncio
-import inspect
 import json
 import math
 import time
@@ -81,8 +80,6 @@ async def api_semantic_search(
     nodes = []
     for node_id in ids:
         attrs = await _maybe_call(graph, "get_node", node_id)
-        if inspect.isawaitable(attrs):
-            attrs = await attrs
         if attrs is not None:
             nodes.append({"id": node_id, "attributes": attrs})
     SEMANTIC_SEARCH_LATENCY.observe(time.perf_counter() - start)
@@ -111,8 +108,6 @@ async def api_recall(
     nodes = []
     for node_id in ids:
         attrs = await _maybe_call(graph, "get_node", node_id)
-        if inspect.isawaitable(attrs):
-            attrs = await attrs
         if attrs is not None:
             emb = attrs.get("embedding")
             if isinstance(emb, list) and len(emb) == len(vector):
@@ -150,8 +145,6 @@ async def api_recall_stream(
         ids = store.query(vector, k=k)
         for node_id in ids:
             attrs = await _maybe_call(graph, "get_node", node_id)
-            if inspect.isawaitable(attrs):
-                attrs = await attrs
             if attrs is not None:
                 emb = attrs.get("embedding")
                 if isinstance(emb, list) and len(emb) == len(vector):
