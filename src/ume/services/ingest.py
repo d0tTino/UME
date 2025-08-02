@@ -48,12 +48,26 @@ def ingest_event(data: Dict[str, Any], graph: IGraphAdapter) -> None:
 
     tag_results = classify_event(event)
     event.payload["classification"] = [
-        {"tag": r.tag, "confidence": r.confidence} for r in tag_results
+        {
+            "tag": r.tag,
+            "confidence": r.confidence,
+            "domain": r.domain,
+            "subdomain": r.subdomain,
+            "sensitivity": r.sensitivity,
+        }
+        for r in tag_results
     ]
     if tag_results:
         attributes = event.payload.setdefault("attributes", {})
         attributes["tags"] = [r.tag for r in tag_results]
         attributes["tag_confidence"] = [r.confidence for r in tag_results]
+        for r in tag_results:
+            if r.domain and "domain" not in attributes:
+                attributes["domain"] = r.domain
+            if r.subdomain and "subdomain" not in attributes:
+                attributes["subdomain"] = r.subdomain
+            if r.sensitivity and "sensitivity" not in attributes:
+                attributes["sensitivity"] = r.sensitivity
 
     apply_event(event, graph)
 
