@@ -85,6 +85,7 @@ grpc_server = ["grpcio"]
 produce_demo = "ume.producer_demo:main"
 ume-cli = "ume_cli:main"
 ume = "ume.__main__:main"
+ume-projection = "ume.projection_engine:main"
 compile-protos = "scripts.compile_protos:main"
 
 

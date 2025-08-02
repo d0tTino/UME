@@ -26,7 +26,7 @@ The engine is built from a few key components:
     environment settings. The backend is selected via `UME_VECTOR_BACKEND`.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
-- **Projection Engine** (`src/ume/consumer_demo.py`)
+- **Projection Engine** (`src/ume/projection_engine.py`)
   - Consumes sanitized events from Kafka and applies them to the graph via the configured adapter.
 
 ### Event Flow
@@ -74,7 +74,7 @@ The current system consists of the following main components:
     *   The demo uses a topic named `ume-clean-events`, configured for unlimited retention and immutable append-only storage so it acts as the canonical audit trail.
     *   The Docker setup also includes Redpanda Console, which provides a UI and schema registry capabilities, accessible typically on `localhost:8081` (for the console) while Redpanda itself exposes a schema registry via Pandaproxy on `localhost:8082`.
 
-3.  **Event Consumer (`src/ume/consumer_demo.py`):**
+3.  **Event Consumer (`src/ume/projection_engine.py`):**
     *   This script subscribes to topics on the message broker to receive and process events.
     *   In the demo, it connects to the Kafka/Redpanda broker at `localhost:9092`, subscribes to the `ume-clean-events` topic using the group ID `ume_client_group`.
     *   Upon receiving an event, it logs the event's content. In a more complete system, this component would be responsible for parsing the event, updating the memory graph, triggering actions, or other processing tasks.
@@ -248,6 +248,7 @@ For current plans and eventual detailed documentation on the UME graph model, pl
 
 *   [**Graph Model Documentation (docs/GRAPH_MODEL.md)**](docs/GRAPH_MODEL.md)
 *   [**Graph Listener Guide (docs/GRAPH_LISTENERS.md)**](docs/GRAPH_LISTENERS.md)
+*   [**Projection Engine (docs/PROJECTION_ENGINE.md)**](docs/PROJECTION_ENGINE.md)
 *   [**LLM Ferry (docs/LLM_FERRY.md)**](docs/LLM_FERRY.md)
 *   [**Angel Bridge (docs/ANGEL_BRIDGE.md)**](docs/ANGEL_BRIDGE.md)
 *   [**API Reference (docs/API_REFERENCE.md)**](docs/API_REFERENCE.md)
@@ -476,9 +477,9 @@ poetry run ume down
 ```
 See [docs/SSL_SETUP.md](docs/SSL_SETUP.md) for details.
 
-### 3. Run the Consumer Demo
+### 3. Run the Projection Engine
 ```bash
-poetry run python src/ume/consumer_demo.py
+poetry run ume-projection
 ```
 This script subscribes to topic `ume-clean-events` on `localhost:9092` and waits for messages.
 

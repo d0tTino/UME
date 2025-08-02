@@ -156,7 +156,11 @@ def test_pipeline_end_to_end(tmp_path, monkeypatch):
 
 
 def test_generic_events_go_to_ledger(tmp_path, monkeypatch, caplog):
-    msg_data = {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}}
+    msg_data = {
+        "eventType": "CUSTOM",
+        "timestamp": "1970-01-01T00:00:01Z",
+        "payload": {"foo": "bar"},
+    }
     msg = DummyMessage(json.dumps(msg_data).encode("utf-8"), 0)
     consumer = DummyConsumer([msg])
     ledger = EventLedger(str(tmp_path / "ledger.db"))
@@ -180,7 +184,11 @@ def test_generic_events_go_to_ledger(tmp_path, monkeypatch, caplog):
 def test_generic_enveloped_events_go_to_ledger(tmp_path, monkeypatch, caplog):
     envelope = {
         "schema_version": "1.0.0",
-        "event": {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}},
+        "event": {
+            "eventType": "CUSTOM",
+            "timestamp": "1970-01-01T00:00:01Z",
+            "payload": {"foo": "bar"},
+        },
     }
     msg = DummyMessage(json.dumps(envelope).encode("utf-8"), 0)
     consumer = DummyConsumer([msg])

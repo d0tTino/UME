@@ -9,7 +9,7 @@ from confluent_kafka import Consumer, KafkaException, KafkaError
 from jsonschema import ValidationError
 
 from ..config import settings
-from ..utils import ssl_config, event_to_snake
+from ..utils import ssl_config, event_to_snake, event_to_camel
 from ..event import parse_event, EventError, EventType
 from ..processing import apply_event_to_graph, ProcessingError
 from ..schema_utils import validate_event_dict
@@ -78,10 +78,6 @@ def run_graph_consumer(
             try:
                 data_camel = json.loads(msg.value().decode("utf-8"))
                 data = event_to_snake(data_camel)
-                validation_data = dict(data)
-                if "event_type" in validation_data:
-                    validation_data["eventType"] = validation_data.pop("event_type")
-                validate_event_dict(validation_data)
                 payload = data["event"] if "event" in data else data
                 event = parse_event(payload)
             except (json.JSONDecodeError, EventError) as exc:
@@ -90,7 +86,12 @@ def run_graph_consumer(
 
             if event.event_type not in VALID_EVENT_TYPES:
                 try:
-                    event_ledger.append(msg.offset(), payload)
+                    event_dict = {
+                        "event_type": event.event_type,
+                        "timestamp": event.timestamp,
+                        "payload": event.payload,
+                    }
+                    event_ledger.append(msg.offset(), event_to_camel(event_dict))
                 except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
                     logger.error("Ledger append failed: %s", exc)
                 try:
@@ -100,8 +101,11 @@ def run_graph_consumer(
                 logger.warning("Unknown event type '%s' skipped", event.event_type)
                 continue
 
+            validation_data = dict(data)
+            if "event_type" in validation_data:
+                validation_data["eventType"] = validation_data.pop("event_type")
             try:
-                validate_event_dict(data)
+                validate_event_dict(validation_data)
             except ValidationError as exc:
                 logger.error("Invalid event skipped: %s", exc)
                 continue
