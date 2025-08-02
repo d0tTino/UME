@@ -39,6 +39,12 @@ LLM_FERRY_API_KEY=
 
 # Number of hours of events to include in Angel Bridge summaries
 ANGEL_BRIDGE_LOOKBACK_HOURS=24
+# Kafka broker configuration for the projection engine
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+# Topic containing sanitized events
+KAFKA_CLEAN_EVENTS_TOPIC=ume-clean-events
+# Consumer group used by projection engine
+KAFKA_GROUP_ID=ume_client_group
 ```
 
 Set `UME_DOSSIER_PATH` to change where UME stores user dossier files if you want to relocate them from the default location.
