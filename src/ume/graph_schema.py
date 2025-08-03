@@ -15,6 +15,7 @@ class NodeType:
 
     name: str
     version: str
+    permission_level: str | None = None
 
 
 @dataclass
@@ -23,6 +24,7 @@ class EdgeLabel:
 
     label: str
     version: str
+    permission_level: str | None = None
 
 
 @dataclass
@@ -42,11 +44,19 @@ class GraphSchema:
             else:
                 data = json.load(f)
         node_types = {
-            name: NodeType(name=name, version=str(info.get("version", "0.0.0")))
+            name: NodeType(
+                name=name,
+                version=str(info.get("version", "0.0.0")),
+                permission_level=info.get("permission_level"),
+            )
             for name, info in data.get("node_types", {}).items()
         }
         edge_labels = {
-            label: EdgeLabel(label=label, version=str(info.get("version", "0.0.0")))
+            label: EdgeLabel(
+                label=label,
+                version=str(info.get("version", "0.0.0")),
+                permission_level=info.get("permission_level"),
+            )
             for label, info in data.get("edge_labels", {}).items()
         }
         version = str(data.get("version", "0.0.0"))

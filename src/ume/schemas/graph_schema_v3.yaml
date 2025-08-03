@@ -1,0 +1,39 @@
+version: "3.0.0"
+node_types:
+  User:
+    version: "3.0.0"
+    permission_level: "public"
+  UserGroup:
+    version: "3.0.0"
+    permission_level: "public"
+  CalendarEvent:
+    version: "3.0.0"
+    permission_level: "public"
+  CalendarLayer:
+    version: "3.0.0"
+    permission_level: "public"
+  DecisionAnalysis:
+    version: "3.0.0"
+    permission_level: "public"
+  ProposedAction:
+    version: "3.0.0"
+    permission_level: "public"
+  FinancialAccount:
+    version: "3.0.0"
+    permission_level: "public"
+edge_labels:
+  OWNED_BY:
+    version: "3.0.0"
+    permission_level: "public"
+  SHARED_WITH:
+    version: "3.0.0"
+    permission_level: "public"
+  INVITES:
+    version: "3.0.0"
+    permission_level: "public"
+  TAGGED_AS:
+    version: "3.0.0"
+    permission_level: "public"
+  CONSIDERS:
+    version: "3.0.0"
+    permission_level: "public"
