@@ -132,6 +132,8 @@ for _package in _OPTIONAL_PACKAGES:
         if _package == "neo4j":
             module.GraphDatabase = object
             module.Driver = object
+        if _package == "grpc":
+            module.__version__ = "0"
         if _package == "structlog":
             proc = type("P", (), {})
             module.contextvars = types.SimpleNamespace(
@@ -282,4 +284,40 @@ def _restore_env() -> Generator[None, None, None]:
         return
     if getattr(pkg, "__path__", None):
         importlib.reload(module)
+
+
+@pytest.fixture
+def finance_engine_mock():
+    httpx = pytest.importorskip("httpx")
+    respx = pytest.importorskip("respx")
+    with respx.mock(assert_all_called=True) as mock:
+        mock.post("http://finance-engine:8000/categorize").mock(
+            return_value=httpx.Response(200, json={"categories": ["Food"]})
+        )
+        yield mock
+
+
+@pytest.fixture
+def tino_storm_mock():
+    httpx = pytest.importorskip("httpx")
+    respx = pytest.importorskip("respx")
+    from ume.classification.tino_storm import TinoStormClassifier
+    from ume.classification.plugins import register_classifier
+
+    url = "http://tino"
+    with respx.mock(assert_all_called=True) as mock:
+        mock.post(f"{url}/classify").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "domain": "research",
+                    "subdomain": "ml",
+                    "sensitivity": "low",
+                    "confidence": 1.0,
+                },
+            )
+        )
+        register_classifier("tino_storm", TinoStormClassifier(base_url=url))
+        yield mock
+    register_classifier("tino_storm", TinoStormClassifier())
 
