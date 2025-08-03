@@ -75,13 +75,29 @@ class GraphSchemaManager:
         self.get_schema(old_version)  # validate versions exist
         new_schema = self.get_schema(new_version)
 
-        if graph is not None and old_version == "1.0.0" and new_version == "2.0.0":
-            for src, tgt, label in list(graph.get_all_edges()):
-                if label == "L":
-                    graph.delete_edge(src, tgt, label)
-                    graph.add_edge(src, tgt, "LINKS_TO")
-                elif label == "TO_DELETE":
-                    graph.delete_edge(src, tgt, label)
+        if graph is not None:
+            if old_version == "1.0.0":
+                for src, tgt, label in list(graph.get_all_edges()):
+                    if label == "L":
+                        graph.delete_edge(src, tgt, label)
+                        graph.add_edge(src, tgt, "LINKS_TO")
+                    elif label == "TO_DELETE":
+                        graph.delete_edge(src, tgt, label)
+
+            if new_version == "3.0.0":
+                for src, tgt, label in list(graph.get_all_edges()):
+                    if label == "NEW_LABEL":
+                        graph.delete_edge(src, tgt, label)
+                        graph.add_edge(src, tgt, "TAGGED_AS")
+                    elif label in {
+                        "REMEMBERS",
+                        "ASSOCIATED_WITH",
+                        "CAUSES",
+                        "LINKS_TO",
+                        "CONNECTS_TO",
+                        "RELATES_TO",
+                    }:
+                        graph.delete_edge(src, tgt, label)
 
         return new_schema
 

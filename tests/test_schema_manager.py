@@ -27,6 +27,7 @@ def test_schema_manager_loads_versions():
     versions = set(manager.available_versions())
     assert "1.0.0" in versions
     assert "2.0.0" in versions
+    assert "3.0.0" in versions
 
 
 def test_get_schema_returns_correct_version():
@@ -47,6 +48,8 @@ def test_proto_lookup():
     manager = GraphSchemaManager()
     proto = manager.get_proto("1.0.0")
     assert hasattr(proto, "Graph")
+    proto3 = manager.get_proto("3.0.0")
+    assert hasattr(proto3, "Graph")
 
 
 def test_register_schema(tmp_path: Path):
@@ -95,3 +98,21 @@ def test_upgrade_transforms_graph(graph: PersistentGraph) -> None:
     assert ("a", "b", "LINKS_TO") in edges
     assert all(lbl != "L" for _, _, lbl in edges)
     assert all(lbl != "TO_DELETE" for _, _, lbl in edges)
+
+
+def test_upgrade_to_v3_transforms_graph(graph: PersistentGraph) -> None:
+    graph.add_node("a", {})
+    graph.add_node("b", {})
+    graph.add_edge("a", "b", "L")
+    graph.add_edge("b", "a", "TO_DELETE")
+    graph.add_edge("a", "b", "NEW_LABEL")
+    graph.add_edge("b", "a", "REMEMBERS")
+
+    manager = GraphSchemaManager()
+    manager.upgrade_schema("1.0.0", "3.0.0", graph)
+
+    edges = graph.get_all_edges()
+    assert ("a", "b", "TAGGED_AS") in edges
+    assert all(
+        lbl == "TAGGED_AS" for _, _, lbl in edges
+    )
