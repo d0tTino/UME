@@ -6,6 +6,7 @@ from .decisions import Decision, create_decision
 from .finance import Transaction, create_transaction
 from .financial_account import FinancialAccount, create_financial_account
 
+
 __all__ = [
     "User",
     "create_user",
@@ -13,6 +14,8 @@ __all__ = [
     "create_calendar_event",
     "Decision",
     "create_decision",
+    "DecisionAnalysis",
+    "create_decision_analysis",
     "Transaction",
     "create_transaction",
     "FinancialAccount",
