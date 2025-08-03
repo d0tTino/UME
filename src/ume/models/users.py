@@ -6,18 +6,27 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import uuid
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "3.0"
 
 
 @dataclass
 class User:
     """Represents a user in the graph."""
 
-    id: str
+    user_id: str
     name: str
     email: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     schema_version: str = SCHEMA_VERSION
+
+    @property
+    def id(self) -> str:  # pragma: no cover - compatibility layer
+        """Backward compatible alias for ``user_id``."""
+        return self.user_id
+
+    @id.setter
+    def id(self, value: str) -> None:  # pragma: no cover - compatibility layer
+        self.user_id = value
 
 
 def create_user(
@@ -30,7 +39,7 @@ def create_user(
     """Factory helper to build :class:`User` instances."""
 
     return User(
-        id=user_id or str(uuid.uuid4()),
+        user_id=user_id or str(uuid.uuid4()),
         name=name,
         email=email,
         created_at=created_at or datetime.utcnow(),
