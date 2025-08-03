@@ -2,6 +2,8 @@ import ume.services.ingest as ingest_module
 from ume.graph import MockGraph
 from ume.services import ingest_event
 from ume.processing import apply_event_to_graph
+from ume.event import Event
+from ume.classification.service import classify_event
 
 
 def test_ingest_event_classifies_and_persists_tags(monkeypatch) -> None:
@@ -40,3 +42,20 @@ def test_ingest_event_classifies_and_persists_tags(monkeypatch) -> None:
             "sensitivity": None,
         }
     ]
+
+
+def test_finance_tag_generation(finance_engine_mock) -> None:
+    event = Event(event_type="CREATE_NODE", timestamp=0, payload={"transaction": {"amount": 1}})
+    results = classify_event(event)
+    assert [r.tag for r in results] == ["finance:food"]
+
+
+def test_research_tag_generation(tino_storm_mock) -> None:
+    event = Event(
+        event_type="CREATE_NODE",
+        timestamp=0,
+        payload={"attributes": {"content": "some text"}},
+    )
+    results = classify_event(event)
+    assert [r.tag for r in results] == ["research:ml:low"]
+    assert results[0].domain == "research"
