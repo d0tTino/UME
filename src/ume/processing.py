@@ -224,6 +224,10 @@ def apply_event_to_graph(
         for listener in get_registered_listeners():
             listener.on_edge_deleted(source_node_id, target_node_id, label)
 
+    elif event.event_type == EventType.ANOMALY_DETECTED:
+        # No graph mutations for anomaly events; they are informational only.
+        return
+
     else:
         # For now, we can choose to ignore unknown event types or raise an error.
         # Raising an error is often better for catching unexpected event types.

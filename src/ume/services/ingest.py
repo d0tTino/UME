@@ -12,6 +12,7 @@ from ..processing import apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..classification import classify_event
+from ..anomaly_detection import AnomalyDetector
 
 if TYPE_CHECKING:  # pragma: no cover - typing import for mypy
     from ume_client import events_pb2 as events_pb2_type
@@ -19,6 +20,8 @@ else:
     events_pb2_type = cast(Any, None)
 
 events_pb2 = cast(Any, _events_pb2)
+
+_anomaly_detector = AnomalyDetector()
 
 __all__ = [
     "validate_event",
@@ -70,6 +73,18 @@ def ingest_event(data: Dict[str, Any], graph: IGraphAdapter) -> None:
                 attributes["sensitivity"] = r.sensitivity
 
     apply_event(event, graph)
+
+    anomaly_event = _anomaly_detector.process_event(event)
+    if anomaly_event is not None:
+        ingest_event(
+            {
+                "eventType": anomaly_event.event_type,
+                "timestamp": anomaly_event.timestamp,
+                "payload": anomaly_event.payload,
+                "sourceService": anomaly_event.source,
+            },
+            graph,
+        )
 
 
 def ingest_events_batch(events: Iterable[Dict[str, Any]], graph: IGraphAdapter) -> None:
