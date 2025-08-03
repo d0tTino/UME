@@ -240,6 +240,41 @@ When nodes include textual attributes, the consumer generates vector embeddings 
 
 This pipeline demonstrates how UME transforms incoming events into a persistent knowledge graph.
 
+## Event Tags and Anomaly Detection
+
+Ingested events are passed through the classification service which attaches one or more **tags** to the event's `classification` field. Tags are assigned by registered classifiers and can later be used to filter or analyze events.
+
+To retrieve events carrying a specific tag:
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/events?tag=phishing"
+```
+
+The `AnomalyDetector` tracks how often each tag appears for a given entity. If the frequency of a tag changes more than the configured threshold, an `ANOMALY_DETECTED` event is emitted.
+
+### Registering a classifier
+
+```python
+from ume.classification.plugins import register_classifier, Classifier, TagResult
+
+class MyClassifier(Classifier):
+    def classify(self, payload: dict) -> list[TagResult]:
+        return [TagResult(tag="custom", confidence=1.0)]
+
+register_classifier("MY_EVENT", MyClassifier())
+```
+
+### Adjusting anomaly thresholds
+
+```python
+from ume.anomaly_detection import AnomalyDetector
+
+detector = AnomalyDetector(threshold=0.2)
+```
+
+For more details see [docs/TAGS_AND_ANOMALIES.md](docs/TAGS_AND_ANOMALIES.md).
+
 ## UME Graph Model
 
 A core aspect of the Universal Memory Engine (UME) is its ability to construct a knowledge graph from the events it processes. This graph serves as the dynamic, queryable memory for agents and automations.
