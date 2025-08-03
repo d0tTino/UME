@@ -66,7 +66,10 @@ def extract_subgraph(
     nodes: Dict[str, Dict[str, Any]] = {}
     edges: List[Tuple[str, str, str]] = []
     adj: Dict[str, List[Tuple[str, str]]] = {}
-    for src, tgt, lbl in graph.get_all_edges():
+    # ``get_all_edges`` may include additional metadata (e.g., permission
+    # level). Unpack only the first three values to remain compatible with
+    # both 3- and 4-tuple representations.
+    for src, tgt, lbl, *_ in graph.get_all_edges():
         adj.setdefault(src, []).append((tgt, lbl))
 
     to_visit = [(start_node_id, 0)]
