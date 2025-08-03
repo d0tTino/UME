@@ -17,7 +17,7 @@ from .reliability import filter_low_confidence
 import inspect
 from .graph_adapter import IGraphAdapter
 from .async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
-from .query import Neo4jQueryEngine
+from .query import Neo4jQueryEngine, build_events_query
 from .event import EventError
 from .processing import ProcessingError
 from ume.services.ingest import ingest_event, ingest_events_batch
@@ -363,6 +363,20 @@ async def api_get_entity(
 ) -> Dict[str, Any]:
     """Return node ``id`` if its ``type`` matches the path parameter."""
     return {"id": id, "attributes": entity}
+
+
+@router.get("/events")
+def api_get_events(
+    tag: str | None = Query(None),
+    node_id: str | None = Query(None),
+    limit: int = Query(100, ge=1),
+    _: str = Depends(deps.get_current_role),
+    engine: Neo4jQueryEngine = Depends(deps.get_query_engine),
+) -> List[Dict[str, Any]]:
+    """Query events filtered by optional ``tag`` or ``node_id``."""
+
+    cypher, params = build_events_query(tag=tag, node_id=node_id, limit=limit)
+    return engine.execute_cypher(cypher, params)
 
 
 @router.post("/events")

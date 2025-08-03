@@ -169,6 +169,13 @@ Return basic graph and vector index statistics.
 Return recent audit log entries, newest first.
 - **Query parameters**: optional `limit` (default `10`).
 
+### GET `/events`
+Query events or nodes stored in the graph.
+- **Query parameters**:
+  - `tag` – return only entries whose `tags` list contains this value.
+  - `node_id` – optionally restrict results to a specific node.
+  - `limit` – maximum number of results (default `100`).
+
 ### POST `/events`
 Validate and apply an event to the graph. This endpoint is also available as
 `/store`.

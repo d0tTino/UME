@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-from neo4j import GraphDatabase, Driver
+from neo4j import Driver, GraphDatabase
 
 
 class Neo4jQueryEngine:
@@ -43,3 +43,32 @@ class Neo4jQueryEngine:
         with self._driver.session() as session:
             result = session.run(query, parameters or {})
             return [record.data() for record in result]
+
+
+def build_events_query(
+    *,
+    tag: str | None = None,
+    node_id: str | None = None,
+    limit: int = 100,
+) -> Tuple[str, Dict[str, Any]]:
+    """Return Cypher and parameters to fetch events filtered by ``tag``.
+
+    The returned statement matches nodes in the graph and optionally restricts
+    results to those whose ``tags`` list contains ``tag`` or whose ``id``
+    matches ``node_id``. Results are limited by ``limit``.
+    """
+
+    params: Dict[str, Any] = {"limit": limit}
+    clauses: List[str] = []
+    if tag is not None:
+        params["tag"] = tag
+        clauses.append("$tag IN n.tags")
+    if node_id is not None:
+        params["node_id"] = node_id
+        clauses.append("n.id = $node_id")
+
+    query = "MATCH (n)"
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
+    query += " RETURN n LIMIT $limit"
+    return query, params

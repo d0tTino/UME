@@ -77,6 +77,32 @@ def test_post_event_requires_auth(client_and_graph):
     assert res.status_code == 401
 
 
+def test_get_events_with_tag(client_and_graph):
+    client, _ = client_and_graph
+    token = _token(client)
+
+    class QE:
+        def __init__(self) -> None:
+            self.last: tuple[str, dict[str, object]] | None = None
+
+        def execute_cypher(self, query, parameters=None):
+            self.last = (query, parameters or {})
+            return [{"id": "n1"}]
+
+    app.state.query_engine = QE()
+
+    res = client.get(
+        "/events",
+        params={"tag": "malware"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 200
+    assert res.json() == [{"id": "n1"}]
+    qe = app.state.query_engine
+    assert qe.last is not None and qe.last[1]["tag"] == "malware"
+
+
 def test_post_events_batch(client_and_graph) -> None:
     client, g = client_and_graph
     token = _token(client)
