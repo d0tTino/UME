@@ -44,6 +44,7 @@ from .memory_aging import (
 )
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
+from .permissions_adapter import PermissionsGraphAdapter
 from .plugins.alignment import PolicyViolationError
 from .processing import apply_event_to_graph, ProcessingError
 from .audit import log_audit_entry, get_audit_entries
@@ -128,6 +129,7 @@ __all__ = [
     "Neo4jGraph",
     "IGraphAdapter",
     "RoleBasedGraphAdapter",
+    "PermissionsGraphAdapter",
     "AccessDeniedError",
     "apply_event_to_graph",
     "ProcessingError",
