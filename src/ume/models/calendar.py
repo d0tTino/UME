@@ -15,18 +15,28 @@ class CalendarEvent:
 
     id: str
     title: str
-    start: datetime
-    end: datetime | None = None
+    start_time: datetime
+    end_time: datetime | None = None
     description: str | None = None
+    is_all_day: bool = False
+    location: str | None = None
+    status: str | None = None
+    rrule: str | None = None
+    visibility: str | None = None
     schema_version: str = SCHEMA_VERSION
 
 
 def create_calendar_event(
     title: str,
-    start: datetime,
-    end: datetime | None = None,
+    start_time: datetime,
+    end_time: datetime | None = None,
     *,
     description: str | None = None,
+    is_all_day: bool = False,
+    location: str | None = None,
+    status: str | None = None,
+    rrule: str | None = None,
+    visibility: str | None = None,
     event_id: str | None = None,
 ) -> CalendarEvent:
     """Factory helper to build :class:`CalendarEvent` instances."""
@@ -34,7 +44,12 @@ def create_calendar_event(
     return CalendarEvent(
         id=event_id or str(uuid.uuid4()),
         title=title,
-        start=start,
-        end=end,
+        start_time=start_time,
+        end_time=end_time,
         description=description,
+        is_all_day=is_all_day,
+        location=location,
+        status=status,
+        rrule=rrule,
+        visibility=visibility,
     )
