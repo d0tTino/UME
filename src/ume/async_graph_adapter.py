@@ -55,17 +55,25 @@ class IAsyncGraphAdapter(ABC):
 
     @abstractmethod
     async def add_edge(
-        self, source_node_id: str, target_node_id: str, label: str
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
     ) -> None:
         pass
 
     @abstractmethod
-    async def get_all_edges(self) -> List[Tuple[str, str, str]]:
+    async def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         pass
 
     @abstractmethod
     async def delete_edge(
-        self, source_node_id: str, target_node_id: str, label: str
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
     ) -> None:
         pass
 
