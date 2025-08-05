@@ -12,7 +12,14 @@ try:  # pragma: no cover - optional dependency
     import redis
 except Exception:  # pragma: no cover - allow tests without redis installed
     redis = None
-from fastapi_limiter import FastAPILimiter
+
+try:  # pragma: no cover - optional dependency
+    from fastapi_limiter import FastAPILimiter
+except Exception:  # pragma: no cover - provide stub for tests without limiter
+    class FastAPILimiter:  # type: ignore
+        @staticmethod
+        async def init(*_args: Any, **_kwargs: Any) -> None:  # pragma: no cover - simple stub
+            return None
 
 from .config import settings
 from .logging_utils import configure_logging
@@ -25,7 +32,18 @@ except Exception:  # pragma: no cover - allow tests without opentelemetry instal
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from starlette_graphene3 import GraphQLApp, make_graphiql_handler
+try:  # pragma: no cover - optional dependency
+    from starlette_graphene3 import GraphQLApp, make_graphiql_handler
+except Exception:  # pragma: no cover - provide stubs for tests without graphene
+    class GraphQLApp:  # type: ignore
+        def __init__(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover - simple stub
+            pass
+
+    def make_graphiql_handler() -> Callable[[Any], Any]:  # pragma: no cover - simple stub
+        def _handler(*_args: Any, **_kwargs: Any) -> None:
+            return None
+
+        return _handler
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from .retention import (

@@ -128,17 +128,18 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
                     f"Invalid snapshot format for edge at index {i}: each edge should be a list or tuple, "
                     f"got {type(edge_data).__name__}."
                 )
-            if len(edge_data) != 3:
+            if len(edge_data) < 3:
                 raise SnapshotError(
-                    f"Invalid snapshot format for edge at index {i}: each edge must have 3 elements "
+                    f"Invalid snapshot format for edge at index {i}: each edge must have at least 3 elements "
                     f"(source, target, label), got {len(edge_data)} elements."
                 )
-            if not all(isinstance(item, str) for item in edge_data):
+            src, tgt, lbl = edge_data[:3]
+            if not all(isinstance(item, str) for item in (src, tgt, lbl)):
                 raise SnapshotError(
                     f"Invalid snapshot format for edge at index {i}: all edge elements "
                     f"(source, target, label) must be strings."
                 )
-            edge_tuple = tuple(edge_data)
+            edge_tuple = (src, tgt, lbl)
             if edge_tuple in seen_edges:
                 raise SnapshotError(
                     f"Duplicate edge {edge_tuple} encountered in snapshot."
@@ -171,5 +172,5 @@ def load_graph_into_existing(
     for node_id in temp_graph.get_all_node_ids():
         attrs = temp_graph.get_node(node_id) or {}
         graph.add_node(node_id, attrs)
-    for src, tgt, lbl in temp_graph.get_all_edges():
+    for src, tgt, lbl, *_ in temp_graph.get_all_edges():
         graph.add_edge(src, tgt, lbl)
