@@ -27,17 +27,30 @@ class PermissionsGraphAdapter(IGraphAdapter):
     def _subjects(self) -> list[str]:
         return [s for s in [self.user_id, self.group_id] if s]
 
-    def _has_permission_edge(self, subject: str, node_id: str, label: str) -> bool:
-        for src, tgt, lbl in self._adapter.get_all_edges():
-            if src == subject and tgt == node_id and lbl == label:
+    def _has_permission_edge(self, node_id: str, subject: str, perm: str) -> bool:
+        for edge in self._adapter.get_all_edges():
+            src, tgt, lbl, *rest = edge
+            perm_level = None
+            if rest:
+                attrs = rest[0]
+                if isinstance(attrs, dict):
+                    perm_level = attrs.get("permission_level")
+                else:
+                    perm_level = attrs
+            if (
+                src == node_id
+                and tgt == subject
+                and lbl == "HAS_PERMISSION"
+                and perm_level == perm
+            ):
                 return True
         return False
 
     def _has_permission(self, node_id: str, perm: str) -> bool:
         for subject in self._subjects():
-            if self._has_permission_edge(subject, node_id, perm):
+            if self._has_permission_edge(node_id, subject, perm):
                 return True
-            if perm == "viewer" and self._has_permission_edge(subject, node_id, "editor"):
+            if perm == "viewer" and self._has_permission_edge(node_id, subject, "editor"):
                 return True
         return False
 
@@ -73,9 +86,10 @@ class PermissionsGraphAdapter(IGraphAdapter):
             if self._has_permission(nid, "viewer")
         }
         data["edges"] = [
-            (s, t, lbl)
-            for s, t, lbl in data.get("edges", [])
-            if self._has_permission(s, "viewer") and self._has_permission(t, "viewer")
+            edge
+            for edge in data.get("edges", [])
+            if self._has_permission(edge[0], "viewer")
+            and self._has_permission(edge[1], "viewer")
         ]
         return data
 
@@ -84,6 +98,29 @@ class PermissionsGraphAdapter(IGraphAdapter):
 
     def get_all_node_ids(self) -> List[str]:
         return self._filter_visible(self._adapter.get_all_node_ids())
+
+    def _get_nodes_for_subject(self, subject_id: str) -> List[str]:
+        nodes: set[str] = set()
+        for edge in self._adapter.get_all_edges():
+            src, tgt, lbl, *rest = edge
+            if lbl != "HAS_PERMISSION" or tgt != subject_id:
+                continue
+            perm_level = None
+            if rest:
+                attrs = rest[0]
+                if isinstance(attrs, dict):
+                    perm_level = attrs.get("permission_level")
+                else:
+                    perm_level = attrs
+            if perm_level:
+                nodes.add(src)
+        return list(nodes)
+
+    def get_nodes_by_user(self, user_id: str) -> List[str]:
+        return self._filter_visible(self._get_nodes_for_subject(user_id))
+
+    def get_nodes_shared_with(self, group_id: str) -> List[str]:
+        return self._filter_visible(self._get_nodes_for_subject(group_id))
 
     def find_connected_nodes(
         self, node_id: str, edge_label: Optional[str] = None
@@ -98,12 +135,13 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self._require_editor(target_node_id)
         self._adapter.add_edge(source_node_id, target_node_id, label)
 
-    def get_all_edges(self) -> List[tuple[str, str, str]]:
+    def get_all_edges(self) -> List[tuple[str, ...]]:
         edges = self._adapter.get_all_edges()
         return [
-            (s, t, lbl)
-            for s, t, lbl in edges
-            if self._has_permission(s, "viewer") and self._has_permission(t, "viewer")
+            edge
+            for edge in edges
+            if self._has_permission(edge[0], "viewer")
+            and self._has_permission(edge[1], "viewer")
         ]
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
@@ -166,10 +204,10 @@ class PermissionsGraphAdapter(IGraphAdapter):
             if self._has_permission(nid, "viewer")
         }
         subgraph["edges"] = [
-            (s, t, lbl)
-            for s, t, lbl in subgraph.get("edges", [])
-            if self._has_permission(s, "viewer")
-            and self._has_permission(t, "viewer")
+            edge
+            for edge in subgraph.get("edges", [])
+            if self._has_permission(edge[0], "viewer")
+            and self._has_permission(edge[1], "viewer")
         ]
         return subgraph
 
