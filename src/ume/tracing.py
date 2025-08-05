@@ -95,11 +95,13 @@ class TracingGraphAdapter(IGraphAdapter):
         with self._tracer.start_as_current_span("graph.find_connected_nodes"):
             return self._adapter.find_connected_nodes(node_id, edge_label)
 
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self, source_node_id: str, target_node_id: str, label: str, **attrs: Any
+    ) -> None:
         with self._tracer.start_as_current_span("graph.add_edge"):
-            self._adapter.add_edge(source_node_id, target_node_id, label)
+            self._adapter.add_edge(source_node_id, target_node_id, label, **attrs)
 
-    def get_all_edges(self) -> List[tuple[str, str, str]]:
+    def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
         with self._tracer.start_as_current_span("graph.get_all_edges"):
             return self._adapter.get_all_edges()
 

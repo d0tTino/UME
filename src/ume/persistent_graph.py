@@ -40,12 +40,18 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                     source TEXT,
                     target TEXT,
                     label TEXT,
+                    attributes TEXT,
                     redacted INTEGER DEFAULT 0,
                     created_at INTEGER DEFAULT (strftime('%s','now')),
                     PRIMARY KEY (source, target, label)
                 )
                 """
             )
+            # Ensure the attributes column exists for pre-existing databases
+            cur = self.conn.execute("PRAGMA table_info(edges)")
+            cols = [row[1] for row in cur.fetchall()]
+            if "attributes" not in cols:
+                self.conn.execute("ALTER TABLE edges ADD COLUMN attributes TEXT")
             self.conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS scores (
@@ -122,19 +128,30 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         label: str,
         *,
         created_at: int | None = None,
+        **attrs: Any,
     ) -> None:
         if not self.node_exists(source_node_id) or not self.node_exists(target_node_id):
             raise ProcessingError(
                 f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
             )
+
+        from .graph_schema import DEFAULT_SCHEMA  # local import to avoid circular
+
+        edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
+        permission_level = edge_def.permission_level if edge_def else None
+        attr_dict: Dict[str, Any] = dict(attrs)
+        if permission_level is not None:
+            attr_dict["permission_level"] = permission_level
+
         try:
             with self.conn:
                 self.conn.execute(
-                    "INSERT INTO edges(source, target, label, created_at) VALUES(?, ?, ?, ?)",
+                    "INSERT INTO edges(source, target, label, attributes, created_at) VALUES(?, ?, ?, ?, ?)",
                     (
                         source_node_id,
                         target_node_id,
                         label,
+                        json.dumps(attr_dict),
                         created_at or int(time.time()),
                     ),
                 )
@@ -143,17 +160,25 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
             )
 
-    def get_all_edges(self) -> List[Tuple[str, str, str]]:
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:  # type: ignore[override]
         cur = self.conn.execute(
             """
-            SELECT e.source, e.target, e.label
+            SELECT e.source, e.target, e.label, e.attributes
             FROM edges e
             JOIN nodes s ON e.source = s.id
             JOIN nodes t ON e.target = t.id
             WHERE e.redacted=0 AND s.redacted=0 AND t.redacted=0
             """
         )
-        return [(row["source"], row["target"], row["label"]) for row in cur.fetchall()]
+        return [
+            (
+                row["source"],
+                row["target"],
+                row["label"],
+                json.loads(row["attributes"]) if row["attributes"] else {},
+            )
+            for row in cur.fetchall()
+        ]
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         with self.conn:

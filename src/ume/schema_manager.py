@@ -77,7 +77,7 @@ class GraphSchemaManager:
 
         if graph is not None:
             if old_version == "1.0.0":
-                for src, tgt, label in list(graph.get_all_edges()):
+                for src, tgt, label, *_ in list(graph.get_all_edges()):
                     if label == "L":
                         graph.delete_edge(src, tgt, label)
                         graph.add_edge(src, tgt, "LINKS_TO")
@@ -85,7 +85,7 @@ class GraphSchemaManager:
                         graph.delete_edge(src, tgt, label)
 
             if new_version == "3.0.0":
-                for src, tgt, label in list(graph.get_all_edges()):
+                for src, tgt, label, *_ in list(graph.get_all_edges()):
                     if label == "NEW_LABEL":
                         graph.delete_edge(src, tgt, label)
                         graph.add_edge(src, tgt, "TAGGED_AS")

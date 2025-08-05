@@ -57,7 +57,7 @@ def test_create_edge_mutation() -> None:
     )
     assert res.status_code == 200
     assert res.json()["data"]["createEdge"]["ok"] is True
-    assert ("b", "a", "ba") in app.state.graph.get_all_edges()
+    assert ("b", "a", "ba", {}) in app.state.graph.get_all_edges()
 
 
 def test_edges_for_node() -> None:

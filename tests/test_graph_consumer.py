@@ -81,5 +81,5 @@ def test_graph_consumer_applies_events(tmp_path, monkeypatch: pytest.MonkeyPatch
 
     assert graph.node_exists("n1")
     assert graph.node_exists("n2")
-    assert ("n1", "n2", "RELATES_TO") in graph.get_all_edges()
+    assert ("n1", "n2", "RELATES_TO", {}) in graph.get_all_edges()
     assert ledger.last_processed_offset == 2

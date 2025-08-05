@@ -301,13 +301,17 @@ class AsyncAdapterMixin:
         )
 
     async def add_edge(
-        self, source_node_id: str, target_node_id: str, label: str
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        **attrs: Any,
     ) -> None:
         await asyncio.to_thread(
-            self._adapter.add_edge, source_node_id, target_node_id, label
+            self._adapter.add_edge, source_node_id, target_node_id, label, **attrs
         )
 
-    async def get_all_edges(self) -> List[Tuple[str, str, str]]:
+    async def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         return await asyncio.to_thread(self._adapter.get_all_edges)
 
     async def delete_edge(

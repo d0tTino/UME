@@ -74,7 +74,7 @@ def test_create_edge_endpoint(client_and_graph):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert ("s1", "t1", "L") in g.get_all_edges()
+    assert ("s1", "t1", "L", {}) in g.get_all_edges()
 
 
 def test_delete_edge_endpoint(client_and_graph):
@@ -91,4 +91,4 @@ def test_delete_edge_endpoint(client_and_graph):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert ("s2", "t2", "L2") not in g.get_all_edges()
+    assert ("s2", "t2", "L2", {}) not in g.get_all_edges()

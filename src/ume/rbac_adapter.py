@@ -59,8 +59,10 @@ class RoleBasedGraphAdapter(IGraphAdapter):
         self._require_analytics_role()
         return self._adapter.find_connected_nodes(node_id, edge_label)
 
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
-        self._adapter.add_edge(source_node_id, target_node_id, label)
+    def add_edge(
+        self, source_node_id: str, target_node_id: str, label: str, **attrs: Any
+    ) -> None:
+        self._adapter.add_edge(source_node_id, target_node_id, label, **attrs)
 
     def get_all_edges(self) -> list[tuple[str, str, str]]:
         return self._adapter.get_all_edges()

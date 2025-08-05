@@ -37,7 +37,7 @@ class NodeType(graphene.ObjectType):
             return []
         all_edges = await _maybe_call(graph, "get_all_edges")
         result = []
-        for src, tgt, lbl in all_edges:
+        for src, tgt, lbl, _ in all_edges:
             if src == self.id and (label is None or lbl == label):
                 result.append(EdgeType(source=src, target=tgt, label=lbl))
         return result
@@ -99,7 +99,7 @@ class Query(graphene.ObjectType):
         if graph is None:
             return []
         edges = await _maybe_call(graph, "get_all_edges")
-        return [EdgeType(source=s, target=t, label=lbl) for s, t, lbl in edges]
+        return [EdgeType(source=s, target=t, label=lbl) for s, t, lbl, _ in edges]
 
     async def resolve_path(
         self,

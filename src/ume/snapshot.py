@@ -1,6 +1,6 @@
 # src/ume/snapshot.py
 import json
-from typing import Union, List, Tuple, Any
+from typing import Union, List, Tuple, Any, Dict
 import pathlib  # For type hinting path-like objects
 
 from .persistent_graph import PersistentGraph
@@ -120,7 +120,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
                 f"Invalid snapshot format: 'edges' should be a list, got {type(data['edges']).__name__}."
             )
 
-        loaded_edges: List[Tuple[str, str, str]] = []
+        loaded_edges: List[Tuple[str, str, str, Dict[str, Any]]] = []
         seen_edges = set()
         for i, edge_data in enumerate(data["edges"]):
             if not isinstance(edge_data, (list, tuple)):
@@ -128,28 +128,28 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
                     f"Invalid snapshot format for edge at index {i}: each edge should be a list or tuple, "
                     f"got {type(edge_data).__name__}."
                 )
-            if len(edge_data) != 3:
+            if len(edge_data) != 4:
                 raise SnapshotError(
-                    f"Invalid snapshot format for edge at index {i}: each edge must have 3 elements "
-                    f"(source, target, label), got {len(edge_data)} elements."
+                    f"Invalid snapshot format for edge at index {i}: each edge must have 4 elements "
+                    f"(source, target, label, attrs), got {len(edge_data)} elements."
                 )
-            if not all(isinstance(item, str) for item in edge_data):
+            src, tgt, lbl, attrs = edge_data
+            if not all(isinstance(item, str) for item in (src, tgt, lbl)) or not isinstance(attrs, dict):
                 raise SnapshotError(
-                    f"Invalid snapshot format for edge at index {i}: all edge elements "
-                    f"(source, target, label) must be strings."
+                    f"Invalid snapshot format for edge at index {i}: expected (source:str, target:str, label:str, attrs:dict)."
                 )
-            edge_tuple = tuple(edge_data)
+            edge_tuple = (src, tgt, lbl)
             if edge_tuple in seen_edges:
                 raise SnapshotError(
                     f"Duplicate edge {edge_tuple} encountered in snapshot."
                 )
             seen_edges.add(edge_tuple)
-            loaded_edges.append(edge_tuple)
+            loaded_edges.append((src, tgt, lbl, attrs))
 
         # Use public API to add edges for consistency
-        for src, tgt, lbl in loaded_edges:
+        for src, tgt, lbl, attrs in loaded_edges:
             try:
-                graph.add_edge(src, tgt, lbl)
+                graph.add_edge(src, tgt, lbl, **attrs)
             except ProcessingError as e:
                 raise SnapshotError(
                     f"Error adding edge ({src}, {tgt}, {lbl}): {e}"
@@ -171,5 +171,5 @@ def load_graph_into_existing(
     for node_id in temp_graph.get_all_node_ids():
         attrs = temp_graph.get_node(node_id) or {}
         graph.add_node(node_id, attrs)
-    for src, tgt, lbl in temp_graph.get_all_edges():
-        graph.add_edge(src, tgt, lbl)
+    for src, tgt, lbl, attrs in temp_graph.get_all_edges():
+        graph.add_edge(src, tgt, lbl, **attrs)

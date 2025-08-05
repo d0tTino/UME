@@ -27,7 +27,7 @@ def test_umeprompt_commands(tmp_path: Path) -> None:
     prompt.do_new_node('n2 "{}"')
     prompt.do_new_edge("n1 n2 L")
     assert set(prompt.graph.get_all_node_ids()) == {"n1", "n2"}
-    assert ("n1", "n2", "L") in prompt.graph.get_all_edges()
+    assert ("n1", "n2", "L", {}) in prompt.graph.get_all_edges()
 
     prompt.do_register_schema(
         "2.0.0 src/ume/schemas/graph_schema_v2.yaml ume.protos.graph_v2_pb2"

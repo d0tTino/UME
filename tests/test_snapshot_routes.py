@@ -123,7 +123,7 @@ def test_snapshot_routes_roundtrip(
     )
     assert res_load.status_code == 200
     assert set(fresh.get_all_node_ids()) == {"a", "b"}
-    assert ("a", "b", "L") in fresh.get_all_edges()
+    assert ("a", "b", "L", {}) in fresh.get_all_edges()
 
 
 @pytest.mark.parametrize(
@@ -211,7 +211,7 @@ def test_restore_route_builds_graph(
 
     fresh = create_graph_adapter(db_path)
     assert set(fresh.get_all_node_ids()) == {"a", "b"}
-    assert ("a", "b", "L") in fresh.get_all_edges()
+    assert ("a", "b", "L", {}) in fresh.get_all_edges()
 
 
 @pytest.mark.parametrize(
@@ -337,7 +337,7 @@ def test_load_route_restores_graph(
         )
         assert res_load.status_code == 200
         assert set(fresh.get_all_node_ids()) == {"a", "b"}
-        assert ("a", "b", "L") in fresh.get_all_edges()
+        assert ("a", "b", "L", {}) in fresh.get_all_edges()
 
 
 @pytest.mark.parametrize(
@@ -428,7 +428,7 @@ def test_restore_route_temporarydir(
 
         fresh = create_graph_adapter(db_path)
         assert set(fresh.get_all_node_ids()) == {"a", "b"}
-        assert ("a", "b", "L") in fresh.get_all_edges()
+        assert ("a", "b", "L", {}) in fresh.get_all_edges()
 
 
 def test_snapshot_dir_restrictions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -52,5 +52,10 @@ def test_listener_creates_edges(monkeypatch):
     unregister_listener(listener)
 
     edges = graph.get_all_edges()
-    assert ("n1", "n2", "RELATES_TO") in edges or ("n2", "n1", "RELATES_TO") in edges
+    assert ("n1", "n2", "RELATES_TO", {}) in edges or (
+        "n2",
+        "n1",
+        "RELATES_TO",
+        {},
+    ) in edges
 
