@@ -38,6 +38,9 @@ class _FastAPI:
     def include_router(self, *_: object, **__: object) -> None:  # pragma: no cover - stub
         return None
 
+    def add_route(self, *_: object, **__: object) -> None:  # pragma: no cover - stub
+        return None
+
     def exception_handler(self, *_: object, **__: object):  # pragma: no cover - stub
         def _wrap(func):
             return func
@@ -47,6 +50,22 @@ class _FastAPI:
 
 fastapi_mod.FastAPI = _FastAPI  # type: ignore[attr-defined]
 fastapi_mod.Request = object  # type: ignore[attr-defined]
+class _APIRouter:
+    def __init__(self, *_, **__):
+        self.routes = []
+
+    def _noop(self, *_, **__):
+        def _wrap(func):
+            self.routes.append(func)
+            return func
+
+        return _wrap
+
+    get = post = put = delete = _noop
+
+fastapi_mod.APIRouter = _APIRouter  # type: ignore[attr-defined]
+fastapi_mod.Depends = lambda *_, **__: None  # type: ignore[attr-defined]
+fastapi_mod.HTTPException = Exception  # type: ignore[attr-defined]
 responses_mod = types.ModuleType("fastapi.responses")
 responses_mod.JSONResponse = object  # type: ignore[attr-defined]
 responses_mod.Response = object  # type: ignore[attr-defined]
@@ -62,6 +81,7 @@ api_deps_stub.TOKENS = {}
 api_deps_stub.configure_graph = lambda *_: None
 api_deps_stub.configure_vector_store = lambda *_: None
 api_deps_stub.remove_expired_tokens = lambda: None
+api_deps_stub.get_current_role = lambda: "tester"
 sys.modules.setdefault("ume.api_deps", api_deps_stub)
 
 empty_router = types.SimpleNamespace()
