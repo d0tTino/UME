@@ -163,9 +163,12 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 raise ProcessingError(
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
+            props = {"redacted": False, "created_at": int(time.time())}
+            if attrs:
+                props.update(attrs)
             session.run(
-                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` {{redacted:false, created_at:$ts}}]->(t)",
-                {"src": source_node_id, "tgt": target_node_id, "ts": int(time.time())},
+                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` $props]->(t)",
+                {"src": source_node_id, "tgt": target_node_id, "props": props},
             )
 
     def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
@@ -175,9 +178,10 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 "WHERE coalesce(r.redacted, false) = false "
                 "AND coalesce(s.redacted, false) = false "
                 "AND coalesce(t.redacted, false) = false "
-                "RETURN s.id AS src, t.id AS tgt, type(r) AS label"
+                "RETURN s.id AS src, t.id AS tgt, type(r) AS label, properties(r) AS attrs"
             )
             return [(rec["src"], rec["tgt"], rec["label"], {}) for rec in result]
+
 
     def delete_edge(
         self,

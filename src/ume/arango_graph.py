@@ -134,14 +134,17 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         key = self._edge_key(source_node_id, target_node_id, label)
         if self._edges.has(key):
             raise ProcessingError(f"Edge ({source_node_id}, {target_node_id}, {label}) already exists.")
-        self._edges.insert({
+        doc = {
             "_key": key,
             "source": source_node_id,
             "target": target_node_id,
             "label": label,
             "redacted": False,
             "created_at": int(time.time()),
-        })
+        }
+        if attrs:
+            doc["attrs"] = attrs
+        self._edges.insert(doc)
 
     def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         result: List[Tuple[str, str, str, Dict[str, Any]]] = []
@@ -151,6 +154,7 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             if not self.node_exists(e["source"]) or not self.node_exists(e["target"]):
                 continue
             result.append((e["source"], e["target"], e["label"], {}))
+
         return result
 
     def delete_edge(
