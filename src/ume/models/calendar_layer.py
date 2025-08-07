@@ -1,9 +1,9 @@
-"""Calendar layer model and factory helpers."""
+"""Calendar layer node model and factory helpers."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-import uuid
+from uuid import uuid4
 
 
 @dataclass
@@ -24,7 +24,7 @@ def create_calendar_layer(
     """Factory helper to build :class:`CalendarLayer` instances."""
 
     return CalendarLayer(
-        layer_id=layer_id or str(uuid.uuid4()),
+        layer_id=layer_id or str(uuid4()),
         layer_name=layer_name,
         color=color,
     )

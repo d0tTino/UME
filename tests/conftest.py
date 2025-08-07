@@ -189,7 +189,12 @@ for _package in _OPTIONAL_PACKAGES:
             module.depends = depends  # type: ignore[attr-defined]
             sys.modules.setdefault("fastapi_limiter.depends", depends)
         if _package == "sse_starlette":
-            from fastapi.responses import Response as _Response
+            try:
+                from fastapi.responses import Response as _Response
+            except Exception:
+                class _Response:  # pragma: no cover - minimal placeholder
+                    def __init__(self, *_, **__):
+                        pass
 
             sse = types.ModuleType("sse_starlette.sse")
 
