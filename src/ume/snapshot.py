@@ -135,6 +135,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
                 )
             src, tgt, lbl, attrs = edge_data
             if not all(isinstance(item, str) for item in (src, tgt, lbl)) or not isinstance(attrs, dict):
+
                 raise SnapshotError(
                     f"Invalid snapshot format for edge at index {i}: expected (source:str, target:str, label:str, attrs:dict)."
                 )

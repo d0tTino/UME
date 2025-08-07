@@ -3,24 +3,81 @@ node_types:
   User:
     version: "3.0.0"
     permission_level: "public"
+    properties:
+      user_id:
+        version: "3.0.0"
+      name:
+        version: "3.0.0"
+      email:
+        version: "3.0.0"
+      created_at:
+        version: "3.0.0"
   UserGroup:
     version: "3.0.0"
     permission_level: "public"
+    properties:
+      group_id:
+        version: "3.0.0"
+      name:
+        version: "3.0.0"
+      members:
+        version: "3.0.0"
   CalendarEvent:
     version: "3.0.0"
     permission_level: "public"
+    properties:
+      id:
+        version: "3.0.0"
+      title:
+        version: "3.0.0"
+      start:
+        version: "3.0.0"
+      end:
+        version: "3.0.0"
+      description:
+        version: "3.0.0"
   CalendarLayer:
     version: "3.0.0"
     permission_level: "public"
+    properties:
+      layer_id:
+        version: "3.0.0"
+      layer_name:
+        version: "3.0.0"
+      color:
+        version: "3.0.0"
   DecisionAnalysis:
     version: "3.0.0"
     permission_level: "public"
+    properties:
+      analysis_id:
+        version: "3.0.0"
+      query:
+        version: "3.0.0"
+      created_at:
+        version: "3.0.0"
   ProposedAction:
     version: "3.0.0"
     permission_level: "public"
+    properties:
+      action_id:
+        version: "3.0.0"
+      description:
+        version: "3.0.0"
   FinancialAccount:
     version: "3.0.0"
     permission_level: "public"
+    properties:
+      account_id:
+        version: "3.0.0"
+      account_type:
+        version: "3.0.0"
+      institution:
+        version: "3.0.0"
+      balance:
+        version: "3.0.0"
+      currency:
+        version: "3.0.0"
 edge_labels:
   OWNED_BY:
     version: "3.0.0"

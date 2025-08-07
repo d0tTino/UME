@@ -50,6 +50,7 @@ def test_snapshot_roundtrip(tmp_path: Path) -> None:
     assert ("a", "b", "L", {}) in g.get_all_edges()
 
 
+
 def test_snapshot_requires_analytics_role(tmp_path: Path) -> None:
     g = MockGraph()
     configure_graph(g)

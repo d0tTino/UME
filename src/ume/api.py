@@ -18,6 +18,7 @@ except Exception:  # pragma: no cover - tests may run without limiter
     class FastAPILimiter:  # type: ignore[misc]
         @staticmethod
         async def init(*_: object, **__: object) -> None:
+
             return None
 
 from .config import settings
@@ -38,6 +39,7 @@ except Exception:  # pragma: no cover - tests may run without GraphQL
 
     def make_graphiql_handler(*_: object, **__: object) -> None:  # type: ignore[no-redef]
         return None
+
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from .retention import (

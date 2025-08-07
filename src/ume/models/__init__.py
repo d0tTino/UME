@@ -7,7 +7,6 @@ from .decision_analysis import DecisionAnalysis, create_decision_analysis
 from .decisions import Decision, create_decision
 from .finance import Transaction, create_transaction
 from .financial_account import FinancialAccount, create_financial_account
-from .proposed_action import ProposedAction, create_proposed_action
 from .user_group import UserGroup, create_user_group
 
 
@@ -22,8 +21,9 @@ __all__ = [
     "create_decision",
     "DecisionAnalysis",
     "create_decision_analysis",
-    "ProposedAction",
-    "create_proposed_action",
+    "FinancialAccount",
+    "create_financial_account",
+
     "Transaction",
     "create_transaction",
     "FinancialAccount",

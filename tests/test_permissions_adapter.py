@@ -8,7 +8,7 @@ def build_graph() -> MockGraph:
     g.add_node("User.u1", {})
     g.add_node("Document.d1", {"title": "doc1"})
     g.add_node("Document.d2", {"title": "doc2"})
-    g.add_edge("User.u1", "Document.d1", "editor")
+    g._edges["Document.d1"].append(("User.u1", "HAS_PERMISSION", {"permission_level": "editor"}))
     return g
 
 
@@ -34,8 +34,21 @@ def test_group_viewer_allows_read_not_edit() -> None:
     g = MockGraph()
     g.add_node("Group.g1", {})
     g.add_node("Document.d1", {})
-    g.add_edge("Group.g1", "Document.d1", "viewer")
+    g._edges["Document.d1"].append(("Group.g1", "HAS_PERMISSION", {"permission_level": "viewer"}))
     adapter = PermissionsGraphAdapter(g, group_id="Group.g1")
     assert adapter.get_node("Document.d1") == {}
     with pytest.raises(AccessDeniedError):
         adapter.update_node("Document.d1", {"foo": "bar"})
+
+
+def test_get_nodes_by_user_and_group() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("Group.g1", {})
+    g.add_node("Document.d1", {})
+    g.add_node("Document.d2", {})
+    g._edges["Document.d1"].append(("User.u1", "HAS_PERMISSION", {"permission_level": "editor"}))
+    g._edges["Document.d2"].append(("Group.g1", "HAS_PERMISSION", {"permission_level": "viewer"}))
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1", group_id="Group.g1")
+    assert set(adapter.get_nodes_by_user("User.u1")) == {"Document.d1"}
+    assert set(adapter.get_nodes_shared_with("Group.g1")) == {"Document.d2"}

@@ -19,6 +19,7 @@ def _to_networkx(graph: IGraphAdapter) -> nx.DiGraph:
         g.add_node(node_id, **attrs)
     for src, tgt, label, attrs in graph.get_all_edges():
         g.add_edge(src, tgt, label=label, **attrs)
+
     return g
 
 

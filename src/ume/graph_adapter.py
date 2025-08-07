@@ -141,7 +141,13 @@ class IGraphAdapter(ABC):
         pass
 
     @abstractmethod
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         """
         Adds a directed, labeled edge between two existing nodes.
 
@@ -149,6 +155,7 @@ class IGraphAdapter(ABC):
             source_node_id: The identifier of the source node (origin of the edge).
             target_node_id: The identifier of the target node (destination of the edge).
             label: A string label describing the type of relationship or connection.
+            attrs: Optional dictionary of edge attributes.
 
         Raises:
             ProcessingError (or similar): If either the source_node_id or
@@ -159,20 +166,28 @@ class IGraphAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_all_edges(self) -> list[tuple[str, str, str]]:
+    def get_all_edges(self) -> list[tuple[str, str, str, Dict[str, Any]]]:
         """
         Retrieves a list of all edges currently in the graph.
 
-        Each edge is represented as a tuple: (source_node_id, target_node_id, label).
+        Each edge is represented as a tuple:
+            (source_node_id, target_node_id, label, attrs).
 
         Returns:
-            A list of tuples, where each tuple represents an edge.
-            Returns an empty list if the graph contains no edges.
+            A list of tuples, where each tuple represents an edge and its
+            attribute dictionary. Returns an empty list if the graph contains no
+            edges.
         """
         pass
 
     @abstractmethod
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         """
         Removes a specific directed, labeled edge from the graph.
 
@@ -180,6 +195,7 @@ class IGraphAdapter(ABC):
             source_node_id: The identifier of the source node of the edge.
             target_node_id: The identifier of the target node of the edge.
             label: The label of the edge to remove.
+            attrs: Optional dictionary of edge attributes.
 
         Raises:
             ProcessingError (or similar): If the specified edge does not exist,
@@ -311,15 +327,29 @@ class AsyncAdapterMixin:
             self._adapter.add_edge, source_node_id, target_node_id, label, **attrs
         )
 
+
     async def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         return await asyncio.to_thread(self._adapter.get_all_edges)
 
     async def delete_edge(
-        self, source_node_id: str, target_node_id: str, label: str
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
     ) -> None:
-        await asyncio.to_thread(
-            self._adapter.delete_edge, source_node_id, target_node_id, label
-        )
+        if attrs is not None:
+            await asyncio.to_thread(
+                self._adapter.delete_edge,
+                source_node_id,
+                target_node_id,
+                label,
+                attrs,
+            )
+        else:
+            await asyncio.to_thread(
+                self._adapter.delete_edge, source_node_id, target_node_id, label
+            )
 
     async def redact_node(self, node_id: str) -> None:
         await asyncio.to_thread(self._adapter.redact_node, node_id)

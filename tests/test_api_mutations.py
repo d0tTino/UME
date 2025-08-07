@@ -77,6 +77,7 @@ def test_create_edge_endpoint(client_and_graph):
     assert ("s1", "t1", "L", {}) in g.get_all_edges()
 
 
+
 def test_delete_edge_endpoint(client_and_graph):
     client, g = client_and_graph
     g.add_node("s2", {})
@@ -92,3 +93,4 @@ def test_delete_edge_endpoint(client_and_graph):
     )
     assert res.status_code == 200
     assert ("s2", "t2", "L2", {}) not in g.get_all_edges()
+
