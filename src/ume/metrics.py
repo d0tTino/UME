@@ -1,4 +1,34 @@
-from prometheus_client import Counter, Histogram, Gauge
+"""Metric definitions used throughout UME.
+
+The project relies on ``prometheus_client`` for metric collection. However the
+test environment used for kata exercises doesn't always provide a compatible
+version of that library (missing symbols such as ``Exemplar`` have been
+observed).  Importing the package in those situations would raise an
+``ImportError`` and prevent the rest of the module from being imported.  To
+make the module robust, we fall back to lightweight no-op stubs when the real
+library isn't available.
+"""
+
+try:  # pragma: no cover - exercised indirectly
+    from prometheus_client import Counter, Histogram, Gauge
+except Exception:  # pragma: no cover - library missing or incompatible
+    class _Metric:  # minimal stub used during tests
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def labels(self, *args, **kwargs):
+            return self
+
+        def observe(self, *args, **kwargs) -> None:
+            pass
+
+        def inc(self, *args, **kwargs) -> None:
+            pass
+
+        def set(self, *args, **kwargs) -> None:
+            pass
+
+    Counter = Histogram = Gauge = _Metric
 
 # HTTP metrics
 REQUEST_COUNT = Counter(
