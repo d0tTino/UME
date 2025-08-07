@@ -12,7 +12,13 @@ try:  # pragma: no cover - optional dependency
     import redis
 except Exception:  # pragma: no cover - allow tests without redis installed
     redis = None
-from fastapi_limiter import FastAPILimiter
+try:  # pragma: no cover - optional dependency
+    from fastapi_limiter import FastAPILimiter
+except Exception:  # pragma: no cover - tests may run without limiter
+    class FastAPILimiter:  # type: ignore[misc]
+        @staticmethod
+        async def init(*_: object, **__: object) -> None:
+            return None
 
 from .config import settings
 from .logging_utils import configure_logging
@@ -25,7 +31,13 @@ except Exception:  # pragma: no cover - allow tests without opentelemetry instal
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from starlette_graphene3 import GraphQLApp, make_graphiql_handler
+try:  # pragma: no cover - optional dependency
+    from starlette_graphene3 import GraphQLApp, make_graphiql_handler
+except Exception:  # pragma: no cover - tests may run without GraphQL
+    GraphQLApp = None  # type: ignore[assignment]
+
+    def make_graphiql_handler(*_: object, **__: object) -> None:  # type: ignore[no-redef]
+        return None
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from .retention import (
@@ -53,7 +65,10 @@ from .snapshot_routes import router as snapshot_router
 from .ledger_routes import router as ledger_router
 from .dossier_routes import router as dossier_router
 from .consent_ledger import consent_ledger  # noqa: F401
-from .graphql_api import schema as graphql_schema
+try:  # pragma: no cover - optional dependency
+    from .graphql_api import schema as graphql_schema
+except Exception:  # pragma: no cover - allow tests without graphene
+    graphql_schema = None
 
 from . import api_deps
 
@@ -101,7 +116,7 @@ app.include_router(dossier_router)
 # Some unit tests replace ``fastapi.FastAPI`` with a minimal stub that lacks
 # ``add_route``. Guard the GraphQL route registration so those tests can import
 # this module without the real FastAPI implementation.
-if hasattr(app, "add_route"):  # pragma: no cover - exercised only in tests
+if GraphQLApp is not None and graphql_schema is not None and hasattr(app, "add_route"):
     app.add_route(
         "/graphql",
         GraphQLApp(
