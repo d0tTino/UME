@@ -98,15 +98,19 @@ app.include_router(feedback_router)
 app.include_router(snapshot_router)
 app.include_router(ledger_router)
 app.include_router(dossier_router)
-app.add_route(
-    "/graphql",
-    GraphQLApp(
-        graphql_schema,
-        on_get=make_graphiql_handler(),
-        context_value=lambda request: {"app": app},
-    ),
-    methods=["GET", "POST"],
-)
+# Some unit tests replace ``fastapi.FastAPI`` with a minimal stub that lacks
+# ``add_route``. Guard the GraphQL route registration so those tests can import
+# this module without the real FastAPI implementation.
+if hasattr(app, "add_route"):  # pragma: no cover - exercised only in tests
+    app.add_route(
+        "/graphql",
+        GraphQLApp(
+            graphql_schema,
+            on_get=make_graphiql_handler(),
+            context_value=lambda request: {"app": app},
+        ),
+        methods=["GET", "POST"],
+    )
 
 
 
