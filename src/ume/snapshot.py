@@ -150,7 +150,7 @@ def load_graph_from_file(path: Union[str, pathlib.Path]) -> PersistentGraph:
         # Use public API to add edges for consistency
         for src, tgt, lbl, attrs in loaded_edges:
             try:
-                graph.add_edge(src, tgt, lbl, **attrs)
+                graph.add_edge(src, tgt, lbl, attrs)
             except ProcessingError as e:
                 raise SnapshotError(
                     f"Error adding edge ({src}, {tgt}, {lbl}): {e}"
@@ -173,4 +173,4 @@ def load_graph_into_existing(
         attrs = temp_graph.get_node(node_id) or {}
         graph.add_node(node_id, attrs)
     for src, tgt, lbl, attrs in temp_graph.get_all_edges():
-        graph.add_edge(src, tgt, lbl, **attrs)
+        graph.add_edge(src, tgt, lbl, attrs)

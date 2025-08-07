@@ -46,7 +46,7 @@ def test_snapshot_roundtrip_all_backends(
     load_graph_into_existing(graph, snap)
 
     assert set(graph.get_all_node_ids()) == {"a", "b"}
-    assert ("a", "b", "L") in graph.get_all_edges()
+    assert ("a", "b", "L", {}) in graph.get_all_edges()
 
     graph.clear()
     graph.close()

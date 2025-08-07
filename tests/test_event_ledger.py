@@ -139,4 +139,4 @@ def test_build_graph_from_ledger_roundtrip(tmp_path):
 
     graph = build_graph_from_ledger(ledger)
     assert set(graph.get_all_node_ids()) == {"a", "b"}
-    assert ("a", "b", "LINKS_TO") in graph.get_all_edges()
+    assert ("a", "b", "LINKS_TO", {}) in graph.get_all_edges()

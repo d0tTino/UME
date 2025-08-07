@@ -120,7 +120,13 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         return f"{source}|{target}|{label}"
 
     # ---- Edge methods -------------------------------------------------------
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         if not self.node_exists(source_node_id) or not self.node_exists(target_node_id):
             raise ProcessingError(
                 f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
@@ -137,17 +143,23 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             "created_at": int(time.time()),
         })
 
-    def get_all_edges(self) -> List[Tuple[str, str, str]]:
-        result: List[Tuple[str, str, str]] = []
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
+        result: List[Tuple[str, str, str, Dict[str, Any]]] = []
         for e in cast(Iterable[Dict[str, Any]], self._edges.all()):
             if e.get("redacted"):
                 continue
             if not self.node_exists(e["source"]) or not self.node_exists(e["target"]):
                 continue
-            result.append((e["source"], e["target"], e["label"]))
+            result.append((e["source"], e["target"], e["label"], {}))
         return result
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         key = self._edge_key(source_node_id, target_node_id, label)
         if not self._edges.has(key):
             raise ProcessingError(

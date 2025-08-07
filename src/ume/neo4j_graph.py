@@ -132,7 +132,13 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             return [record["id"] for record in result]
 
     # ---- Edge methods -------------------------------------------------
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
         schema.validate_edge_label(label)
         escaped_label = label.replace("`", "``")
@@ -162,7 +168,7 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 {"src": source_node_id, "tgt": target_node_id, "ts": int(time.time())},
             )
 
-    def get_all_edges(self) -> List[tuple[str, str, str]]:
+    def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
         with self._driver.session() as session:
             result = session.run(
                 "MATCH (s)-[r]->(t) "
@@ -171,9 +177,15 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 "AND coalesce(t.redacted, false) = false "
                 "RETURN s.id AS src, t.id AS tgt, type(r) AS label"
             )
-            return [(rec["src"], rec["tgt"], rec["label"]) for rec in result]
+            return [(rec["src"], rec["tgt"], rec["label"], {}) for rec in result]
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
         schema.validate_edge_label(label)
         escaped_label = label.replace("`", "``")

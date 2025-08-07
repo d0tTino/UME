@@ -45,7 +45,7 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
     # Add some edges
     graph.add_edge("a", "b", "RELATES_TO")
     graph.add_edge("b", "c", "LINKS_TO")
-    expected_edges = [("a", "b", "RELATES_TO"), ("b", "c", "LINKS_TO")]
+    expected_edges = [("a", "b", "RELATES_TO", {}), ("b", "c", "LINKS_TO", {})]
 
     # Get the dump
     dumped_data = graph.dump()
@@ -58,9 +58,9 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
     assert dumped_data["nodes"]["c"] == {}
     assert "edges" in dumped_data
     assert len(dumped_data["edges"]) == 2
-    assert set(map(tuple, dumped_data["edges"])) == set(
-        map(tuple, expected_edges)
-    )  # Compare content, order-agnostic
+    assert {tuple(e[:3]) for e in dumped_data["edges"]} == {
+        tuple(e[:3]) for e in expected_edges
+    }  # Compare content, ignore attrs and order
 
     # Perform JSON serialization and deserialization (roundtrip)
     json_str = json.dumps(dumped_data)
@@ -74,9 +74,9 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
     assert restored_data_from_json["nodes"]["c"] == {}
     assert "edges" in restored_data_from_json
     assert len(restored_data_from_json["edges"]) == 2
-    assert set(map(tuple, restored_data_from_json["edges"])) == set(
-        map(tuple, expected_edges)
-    )
+    assert {tuple(e[:3]) for e in restored_data_from_json["edges"]} == {
+        tuple(e[:3]) for e in expected_edges
+    }
 
     # Ensure original graph is not affected by modifications to dumped_data (due to .copy())
     dumped_data["nodes"]["a"]["name"] = "Changed Name"
@@ -90,9 +90,9 @@ def test_graph_serialization_roundtrip_with_nodes_and_edges():
             "MODIFIED_REL",
         )  # Try to modify dumped edge
         original_edges_in_graph = graph.get_all_edges()  # Get fresh copy
-        assert set(map(tuple, original_edges_in_graph)) == set(
-            map(tuple, expected_edges)
-        )
+        assert {tuple(e[:3]) for e in original_edges_in_graph} == {
+            tuple(e[:3]) for e in expected_edges
+        }
 
 
 def test_dump_returns_copy_not_reference():
@@ -217,7 +217,7 @@ def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
     original_graph.add_node("n1", attrs1)
     original_graph.add_node("n2", attrs2)
     original_graph.add_edge("n1", "n2", "CONNECTS_TO")
-    expected_edges = [("n1", "n2", "CONNECTS_TO")]
+    expected_edges = [("n1", "n2", "CONNECTS_TO", {})]
 
     snapshot_file = tmp_path / "populated_graph_to_load.json"
     snapshot_graph_to_file(original_graph, snapshot_file)
@@ -227,9 +227,9 @@ def test_load_graph_from_file_success_populated_graph(tmp_path: pathlib.Path):
     assert loaded_graph.node_count == 2
     assert loaded_graph.get_node("n1") == attrs1
     assert loaded_graph.get_node("n2") == attrs2
-    assert set(map(tuple, loaded_graph.get_all_edges())) == set(
-        map(tuple, expected_edges)
-    )
+    assert {tuple(e[:3]) for e in loaded_graph.get_all_edges()} == {
+        tuple(e[:3]) for e in expected_edges
+    }
     assert original_graph.dump() == loaded_graph.dump()  # Compare full dumps
 
 
@@ -348,14 +348,14 @@ def test_load_graph_from_file_invalid_structure_edge_item_not_list_or_tuple(
 def test_load_graph_from_file_invalid_structure_edge_item_wrong_length(
     tmp_path: pathlib.Path,
 ):
-    """Test load_graph_from_file where an edge item does not have 3 elements."""
+    """Test load_graph_from_file where an edge item does not have 4 elements."""
     snapshot_file = tmp_path / "invalid_edge_item_length.json"
     with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump({"nodes": {}, "edges": [("n1", "n2")]}, f)  # Only 2 elements
 
     with pytest.raises(
         SnapshotError,
-        match="Invalid snapshot format for edge at index 0: each edge must have 3 elements",
+        match="Invalid snapshot format for edge at index 0: each edge must have 4 elements",
     ):
         load_graph_from_file(snapshot_file)
 
@@ -366,11 +366,11 @@ def test_load_graph_from_file_invalid_structure_edge_element_not_string(
     """Test load_graph_from_file where an edge element (source, target, or label) is not a string."""
     snapshot_file = tmp_path / "invalid_edge_element_type.json"
     with open(snapshot_file, "w", encoding="utf-8") as f:
-        json.dump({"nodes": {}, "edges": [("n1", "n2", 123)]}, f)  # Label is int
+        json.dump({"nodes": {}, "edges": [("n1", "n2", 123, {})]}, f)  # Label is int
 
     with pytest.raises(
         SnapshotError,
-        match="Invalid snapshot format for edge at index 0: all edge elements .* must be strings",
+        match="Invalid snapshot format for edge at index 0: expected \(source:str, target:str, label:str, attrs:dict\).",
     ):
         load_graph_from_file(snapshot_file)
 
@@ -378,7 +378,7 @@ def test_load_graph_from_file_invalid_structure_edge_element_not_string(
 def test_load_graph_from_file_edge_references_missing_node(tmp_path: pathlib.Path):
     """Edges referencing missing nodes should raise SnapshotError."""
     snapshot_file = tmp_path / "edge_missing_node.json"
-    snapshot_data = {"nodes": {"n1": {"attr": "val"}}, "edges": [("n1", "n2", "REL")]}
+    snapshot_data = {"nodes": {"n1": {"attr": "val"}}, "edges": [("n1", "n2", "REL", {})]}
     with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump(snapshot_data, f)
 
@@ -395,7 +395,7 @@ def test_load_graph_from_file_duplicate_edge(tmp_path: pathlib.Path):
     snapshot_file = tmp_path / "duplicate_edge.json"
     snapshot_data = {
         "nodes": {"n1": {}, "n2": {}},
-        "edges": [("n1", "n2", "REL"), ("n1", "n2", "REL")],
+        "edges": [("n1", "n2", "REL", {}), ("n1", "n2", "REL", {})],
     }
     with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump(snapshot_data, f)
