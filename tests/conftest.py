@@ -59,6 +59,7 @@ if importlib.util.find_spec("httpx") is None:
 
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
+yaml_stub.safe_dump = lambda *_, **__: ""
 if importlib.util.find_spec("yaml") is None:
     sys.modules.setdefault("yaml", yaml_stub)
 

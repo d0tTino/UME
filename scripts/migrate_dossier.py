@@ -9,11 +9,40 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import importlib.util
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+# Provide minimal stubs for optional dependencies when running as a standalone
+# script so the migration can proceed without heavy extras installed.
+import types
+
+if importlib.util.find_spec("prometheus_client") is None:
+    prom = types.ModuleType("prometheus_client")
+
+    class _Metric:  # pragma: no cover - trivial stub
+        def __init__(self, *_: object, **__: object) -> None:
+            pass
+
+        def labels(self, *_: object, **__: object) -> "_Metric":
+            return self
+
+        def inc(self, *_: object, **__: object) -> None:
+            pass
+
+        def set(self, *_: object, **__: object) -> None:
+            pass
+
+    prom.Counter = prom.Histogram = prom.Gauge = _Metric  # type: ignore[attr-defined]
+    prom.generate_latest = lambda *_: b""
+    prom.CONTENT_TYPE_LATEST = "text/plain"
+    sys.modules.setdefault("prometheus_client", prom)
 
 from ume.config.loader import load_settings
 
