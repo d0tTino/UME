@@ -95,9 +95,9 @@ def test_upgrade_transforms_graph(graph: PersistentGraph) -> None:
     manager.upgrade_schema("1.0.0", "2.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("a", "b", "LINKS_TO") in edges
-    assert all(lbl != "L" for _, _, lbl in edges)
-    assert all(lbl != "TO_DELETE" for _, _, lbl in edges)
+    assert ("a", "b", "LINKS_TO", {}) in edges
+    assert all(lbl != "L" for _, _, lbl, _ in edges)
+    assert all(lbl != "TO_DELETE" for _, _, lbl, _ in edges)
 
 
 def test_upgrade_to_v3_transforms_graph(graph: PersistentGraph) -> None:
@@ -112,7 +112,7 @@ def test_upgrade_to_v3_transforms_graph(graph: PersistentGraph) -> None:
     manager.upgrade_schema("1.0.0", "3.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("a", "b", "TAGGED_AS") in edges
+    assert ("a", "b", "TAGGED_AS", {}) in edges
     assert all(
-        lbl == "TAGGED_AS" for _, _, lbl in edges
+        lbl == "TAGGED_AS" for _, _, lbl, _ in edges
     )

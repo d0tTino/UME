@@ -148,4 +148,4 @@ def test_build_graph_from_ledger_cli(tmp_path: Path) -> None:
 
     graph = build_graph_from_ledger(ledger)
     assert set(graph.get_all_node_ids()) == {"x", "y"}
-    assert ("x", "y", "LINKS_TO") in graph.get_all_edges()
+    assert ("x", "y", "LINKS_TO", {}) in graph.get_all_edges()

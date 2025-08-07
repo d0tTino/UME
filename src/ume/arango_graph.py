@@ -153,7 +153,8 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 continue
             if not self.node_exists(e["source"]) or not self.node_exists(e["target"]):
                 continue
-            result.append((e["source"], e["target"], e["label"], cast(Dict[str, Any], e.get("attrs", {}))))
+            result.append((e["source"], e["target"], e["label"], {}))
+
         return result
 
     def delete_edge(

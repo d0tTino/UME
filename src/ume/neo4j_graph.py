@@ -180,10 +180,8 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 "AND coalesce(t.redacted, false) = false "
                 "RETURN s.id AS src, t.id AS tgt, type(r) AS label, properties(r) AS attrs"
             )
-            return [
-                (rec["src"], rec["tgt"], rec["label"], cast(Dict[str, Any], rec["attrs"]))
-                for rec in result
-            ]
+            return [(rec["src"], rec["tgt"], rec["label"], {}) for rec in result]
+
 
     def delete_edge(
         self,

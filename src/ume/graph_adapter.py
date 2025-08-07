@@ -321,10 +321,10 @@ class AsyncAdapterMixin:
         source_node_id: str,
         target_node_id: str,
         label: str,
-        **attrs: Any,
+        attrs: Dict[str, Any] | None = None,
     ) -> None:
         await asyncio.to_thread(
-            self._adapter.add_edge, source_node_id, target_node_id, label, **attrs
+            self._adapter.add_edge, source_node_id, target_node_id, label, attrs
         )
 
 

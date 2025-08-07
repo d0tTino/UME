@@ -268,7 +268,7 @@ def test_apply_create_edge_event_success(graph: PersistentGraph):
     apply_event_to_graph(event, graph)
 
     # Verify edge was added (PersistentGraph stores edges as list of tuples)
-    assert ("source_node", "target_node", "RELATES_TO") in graph.get_all_edges()
+    assert ("source_node", "target_node", "RELATES_TO", {}) in graph.get_all_edges()
 
 
 def test_apply_create_edge_event_missing_source_node(graph: PersistentGraph):
@@ -352,7 +352,7 @@ def test_apply_delete_edge_event_success(graph: PersistentGraph):
     graph.add_node("s_node", {})
     graph.add_node("t_node", {})
     graph.add_edge("s_node", "t_node", "TO_DELETE")
-    assert ("s_node", "t_node", "TO_DELETE") in graph.get_all_edges()  # Verify setup
+    assert ("s_node", "t_node", "TO_DELETE", {}) in graph.get_all_edges()  # Verify setup
 
     event = Event(
         event_type=EventType.DELETE_EDGE,
@@ -363,7 +363,7 @@ def test_apply_delete_edge_event_success(graph: PersistentGraph):
         payload={},
     )
     apply_event_to_graph(event, graph)
-    assert ("s_node", "t_node", "TO_DELETE") not in graph.get_all_edges()
+    assert ("s_node", "t_node", "TO_DELETE", {}) not in graph.get_all_edges()
 
 
 def test_apply_delete_edge_event_edge_not_exist(graph: PersistentGraph):
@@ -434,7 +434,7 @@ def test_apply_data_source_queried_adds_edge(graph: PersistentGraph, monkeypatch
         payload={},
     )
     apply_event_to_graph(event, graph)
-    assert ("job1", "ds1", "RELATES_TO") in graph.get_all_edges()
+    assert ("job1", "ds1", "RELATES_TO", {}) in graph.get_all_edges()
 
 
 def test_apply_entity_discovered_creates_node_and_edge(graph: PersistentGraph, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -454,7 +454,7 @@ def test_apply_entity_discovered_creates_node_and_edge(graph: PersistentGraph, m
     apply_event_to_graph(event, graph)
     assert graph.node_exists("ent1")
     assert graph.get_node("ent1") == {"name": "E1", "tokens": ["E1"]}
-    assert ("job1", "ent1", "RELATES_TO") in graph.get_all_edges()
+    assert ("job1", "ent1", "RELATES_TO", {}) in graph.get_all_edges()
 
 
 def test_apply_document_archived_updates_node(graph: PersistentGraph) -> None:

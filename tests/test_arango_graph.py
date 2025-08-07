@@ -73,7 +73,7 @@ def test_node_and_edge_crud():
     graph.update_node("n1", {"v": 2})
     assert graph.get_node("n1")["v"] == 2
     graph.add_edge("n1", "n2", "R")
-    assert ("n1", "n2", "R") in graph.get_all_edges()
+    assert ("n1", "n2", "R", {}) in graph.get_all_edges()
     graph.delete_edge("n1", "n2", "R")
     assert graph.get_all_edges() == []
 

@@ -193,7 +193,7 @@ def test_add_edge_success(graph: PersistentGraph):
     # Ensure the edge is present via the public API
     all_edges = graph.get_all_edges()
     assert len(all_edges) == 1
-    assert ("nodeS", "nodeT", "RELATES_TO") in all_edges
+    assert ("nodeS", "nodeT", "RELATES_TO", {}) in all_edges
 
 
 def test_add_edge_missing_source_node_raises_error(graph: MockGraph):
@@ -342,7 +342,7 @@ def test_delete_edge_success(graph: PersistentGraph):
     """Test deleting an existing edge successfully."""
     graph.add_node("s1", {})
     graph.add_node("t1", {})
-    edge_to_delete = ("s1", "t1", "LINKS_TO")
+    edge_to_delete = ("s1", "t1", "LINKS_TO", {})
     graph.add_edge(edge_to_delete[0], edge_to_delete[1], edge_to_delete[2])
 
     assert edge_to_delete in graph.get_all_edges()  # Verify edge exists before deletion
