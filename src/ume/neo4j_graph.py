@@ -132,7 +132,13 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             return [record["id"] for record in result]
 
     # ---- Edge methods -------------------------------------------------
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
         schema.validate_edge_label(label)
         escaped_label = label.replace("`", "``")
@@ -157,23 +163,35 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 raise ProcessingError(
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
+            props = {"redacted": False, "created_at": int(time.time())}
+            if attrs:
+                props.update(attrs)
             session.run(
-                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` {{redacted:false, created_at:$ts}}]->(t)",
-                {"src": source_node_id, "tgt": target_node_id, "ts": int(time.time())},
+                f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` $props]->(t)",
+                {"src": source_node_id, "tgt": target_node_id, "props": props},
             )
 
-    def get_all_edges(self) -> List[tuple[str, str, str]]:
+    def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
         with self._driver.session() as session:
             result = session.run(
                 "MATCH (s)-[r]->(t) "
                 "WHERE coalesce(r.redacted, false) = false "
                 "AND coalesce(s.redacted, false) = false "
                 "AND coalesce(t.redacted, false) = false "
-                "RETURN s.id AS src, t.id AS tgt, type(r) AS label"
+                "RETURN s.id AS src, t.id AS tgt, type(r) AS label, properties(r) AS attrs"
             )
-            return [(rec["src"], rec["tgt"], rec["label"]) for rec in result]
+            return [
+                (rec["src"], rec["tgt"], rec["label"], cast(Dict[str, Any], rec["attrs"]))
+                for rec in result
+            ]
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
         schema.validate_edge_label(label)
         escaped_label = label.replace("`", "``")

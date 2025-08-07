@@ -126,9 +126,9 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         source_node_id: str,
         target_node_id: str,
         label: str,
+        attrs: Dict[str, Any] | None = None,
         *,
         created_at: int | None = None,
-        **attrs: Any,
     ) -> None:
         if not self.node_exists(source_node_id) or not self.node_exists(target_node_id):
             raise ProcessingError(
@@ -139,7 +139,7 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
 
         edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
         permission_level = edge_def.permission_level if edge_def else None
-        attr_dict: Dict[str, Any] = dict(attrs)
+        attr_dict: Dict[str, Any] = dict(attrs or {})
         if permission_level is not None:
             attr_dict["permission_level"] = permission_level
 
@@ -160,7 +160,7 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
             )
 
-    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:  # type: ignore[override]
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         cur = self.conn.execute(
             """
             SELECT e.source, e.target, e.label, e.attributes
@@ -180,7 +180,13 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             for row in cur.fetchall()
         ]
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         with self.conn:
             cur = self.conn.execute(
                 "DELETE FROM edges WHERE source=? AND target=? AND label=?",

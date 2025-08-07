@@ -119,11 +119,15 @@ class PermissionsGraphAdapter(IGraphAdapter):
         return self._filter_visible(connected)
 
     def add_edge(
-        self, source_node_id: str, target_node_id: str, label: str, **attrs: Any
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
     ) -> None:
         self._require_editor(source_node_id)
         self._require_editor(target_node_id)
-        self._adapter.add_edge(source_node_id, target_node_id, label, **attrs)
+        self._adapter.add_edge(source_node_id, target_node_id, label, attrs)
 
     def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
         edges = self._adapter.get_all_edges()
@@ -134,10 +138,16 @@ class PermissionsGraphAdapter(IGraphAdapter):
 
         ]
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         self._require_editor(source_node_id)
         self._require_editor(target_node_id)
-        self._adapter.delete_edge(source_node_id, target_node_id, label)
+        self._adapter.delete_edge(source_node_id, target_node_id, label, attrs)
 
     def redact_node(self, node_id: str) -> None:
         self._require_editor(node_id)

@@ -130,7 +130,13 @@ class PostgresGraph(GraphAlgorithmsMixin, IGraphAdapter):
             cur.execute("TRUNCATE nodes")
 
     # ---- Edge methods -------------------------------------------------------
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         if not self.node_exists(source_node_id) or not self.node_exists(target_node_id):
             raise ProcessingError(
                 f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
@@ -149,7 +155,7 @@ class PostgresGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 (source_node_id, target_node_id, label, int(time.time())),
             )
 
-    def get_all_edges(self) -> List[Tuple[str, str, str]]:
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         with self._conn.cursor() as cur:
             cur.execute(
                 """
@@ -160,9 +166,15 @@ class PostgresGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 WHERE e.redacted=false AND s.redacted=false AND t.redacted=false
                 """
             )
-            return [(row[0], row[1], row[2]) for row in cur.fetchall()]
+            return [(row[0], row[1], row[2], {}) for row in cur.fetchall()]
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         with self._conn.cursor() as cur:
             cur.execute(
                 "DELETE FROM edges WHERE source=%s AND target=%s AND label=%s",
