@@ -104,7 +104,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         source_node_id: str,
         target_node_id: str,
         label: str,
-        **attrs: Any,
+        attrs: Dict[str, Any] | None = None,
     ) -> None:
         """
         Adds a directed, labeled edge between two existing nodes.
@@ -126,12 +126,12 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
 
         edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
         permission_level = edge_def.permission_level if edge_def else None
-        attr_dict: Dict[str, Any] = dict(attrs)
+        attr_dict: Dict[str, Any] = dict(attrs or {})
         if permission_level is not None:
             attr_dict["permission_level"] = permission_level
         self._edges[source_node_id].append((target_node_id, label, attr_dict))
 
-    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:  # type: ignore[override]
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         """
         Retrieves a list of all edges currently in the graph.
 
@@ -153,7 +153,13 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     all_edges.append((src, tgt, lbl, attr.copy()))
         return all_edges
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         """
         Removes a specific directed, labeled edge from the graph.
 

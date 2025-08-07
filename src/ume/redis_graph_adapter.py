@@ -106,7 +106,13 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
     def _edge_member(self, source: str, target: str, label: str) -> str:
         return f"{source}|{target}|{label}"
 
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         if not self.node_exists(source_node_id) or not self.node_exists(target_node_id):
             raise ProcessingError(
                 f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
@@ -118,8 +124,8 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
             )
         self._client.sadd(self.EDGE_SET_KEY, member)
 
-    def get_all_edges(self) -> List[Tuple[str, str, str]]:
-        result = []
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
+        result: List[Tuple[str, str, str, Dict[str, Any]]] = []
         for b in self._client.smembers(self.EDGE_SET_KEY):
             member = b.decode()
             if self._client.sismember(self.REDACTED_EDGES_KEY, member):
@@ -130,10 +136,16 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
                 tgt,
             ):
                 continue
-            result.append((src, tgt, lbl))
+            result.append((src, tgt, lbl, {}))
         return result
 
-    def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def delete_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, Any] | None = None,
+    ) -> None:
         member = self._edge_member(source_node_id, target_node_id, label)
         if self._client.srem(self.EDGE_SET_KEY, member) == 0:
             raise ProcessingError(

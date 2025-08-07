@@ -111,7 +111,7 @@ class GraphAlgorithmsMixin:
     ) -> List[str]:  # pragma: no cover - interface
         raise NotImplementedError
 
-    def get_all_edges(self) -> List[Tuple[str, str, str]]:  # pragma: no cover
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:  # pragma: no cover
         raise NotImplementedError
 
     def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:  # pragma: no cover

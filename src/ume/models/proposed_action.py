@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
 import uuid
 
 
@@ -13,19 +12,25 @@ class ProposedAction:
 
     action_id: str
     description: str
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    rank: int
+    is_optimal: bool = False
+    outcome_metrics: dict[str, float] = field(default_factory=dict)
 
 
 def create_proposed_action(
     description: str,
     *,
     action_id: str | None = None,
-    created_at: datetime | None = None,
+    rank: int = 0,
+    is_optimal: bool = False,
+    outcome_metrics: dict[str, float] | None = None,
 ) -> ProposedAction:
     """Factory helper to build :class:`ProposedAction` instances."""
 
     return ProposedAction(
         action_id=action_id or str(uuid.uuid4()),
         description=description,
-        created_at=created_at or datetime.utcnow(),
+        rank=rank,
+        is_optimal=is_optimal,
+        outcome_metrics=outcome_metrics or {},
     )
