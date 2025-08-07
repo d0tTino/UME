@@ -25,8 +25,8 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         self._redacted_nodes: set[str] = set()
         self._redacted_edges: set[Tuple[str, str, str]] = set()
         # Store edges in an adjacency list for faster lookups:
-        #   source_id -> [(target_id, label, permission_level), ...]
-        self._edges: DefaultDict[str, List[Tuple[str, str, Optional[str]]]] = DefaultDict(list)
+        #   source_id -> [(target_id, label, attrs), ...]
+        self._edges: DefaultDict[str, List[Tuple[str, str, Dict[str, Any]]]] = DefaultDict(list)
 
     def add_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
         """
@@ -99,7 +99,13 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         """
         return [nid for nid in self._nodes.keys() if nid not in self._redacted_nodes]
 
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        **attrs: Any,
+    ) -> None:
         """
         Adds a directed, labeled edge between two existing nodes.
 
@@ -120,28 +126,31 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
 
         edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
         permission_level = edge_def.permission_level if edge_def else None
-        self._edges[source_node_id].append((target_node_id, label, permission_level))
+        attr_dict: Dict[str, Any] = dict(attrs)
+        if permission_level is not None:
+            attr_dict["permission_level"] = permission_level
+        self._edges[source_node_id].append((target_node_id, label, attr_dict))
 
-    def get_all_edges(self) -> List[Tuple[str, str, str, Optional[str]]]:  # type: ignore[override]
+    def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:  # type: ignore[override]
         """
         Retrieves a list of all edges currently in the graph.
 
         Each edge is represented as a tuple:
-            (source_node_id, target_node_id, label, permission_level).
+            (source_node_id, target_node_id, label, attrs).
 
         Returns:
             A list of tuples, where each tuple represents an edge.
             Returns an empty list if the graph contains no edges.
         """
-        all_edges: List[Tuple[str, str, str, Optional[str]]] = []
+        all_edges: List[Tuple[str, str, str, Dict[str, Any]]] = []
         for src, targets in self._edges.items():
-            for tgt, lbl, perm in targets:
+            for tgt, lbl, attr in targets:
                 if (
                     src not in self._redacted_nodes
                     and tgt not in self._redacted_nodes
                     and (src, tgt, lbl) not in self._redacted_edges
                 ):
-                    all_edges.append((src, tgt, lbl, perm))
+                    all_edges.append((src, tgt, lbl, attr.copy()))
         return all_edges
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
@@ -170,7 +179,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
             )
 
         index_to_remove: Optional[int] = None
-        for idx, (tgt, lbl, _perm) in enumerate(edges_from_source):
+        for idx, (tgt, lbl, _attr) in enumerate(edges_from_source):
             if tgt == target_node_id and lbl == label:
                 index_to_remove = idx
                 break
@@ -208,7 +217,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(f"Node '{node_id}' not found.")
 
         connected_nodes: List[str] = []
-        for target, lbl, _perm in self._edges.get(node_id, []):
+        for target, lbl, _attr in self._edges.get(node_id, []):
             if (edge_label is None or lbl == edge_label) and (
                 node_id not in self._redacted_nodes
                 and target not in self._redacted_nodes
@@ -223,7 +232,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         for src, targets in self._edges.items():
             if src in self._redacted_nodes:
                 continue
-            for tgt, lbl, _perm in targets:
+            for tgt, lbl, _attr in targets:
                 if (
                     lbl == "OWNED_BY"
                     and tgt == user_id
@@ -239,7 +248,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         for src, targets in self._edges.items():
             if src in self._redacted_nodes:
                 continue
-            for tgt, lbl, _perm in targets:
+            for tgt, lbl, _attr in targets:
                 if (
                     lbl == "SHARED_WITH"
                     and tgt == group_id
@@ -272,17 +281,17 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
             A dictionary with "nodes" and "edges" keys.
             "nodes" maps to a dictionary of all nodes and their attributes.
             "edges" maps to a list of all edges, where each edge is a tuple
-            (source_node_id, target_node_id, label, permission_level).
+            (source_node_id, target_node_id, label, attrs).
         """
-        edge_list: List[Tuple[str, str, str, Optional[str]]] = []
+        edge_list: List[Tuple[str, str, str, Dict[str, Any]]] = []
         for src, targets in self._edges.items():
-            for tgt, lbl, perm in targets:
+            for tgt, lbl, attr in targets:
                 if (
                     src not in self._redacted_nodes
                     and tgt not in self._redacted_nodes
                     and (src, tgt, lbl) not in self._redacted_edges
                 ):
-                    edge_list.append((src, tgt, lbl, perm))
+                    edge_list.append((src, tgt, lbl, attr.copy()))
         return {
             "nodes": {
                 nid: attrs.copy()
@@ -303,7 +312,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(
                 f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be redacted."
             )
-        for tgt, lbl, _perm in edges_from_source:
+        for tgt, lbl, _attr in edges_from_source:
             if tgt == target_node_id and lbl == label:
                 self._redacted_edges.add((source_node_id, target_node_id, label))
                 return

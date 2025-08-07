@@ -59,6 +59,7 @@ if importlib.util.find_spec("httpx") is None:
 
 yaml_stub = types.ModuleType("yaml")
 yaml_stub.safe_load = lambda _: {}
+yaml_stub.safe_dump = lambda *_, **__: ""
 if importlib.util.find_spec("yaml") is None:
     sys.modules.setdefault("yaml", yaml_stub)
 
@@ -97,9 +98,20 @@ prom_stub.Histogram = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.Gauge = _DummyMetric  # type: ignore[attr-defined]
 prom_stub.generate_latest = lambda *_: b""
 prom_stub.CONTENT_TYPE_LATEST = "text/plain"
-
 if importlib.util.find_spec("prometheus_client") is None:
     sys.modules.setdefault("prometheus_client", prom_stub)
+
+samples_stub = types.ModuleType("prometheus_client.samples")
+class Sample:  # pragma: no cover - minimal metric sample
+    def __init__(self, *_, **__):
+        pass
+
+samples_stub.Sample = Sample  # type: ignore[attr-defined]
+sys.modules.setdefault("prometheus_client.samples", samples_stub)
+
+parser_stub = types.ModuleType("prometheus_client.parser")
+parser_stub.text_string_to_metric_families = lambda *_: []
+sys.modules.setdefault("prometheus_client.parser", parser_stub)
 
 if importlib.util.find_spec("numpy") is None:
     numpy_stub = types.ModuleType("numpy")
@@ -121,10 +133,6 @@ jsonschema_stub.ValidationError = _ValidationError  # type: ignore[attr-defined]
 if importlib.util.find_spec("jsonschema") is None:
     sys.modules.setdefault("jsonschema", jsonschema_stub)
 
-# Force the vector backend to chroma to avoid faiss dependency during tests
-from ume.config import settings as _settings  # noqa: E402
-object.__setattr__(_settings, "UME_VECTOR_BACKEND", "chroma")
-
 # Additional optional packages used in some modules. These are large or
 # platform-specific dependencies that aren't needed for most unit tests, so we
 # provide lightweight stubs when they aren't installed.
@@ -136,6 +144,7 @@ _OPTIONAL_PACKAGES = [
     "fastapi_limiter",
     "sse_starlette",
     "networkx",
+    "redis",
     "grpc",
     "aiosqlite",
     "pydantic_settings",
@@ -160,8 +169,54 @@ for _package in _OPTIONAL_PACKAGES:
         if _package == "neo4j":
             module.GraphDatabase = object
             module.Driver = object
+        if _package == "fastapi_limiter":
+            class _Limiter:
+                @staticmethod
+                async def init(*_: object, **__: object) -> None:
+                    return None
+
+            module.FastAPILimiter = _Limiter  # type: ignore[attr-defined]
+            depends = types.ModuleType("fastapi_limiter.depends")
+
+            class RateLimiter:  # pragma: no cover - simple placeholder
+                def __init__(self, *_, **__):
+                    pass
+
+                def __call__(self, *_, **__):  # type: ignore[no-untyped-def]
+                    return None
+
+            depends.RateLimiter = RateLimiter  # type: ignore[attr-defined]
+            module.depends = depends  # type: ignore[attr-defined]
+            sys.modules.setdefault("fastapi_limiter.depends", depends)
+        if _package == "sse_starlette":
+            from fastapi.responses import Response as _Response
+
+            sse = types.ModuleType("sse_starlette.sse")
+
+            class EventSourceResponse(_Response):  # pragma: no cover - minimal stub
+                pass
+            sse.EventSourceResponse = EventSourceResponse  # type: ignore[attr-defined]
+            class AppStatus:  # pragma: no cover - simple constants
+                STARTING = "starting"
+                RUNNING = "running"
+
+            sse.AppStatus = AppStatus  # type: ignore[attr-defined]
+            module.sse = sse  # type: ignore[attr-defined]
+            sys.modules.setdefault("sse_starlette.sse", sse)
         if _package == "grpc":
-            module.__version__ = "0"
+            module.__version__ = "1.73.1"
+            utilities = types.ModuleType("grpc._utilities")
+            utilities.first_version_is_lower = lambda *_: False
+            module._utilities = utilities  # type: ignore[attr-defined]
+            sys.modules.setdefault("grpc._utilities", utilities)
+        if _package == "redis":
+            class Redis:  # pragma: no cover - minimal stub
+                def __init__(self, *_, **__):
+                    pass
+
+            module.Redis = Redis  # type: ignore[attr-defined]
+            import importlib.machinery as _machinery
+            module.__spec__ = _machinery.ModuleSpec("redis", None)  # type: ignore[attr-defined]
         if _package == "structlog":
             proc = type("P", (), {})
             module.contextvars = types.SimpleNamespace(
@@ -190,6 +245,9 @@ for _package in _OPTIONAL_PACKAGES:
         if _package == "pydantic":
             module.Extra = type("Extra", (), {"ignore": "ignore"})
         sys.modules.setdefault(_package, module)
+
+from ume.config import settings as _settings  # noqa: E402
+object.__setattr__(_settings, "UME_VECTOR_BACKEND", "chroma")
 
 try:
     from ume.pipeline import privacy_agent as privacy_agent_module

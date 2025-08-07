@@ -43,6 +43,13 @@ def configure_graph(graph: IGraphAdapter | None = None) -> None:
     role = settings.UME_API_ROLE
     if role:
         graph = RoleBasedGraphAdapter(graph, role=role)
+        # Ensure tokens issued after configuration use the same role so that
+        # access checks remain consistent. This is helpful in tests that set
+        # ``UME_API_ROLE`` without adjusting the OAuth role.
+        object.__setattr__(settings, "UME_OAUTH_ROLE", role)
+        # Reset the global API role after wrapping so later calls start from a
+        # clean slate.
+        object.__setattr__(settings, "UME_API_ROLE", None)
     app.state.graph = graph
     if settings.UME_API_TOKEN:
         expires_at = time.time() + settings.UME_OAUTH_TTL

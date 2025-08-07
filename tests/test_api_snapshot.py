@@ -47,7 +47,8 @@ def test_snapshot_roundtrip(tmp_path: Path) -> None:
     )
     assert res_load.status_code == 200
     assert set(g.get_all_node_ids()) == {"a", "b"}
-    assert ("a", "b", "L") in [(s, t, lbl) for s, t, lbl, *_ in g.get_all_edges()]
+    assert ("a", "b", "L", {}) in g.get_all_edges()
+
 
 
 def test_snapshot_requires_analytics_role(tmp_path: Path) -> None:

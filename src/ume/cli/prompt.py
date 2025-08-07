@@ -204,7 +204,9 @@ class UMEPrompt(Cmd):
                 print("No edges in the graph.")
                 return
             print("Edges:")
-            for src, tgt, lbl in sorted(list(edges)):
+            for src, tgt, lbl, _ in sorted(
+                edges, key=lambda e: (e[0], e[1], e[2])
+            ):
                 print(f"  - {src} -> {tgt} [{lbl}]")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")

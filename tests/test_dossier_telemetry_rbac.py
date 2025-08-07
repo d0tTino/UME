@@ -23,6 +23,7 @@ def test_snapshot_permission(tmp_path, monkeypatch):
     client = _client("TelemetryAdmin")
     res = client.post("/dossier/snapshot", json={"dossier_id": "d1"}, headers={"Authorization": "Bearer tkn"})
     assert res.status_code == 200
+    object.__setattr__(settings, "UME_API_ROLE", "")
 
 
 def test_add_activity_permission(tmp_path, monkeypatch):
@@ -44,3 +45,4 @@ def test_add_activity_permission(tmp_path, monkeypatch):
         headers={"Authorization": "Bearer tkn"},
     )
     assert res.status_code == 200
+    object.__setattr__(settings, "UME_API_ROLE", "")

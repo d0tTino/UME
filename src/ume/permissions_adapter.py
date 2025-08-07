@@ -27,22 +27,10 @@ class PermissionsGraphAdapter(IGraphAdapter):
     def _subjects(self) -> list[str]:
         return [s for s in [self.user_id, self.group_id] if s]
 
-    def _has_permission_edge(self, node_id: str, subject: str, perm: str) -> bool:
-        for edge in self._adapter.get_all_edges():
-            src, tgt, lbl, *rest = edge
-            perm_level = None
-            if rest:
-                attrs = rest[0]
-                if isinstance(attrs, dict):
-                    perm_level = attrs.get("permission_level")
-                else:
-                    perm_level = attrs
-            if (
-                src == node_id
-                and tgt == subject
-                and lbl == "HAS_PERMISSION"
-                and perm_level == perm
-            ):
+    def _has_permission_edge(self, subject: str, node_id: str, label: str) -> bool:
+        for src, tgt, lbl, _ in self._adapter.get_all_edges():
+            if src == subject and tgt == node_id and lbl == label:
+
                 return True
         return False
 
@@ -86,10 +74,10 @@ class PermissionsGraphAdapter(IGraphAdapter):
             if self._has_permission(nid, "viewer")
         }
         data["edges"] = [
-            edge
-            for edge in data.get("edges", [])
-            if self._has_permission(edge[0], "viewer")
-            and self._has_permission(edge[1], "viewer")
+            (s, t, lbl, attrs)
+            for s, t, lbl, attrs in data.get("edges", [])
+            if self._has_permission(s, "viewer") and self._has_permission(t, "viewer")
+
         ]
         return data
 
@@ -130,18 +118,20 @@ class PermissionsGraphAdapter(IGraphAdapter):
         connected = self._adapter.find_connected_nodes(node_id, edge_label)
         return self._filter_visible(connected)
 
-    def add_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
+    def add_edge(
+        self, source_node_id: str, target_node_id: str, label: str, **attrs: Any
+    ) -> None:
         self._require_editor(source_node_id)
         self._require_editor(target_node_id)
-        self._adapter.add_edge(source_node_id, target_node_id, label)
+        self._adapter.add_edge(source_node_id, target_node_id, label, **attrs)
 
-    def get_all_edges(self) -> List[tuple[str, ...]]:
+    def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
         edges = self._adapter.get_all_edges()
         return [
-            edge
-            for edge in edges
-            if self._has_permission(edge[0], "viewer")
-            and self._has_permission(edge[1], "viewer")
+            (s, t, lbl, attrs)
+            for s, t, lbl, attrs in edges
+            if self._has_permission(s, "viewer") and self._has_permission(t, "viewer")
+
         ]
 
     def delete_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:

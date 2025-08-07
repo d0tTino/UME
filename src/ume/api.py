@@ -12,13 +12,13 @@ try:  # pragma: no cover - optional dependency
     import redis
 except Exception:  # pragma: no cover - allow tests without redis installed
     redis = None
-
 try:  # pragma: no cover - optional dependency
     from fastapi_limiter import FastAPILimiter
-except Exception:  # pragma: no cover - provide stub for tests without limiter
-    class FastAPILimiter:  # type: ignore
+except Exception:  # pragma: no cover - tests may run without limiter
+    class FastAPILimiter:  # type: ignore[misc]
         @staticmethod
-        async def init(*_args: Any, **_kwargs: Any) -> None:  # pragma: no cover - simple stub
+        async def init(*_: object, **__: object) -> None:
+
             return None
 
 from .config import settings
@@ -34,16 +34,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 try:  # pragma: no cover - optional dependency
     from starlette_graphene3 import GraphQLApp, make_graphiql_handler
-except Exception:  # pragma: no cover - provide stubs for tests without graphene
-    class GraphQLApp:  # type: ignore
-        def __init__(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover - simple stub
-            pass
+except Exception:  # pragma: no cover - tests may run without GraphQL
+    GraphQLApp = None  # type: ignore[assignment]
 
-    def make_graphiql_handler() -> Callable[[Any], Any]:  # pragma: no cover - simple stub
-        def _handler(*_args: Any, **_kwargs: Any) -> None:
-            return None
+    def make_graphiql_handler(*_: object, **__: object) -> None:  # type: ignore[no-redef]
+        return None
 
-        return _handler
 
 from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 from .retention import (
@@ -71,7 +67,10 @@ from .snapshot_routes import router as snapshot_router
 from .ledger_routes import router as ledger_router
 from .dossier_routes import router as dossier_router
 from .consent_ledger import consent_ledger  # noqa: F401
-from .graphql_api import schema as graphql_schema
+try:  # pragma: no cover - optional dependency
+    from .graphql_api import schema as graphql_schema
+except Exception:  # pragma: no cover - allow tests without graphene
+    graphql_schema = None
 
 from . import api_deps
 
@@ -116,15 +115,19 @@ app.include_router(feedback_router)
 app.include_router(snapshot_router)
 app.include_router(ledger_router)
 app.include_router(dossier_router)
-app.add_route(
-    "/graphql",
-    GraphQLApp(
-        graphql_schema,
-        on_get=make_graphiql_handler(),
-        context_value=lambda request: {"app": app},
-    ),
-    methods=["GET", "POST"],
-)
+# Some unit tests replace ``fastapi.FastAPI`` with a minimal stub that lacks
+# ``add_route``. Guard the GraphQL route registration so those tests can import
+# this module without the real FastAPI implementation.
+if GraphQLApp is not None and graphql_schema is not None and hasattr(app, "add_route"):
+    app.add_route(
+        "/graphql",
+        GraphQLApp(
+            graphql_schema,
+            on_get=make_graphiql_handler(),
+            context_value=lambda request: {"app": app},
+        ),
+        methods=["GET", "POST"],
+    )
 
 
 

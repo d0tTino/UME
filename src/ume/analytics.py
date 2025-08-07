@@ -17,9 +17,9 @@ def _to_networkx(graph: IGraphAdapter) -> nx.DiGraph:
     for node_id in graph.get_all_node_ids():
         attrs = graph.get_node(node_id) or {}
         g.add_node(node_id, **attrs)
-    for edge in graph.get_all_edges():
-        src, tgt, label, *_ = edge  # ignore optional metadata like permission level
-        g.add_edge(src, tgt, label=label)
+    for src, tgt, label, attrs in graph.get_all_edges():
+        g.add_edge(src, tgt, label=label, **attrs)
+
     return g
 
 
@@ -150,8 +150,8 @@ def graph_similarity(graph1: IGraphAdapter, graph2: IGraphAdapter) -> float:
         except NotImplementedError:
             pass
 
-    edges1 = set(graph1.get_all_edges())
-    edges2 = set(graph2.get_all_edges())
+    edges1 = { (s, t, l) for s, t, l, _ in graph1.get_all_edges() }
+    edges2 = { (s, t, l) for s, t, l, _ in graph2.get_all_edges() }
     if not edges1 and not edges2:
         return 1.0
     return len(edges1 & edges2) / len(edges1 | edges2)

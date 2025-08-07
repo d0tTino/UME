@@ -39,4 +39,4 @@ def test_build_concept_graph(monkeypatch):
     assert any(
         ev.node_id == "n1" and ev.target_node_id == "n2" for ev in rel_events
     )
-    assert ("n1", "n2", "RELATES_TO") in graph.get_all_edges()
+    assert ("n1", "n2", "RELATES_TO", {}) in graph.get_all_edges()

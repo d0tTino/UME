@@ -250,12 +250,15 @@ def test_get_all_edges_populated(graph: MockGraph):
     edges = graph.get_all_edges()
     assert isinstance(edges, list)
     assert len(edges) == 3
-    # Use set of tuples for order-agnostic comparison
-    expected_edges = {("n1", "n2", "L1"), ("n2", "n3", "L2"), ("n1", "n3", "L3")}
-    assert set(edges) == expected_edges
+    expected_edges = {
+        ("n1", "n2", "L1"),
+        ("n2", "n3", "L2"),
+        ("n1", "n3", "L3"),
+    }
+    assert {e[:3] for e in edges} == expected_edges
 
     # Test that it returns a copy
-    edges.append(("n3", "n1", "L4_local_copy"))
+    edges.append(("n3", "n1", "L4_local_copy", {}))
     assert len(graph.get_all_edges()) == 3
 
 
@@ -355,8 +358,8 @@ def test_delete_multiple_edges(graph: MockGraph):
     graph.add_node("s", {})
     graph.add_node("t1", {})
     graph.add_node("t2", {})
-    edge1 = ("s", "t1", "L1")
-    edge2 = ("s", "t2", "L2")
+    edge1 = ("s", "t1", "L1", {})
+    edge2 = ("s", "t2", "L2", {})
 
     graph.add_edge(edge1[0], edge1[1], edge1[2])
     graph.add_edge(edge2[0], edge2[1], edge2[2])

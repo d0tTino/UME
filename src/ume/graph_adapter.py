@@ -321,16 +321,12 @@ class AsyncAdapterMixin:
         source_node_id: str,
         target_node_id: str,
         label: str,
-        attrs: Dict[str, Any] | None = None,
+        **attrs: Any,
     ) -> None:
-        if attrs is not None:
-            await asyncio.to_thread(
-                self._adapter.add_edge, source_node_id, target_node_id, label, attrs
-            )
-        else:
-            await asyncio.to_thread(
-                self._adapter.add_edge, source_node_id, target_node_id, label
-            )
+        await asyncio.to_thread(
+            self._adapter.add_edge, source_node_id, target_node_id, label, **attrs
+        )
+
 
     async def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         return await asyncio.to_thread(self._adapter.get_all_edges)
