@@ -66,6 +66,7 @@ from .feedback_routes import router as feedback_router
 from .snapshot_routes import router as snapshot_router
 from .ledger_routes import router as ledger_router
 from .dossier_routes import router as dossier_router
+from .decisions_routes import router as decisions_router
 from .consent_ledger import consent_ledger  # noqa: F401
 try:  # pragma: no cover - optional dependency
     from .graphql_api import schema as graphql_schema
@@ -115,6 +116,7 @@ app.include_router(feedback_router)
 app.include_router(snapshot_router)
 app.include_router(ledger_router)
 app.include_router(dossier_router)
+app.include_router(decisions_router)
 # Some unit tests replace ``fastapi.FastAPI`` with a minimal stub that lacks
 # ``add_route``. Guard the GraphQL route registration so those tests can import
 # this module without the real FastAPI implementation.
