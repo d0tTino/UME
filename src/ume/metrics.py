@@ -13,19 +13,19 @@ try:  # pragma: no cover - exercised indirectly
     from prometheus_client import Counter, Histogram, Gauge
 except Exception:  # pragma: no cover - library missing or incompatible
     class _Metric:  # minimal stub used during tests
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-        def labels(self, *args, **kwargs):
+        def labels(self, *args: object, **kwargs: object) -> "_Metric":
             return self
 
-        def observe(self, *args, **kwargs) -> None:
+        def observe(self, *args: object, **kwargs: object) -> None:
             pass
 
-        def inc(self, *args, **kwargs) -> None:
+        def inc(self, *args: object, **kwargs: object) -> None:
             pass
 
-        def set(self, *args, **kwargs) -> None:
+        def set(self, *args: object, **kwargs: object) -> None:
             pass
 
     Counter = Histogram = Gauge = _Metric
