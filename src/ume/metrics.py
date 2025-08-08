@@ -3,33 +3,139 @@
 The project relies on ``prometheus_client`` for metric collection. However the
 test environment used for kata exercises doesn't always provide a compatible
 version of that library (missing symbols such as ``Exemplar`` have been
-observed).  Importing the package in those situations would raise an
-``ImportError`` and prevent the rest of the module from being imported.  To
-make the module robust, we fall back to lightweight no-op stubs when the real
+observed). Importing the package in those situations would raise an
+``ImportError`` and prevent the rest of the module from being imported. To make
+the module robust, we fall back to lightweight no-op stubs when the real
 library isn't available.
 """
 
-try:  # pragma: no cover - exercised indirectly
-    from prometheus_client import Counter, Histogram, Gauge
+from typing import Any, Iterable
+
+_PromCounter: Any
+_PromHistogram: Any
+_PromGauge: Any
+
+Counter: Any
+Histogram: Any
+Gauge: Any
+
+
+try:
+    from prometheus_client import (
+        Counter as _PromCounter,
+        Histogram as _PromHistogram,
+        Gauge as _PromGauge,
+    )
+    if not all(hasattr(m, "clear") for m in (_PromCounter, _PromHistogram, _PromGauge)):
+        raise ImportError("prometheus_client stubs lack clear()")
 except Exception:  # pragma: no cover - library missing or incompatible
-    class _Metric:  # minimal stub used during tests
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
+    _PromCounter = _PromHistogram = _PromGauge = None
 
-        def labels(self, *args: object, **kwargs: object) -> "_Metric":
-            return self
+if _PromCounter is None:
+    class _Sample:
+        def __init__(self, name: str, labels: dict[str, str], value: float) -> None:
+            self.name = name
+            self.labels = labels
+            self.value = value
 
-        def observe(self, *args: object, **kwargs: object) -> None:
-            pass
+    class _MetricChild:
+        def __init__(self, parent: "_Metric", labels: dict[str, str]):
+            self._parent = parent
+            self._labels = tuple(labels.get(n, "") for n in parent.labelnames)
 
-        def inc(self, *args: object, **kwargs: object) -> None:
-            pass
+        def inc(self, amount: float = 1) -> None:
+            self._parent._inc(self._labels, amount)
 
-        def set(self, *args: object, **kwargs: object) -> None:
-            pass
+        def observe(self, amount: float) -> None:
+            self._parent._observe(self._labels, amount)
 
-    Counter = Histogram = Gauge = _Metric
+        def set(self, value: float) -> None:
+            self._parent._set(self._labels, value)
 
+    class _Metric:
+        """Minimal in-memory metric used when prometheus_client isn't available."""
+
+        def __init__(
+            self,
+            name: str,
+            doc: str,
+            labelnames: Iterable[str] = (),
+            kind: str = "counter",
+        ) -> None:
+            self.name = name
+            self.doc = doc
+            self.labelnames = tuple(labelnames)
+            self.kind = kind  # 'counter', 'histogram', 'gauge'
+            self.values: dict[tuple[str, ...], float] = {}
+            self.sums: dict[tuple[str, ...], float] = {}
+
+        def labels(self, *args: str, **kwargs: str) -> _MetricChild:
+            labels = kwargs or dict(zip(self.labelnames, args))
+            return _MetricChild(self, labels)
+
+        def clear(self) -> None:
+            self.values.clear()
+            self.sums.clear()
+
+        # internal helpers operating on label keys
+        def _inc(self, key: tuple[str, ...], amount: float) -> None:
+            self.values[key] = self.values.get(key, 0.0) + amount
+
+        def _observe(self, key: tuple[str, ...], amount: float) -> None:
+            self.values[key] = self.values.get(key, 0.0) + 1.0
+            self.sums[key] = self.sums.get(key, 0.0) + amount
+
+        def _set(self, key: tuple[str, ...], value: float) -> None:
+            self.values[key] = value
+
+        # public methods for unlabelled metrics
+        def inc(self, amount: float = 1) -> None:
+            self._inc((), amount)
+
+        def observe(self, amount: float) -> None:
+            self._observe((), amount)
+
+        def set(self, value: float) -> None:
+            self._set((), value)
+
+        def collect(self) -> list[object]:  # pragma: no cover - simple stub
+            class _Collected:
+                def __init__(self, samples: list[_Sample]):
+                    self.samples = samples
+
+            samples: list[_Sample] = []
+            for key, val in self.values.items():
+                labels = dict(zip(self.labelnames, key))
+                if self.kind == "counter":
+                    samples.append(_Sample(f"{self.name}_total", labels, val))
+                elif self.kind == "histogram":
+                    samples.append(_Sample(f"{self.name}_count", labels, val))
+                    samples.append(
+                        _Sample(f"{self.name}_sum", labels, self.sums.get(key, 0.0))
+                    )
+                else:  # gauge
+                    samples.append(_Sample(self.name, labels, val))
+            return [_Collected(samples)]
+
+    class _Counter(_Metric):
+        def __init__(self, name: str, doc: str, labelnames: Iterable[str] = ()) -> None:
+            super().__init__(name, doc, labelnames, kind="counter")
+
+    class _Histogram(_Metric):
+        def __init__(self, name: str, doc: str, labelnames: Iterable[str] = ()) -> None:
+            super().__init__(name, doc, labelnames, kind="histogram")
+
+    class _Gauge(_Metric):
+        def __init__(self, name: str, doc: str, labelnames: Iterable[str] = ()) -> None:
+            super().__init__(name, doc, labelnames, kind="gauge")
+
+    Counter = _Counter
+    Histogram = _Histogram
+    Gauge = _Gauge
+else:
+    Counter = _PromCounter
+    Histogram = _PromHistogram
+    Gauge = _PromGauge
 # HTTP metrics
 REQUEST_COUNT = Counter(
     "ume_http_requests_total",
