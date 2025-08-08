@@ -15,12 +15,17 @@ from numpy.typing import NDArray
 
 from ..config import settings
 from prometheus_client import Gauge, Histogram
+from typing import Any
 
 from ..vector_store import VectorBackend
 from typing import TYPE_CHECKING
 
+faiss: Any
 try:  # optional dependency
-    import faiss
+    import faiss as _faiss
+    if not hasattr(_faiss, "IndexFlatL2"):
+        raise ImportError
+    faiss = _faiss
 except Exception:  # pragma: no cover - optional dependency missing
     faiss = None
 

@@ -4,7 +4,13 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, Response
 
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+try:  # pragma: no cover - prometheus is optional during tests
+    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+except Exception:  # pragma: no cover - fall back to simple stubs
+    CONTENT_TYPE_LATEST = "text/plain"
+
+    def generate_latest() -> bytes:  # type: ignore[override]
+        return b""
 
 from .metrics import (
     REQUEST_COUNT,
