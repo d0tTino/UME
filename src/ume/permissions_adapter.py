@@ -27,11 +27,16 @@ class PermissionsGraphAdapter(IGraphAdapter):
     def _subjects(self) -> list[str]:
         return [s for s in [self.user_id, self.group_id] if s]
 
-    def _has_permission_edge(self, subject: str, node_id: str, label: str) -> bool:
-        for src, tgt, lbl, _ in self._adapter.get_all_edges():
-            if src == subject and tgt == node_id and lbl == label:
-
-                return True
+    def _has_permission_edge(self, node_id: str, subject: str, perm: str) -> bool:
+        for src, tgt, lbl, attrs in self._adapter.get_all_edges():
+            if src == node_id and tgt == subject and lbl == "HAS_PERMISSION":
+                perm_level = None
+                if isinstance(attrs, dict):
+                    perm_level = attrs.get("permission_level")
+                else:
+                    perm_level = attrs
+                if perm_level == perm:
+                    return True
         return False
 
     def _has_permission(self, node_id: str, perm: str) -> bool:
