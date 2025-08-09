@@ -69,6 +69,7 @@ from .dossier_routes import router as dossier_router
 from .calendar_routes import router as calendar_router
 from .permissions_routes import router as permissions_router
 
+
 from .consent_ledger import consent_ledger  # noqa: F401
 try:  # pragma: no cover - optional dependency
     from .graphql_api import schema as graphql_schema
@@ -120,6 +121,7 @@ app.include_router(ledger_router)
 app.include_router(dossier_router)
 app.include_router(calendar_router)
 app.include_router(permissions_router)
+
 
 # Some unit tests replace ``fastapi.FastAPI`` with a minimal stub that lacks
 # ``add_route``. Guard the GraphQL route registration so those tests can import
@@ -294,6 +296,7 @@ class _DefaultQueryEngine:
 
         self.last = (cypher, params or {})
         return [{"id": "n1"}]
+
 
 app.state.query_engine = cast(Any, _DefaultQueryEngine())
 app.state.graph = cast(Any, None)
