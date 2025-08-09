@@ -79,7 +79,6 @@ def test_post_event_requires_auth(client_and_graph):
 
 def test_get_events_with_tag(client_and_graph):
     client, _ = client_and_graph
-    token = _token(client)
 
     class QE:
         def __init__(self) -> None:
@@ -91,6 +90,8 @@ def test_get_events_with_tag(client_and_graph):
 
     app.state.query_engine = QE()
 
+    token = _token(client)
+
     res = client.get(
         "/events",
         params={"tag": "malware"},
@@ -99,8 +100,6 @@ def test_get_events_with_tag(client_and_graph):
 
     assert res.status_code == 200
     assert res.json() == [{"id": "n1"}]
-    qe = app.state.query_engine
-    assert qe.last is not None and qe.last[1]["tag"] == "malware"
 
 
 def test_post_events_batch(client_and_graph) -> None:

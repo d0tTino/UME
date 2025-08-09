@@ -14,7 +14,12 @@ def client_and_graph():
     g.add_edge("a", "b", "L")
     configure_graph(g)
     app.state.query_engine = type("QE", (), {"execute_cypher": lambda self, q: []})()
-    return TestClient(app), g
+    orig_role = settings.UME_OAUTH_ROLE
+    settings.UME_OAUTH_ROLE = ""
+    try:
+        yield TestClient(app), g
+    finally:
+        settings.UME_OAUTH_ROLE = orig_role
 
 
 def test_redact_node_endpoint(client_and_graph):

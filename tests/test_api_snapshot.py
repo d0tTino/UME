@@ -26,7 +26,10 @@ def test_snapshot_roundtrip(tmp_path: Path) -> None:
     configure_graph(g)
 
     client = TestClient(app)
+    orig_role = settings.UME_OAUTH_ROLE
+    settings.UME_OAUTH_ROLE = "AnalyticsAgent"
     token = _token(client)
+    settings.UME_OAUTH_ROLE = orig_role
     snap = tmp_path / "snap.json"
 
     res_save = client.post(

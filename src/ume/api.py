@@ -67,6 +67,7 @@ from .snapshot_routes import router as snapshot_router
 from .ledger_routes import router as ledger_router
 from .dossier_routes import router as dossier_router
 from .calendar_routes import router as calendar_router
+from .permissions_routes import router as permissions_router
 
 from .consent_ledger import consent_ledger  # noqa: F401
 try:  # pragma: no cover - optional dependency
@@ -118,6 +119,7 @@ app.include_router(snapshot_router)
 app.include_router(ledger_router)
 app.include_router(dossier_router)
 app.include_router(calendar_router)
+app.include_router(permissions_router)
 
 # Some unit tests replace ``fastapi.FastAPI`` with a minimal stub that lacks
 # ``add_route``. Guard the GraphQL route registration so those tests can import
@@ -277,8 +279,21 @@ async def metrics_middleware(
 # These can be configured by the embedding application or tests
 
 class _DefaultQueryEngine:
-    def execute_cypher(self, cypher: str) -> list[dict[str, Any]]:
-        return [{"q": cypher}]
+    def __init__(self) -> None:
+        self.last: tuple[str, dict[str, Any]] | None = None
+
+    def execute_cypher(
+        self, cypher: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """Minimal stub query engine used in tests.
+
+        Records the last executed query and returns a fixed result so tests
+        depending on ``app.state.query_engine`` can operate without a real
+        database backend.
+        """
+
+        self.last = (cypher, params or {})
+        return [{"id": "n1"}]
 
 app.state.query_engine = cast(Any, _DefaultQueryEngine())
 app.state.graph = cast(Any, None)

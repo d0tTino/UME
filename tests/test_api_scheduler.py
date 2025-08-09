@@ -8,102 +8,114 @@ import types
 import pytest
 
 root = Path(__file__).resolve().parents[1]
-_orig_ume = sys.modules.get("ume")
-package = types.ModuleType("ume")
-package.__path__ = [str(root / "src" / "ume")]
-sys.modules["ume"] = package
-package.VectorStore = object  # type: ignore[attr-defined]
-package.create_vector_store = lambda *_, **__: None
 
-# Provide minimal FastAPI stubs so ume.api can be imported without the real
-# dependency installed.
-fastapi_mod = types.ModuleType("fastapi")
+spec_fastapi = importlib.util.find_spec("fastapi")
+if spec_fastapi is None:
+    _orig_ume = sys.modules.get("ume")
+    package = types.ModuleType("ume")
+    package.__path__ = [str(root / "src" / "ume")]
+    sys.modules["ume"] = package
+    package.VectorStore = object  # type: ignore[attr-defined]
+    package.create_vector_store = lambda *_, **__: None
 
-class _FastAPI:
-    def __init__(self, *_: object, **__: object) -> None:
-        self.state = types.SimpleNamespace()
+    # Provide minimal FastAPI stubs so ume.api can be imported without the real
+    # dependency installed.
+    fastapi_mod = types.ModuleType("fastapi")
 
-    def on_event(self, *_: object, **__: object):  # pragma: no cover - stub
-        def _wrap(func):
-            return func
+    class _FastAPI:
+        def __init__(self, *_: object, **__: object) -> None:
+            self.state = types.SimpleNamespace()
 
-        return _wrap
+        def on_event(self, *_: object, **__: object):  # pragma: no cover - stub
+            def _wrap(func):
+                return func
 
-    def middleware(self, *_: object, **__: object):  # pragma: no cover - stub
-        def _wrap(func):
-            return func
+            return _wrap
 
-        return _wrap
+        def middleware(self, *_: object, **__: object):  # pragma: no cover - stub
+            def _wrap(func):
+                return func
 
-    def include_router(self, *_: object, **__: object) -> None:  # pragma: no cover - stub
-        return None
+            return _wrap
 
-    def add_route(self, *_: object, **__: object) -> None:  # pragma: no cover - stub
-        return None
+        def include_router(self, *_: object, **__: object) -> None:  # pragma: no cover - stub
+            return None
 
-    def exception_handler(self, *_: object, **__: object):  # pragma: no cover - stub
-        def _wrap(func):
-            return func
+        def add_route(self, *_: object, **__: object) -> None:  # pragma: no cover - stub
+            return None
 
-        return _wrap
+        def exception_handler(self, *_: object, **__: object):  # pragma: no cover - stub
+            def _wrap(func):
+                return func
+
+            return _wrap
 
 
-fastapi_mod.FastAPI = _FastAPI  # type: ignore[attr-defined]
-fastapi_mod.Request = object  # type: ignore[attr-defined]
-class _APIRouter:
-    def __init__(self, *_, **__):
-        self.routes = []
+    fastapi_mod.FastAPI = _FastAPI  # type: ignore[attr-defined]
+    fastapi_mod.Request = object  # type: ignore[attr-defined]
 
-    def _noop(self, *_, **__):
-        def _wrap(func):
-            self.routes.append(func)
-            return func
+    class _APIRouter:
+        def __init__(self, *_, **__):
+            self.routes: list[object] = []
 
-        return _wrap
+        def _noop(self, *_, **__):
+            def _wrap(func):
+                self.routes.append(func)
+                return func
 
-    get = post = put = delete = _noop
+            return _wrap
 
-fastapi_mod.APIRouter = _APIRouter  # type: ignore[attr-defined]
-fastapi_mod.Depends = lambda *_, **__: None  # type: ignore[attr-defined]
-fastapi_mod.HTTPException = Exception  # type: ignore[attr-defined]
-responses_mod = types.ModuleType("fastapi.responses")
-responses_mod.JSONResponse = object  # type: ignore[attr-defined]
-responses_mod.Response = object  # type: ignore[attr-defined]
-exceptions_mod = types.ModuleType("fastapi.exceptions")
-exceptions_mod.RequestValidationError = Exception  # type: ignore[attr-defined]
-sys.modules.setdefault("fastapi", fastapi_mod)
-sys.modules.setdefault("fastapi.responses", responses_mod)
-sys.modules.setdefault("fastapi.exceptions", exceptions_mod)
+        get = post = put = delete = _noop
 
-api_deps_stub = types.ModuleType("ume.api_deps")
-api_deps_stub.POLICY_DIR = root
-api_deps_stub.TOKENS = {}
-api_deps_stub.configure_graph = lambda *_: None
-api_deps_stub.configure_vector_store = lambda *_: None
-api_deps_stub.remove_expired_tokens = lambda: None
-api_deps_stub.get_current_role = lambda: "tester"
-sys.modules.setdefault("ume.api_deps", api_deps_stub)
+    fastapi_mod.APIRouter = _APIRouter  # type: ignore[attr-defined]
+    fastapi_mod.Depends = lambda *_, **__: None  # type: ignore[attr-defined]
+    fastapi_mod.Query = lambda *_, **__: None  # type: ignore[attr-defined]
+    fastapi_mod.HTTPException = Exception  # type: ignore[attr-defined]
+    responses_mod = types.ModuleType("fastapi.responses")
+    responses_mod.JSONResponse = object  # type: ignore[attr-defined]
+    responses_mod.Response = object  # type: ignore[attr-defined]
+    exceptions_mod = types.ModuleType("fastapi.exceptions")
+    exceptions_mod.RequestValidationError = Exception  # type: ignore[attr-defined]
+    sys.modules.setdefault("fastapi", fastapi_mod)
+    sys.modules.setdefault("fastapi.responses", responses_mod)
+    sys.modules.setdefault("fastapi.exceptions", exceptions_mod)
 
-empty_router = types.SimpleNamespace()
-for _mod in [
-    "graph_routes",
-    "vector_routes",
-    "policy_routes",
-    "auth_routes",
-    "metrics_routes",
-    "dashboard_routes",
-    "pii_routes",
-    "recommendations_routes",
-    "feedback_routes",
-    "snapshot_routes",
-    "ledger_routes",
-]:
-    m = types.ModuleType(f"ume.{_mod}")
-    m.router = empty_router
-    sys.modules.setdefault(f"ume.{_mod}", m)
+    api_deps_stub = types.ModuleType("ume.api_deps")
+    api_deps_stub.POLICY_DIR = root
+    api_deps_stub.TOKENS = {}
+    api_deps_stub.configure_graph = lambda *_: None
+    api_deps_stub.configure_vector_store = lambda *_: None
+    api_deps_stub.remove_expired_tokens = lambda: None
+    api_deps_stub.get_current_role = lambda: "tester"
+    api_deps_stub.get_graph = lambda: None
+    sys.modules.setdefault("ume.api_deps", api_deps_stub)
 
-from ume.event_ledger import EventLedger
-from ume import retention
+    empty_router = types.SimpleNamespace()
+    for _mod in [
+        "graph_routes",
+        "vector_routes",
+        "policy_routes",
+        "auth_routes",
+        "metrics_routes",
+        "dashboard_routes",
+        "pii_routes",
+        "recommendations_routes",
+        "feedback_routes",
+        "snapshot_routes",
+        "ledger_routes",
+    ]:
+        m = types.ModuleType(f"ume.{_mod}")
+        m.router = empty_router
+        sys.modules.setdefault(f"ume.{_mod}", m)
+
+    spec_api = importlib.util.spec_from_file_location("ume.api", root / "src" / "ume" / "api.py")
+    assert spec_api and spec_api.loader
+    api = importlib.util.module_from_spec(spec_api)
+    sys.modules["ume.api"] = api
+    spec_api.loader.exec_module(api)
+else:  # FastAPI is installed; import normally
+    import ume.api as api  # type: ignore[import-not-found]
+    _orig_ume = None
 
 # Patch FastAPILimiter to avoid optional dependency requirement
 class _DummyLimiter:
@@ -114,7 +126,7 @@ class _DummyLimiter:
     async def init(cls, *args, **kwargs):
         return None
 
-sys.modules["fastapi_limiter"] = type("m", (), {"FastAPILimiter": _DummyLimiter})
+sys.modules.setdefault("fastapi_limiter", type("m", (), {"FastAPILimiter": _DummyLimiter}))
 sys.modules.setdefault(
     "fastapi_limiter.depends",
     type(
@@ -138,16 +150,13 @@ sys.modules.setdefault(
     type("m", (), {"EventSourceResponse": object}),
 )
 grpc_util = type("m", (), {"first_version_is_lower": lambda *_: False})
-sys.modules["grpc._utilities"] = grpc_util
+sys.modules.setdefault("grpc._utilities", grpc_util)
 grpc_mod = type("m", (), {"__version__": "1.74.0"})
-sys.modules["grpc"] = grpc_mod
+sys.modules.setdefault("grpc", grpc_mod)
 sys.modules.setdefault("google", type("m", (), {}))
 
-spec_api = importlib.util.spec_from_file_location("ume.api", root / "src" / "ume" / "api.py")
-assert spec_api and spec_api.loader
-api = importlib.util.module_from_spec(spec_api)
-sys.modules["ume.api"] = api
-spec_api.loader.exec_module(api)
+from ume.event_ledger import EventLedger
+from ume import retention
 
 
 @pytest.mark.asyncio
@@ -166,9 +175,10 @@ async def test_api_compaction_thread_stops(tmp_path, monkeypatch: pytest.MonkeyP
     retention.stop_ledger_compaction_scheduler()
     ledger.close()
 
-if _orig_ume is None:
-    sys.modules.pop("ume", None)
-    sys.modules.pop("ume.api", None)
-else:
-    sys.modules["ume"] = _orig_ume
-    sys.modules["ume.api"] = importlib.import_module("ume.api")
+if spec_fastapi is None:
+    if _orig_ume is None:
+        sys.modules.pop("ume", None)
+        sys.modules.pop("ume.api", None)
+    else:
+        sys.modules["ume"] = _orig_ume
+        sys.modules["ume.api"] = importlib.import_module("ume.api")
