@@ -36,6 +36,16 @@ node_types:
         version: "3.0.0"
       description:
         version: "3.0.0"
+      is_all_day:
+        version: "3.0.0"
+      location:
+        version: "3.0.0"
+      status:
+        version: "3.0.0"
+      rrule:
+        version: "3.0.0"
+      visibility:
+        version: "3.0.0"
   CalendarLayer:
     version: "3.0.0"
     permission_level: "public"
