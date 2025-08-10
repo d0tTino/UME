@@ -25,9 +25,12 @@ def test_decision_flow(client_and_graph) -> None:
     client, g = client_and_graph
     token = _token(client)
 
+    # Pre-create user node for permission edges
+    g.add_node("user1", {})
+
     res = client.post(
         "/v1/decisions",
-        json={"query": "Choose option"},
+        json={"query": "Choose option", "user_id": "user1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -36,7 +39,7 @@ def test_decision_flow(client_and_graph) -> None:
 
     res = client.post(
         f"/v1/decisions/{analysis_id}/actions",
-        json={"description": "Option A"},
+        json={"description": "Option A", "user_id": "user1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -45,6 +48,7 @@ def test_decision_flow(client_and_graph) -> None:
 
     res = client.get(
         f"/v1/decisions/{analysis_id}",
+        params={"user_id": "user1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200

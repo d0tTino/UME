@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
+from .permissions_adapter import PermissionsGraphAdapter
 from .models import (
     DecisionAnalysis,
     ProposedAction,
@@ -19,6 +20,8 @@ router = APIRouter(prefix="/v1/decisions")
 
 class DecisionCreateRequest(BaseModel):
     query: str
+    user_id: str
+    group_id: str | None = None
 
 
 class ActionCreateRequest(BaseModel):
@@ -26,6 +29,8 @@ class ActionCreateRequest(BaseModel):
     rank: int = 0
     is_optimal: bool = False
     outcome_metrics: dict[str, float] | None = None
+    user_id: str
+    group_id: str | None = None
 
 
 def _analysis_to_dict(analysis: DecisionAnalysis) -> dict[str, Any]:
@@ -52,9 +57,28 @@ def create_decision(
     _: str = Depends(deps.get_current_role),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> dict[str, Any]:
+    perm_graph = PermissionsGraphAdapter(
+        graph, user_id=req.user_id, group_id=req.group_id
+    )
     analysis = create_decision_analysis(req.query)
     attrs = _analysis_to_dict(analysis)
-    graph.add_node(analysis.analysis_id, attrs)
+    perm_graph.add_node(analysis.analysis_id, attrs)
+    # Establish ownership and permissions
+    graph.add_edge(analysis.analysis_id, req.user_id, "OWNED_BY")
+    graph.add_edge(
+        analysis.analysis_id,
+        req.user_id,
+        "HAS_PERMISSION",
+        {"permission_level": "editor"},
+    )
+    if req.group_id:
+        graph.add_edge(analysis.analysis_id, req.group_id, "OWNED_BY")
+        graph.add_edge(
+            analysis.analysis_id,
+            req.group_id,
+            "HAS_PERMISSION",
+            {"permission_level": "editor"},
+        )
     return attrs
 
 
@@ -65,7 +89,10 @@ def add_action(
     _: str = Depends(deps.get_current_role),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> dict[str, Any]:
-    if not graph.node_exists(analysis_id):
+    perm_graph = PermissionsGraphAdapter(
+        graph, user_id=req.user_id, group_id=req.group_id
+    )
+    if not perm_graph.node_exists(analysis_id):
         raise HTTPException(status_code=404, detail="Analysis not found")
     action = create_proposed_action(
         req.description,
@@ -74,25 +101,46 @@ def add_action(
         outcome_metrics=req.outcome_metrics or {},
     )
     action_attrs = _action_to_dict(action)
-    graph.add_node(action.action_id, action_attrs)
-    graph.add_edge(analysis_id, action.action_id, "CONSIDERS")
+    perm_graph.add_node(action.action_id, action_attrs)
+    # Ownership and permissions for the action
+    graph.add_edge(action.action_id, req.user_id, "OWNED_BY")
+    graph.add_edge(
+        action.action_id,
+        req.user_id,
+        "HAS_PERMISSION",
+        {"permission_level": "editor"},
+    )
+    if req.group_id:
+        graph.add_edge(action.action_id, req.group_id, "OWNED_BY")
+        graph.add_edge(
+            action.action_id,
+            req.group_id,
+            "HAS_PERMISSION",
+            {"permission_level": "editor"},
+        )
+    perm_graph.add_edge(analysis_id, action.action_id, "CONSIDERS")
     return action_attrs
 
 
 @router.get("/{analysis_id}")
 def get_decision(
     analysis_id: str,
+    user_id: str = Query(...),
+    group_id: str | None = Query(None),
     _: str = Depends(deps.get_current_role),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> dict[str, Any]:
-    attrs = graph.get_node(analysis_id)
+    perm_graph = PermissionsGraphAdapter(
+        graph, user_id=user_id, group_id=group_id
+    )
+    attrs = perm_graph.get_node(analysis_id)
     if attrs is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     analysis = {"analysis_id": analysis_id, **attrs}
-    action_ids = graph.find_connected_nodes(analysis_id, edge_label="CONSIDERS")
+    action_ids = perm_graph.find_connected_nodes(analysis_id, edge_label="CONSIDERS")
     actions = []
     for aid in action_ids:
-        a_attrs = graph.get_node(aid)
+        a_attrs = perm_graph.get_node(aid)
         if a_attrs:
             actions.append({"action_id": aid, **a_attrs})
     return {"analysis": analysis, "actions": actions}
