@@ -72,17 +72,13 @@ def create_event(
         "visibility": event.visibility,
     }
     graph.add_node(event.id, attrs)
-    graph.add_edge(event.id, req.user_id, "OWNED_BY")
     graph.add_edge(
-        event.id,
-        req.user_id,
-        "HAS_PERMISSION",
-        {"permission_level": "editor"},
+        event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
     )
     for uid in req.invitee_ids or []:
         graph.add_edge(event.id, uid, "INVITES")
         graph.add_edge(
-            event.id, uid, "HAS_PERMISSION", {"permission_level": "viewer"}
+            event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}
         )
     for lid in req.layer_ids or []:
         graph.add_edge(event.id, lid, "TAGGED_AS")

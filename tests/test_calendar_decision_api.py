@@ -54,10 +54,6 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert res.status_code == 200
     event_id = res.json()["id"]
 
-    # Additional edges to satisfy PermissionsGraphAdapter's checks
-    graph.add_edge(event_id, "user1", "editor")
-    graph.add_edge(event_id, "user2", "viewer")
-
     # Owner sees the event
     res = client.get(
         "/v1/calendar/events",
@@ -86,8 +82,8 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert res.json() == []
 
     edges = graph.get_all_edges()
-    assert (event_id, "user1", "HAS_PERMISSION", {"permission_level": "editor"}) in edges
-    assert (event_id, "user2", "HAS_PERMISSION", {"permission_level": "viewer"}) in edges
+    assert (event_id, "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
+    assert (event_id, "user2", "SHARED_WITH", {"permission_level": "viewer"}) in edges
 
 
 def test_decision_flow(client_and_graph) -> None:

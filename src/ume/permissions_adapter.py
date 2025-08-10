@@ -29,7 +29,7 @@ class PermissionsGraphAdapter(IGraphAdapter):
 
     def _has_permission_edge(self, node_id: str, subject: str, perm: str) -> bool:
         for src, tgt, lbl, attrs in self._adapter.get_all_edges():
-            if src == node_id and tgt == subject and lbl == "HAS_PERMISSION":
+            if src == node_id and tgt == subject and lbl in {"OWNED_BY", "SHARED_WITH"}:
                 perm_level = None
                 if isinstance(attrs, dict):
                     perm_level = attrs.get("permission_level")
@@ -92,11 +92,11 @@ class PermissionsGraphAdapter(IGraphAdapter):
     def get_all_node_ids(self) -> List[str]:
         return self._filter_visible(self._adapter.get_all_node_ids())
 
-    def _get_nodes_for_subject(self, subject_id: str) -> List[str]:
+    def _get_nodes_for_subject(self, subject_id: str, labels: List[str]) -> List[str]:
         nodes: set[str] = set()
         for edge in self._adapter.get_all_edges():
             src, tgt, lbl, *rest = edge
-            if lbl != "HAS_PERMISSION" or tgt != subject_id:
+            if lbl not in labels or tgt != subject_id:
                 continue
             perm_level = None
             if rest:
@@ -110,10 +110,14 @@ class PermissionsGraphAdapter(IGraphAdapter):
         return list(nodes)
 
     def get_nodes_by_user(self, user_id: str) -> List[str]:
-        return self._filter_visible(self._get_nodes_for_subject(user_id))
+        return self._filter_visible(
+            self._get_nodes_for_subject(user_id, ["OWNED_BY", "SHARED_WITH"])
+        )
 
     def get_nodes_shared_with(self, group_id: str) -> List[str]:
-        return self._filter_visible(self._get_nodes_for_subject(group_id))
+        return self._filter_visible(
+            self._get_nodes_for_subject(group_id, ["SHARED_WITH"])
+        )
 
     def find_connected_nodes(
         self, node_id: str, edge_label: Optional[str] = None
