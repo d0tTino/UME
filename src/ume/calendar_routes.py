@@ -26,6 +26,7 @@ class CalendarEventCreateRequest(BaseModel):
     visibility: str | None = None
     user_id: str
     invitee_ids: List[str] | None = None
+    group_ids: List[str] | None = None
     layer_ids: List[str] | None = None
 
 
@@ -72,17 +73,19 @@ def create_event(
         "visibility": event.visibility,
     }
     graph.add_node(event.id, attrs)
-    graph.add_edge(event.id, req.user_id, "OWNED_BY")
     graph.add_edge(
         event.id,
         req.user_id,
-        "HAS_PERMISSION",
+        "OWNED_BY",
         {"permission_level": "editor"},
     )
     for uid in req.invitee_ids or []:
-        graph.add_edge(event.id, uid, "INVITES")
         graph.add_edge(
-            event.id, uid, "HAS_PERMISSION", {"permission_level": "viewer"}
+            event.id, uid, "INVITES", {"permission_level": "viewer"}
+        )
+    for gid in req.group_ids or []:
+        graph.add_edge(
+            event.id, gid, "SHARED_WITH", {"permission_level": "viewer"}
         )
     for lid in req.layer_ids or []:
         graph.add_edge(event.id, lid, "TAGGED_AS")
