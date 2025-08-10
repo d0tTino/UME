@@ -19,6 +19,11 @@ class CalendarEventCreateRequest(BaseModel):
     start: datetime
     end: datetime | None = None
     description: str | None = None
+    is_all_day: bool = False
+    location: str | None = None
+    status: str | None = None
+    rrule: str | None = None
+    visibility: str | None = None
     user_id: str
     invitee_ids: List[str] | None = None
     layer_ids: List[str] | None = None
@@ -30,6 +35,11 @@ class CalendarEventResponse(BaseModel):
     start: int
     end: int | None = None
     description: str | None = None
+    is_all_day: bool
+    location: str | None = None
+    status: str | None = None
+    rrule: str | None = None
+    visibility: str | None = None
 
 
 @router.post("/events", response_model=CalendarEventResponse)
@@ -39,7 +49,15 @@ def create_event(
     _: str = Depends(deps.get_current_role),
 ) -> CalendarEventResponse:
     event = create_calendar_event(
-        req.title, req.start, req.end, description=req.description
+        req.title,
+        req.start,
+        req.end,
+        description=req.description,
+        is_all_day=req.is_all_day,
+        location=req.location,
+        status=req.status,
+        rrule=req.rrule,
+        visibility=req.visibility,
     )
     attrs = {
         "type": "CalendarEvent",
@@ -47,6 +65,11 @@ def create_event(
         "start": int(event.start.timestamp()),
         "end": int(event.end.timestamp()) if event.end else None,
         "description": event.description,
+        "is_all_day": event.is_all_day,
+        "location": event.location,
+        "status": event.status,
+        "rrule": event.rrule,
+        "visibility": event.visibility,
     }
     graph.add_node(event.id, attrs)
     graph.add_edge(event.id, req.user_id, "OWNED_BY")
@@ -69,6 +92,11 @@ def create_event(
         start=attrs["start"],
         end=attrs["end"],
         description=event.description,
+        is_all_day=event.is_all_day,
+        location=event.location,
+        status=event.status,
+        rrule=event.rrule,
+        visibility=event.visibility,
     )
 
 
@@ -104,6 +132,11 @@ def list_events(
                 start=start_ts,
                 end=attrs.get("end"),
                 description=attrs.get("description"),
+                is_all_day=attrs.get("is_all_day", False),
+                location=attrs.get("location"),
+                status=attrs.get("status"),
+                rrule=attrs.get("rrule"),
+                visibility=attrs.get("visibility"),
             )
         )
     return events
