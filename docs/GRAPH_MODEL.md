@@ -39,6 +39,22 @@ Properties:
 - `type_id` *(string, required)*: Unique identifier for the new entity.
 - Other attributes depend on the producer.
 
+### User
+Represents an individual actor within UME.
+
+Properties:
+- `user_id` *(string, required)*: Stable identifier for the user.
+- `name` *(string)*: Display name.
+- `email` *(string)*: Contact address.
+
+### UserGroup
+Collects users for shared permissions and collaboration.
+
+Properties:
+- `group_id` *(string, required)*: Stable identifier for the group.
+- `name` *(string)*: Human friendly label.
+- `members` *(array)*: List of `user_id` values belonging to the group.
+
 ## Edge Labels
 
 - `REMEMBERS`: connects a `UserMemory` node to an `AgentIntent` that created it.
@@ -48,6 +64,9 @@ Properties:
 - `CONNECTS_TO`: Used for network-style associations.
 - `RELATES_TO`: Indicates a topical relationship.
 - `NEW_LABEL`: Links research job nodes to the documents they discover.
+- `OWNED_BY`: Links a resource node to the `User` or `UserGroup` that owns it.
+- `SHARED_WITH`: Grants a `UserGroup` access to a resource. Optional
+  `permission_level` property describes viewer/editor rights.
 
 Example edge creation event:
 
@@ -180,6 +199,19 @@ Version numbers follow `MAJOR.MINOR.PATCH` semantics.  Adding a new optional
 property bumps the MINOR version.  Changing required fields or the meaning of an
 existing property increments MAJOR.  The PATCH component is reserved for
 documentation fixes or clarifications that do not alter validation rules.
+
+### Migration Notes
+
+Historical event ledgers can be upgraded after a schema change using the
+`ume.migrate_events` utility:
+
+```bash
+poetry run python -m ume.migrate_events --source ledger > migrated_events.json
+```
+
+This command reads stored event envelopes and re-emits them with the latest
+`schema_version`, ensuring new node and edge definitions like `User` or
+`SHARED_WITH` are applied consistently.
 
 ## Programmatic Schema Loading
 

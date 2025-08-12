@@ -52,6 +52,33 @@ UME_ROLE=UserService ume new_node UserProfile.123 '{}'
 
 Without the `UserService` role the command raises `AccessDeniedError`.
 
+## Permission Graph Model
+
+Permissions are stored within the graph using dedicated node and edge types
+introduced in schema version `3.0.0`.
+
+- `User` nodes represent individual actors.
+- `UserGroup` nodes collect users for shared access.
+- Resources link to owners via `OWNED_BY` edges.
+- `SHARED_WITH` edges grant group access and may include a `permission_level`
+  property such as `viewer` or `editor`.
+
+### Sample Requests
+
+Retrieve nodes owned by a user:
+
+```bash
+curl "http://localhost:8000/v1/nodes?user_id=User.u1"
+```
+
+Retrieve nodes shared with a group:
+
+```bash
+curl "http://localhost:8000/v1/nodes/shared?group_id=Group.g1"
+```
+
+Both endpoints require an authenticated role as described above.
+
 ## Dossier Endpoint RBAC
 
 API routes under `/dossier` use their own role checks. Three roles are
