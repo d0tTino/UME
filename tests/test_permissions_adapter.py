@@ -14,8 +14,12 @@ def build_graph() -> MockGraph:
 
 def test_update_requires_editor_permission() -> None:
     graph = build_graph()
+    graph._edges["Document.d2"].append(
+        ("User.u1", "SHARED_WITH", {"permission_level": "viewer"})
+    )
     adapter = PermissionsGraphAdapter(graph, user_id="User.u1")
     adapter.update_node("Document.d1", {"title": "updated"})
+    assert adapter.get_node("Document.d2") == {"title": "doc2"}
     with pytest.raises(AccessDeniedError):
         adapter.update_node("Document.d2", {"title": "nope"})
 
@@ -39,6 +43,16 @@ def test_group_viewer_allows_read_not_edit() -> None:
     assert adapter.get_node("Document.d1") == {}
     with pytest.raises(AccessDeniedError):
         adapter.update_node("Document.d1", {"foo": "bar"})
+
+
+def test_group_editor_allows_edit() -> None:
+    g = MockGraph()
+    g.add_node("Group.g1", {})
+    g.add_node("Document.d1", {"title": "doc1"})
+    g._edges["Document.d1"].append(("Group.g1", "SHARED_WITH", {"permission_level": "editor"}))
+    adapter = PermissionsGraphAdapter(g, group_id="Group.g1")
+    adapter.update_node("Document.d1", {"title": "updated"})
+    assert adapter.get_node("Document.d1") == {"title": "updated"}
 
 
 def test_get_nodes_by_user_and_group() -> None:
