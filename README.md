@@ -739,8 +739,10 @@ curl -X POST http://localhost:8000/graphql \
 ```
 
 ### Migrate Events to the New Schema
-Existing events can be rewritten using the latest schema version. Run the
-migration helper and redirect the output to a file:
+UME's graph schema follows semantic versioning (`MAJOR.MINOR.PATCH`) and each
+event envelope records its `schema_version`. When a new schema release adds
+types or properties, historical events should be rewritten to keep the ledger
+consistent. Run the migration helper and redirect the output to a file:
 
 ```bash
 poetry run python -m ume.migrate_events --source ledger > migrated_events.json
