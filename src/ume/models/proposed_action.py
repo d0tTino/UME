@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import uuid
 
 
-SCHEMA_VERSION = "3.0"
+SCHEMA_VERSION = "3.0.0"
 
 
 @dataclass
