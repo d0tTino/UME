@@ -4,6 +4,7 @@ import pytest
 from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
+from ume.decisions_routes import router as decisions_router
 
 
 def _token(client: TestClient) -> str:
@@ -18,6 +19,7 @@ def _token(client: TestClient) -> str:
 def client_and_graph():
     g = MockGraph()
     configure_graph(g)
+    app.include_router(decisions_router)
     return TestClient(app), g
 
 

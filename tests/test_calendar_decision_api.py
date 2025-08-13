@@ -196,43 +196,28 @@ def test_decision_flow(client_and_graph) -> None:
     )
     assert res.status_code == 200
     analysis_id = res.json()["analysis_id"]
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={"description": "Option A", "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    action_id = res.json()["action_id"]
 
-    from unittest.mock import patch
+    res = client.get(
+        f"/v1/decisions/{analysis_id}",
+        params={"user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["analysis"]["analysis_id"] == analysis_id
+    assert [a["action_id"] for a in data["actions"]] == [action_id]
 
-    def patched_has_permission_edge(self, node_id, subject, perm):
-        for src, tgt, lbl, attrs in self._adapter.get_all_edges():
-            if src == node_id and tgt == subject and lbl in {"OWNED_BY", "SHARED_WITH", "HAS_PERMISSION"}:
-                perm_level = None
-                if isinstance(attrs, dict):
-                    perm_level = attrs.get("permission_level")
-                else:
-                    perm_level = attrs
-                if perm_level == perm:
-                    return True
-        return False
+    assert graph.get_node(analysis_id)["query"] == "Choose option"
+    assert graph.get_node(action_id)["description"] == "Option A"
+    assert graph.find_connected_nodes(analysis_id, edge_label="CONSIDERS") == [action_id]
 
-    with patch(
-        "ume.permissions_adapter.PermissionsGraphAdapter._has_permission_edge",
-        patched_has_permission_edge,
-    ):
-        res = client.post(
-            f"/v1/decisions/{analysis_id}/actions",
-            json={"description": "Option A", "user_id": "user1"},
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert res.status_code == 200
-        action_id = res.json()["action_id"]
-
-        res = client.get(
-            f"/v1/decisions/{analysis_id}",
-            params={"user_id": "user1"},
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert res.status_code == 200
-        data = res.json()
-        assert data["analysis"]["analysis_id"] == analysis_id
-        assert [a["action_id"] for a in data["actions"]] == [action_id]
-
-        assert graph.get_node(analysis_id)["query"] == "Choose option"
-        assert graph.get_node(action_id)["description"] == "Option A"
-        assert graph.find_connected_nodes(analysis_id, edge_label="CONSIDERS") == [action_id]
+    edges = graph.get_all_edges()
+    assert (analysis_id, "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
+    assert (action_id, "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
