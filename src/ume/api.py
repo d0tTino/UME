@@ -68,6 +68,7 @@ from .ledger_routes import router as ledger_router
 from .dossier_routes import router as dossier_router
 from .calendar_routes import router as calendar_router
 from .permissions_routes import router as permissions_router
+from .financial_account_routes import router as account_router
 
 
 from .consent_ledger import consent_ledger  # noqa: F401
@@ -120,6 +121,7 @@ app.include_router(snapshot_router)
 app.include_router(ledger_router)
 app.include_router(dossier_router)
 app.include_router(calendar_router)
+app.include_router(account_router)
 app.include_router(permissions_router)
 
 
