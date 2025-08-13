@@ -25,6 +25,7 @@ class CalendarEventCreateRequest(BaseModel):
     rrule: str | None = None
     visibility: str | None = None
     user_id: str
+    group_id: str | None = None
     invitee_ids: List[str] | None = None
     layer_ids: List[str] | None = None
 
@@ -80,6 +81,13 @@ def create_event(
         graph.add_edge(
             event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}
         )
+    if req.group_id:
+        graph.add_edge(
+            event.id,
+            req.group_id,
+            "SHARED_WITH",
+            {"permission_level": "viewer"},
+        )
     for lid in req.layer_ids or []:
         graph.add_edge(event.id, lid, "TAGGED_AS")
     return CalendarEventResponse(
@@ -99,13 +107,18 @@ def create_event(
 @router.get("/events", response_model=List[CalendarEventResponse])
 def list_events(
     user_id: str = Query(...),
+    group_id: str | None = Query(None),
     layer_id: str | None = Query(None),
     since: int | None = Query(None, ge=0),
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> List[CalendarEventResponse]:
-    perm_graph = PermissionsGraphAdapter(graph, user_id=user_id)
+    perm_graph = PermissionsGraphAdapter(
+        graph, user_id=user_id, group_id=group_id
+    )
     event_ids = set(perm_graph.get_nodes_by_user(user_id))
+    if group_id is not None:
+        event_ids |= set(perm_graph.get_nodes_shared_with(group_id))
     if layer_id is not None:
         layer_events = {
             src
