@@ -74,6 +74,12 @@ node_types:
         version: "3.0.0"
       description:
         version: "3.0.0"
+      rank:
+        version: "3.0.0"
+      is_optimal:
+        version: "3.0.0"
+      outcome_metrics:
+        version: "3.0.0"
   FinancialAccount:
     version: "3.0.0"
     permission_level: "public"
