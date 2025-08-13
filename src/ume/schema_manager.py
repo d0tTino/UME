@@ -85,10 +85,19 @@ class GraphSchemaManager:
                         graph.delete_edge(src, tgt, label)
 
             if new_version == "3.0.0":
-                for src, tgt, label, *_ in list(graph.get_all_edges()):
+                for src, tgt, label, attrs in list(graph.get_all_edges()):
                     if label == "NEW_LABEL":
                         graph.delete_edge(src, tgt, label)
                         graph.add_edge(src, tgt, "TAGGED_AS")
+                    elif label == "HAS_PERMISSION":
+                        graph.delete_edge(src, tgt, label)
+                        perm_level = None
+                        if isinstance(attrs, dict):
+                            perm_level = attrs.get("permission_level")
+                        else:
+                            perm_level = attrs
+                        new_label = "OWNED_BY" if perm_level == "editor" else "SHARED_WITH"
+                        graph.add_edge(src, tgt, new_label, attrs)
                     elif label in {
                         "REMEMBERS",
                         "ASSOCIATED_WITH",
