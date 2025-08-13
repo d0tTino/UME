@@ -151,6 +151,15 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     assert res.status_code == 200
     assert res.json() == []
 
+    # User creates their own event
+    res = client.post(
+        "/v1/calendar/events",
+        json={"title": "Solo", "start": start, "user_id": "user2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    own_event = res.json()
+
     # Group-scoped retrieval returns the event
     res = client.get(
         "/v1/calendar/events",
@@ -158,7 +167,9 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert res.json() == [event_data]
+    assert sorted(res.json(), key=lambda e: e["id"]) == sorted(
+        [event_data, own_event], key=lambda e: e["id"]
+    )
 
     edges = graph.get_all_edges()
     assert (event_id, "group1", "SHARED_WITH", {"permission_level": "viewer"}) in edges
