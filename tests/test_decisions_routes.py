@@ -27,9 +27,6 @@ def test_decision_flow(client_and_graph) -> None:
     client, g = client_and_graph
     token = _token(client)
 
-    # Pre-create user node for permission edges
-    g.add_node("user1", {})
-
     res = client.post(
         "/v1/decisions",
         json={"query": "Choose option", "user_id": "user1"},
@@ -62,3 +59,19 @@ def test_decision_flow(client_and_graph) -> None:
     assert g.get_node(analysis_id)["query"] == "Choose option"
     assert g.get_node(action_id)["description"] == "Option A"
     assert g.find_connected_nodes(analysis_id, edge_label="CONSIDERS") == [action_id]
+    # Permission edges created
+    edges = g.get_all_edges()
+    assert any(
+        s == analysis_id
+        and t == "user1"
+        and lbl == "SHARED_WITH"
+        and e.get("permission_level") == "editor"
+        for s, t, lbl, e in edges
+    )
+    assert any(
+        s == action_id
+        and t == "user1"
+        and lbl == "SHARED_WITH"
+        and e.get("permission_level") == "editor"
+        for s, t, lbl, e in edges
+    )
