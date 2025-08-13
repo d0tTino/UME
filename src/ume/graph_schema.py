@@ -10,12 +10,22 @@ import yaml
 
 
 @dataclass
+class Property:
+    """Representation of a property within a node type."""
+
+    name: str
+    version: str
+    permission_level: str | None = None
+
+
+@dataclass
 class NodeType:
     """Representation of a node type within the graph schema."""
 
     name: str
     version: str
     permission_level: str | None = None
+    properties: Dict[str, Property] = field(default_factory=dict)
 
 
 @dataclass
@@ -43,14 +53,22 @@ class GraphSchema:
                 data = yaml.safe_load(f)
             else:
                 data = json.load(f)
-        node_types = {
-            name: NodeType(
+        node_types = {}
+        for name, info in data.get("node_types", {}).items():
+            properties = {
+                prop_name: Property(
+                    name=prop_name,
+                    version=str(prop_info.get("version", "0.0.0")),
+                    permission_level=prop_info.get("permission_level"),
+                )
+                for prop_name, prop_info in info.get("properties", {}).items()
+            }
+            node_types[name] = NodeType(
                 name=name,
                 version=str(info.get("version", "0.0.0")),
                 permission_level=info.get("permission_level"),
+                properties=properties,
             )
-            for name, info in data.get("node_types", {}).items()
-        }
         edge_labels = {
             label: EdgeLabel(
                 label=label,
@@ -83,6 +101,16 @@ class GraphSchema:
             from .processing import ProcessingError
 
             raise ProcessingError(f"Unknown edge label '{label}'")
+
+    def validate_node_property(self, node_type: str, property_name: str) -> None:
+        """Validate that a property exists for a given node type."""
+        self.validate_node_type(node_type)
+        if property_name not in self.node_types[node_type].properties:
+            from .processing import ProcessingError
+
+            raise ProcessingError(
+                f"Unknown property '{property_name}' for node type '{node_type}'"
+            )
 
 
 def load_default_schema() -> GraphSchema:
