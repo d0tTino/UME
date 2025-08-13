@@ -1,10 +1,9 @@
 import subprocess
 from pathlib import Path
 import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import pytest
 
-pytest.importorskip("sentence_transformers")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ume import (
     GraphSchemaManager,
@@ -116,3 +115,25 @@ def test_upgrade_to_v3_transforms_graph(graph: PersistentGraph) -> None:
     assert all(
         lbl == "TAGGED_AS" for _, _, lbl, _ in edges
     )
+
+
+def test_upgrade_maps_has_permission_edges(
+    graph: PersistentGraph,
+) -> None:
+    graph.add_node("doc", {})
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_edge(
+        "doc", "user1", "HAS_PERMISSION", {"permission_level": "editor"}
+    )
+    graph.add_edge(
+        "doc", "user2", "HAS_PERMISSION", {"permission_level": "viewer"}
+    )
+
+    manager = GraphSchemaManager()
+    manager.upgrade_schema("2.0.0", "3.0.0", graph)
+
+    edges = graph.get_all_edges()
+    assert ("doc", "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
+    assert ("doc", "user2", "SHARED_WITH", {"permission_level": "viewer"}) in edges
+    assert all(lbl != "HAS_PERMISSION" for _, _, lbl, _ in edges)
