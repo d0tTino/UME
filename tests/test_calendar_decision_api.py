@@ -122,6 +122,48 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert (event_id, "user2", "SHARED_WITH", {"permission_level": "viewer"}) in edges
 
 
+def test_calendar_event_group_permissions(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    # Pre-create user and group nodes
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_node("group1", {})
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={"title": "Standup", "start": start, "user_id": "user1", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    event_data = res.json()
+    event_id = event_data["id"]
+
+    # Unrelated user without group access cannot see the event
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == []
+
+    # Group-scoped retrieval returns the event
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == [event_data]
+
+    edges = graph.get_all_edges()
+    assert (event_id, "group1", "SHARED_WITH", {"permission_level": "viewer"}) in edges
+
+
 def test_calendar_event_unauthorized_access(client_and_graph) -> None:
     client, _ = client_and_graph
 
