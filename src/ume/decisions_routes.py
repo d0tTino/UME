@@ -63,14 +63,18 @@ def create_decision(
     analysis = create_decision_analysis(req.query)
     attrs = _analysis_to_dict(analysis)
     perm_graph.add_node(analysis.analysis_id, attrs)
-    # Establish ownership and sharing with permission levels
+    # Ensure subject nodes exist
+    if not graph.node_exists(req.user_id):
+        graph.add_node(req.user_id, {})
     graph.add_edge(
         analysis.analysis_id,
         req.user_id,
-        "OWNED_BY",
+        "SHARED_WITH",
         {"permission_level": "editor"},
     )
     if req.group_id:
+        if not graph.node_exists(req.group_id):
+            graph.add_node(req.group_id, {})
         graph.add_edge(
             analysis.analysis_id,
             req.group_id,
@@ -100,14 +104,18 @@ def add_action(
     )
     action_attrs = _action_to_dict(action)
     perm_graph.add_node(action.action_id, action_attrs)
-    # Ownership and sharing for the action
+    # Ensure subject nodes exist
+    if not graph.node_exists(req.user_id):
+        graph.add_node(req.user_id, {})
     graph.add_edge(
         action.action_id,
         req.user_id,
-        "OWNED_BY",
+        "SHARED_WITH",
         {"permission_level": "editor"},
     )
     if req.group_id:
+        if not graph.node_exists(req.group_id):
+            graph.add_node(req.group_id, {})
         graph.add_edge(
             action.action_id,
             req.group_id,
