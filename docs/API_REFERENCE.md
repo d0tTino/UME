@@ -220,59 +220,6 @@ curl -X POST http://localhost:8000/events/batch \
   -d '[{"event_type":"CREATE_NODE","timestamp":1,"node_id":"n1","payload":{"node_id":"n1"}}]'
 ```
 
-### POST `/graphql`
-Execute a GraphQL query against the graph.
-
-Example request:
-
-```bash
-curl -X POST http://localhost:8000/graphql \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ node(id: \"n1\") { id } }"}'
-```
-
-Another query returns all nodes with their attributes:
-
-```bash
-curl -X POST http://localhost:8000/graphql \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ nodes { id attributes } }"}'
-```
-
-And to retrieve every edge in the graph:
-
-```bash
-curl -X POST http://localhost:8000/graphql \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ edges { source target label } }"}'
-```
-
-To list documents related to a topic (optionally filtered by entity):
-
-```bash
-curl -X POST http://localhost:8000/graphql \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ documentsByTopic(topic: \"t1\", entity: \"e1\") { id } }"}'
-```
-
-To locate documents gathered by a research job you can query the path from the
-topic node through the job to a document. The returned list shows each node
-encountered along the way and reveals which research job performed the
-collection:
-
-```bash
-curl -X POST http://localhost:8000/graphql \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"{ path(source: \"t1\", target: \"doc3\", maxDepth: 2) }"}'
-```
-
-This example would return `["t1", "job1", "doc3"]` when document `doc3`
-was discovered by research job `job1` for topic `t1`.
 
 ### GET `/recall`
 Retrieve attribute data for the `k` nearest nodes to a query.
