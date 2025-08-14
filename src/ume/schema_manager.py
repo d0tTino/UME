@@ -17,6 +17,7 @@ class GraphSchemaManager:
     def __init__(self) -> None:
         self._schemas: Dict[str, GraphSchema] = {}
         self._protos: Dict[str, ModuleType] = {}
+        self._default_version = load_default_schema().version
         self._load_available_schemas()
         self._load_available_protos()
 
@@ -51,8 +52,10 @@ class GraphSchemaManager:
             raise KeyError(f"Protobuf schema for version '{version}' not found")
         return self._protos[version]
 
-    def get_schema(self, version: str) -> GraphSchema:
+    def get_schema(self, version: str | None = None) -> GraphSchema:
         """Retrieve schema for a specific version."""
+        if version is None:
+            version = self._default_version
         if version not in self._schemas:
             raise KeyError(f"Schema version '{version}' not found")
         return self._schemas[version]

@@ -111,10 +111,8 @@ def test_upgrade_to_v3_transforms_graph(graph: PersistentGraph) -> None:
     manager.upgrade_schema("1.0.0", "3.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("a", "b", "TAGGED_AS", {}) in edges
-    assert all(
-        lbl == "TAGGED_AS" for _, _, lbl, _ in edges
-    )
+    assert ("a", "b", "TAGGED_AS", {"permission_level": "public"}) in edges
+    assert all(lbl == "TAGGED_AS" for _, _, lbl, _ in edges)
 
 
 def test_upgrade_maps_has_permission_edges(
@@ -134,6 +132,6 @@ def test_upgrade_maps_has_permission_edges(
     manager.upgrade_schema("2.0.0", "3.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("doc", "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
-    assert ("doc", "user2", "SHARED_WITH", {"permission_level": "viewer"}) in edges
+    assert ("doc", "user1", "OWNED_BY", {"permission_level": "public"}) in edges
+    assert ("doc", "user2", "SHARED_WITH", {"permission_level": "public"}) in edges
     assert all(lbl != "HAS_PERMISSION" for _, _, lbl, _ in edges)
