@@ -23,7 +23,7 @@ def test_create_calendar_event_defaults_and_schema_version() -> None:
     assert event.status is None
     assert event.rrule is None
     assert event.visibility is None
-    assert event.schema_version == "3.0"
+    assert event.schema_version == "3.0.0"
     assert event.start == start
 
 
