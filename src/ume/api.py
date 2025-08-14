@@ -67,6 +67,7 @@ from .snapshot_routes import router as snapshot_router
 from .ledger_routes import router as ledger_router
 from .dossier_routes import router as dossier_router
 from .calendar_routes import router as calendar_router
+from .decisions_routes import router as decisions_router
 from .permissions_routes import router as permissions_router
 from .financial_account_routes import router as account_router
 
@@ -121,6 +122,7 @@ app.include_router(snapshot_router)
 app.include_router(ledger_router)
 app.include_router(dossier_router)
 app.include_router(calendar_router)
+app.include_router(decisions_router)
 app.include_router(account_router)
 app.include_router(permissions_router)
 

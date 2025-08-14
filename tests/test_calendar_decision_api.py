@@ -4,12 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ume.api import app, configure_graph
-from ume.decisions_routes import router as decisions_router
 from ume import MockGraph
 from ume.config import settings
-
-# Register decision routes for the test environment
-app.include_router(decisions_router)
 
 
 def _token(client: TestClient) -> str:
@@ -230,5 +226,15 @@ def test_decision_flow(client_and_graph) -> None:
     assert graph.find_connected_nodes(analysis_id, edge_label="CONSIDERS") == [action_id]
 
     edges = graph.get_all_edges()
-    assert (analysis_id, "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
-    assert (action_id, "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
+    assert (
+        analysis_id,
+        "user1",
+        "SHARED_WITH",
+        {"permission_level": "editor"},
+    ) in edges
+    assert (
+        action_id,
+        "user1",
+        "SHARED_WITH",
+        {"permission_level": "editor"},
+    ) in edges
