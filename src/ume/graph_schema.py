@@ -85,7 +85,7 @@ class GraphSchema:
     @classmethod
     def load_default(cls) -> "GraphSchema":
         """Load the built-in schema packaged with ume."""
-        schema_path = resources.files("ume.schemas").joinpath("graph_schema.yaml")
+        schema_path = resources.files("ume.schemas").joinpath("graph_schema_v3.yaml")
         return cls.load(str(schema_path))
 
     def validate_node_type(self, node_type: str) -> None:

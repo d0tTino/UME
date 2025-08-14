@@ -183,7 +183,7 @@ def test_generic_events_go_to_ledger(tmp_path, monkeypatch, caplog):
 
 def test_generic_enveloped_events_go_to_ledger(tmp_path, monkeypatch, caplog):
     envelope = {
-        "schema_version": "1.0.0",
+        "schema_version": "3.0.0",
         "event": {
             "eventType": "CUSTOM",
             "timestamp": "1970-01-01T00:00:01Z",

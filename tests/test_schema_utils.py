@@ -19,7 +19,7 @@ def test_validate_create_node_schema_success():
 
 def test_validate_envelope_schema_success():
     data = {
-        "schema_version": "1.0.0",
+        "schema_version": "3.0.0",
         "event": {"eventType": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1", "payload": {}},
     }
     validate_event_dict(data)
