@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
+from .rbac_adapter import AccessDeniedError
 from .models import create_financial_account
 
 router = APIRouter(prefix="/v1/accounts")
@@ -48,6 +49,10 @@ def create_account(
         "currency": account.currency,
     }
     graph.add_node(account.account_id, attrs)
+    if not graph.node_exists(req.user_id):
+        graph.add_node(req.user_id, {})
+    if req.group_id and not graph.node_exists(req.group_id):
+        graph.add_node(req.group_id, {})
     graph.add_edge(
         account.account_id,
         req.user_id,
@@ -56,12 +61,15 @@ def create_account(
     )
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     if req.group_id:
-        perm_graph.add_edge(
-            account.account_id,
-            req.group_id,
-            "SHARED_WITH",
-            {"permission_level": "viewer"},
-        )
+        try:
+            perm_graph.add_edge(
+                account.account_id,
+                req.group_id,
+                "SHARED_WITH",
+                {"permission_level": "viewer"},
+            )
+        except AccessDeniedError:
+            raise HTTPException(status_code=403, detail="Forbidden")
     return FinancialAccountResponse(
         id=account.account_id,
         account_type=account.account_type,
