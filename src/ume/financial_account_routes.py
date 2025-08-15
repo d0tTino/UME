@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
+from typing import cast
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
@@ -54,9 +55,8 @@ def create_account(
         "OWNED_BY",
         {"permission_level": "editor"},
     )
-    perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     if req.group_id:
-        perm_graph.add_edge(
+        graph.add_edge(
             account.account_id,
             req.group_id,
             "SHARED_WITH",
@@ -68,4 +68,27 @@ def create_account(
         institution=account.institution,
         balance=account.balance,
         currency=account.currency,
+    )
+
+
+@router.get("/{account_id}", response_model=FinancialAccountResponse)
+def get_account(
+    account_id: str,
+    user_id: str = Query(...),
+    group_id: str | None = Query(None),
+    graph: IGraphAdapter = Depends(deps.get_graph),
+    _: str = Depends(deps.get_current_role),
+) -> FinancialAccountResponse:
+    perm_graph = PermissionsGraphAdapter(
+        graph, user_id=user_id, group_id=group_id
+    )
+    attrs = perm_graph.get_node(account_id)
+    if attrs is None:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return FinancialAccountResponse(
+        id=account_id,
+        account_type=cast(str, attrs.get("account_type")),
+        institution=cast(str, attrs.get("institution")),
+        balance=cast(float, attrs.get("balance")),
+        currency=cast(str, attrs.get("currency")),
     )

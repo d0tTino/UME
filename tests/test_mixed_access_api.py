@@ -200,16 +200,30 @@ def test_financial_account_mixed_access(client_and_graph) -> None:
     graph.add_node("u1", {})
     graph.add_node("u2", {})
     graph.add_node("group1", {})
+    graph.add_edge("group1", "u1", "SHARED_WITH", {"permission_level": "editor"})
+    graph.add_edge("group1", "u2", "SHARED_WITH", {"permission_level": "viewer"})
 
     res = client.post(
         "/v1/accounts",
-        json={"user_id": "u1", "group_id": "group1"},
+        json={
+            "user_id": "u1",
+            "group_id": "group1",
+            "account_type": "checking",
+            "institution": "Bank",
+            "balance": 0.0,
+        },
     )
     assert res.status_code == 401
 
     res = client.post(
         "/v1/accounts",
-        json={"user_id": "u1", "group_id": "group1"},
+        json={
+            "user_id": "u1",
+            "group_id": "group1",
+            "account_type": "checking",
+            "institution": "Bank",
+            "balance": 0.0,
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200

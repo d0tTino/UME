@@ -72,18 +72,22 @@ def create_event(
         "rrule": event.rrule,
         "visibility": event.visibility,
     }
+    if not graph.node_exists(req.user_id):
+        graph.add_node(req.user_id, {"type": "User"})
+    if req.group_id and not graph.node_exists(req.group_id):
+        graph.add_node(req.group_id, {"type": "UserGroup"})
     graph.add_node(event.id, attrs)
     graph.add_edge(
         event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
     )
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     for uid in req.invitee_ids or []:
-        perm_graph.add_edge(event.id, uid, "INVITES")
-        perm_graph.add_edge(
+        graph.add_edge(event.id, uid, "INVITES")
+        graph.add_edge(
             event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}
         )
     if req.group_id:
-        perm_graph.add_edge(
+        graph.add_edge(
             event.id,
             req.group_id,
             "SHARED_WITH",
@@ -94,6 +98,10 @@ def create_event(
         if not layer_attrs or layer_attrs.get("type") != "CalendarLayer":
             raise HTTPException(
                 status_code=400, detail=f"Invalid layer_id: {lid}"
+            )
+        if not perm_graph.node_exists(lid):
+            raise HTTPException(
+                status_code=403, detail=f"No access to layer: {lid}"
             )
         graph.add_edge(event.id, lid, "TAGGED_AS")
     return CalendarEventResponse(
@@ -128,7 +136,7 @@ def list_events(
     if layer_id is not None:
         layer_events = {
             src
-            for src, tgt, lbl, _ in graph.get_all_edges()
+            for src, tgt, lbl, _ in perm_graph.get_all_edges()
             if lbl == "TAGGED_AS" and tgt == layer_id
         }
         event_ids &= layer_events

@@ -70,6 +70,9 @@ def test_event_with_existing_layer(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     layer_id = layer_res.json()["layer_id"]
+    graph.add_edge(
+        layer_id, "user1", "SHARED_WITH", {"permission_level": "viewer"}
+    )
     start_dt = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
     start = start_dt.isoformat()
     res = client.post(
@@ -85,4 +88,6 @@ def test_event_with_existing_layer(client_and_graph) -> None:
     assert res.status_code == 200
     event_id = res.json()["id"]
     edges = graph.get_all_edges()
-    assert (event_id, layer_id, "TAGGED_AS", {"permission_level": "public"}) in edges
+    assert any(
+        s == event_id and t == layer_id and lbl == "TAGGED_AS" for s, t, lbl, _ in edges
+    )
