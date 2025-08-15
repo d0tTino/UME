@@ -34,6 +34,9 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     graph.add_node("user1", {})
     graph.add_node("user2", {})
     graph.add_node("user3", {})
+    graph.add_edge(
+        "user2", "user1", "SHARED_WITH", {"permission_level": "editor"}
+    )
 
     start_dt = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
     end_dt = datetime(2024, 1, 1, 13, 0, tzinfo=timezone.utc)
@@ -114,8 +117,18 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert attrs["visibility"] == "public"
 
     edges = graph.get_all_edges()
-    assert (event_id, "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
-    assert (event_id, "user2", "SHARED_WITH", {"permission_level": "viewer"}) in edges
+    assert (
+        event_id,
+        "user1",
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    ) in edges
+    assert (
+        event_id,
+        "user2",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+    ) in edges
 
 
 def test_calendar_event_group_permissions(client_and_graph) -> None:
@@ -126,12 +139,20 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     graph.add_node("user1", {})
     graph.add_node("user2", {})
     graph.add_node("group1", {})
+    graph.add_edge(
+        "group1", "user1", "SHARED_WITH", {"permission_level": "editor"}
+    )
 
     start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
 
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Standup", "start": start, "user_id": "user1", "group_id": "group1"},
+        json={
+            "title": "Standup",
+            "start": start,
+            "user_id": "user1",
+            "group_id": "group1",
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -168,7 +189,56 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     )
 
     edges = graph.get_all_edges()
-    assert (event_id, "group1", "SHARED_WITH", {"permission_level": "viewer"}) in edges
+    assert (
+        event_id,
+        "group1",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+    ) in edges
+
+
+def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Meeting",
+            "start": start,
+            "user_id": "user1",
+            "invitee_ids": ["user2"],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+
+
+def test_calendar_event_group_share_requires_editor(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("group1", {})
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Standup",
+            "start": start,
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
 
 
 def test_calendar_event_unauthorized_access(client_and_graph) -> None:
@@ -223,7 +293,10 @@ def test_decision_flow(client_and_graph) -> None:
 
     assert graph.get_node(analysis_id)["query"] == "Choose option"
     assert graph.get_node(action_id)["description"] == "Option A"
-    assert graph.find_connected_nodes(analysis_id, edge_label="CONSIDERS") == [action_id]
+    assert (
+        graph.find_connected_nodes(analysis_id, edge_label="CONSIDERS")
+        == [action_id]
+    )
 
     edges = graph.get_all_edges()
     assert (

@@ -41,6 +41,9 @@ def test_create_financial_account_edges(client_and_graph) -> None:
 
     graph.add_node("user1", {})
     graph.add_node("group1", {})
+    graph.add_edge(
+        "group1", "user1", "SHARED_WITH", {"permission_level": "editor"}
+    )
 
     res = client.post(
         "/v1/accounts",
@@ -65,5 +68,37 @@ def test_create_financial_account_edges(client_and_graph) -> None:
         "currency": "USD",
     }
     edges = graph.get_all_edges()
-    assert (account_id, "user1", "OWNED_BY", {"permission_level": "editor"}) in edges
-    assert (account_id, "group1", "SHARED_WITH", {"permission_level": "viewer"}) in edges
+    assert (
+        account_id,
+        "user1",
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    ) in edges
+    assert (
+        account_id,
+        "group1",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+    ) in edges
+
+
+def test_financial_account_group_requires_editor(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("group1", {})
+
+    res = client.post(
+        "/v1/accounts",
+        json={
+            "account_type": "checking",
+            "institution": "ACME Bank",
+            "balance": 100.0,
+            "currency": "USD",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403

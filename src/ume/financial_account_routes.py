@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
+from .permissions_adapter import PermissionsGraphAdapter
 from .models import create_financial_account
 
 router = APIRouter(prefix="/v1/accounts")
@@ -48,10 +49,14 @@ def create_account(
     }
     graph.add_node(account.account_id, attrs)
     graph.add_edge(
-        account.account_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+        account.account_id,
+        req.user_id,
+        "OWNED_BY",
+        {"permission_level": "editor"},
     )
+    perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     if req.group_id:
-        graph.add_edge(
+        perm_graph.add_edge(
             account.account_id,
             req.group_id,
             "SHARED_WITH",
