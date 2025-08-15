@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
+from .rbac_adapter import AccessDeniedError
 from .models import (
     DecisionAnalysis,
     ProposedAction,
@@ -118,12 +119,18 @@ def add_action(
     if req.group_id:
         if not graph.node_exists(req.group_id):
             graph.add_node(req.group_id, {})
-        graph.add_edge(
-            action.action_id,
-            req.group_id,
-            "SHARED_WITH",
-            {"permission_level": "editor"},
-        )
+        try:
+            perm_graph.add_edge(
+                action.action_id,
+                req.group_id,
+                "SHARED_WITH",
+                {"permission_level": "viewer"},
+            )
+        except AccessDeniedError:
+            raise HTTPException(
+                status_code=403,
+                detail="Editor permission required for target group",
+            )
     perm_graph.add_edge(analysis_id, action.action_id, "CONSIDERS")
     return action_attrs
 
