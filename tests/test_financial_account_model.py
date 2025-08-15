@@ -86,9 +86,6 @@ def test_financial_account_group_requires_editor(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
 
-    graph.add_node("user1", {})
-    graph.add_node("group1", {})
-
     res = client.post(
         "/v1/accounts",
         json={
@@ -102,3 +99,32 @@ def test_financial_account_group_requires_editor(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+    assert graph.node_exists("user1")
+    assert graph.node_exists("group1")
+
+
+def test_create_financial_account_creates_user_node(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    res = client.post(
+        "/v1/accounts",
+        json={
+            "account_type": "savings",
+            "institution": "ACME Bank",
+            "balance": 50.0,
+            "currency": "USD",
+            "user_id": "user2",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    account_id = res.json()["id"]
+    assert graph.node_exists("user2")
+    edges = graph.get_all_edges()
+    assert (
+        account_id,
+        "user2",
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    ) in edges
