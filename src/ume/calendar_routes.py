@@ -76,13 +76,14 @@ def create_event(
     graph.add_edge(
         event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
     )
+    perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     for uid in req.invitee_ids or []:
-        graph.add_edge(event.id, uid, "INVITES")
-        graph.add_edge(
+        perm_graph.add_edge(event.id, uid, "INVITES")
+        perm_graph.add_edge(
             event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}
         )
     if req.group_id:
-        graph.add_edge(
+        perm_graph.add_edge(
             event.id,
             req.group_id,
             "SHARED_WITH",
@@ -91,7 +92,9 @@ def create_event(
     for lid in req.layer_ids or []:
         layer_attrs = graph.get_node(lid)
         if not layer_attrs or layer_attrs.get("type") != "CalendarLayer":
-            raise HTTPException(status_code=400, detail=f"Invalid layer_id: {lid}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid layer_id: {lid}"
+            )
         graph.add_edge(event.id, lid, "TAGGED_AS")
     return CalendarEventResponse(
         id=event.id,
