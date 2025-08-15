@@ -140,7 +140,7 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
         permission_level = edge_def.permission_level if edge_def else None
         attr_dict: Dict[str, Any] = dict(attrs or {})
-        if permission_level is not None:
+        if permission_level is not None and "permission_level" not in attr_dict:
             attr_dict["permission_level"] = permission_level
 
         try:
