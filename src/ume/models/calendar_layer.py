@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 
+SCHEMA_VERSION = "3.0.0"
+
+
 @dataclass
 class CalendarLayer:
     """Represents a calendar layer in the graph."""
@@ -13,6 +16,7 @@ class CalendarLayer:
     layer_id: str
     layer_name: str
     color: str
+    schema_version: str = SCHEMA_VERSION
 
 
 def create_calendar_layer(
@@ -27,4 +31,5 @@ def create_calendar_layer(
         layer_id=layer_id or str(uuid4()),
         layer_name=layer_name,
         color=color,
+        schema_version=SCHEMA_VERSION,
     )
