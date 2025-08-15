@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import uuid
 
+SCHEMA_VERSION = "1.0"
+
 
 @dataclass
 class UserGroup:
@@ -13,6 +15,7 @@ class UserGroup:
     group_id: str
     name: str
     members: list[str] = field(default_factory=list)
+    schema_version: str = SCHEMA_VERSION
 
 
 def create_user_group(
@@ -27,4 +30,5 @@ def create_user_group(
         group_id=group_id or str(uuid.uuid4()),
         name=name,
         members=members or [],
+        schema_version=SCHEMA_VERSION,
     )
