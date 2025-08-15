@@ -70,6 +70,7 @@ from .calendar_routes import router as calendar_router
 from .decisions_routes import router as decisions_router
 from .permissions_routes import router as permissions_router
 from .financial_account_routes import router as account_router
+from .users_routes import router as users_router
 
 
 from .consent_ledger import consent_ledger  # noqa: F401
@@ -125,6 +126,7 @@ app.include_router(calendar_router)
 app.include_router(decisions_router)
 app.include_router(account_router)
 app.include_router(permissions_router)
+app.include_router(users_router)
 
 
 # Some unit tests replace ``fastapi.FastAPI`` with a minimal stub that lacks
