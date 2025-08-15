@@ -37,6 +37,10 @@ class PermissionsGraphAdapter(IGraphAdapter):
                     perm_level = attrs
                 if perm_level == perm:
                     return True
+                if perm == "viewer" and perm_level in {"editor", "public"}:
+                    return True
+                if perm == "editor" and perm_level == "public":
+                    return True
         return False
 
     def _has_permission(self, node_id: str, perm: str) -> bool:
