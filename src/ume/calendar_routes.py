@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
@@ -89,6 +89,9 @@ def create_event(
             {"permission_level": "viewer"},
         )
     for lid in req.layer_ids or []:
+        layer_attrs = graph.get_node(lid)
+        if not layer_attrs or layer_attrs.get("type") != "CalendarLayer":
+            raise HTTPException(status_code=400, detail=f"Invalid layer_id: {lid}")
         graph.add_edge(event.id, lid, "TAGGED_AS")
     return CalendarEventResponse(
         id=event.id,
