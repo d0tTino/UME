@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ume.models import FinancialAccount, create_financial_account
+from ume.models.financial_account import SCHEMA_VERSION
 from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
@@ -15,6 +16,7 @@ def test_create_financial_account() -> None:
     assert account.balance == 100.0
     assert account.currency == "USD"
     assert account.account_id
+    assert account.schema_version == SCHEMA_VERSION
 
 
 def _token(client: TestClient) -> str:

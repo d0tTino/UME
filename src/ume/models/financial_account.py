@@ -6,6 +6,9 @@ from dataclasses import dataclass
 import uuid
 
 
+SCHEMA_VERSION = "1.0"
+
+
 @dataclass
 class FinancialAccount:
     """Represents a financial account in the graph."""
@@ -15,6 +18,7 @@ class FinancialAccount:
     institution: str
     balance: float
     currency: str = "USD"
+    schema_version: str = SCHEMA_VERSION
 
 
 def create_financial_account(
@@ -33,4 +37,5 @@ def create_financial_account(
         institution=institution,
         balance=balance,
         currency=currency,
+        schema_version=SCHEMA_VERSION,
     )
