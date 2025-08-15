@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 import uuid
 
+SCHEMA_VERSION = "3.0.0"
+
 
 @dataclass
 class DecisionAnalysis:
@@ -14,6 +16,7 @@ class DecisionAnalysis:
     analysis_id: str
     query: str
     created_at: datetime
+    schema_version: str = SCHEMA_VERSION
 
 
 def create_decision_analysis(
@@ -27,4 +30,5 @@ def create_decision_analysis(
         analysis_id=analysis_id or str(uuid.uuid4()),
         query=query,
         created_at=datetime.utcnow(),
+        schema_version=SCHEMA_VERSION,
     )

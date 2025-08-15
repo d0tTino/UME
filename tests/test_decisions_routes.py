@@ -4,6 +4,7 @@ import pytest
 from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
+from ume.models.decision_analysis import SCHEMA_VERSION
 
 
 def _token(client: TestClient) -> str:
@@ -33,6 +34,7 @@ def test_decision_flow(client_and_graph) -> None:
     assert res.status_code == 200
     analysis = res.json()
     analysis_id = analysis["analysis_id"]
+    assert analysis["schema_version"] == SCHEMA_VERSION
 
     res = client.post(
         f"/v1/decisions/{analysis_id}/actions",
@@ -51,6 +53,7 @@ def test_decision_flow(client_and_graph) -> None:
     assert res.status_code == 200
     data = res.json()
     assert data["analysis"]["analysis_id"] == analysis_id
+    assert data["analysis"]["schema_version"] == SCHEMA_VERSION
     assert len(data["actions"]) == 1
     assert data["actions"][0]["action_id"] == action_id
 

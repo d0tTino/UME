@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from ume.models import create_decision_analysis
+from ume.models.decision_analysis import SCHEMA_VERSION
 
 
 def test_create_decision_analysis_sets_created_at() -> None:
@@ -10,3 +11,4 @@ def test_create_decision_analysis_sets_created_at() -> None:
     assert analysis.analysis_id
     assert analysis.created_at >= before
     assert analysis.created_at <= datetime.utcnow()
+    assert analysis.schema_version == SCHEMA_VERSION

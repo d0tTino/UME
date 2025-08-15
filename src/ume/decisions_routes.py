@@ -39,6 +39,7 @@ def _analysis_to_dict(analysis: DecisionAnalysis) -> dict[str, Any]:
         "analysis_id": analysis.analysis_id,
         "query": analysis.query,
         "created_at": int(analysis.created_at.timestamp()),
+        "schema_version": analysis.schema_version,
     }
 
 

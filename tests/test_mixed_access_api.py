@@ -13,6 +13,7 @@ import ume.api_deps as deps
 from ume.graph_adapter import IGraphAdapter
 from ume.permissions_adapter import PermissionsGraphAdapter
 from ume.models import create_financial_account
+from ume.models.decision_analysis import SCHEMA_VERSION
 
 # Register decision routes once for tests
 if not any(r.path.startswith("/v1/decisions") for r in app.router.routes):
@@ -170,7 +171,9 @@ def test_decision_mixed_access(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    analysis_id = res.json()["analysis_id"]
+    analysis_resp = res.json()
+    analysis_id = analysis_resp["analysis_id"]
+    assert analysis_resp["schema_version"] == SCHEMA_VERSION
 
     res = client.get(
         f"/v1/decisions/{analysis_id}",
@@ -185,6 +188,7 @@ def test_decision_mixed_access(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+    assert res.json()["analysis"]["schema_version"] == SCHEMA_VERSION
 
     res = client.get(
         f"/v1/decisions/{analysis_id}",
