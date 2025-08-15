@@ -229,12 +229,12 @@ def test_decision_flow(client_and_graph) -> None:
     assert (
         analysis_id,
         "user1",
-        "SHARED_WITH",
+        "OWNED_BY",
         {"permission_level": "editor"},
     ) in edges
     assert (
         action_id,
         "user1",
-        "SHARED_WITH",
+        "OWNED_BY",
         {"permission_level": "editor"},
     ) in edges

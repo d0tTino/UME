@@ -66,10 +66,11 @@ def create_decision(
     # Ensure subject nodes exist
     if not graph.node_exists(req.user_id):
         graph.add_node(req.user_id, {})
+    # Link analysis to the owning user
     graph.add_edge(
         analysis.analysis_id,
         req.user_id,
-        "SHARED_WITH",
+        "OWNED_BY",
         {"permission_level": "editor"},
     )
     if req.group_id:
@@ -107,10 +108,11 @@ def add_action(
     # Ensure subject nodes exist
     if not graph.node_exists(req.user_id):
         graph.add_node(req.user_id, {})
+    # Link action to the owning user
     graph.add_edge(
         action.action_id,
         req.user_id,
-        "SHARED_WITH",
+        "OWNED_BY",
         {"permission_level": "editor"},
     )
     if req.group_id:
