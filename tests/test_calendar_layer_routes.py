@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
+from ume.models.calendar_layer import SCHEMA_VERSION
 
 
 def _token(client: TestClient) -> str:
@@ -42,12 +43,14 @@ def test_create_calendar_layer(client_and_graph) -> None:
         "layer_id": layer_id,
         "layer_name": "Work",
         "color": "blue",
+        "schema_version": SCHEMA_VERSION,
     }
     attrs = graph.get_node(layer_id)
     assert attrs == {
         "type": "CalendarLayer",
         "layer_name": "Work",
         "color": "blue",
+        "schema_version": SCHEMA_VERSION,
     }
     edges = graph.get_all_edges()
     assert (

@@ -24,6 +24,7 @@ class CalendarLayerResponse(BaseModel):
     layer_id: str
     layer_name: str
     color: str
+    schema_version: str
 
 
 @router.post("/layers", response_model=CalendarLayerResponse)
@@ -39,6 +40,7 @@ def create_layer(
         "type": "CalendarLayer",
         "layer_name": layer.layer_name,
         "color": layer.color,
+        "schema_version": layer.schema_version,
     }
     graph.add_node(layer.layer_id, attrs)
     graph.add_edge(
@@ -59,4 +61,5 @@ def create_layer(
         layer_id=layer.layer_id,
         layer_name=layer.layer_name,
         color=layer.color,
+        schema_version=layer.schema_version,
     )
