@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
+from .permissions_adapter import PermissionsGraphAdapter
+from .rbac_adapter import AccessDeniedError
 from .models import create_calendar_layer
 
 router = APIRouter(prefix="/v1/calendar")
@@ -14,6 +16,8 @@ class CalendarLayerCreateRequest(BaseModel):
     layer_name: str
     color: str
     layer_id: str | None = None
+    user_id: str
+    group_id: str | None = None
 
 
 class CalendarLayerResponse(BaseModel):
@@ -37,6 +41,20 @@ def create_layer(
         "color": layer.color,
     }
     graph.add_node(layer.layer_id, attrs)
+    graph.add_edge(
+        layer.layer_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+    )
+    if req.group_id:
+        perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
+        try:
+            perm_graph.add_edge(
+                layer.layer_id,
+                req.group_id,
+                "SHARED_WITH",
+                {"permission_level": "viewer"},
+            )
+        except AccessDeniedError as exc:  # pragma: no cover - ensure 403 response
+            raise HTTPException(status_code=403, detail=str(exc))
     return CalendarLayerResponse(
         layer_id=layer.layer_id,
         layer_name=layer.layer_name,

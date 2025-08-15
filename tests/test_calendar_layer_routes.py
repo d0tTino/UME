@@ -29,17 +29,80 @@ def client_and_graph():
 def test_create_calendar_layer(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
+    graph.add_node("user1", {})
     res = client.post(
         "/v1/calendar/layers",
-        json={"layer_name": "Work", "color": "blue"},
+        json={"layer_name": "Work", "color": "blue", "user_id": "user1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     data = res.json()
     layer_id = data["layer_id"]
-    assert data == {"layer_id": layer_id, "layer_name": "Work", "color": "blue"}
+    assert data == {
+        "layer_id": layer_id,
+        "layer_name": "Work",
+        "color": "blue",
+    }
     attrs = graph.get_node(layer_id)
-    assert attrs == {"type": "CalendarLayer", "layer_name": "Work", "color": "blue"}
+    assert attrs == {
+        "type": "CalendarLayer",
+        "layer_name": "Work",
+        "color": "blue",
+    }
+    edges = graph.get_all_edges()
+    assert (
+        layer_id,
+        "user1",
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    ) in edges
+
+
+def test_create_layer_with_group_share(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+    graph.add_node("user1", {})
+    graph.add_node("group1", {})
+    graph.add_edge(
+        "group1", "user1", "OWNED_BY", {"permission_level": "editor"}
+    )
+    res = client.post(
+        "/v1/calendar/layers",
+        json={
+            "layer_name": "Work",
+            "color": "blue",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    layer_id = res.json()["layer_id"]
+    edges = graph.get_all_edges()
+    assert (
+        layer_id,
+        "group1",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+    ) in edges
+
+
+def test_create_layer_group_permission_required(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+    graph.add_node("user1", {})
+    graph.add_node("group1", {})
+    res = client.post(
+        "/v1/calendar/layers",
+        json={
+            "layer_name": "Work",
+            "color": "blue",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
 
 
 def test_event_layer_validation(client_and_graph) -> None:
@@ -66,7 +129,7 @@ def test_event_with_existing_layer(client_and_graph) -> None:
     graph.add_node("user1", {})
     layer_res = client.post(
         "/v1/calendar/layers",
-        json={"layer_name": "Work", "color": "blue"},
+        json={"layer_name": "Work", "color": "blue", "user_id": "user1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     layer_id = layer_res.json()["layer_id"]
@@ -90,4 +153,5 @@ def test_event_with_existing_layer(client_and_graph) -> None:
     edges = graph.get_all_edges()
     assert any(
         s == event_id and t == layer_id and lbl == "TAGGED_AS" for s, t, lbl, _ in edges
+
     )

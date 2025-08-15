@@ -7,6 +7,7 @@ from typing import cast
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
+from .rbac_adapter import AccessDeniedError
 from .models import create_financial_account
 
 router = APIRouter(prefix="/v1/accounts")
@@ -49,6 +50,10 @@ def create_account(
         "currency": account.currency,
     }
     graph.add_node(account.account_id, attrs)
+    if not graph.node_exists(req.user_id):
+        graph.add_node(req.user_id, {})
+    if req.group_id and not graph.node_exists(req.group_id):
+        graph.add_node(req.group_id, {})
     graph.add_edge(
         account.account_id,
         req.user_id,
@@ -62,6 +67,7 @@ def create_account(
             "SHARED_WITH",
             {"permission_level": "viewer"},
         )
+
     return FinancialAccountResponse(
         id=account.account_id,
         account_type=account.account_type,
