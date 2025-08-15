@@ -62,14 +62,14 @@ def test_decision_flow(client_and_graph) -> None:
     assert any(
         s == analysis_id
         and t == "user1"
-        and lbl == "SHARED_WITH"
+        and lbl == "OWNED_BY"
         and e.get("permission_level") == "editor"
         for s, t, lbl, e in edges
     )
     assert any(
         s == action_id
         and t == "user1"
-        and lbl == "SHARED_WITH"
+        and lbl == "OWNED_BY"
         and e.get("permission_level") == "editor"
         for s, t, lbl, e in edges
     )
