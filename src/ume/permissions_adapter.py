@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Any, Optional, List
+from typing import Any, DefaultDict, Dict, List, Optional
 
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import AccessDeniedError
@@ -21,26 +21,34 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self._adapter = adapter
         self.user_id = user_id
         self.group_id = group_id
+        self._edges_by_source: DefaultDict[str, List[tuple[str, str, Any]]] = DefaultDict(list)
+        self._edges_by_target: DefaultDict[str, List[tuple[str, str, Any]]] = DefaultDict(list)
+        self.rebuild_index()
 
     # ------------------------------------------------------------------
     # Internal helpers
     def _subjects(self) -> list[str]:
         return [s for s in [self.user_id, self.group_id] if s]
 
-    def _has_permission_edge(self, node_id: str, subject: str, perm: str) -> bool:
+    def rebuild_index(self) -> None:
+        """Rebuild the edge lookup tables from the underlying adapter."""
+        self._edges_by_source.clear()
+        self._edges_by_target.clear()
         for src, tgt, lbl, attrs in self._adapter.get_all_edges():
-            if src == node_id and tgt == subject and lbl in {"OWNED_BY", "SHARED_WITH"}:
-                perm_level = None
-                if isinstance(attrs, dict):
-                    perm_level = attrs.get("permission_level")
-                else:
-                    perm_level = attrs
-                if perm_level == perm:
-                    return True
-                if perm == "viewer" and perm_level in {"editor", "public"}:
-                    return True
-                if perm == "editor" and perm_level == "public":
-                    return True
+            self._edges_by_source[src].append((tgt, lbl, attrs))
+            self._edges_by_target[tgt].append((src, lbl, attrs))
+
+    def _has_permission_edge(self, node_id: str, subject: str, perm: str) -> bool:
+        for tgt, lbl, attrs in self._edges_by_source.get(node_id, []):
+            if tgt != subject or lbl not in {"OWNED_BY", "SHARED_WITH"}:
+                continue
+            perm_level = attrs.get("permission_level") if isinstance(attrs, dict) else attrs
+            if perm_level == perm:
+                return True
+            if perm == "viewer" and perm_level in {"editor", "public"}:
+                return True
+            if perm == "editor" and perm_level == "public":
+                return True
         return False
 
     def _has_permission(self, node_id: str, perm: str) -> bool:
@@ -92,23 +100,17 @@ class PermissionsGraphAdapter(IGraphAdapter):
 
     def clear(self) -> None:
         self._adapter.clear()
+        self.rebuild_index()
 
     def get_all_node_ids(self) -> List[str]:
         return self._filter_visible(self._adapter.get_all_node_ids())
 
     def _get_nodes_for_subject(self, subject_id: str, labels: List[str]) -> List[str]:
         nodes: set[str] = set()
-        for edge in self._adapter.get_all_edges():
-            src, tgt, lbl, *rest = edge
-            if lbl not in labels or tgt != subject_id:
+        for src, lbl, attrs in self._edges_by_target.get(subject_id, []):
+            if lbl not in labels:
                 continue
-            perm_level = None
-            if rest:
-                attrs = rest[0]
-                if isinstance(attrs, dict):
-                    perm_level = attrs.get("permission_level")
-                else:
-                    perm_level = attrs
+            perm_level = attrs.get("permission_level") if isinstance(attrs, dict) else attrs
             if perm_level:
                 nodes.add(src)
         return list(nodes)
@@ -141,6 +143,7 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self._require_editor(source_node_id)
         self._require_editor(target_node_id)
         self._adapter.add_edge(source_node_id, target_node_id, label, attrs)
+        self.rebuild_index()
 
     def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
         edges = self._adapter.get_all_edges()
@@ -161,15 +164,18 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self._require_editor(source_node_id)
         self._require_editor(target_node_id)
         self._adapter.delete_edge(source_node_id, target_node_id, label, attrs)
+        self.rebuild_index()
 
     def redact_node(self, node_id: str) -> None:
         self._require_editor(node_id)
         self._adapter.redact_node(node_id)
+        self.rebuild_index()
 
     def redact_edge(self, source_node_id: str, target_node_id: str, label: str) -> None:
         self._require_editor(source_node_id)
         self._require_editor(target_node_id)
         self._adapter.redact_edge(source_node_id, target_node_id, label)
+        self.rebuild_index()
 
     def close(self) -> None:
         self._adapter.close()

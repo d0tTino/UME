@@ -78,6 +78,7 @@ def test_add_edge_requires_editor_and_preserves_attrs() -> None:
     with pytest.raises(AccessDeniedError):
         adapter.add_edge("Document.d1", "Document.d2", "RELATED", {"weight": 1})
     g._edges["Document.d2"].append(("User.u1", "OWNED_BY", {"permission_level": "editor"}))
+    adapter.rebuild_index()
     adapter.add_edge("Document.d1", "Document.d2", "RELATED", {"weight": 1})
     assert adapter.get_all_edges() == [
         ("Document.d1", "Document.d2", "RELATED", {"weight": 1})
