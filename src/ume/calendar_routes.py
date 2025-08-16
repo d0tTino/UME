@@ -82,6 +82,8 @@ def create_event(
     )
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     for uid in req.invitee_ids or []:
+        if not graph.node_exists(uid):
+            graph.add_node(uid, {"type": "User"})
         graph.add_edge(event.id, uid, "INVITES")
         graph.add_edge(
             event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}

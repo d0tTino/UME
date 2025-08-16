@@ -213,6 +213,39 @@ def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
     assert res.status_code == 200
 
 
+def test_calendar_event_missing_invitee_created(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Sync",
+            "start_time": start,
+            "user_id": "owner",
+            "invitee_ids": ["missing"],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    event = res.json()
+
+    # Invitee node should be created automatically
+    attrs = graph.get_node("missing")
+    assert attrs is not None and attrs.get("type") == "User"
+
+    # Invitee can retrieve the event
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "missing"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == [event]
+
+
 def test_calendar_event_group_share_requires_editor(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
