@@ -117,7 +117,7 @@ def test_event_layer_validation(client_and_graph) -> None:
         "/v1/calendar/events",
         json={
             "title": "Meeting",
-            "start": start,
+            "start_time": start,
             "user_id": "user1",
             "layer_ids": ["missing"],
         },
@@ -145,7 +145,7 @@ def test_event_with_existing_layer(client_and_graph) -> None:
         "/v1/calendar/events",
         json={
             "title": "Meeting",
-            "start": start,
+            "start_time": start,
             "user_id": "user1",
             "layer_ids": [layer_id],
         },

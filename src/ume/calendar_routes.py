@@ -16,8 +16,8 @@ router = APIRouter(prefix="/v1/calendar")
 
 class CalendarEventCreateRequest(BaseModel):
     title: str
-    start: datetime
-    end: datetime | None = None
+    start_time: datetime
+    end_time: datetime | None = None
     description: str | None = None
     is_all_day: bool = False
     location: str | None = None
@@ -33,8 +33,8 @@ class CalendarEventCreateRequest(BaseModel):
 class CalendarEventResponse(BaseModel):
     id: str
     title: str
-    start: int
-    end: int | None = None
+    start_time: int
+    end_time: int | None = None
     description: str | None = None
     is_all_day: bool
     location: str | None = None
@@ -51,8 +51,8 @@ def create_event(
 ) -> CalendarEventResponse:
     event = create_calendar_event(
         req.title,
-        req.start,
-        req.end,
+        req.start_time,
+        req.end_time,
         description=req.description,
         is_all_day=req.is_all_day,
         location=req.location,
@@ -63,8 +63,8 @@ def create_event(
     attrs = {
         "type": "CalendarEvent",
         "title": event.title,
-        "start": int(event.start.timestamp()),
-        "end": int(event.end.timestamp()) if event.end else None,
+        "start_time": int(event.start_time.timestamp()),
+        "end_time": int(event.end_time.timestamp()) if event.end_time else None,
         "description": event.description,
         "is_all_day": event.is_all_day,
         "location": event.location,
@@ -107,8 +107,8 @@ def create_event(
     return CalendarEventResponse(
         id=event.id,
         title=event.title,
-        start=attrs["start"],
-        end=attrs["end"],
+        start_time=attrs["start_time"],
+        end_time=attrs["end_time"],
         description=event.description,
         is_all_day=event.is_all_day,
         location=event.location,
@@ -145,15 +145,15 @@ def list_events(
         attrs = graph.get_node(eid)
         if not attrs:
             continue
-        start_ts = attrs.get("start")
+        start_ts = attrs.get("start_time")
         if since is not None and (start_ts is None or start_ts < since):
             continue
         events.append(
             CalendarEventResponse(
                 id=eid,
                 title=attrs.get("title", ""),
-                start=start_ts,
-                end=attrs.get("end"),
+                start_time=start_ts,
+                end_time=attrs.get("end_time"),
                 description=attrs.get("description"),
                 is_all_day=attrs.get("is_all_day", False),
                 location=attrs.get("location"),

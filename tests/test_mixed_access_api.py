@@ -116,13 +116,13 @@ def test_calendar_mixed_access(client_and_graph) -> None:
 
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Meeting", "start": start, "user_id": "owner", "group_id": "group1"},
+        json={"title": "Meeting", "start_time": start, "user_id": "owner", "group_id": "group1"},
     )
     assert res.status_code == 401
 
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Meeting", "start": start, "user_id": "owner", "group_id": "group1"},
+        json={"title": "Meeting", "start_time": start, "user_id": "owner", "group_id": "group1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
