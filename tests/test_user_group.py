@@ -9,7 +9,7 @@ def test_create_user_group_generates_id_and_defaults_members():
     uuid.UUID(group.group_id)
     assert group.name == "Admins"
     assert group.members == []
-    assert group.schema_version == "1.0"
+    assert group.schema_version == "3.0.0"
 
 
 def test_create_user_group_accepts_members_and_id():
@@ -18,7 +18,7 @@ def test_create_user_group_accepts_members_and_id():
     group = create_user_group(name="Team", members=members, group_id=custom_id)
     assert group.group_id == custom_id
     assert group.members == members
-    assert group.schema_version == "1.0"
+    assert group.schema_version == "3.0.0"
 
 
 def test_create_user_group_invalid_uuid():
