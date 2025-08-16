@@ -30,9 +30,9 @@ node_types:
         version: "3.0.0"
       title:
         version: "3.0.0"
-      start:
+      start_time:
         version: "3.0.0"
-      end:
+      end_time:
         version: "3.0.0"
       description:
         version: "3.0.0"

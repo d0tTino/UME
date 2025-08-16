@@ -50,8 +50,8 @@ def test_calendar_event_permissions(client_and_graph) -> None:
         "/v1/calendar/events",
         json={
             "title": "Meeting",
-            "start": start,
-            "end": end,
+            "start_time": start,
+            "end_time": end,
             "description": "Discuss project",
             "is_all_day": True,
             "location": "Conference Room",
@@ -69,8 +69,8 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert event_data == {
         "id": event_id,
         "title": "Meeting",
-        "start": start_ts,
-        "end": end_ts,
+        "start_time": start_ts,
+        "end_time": end_ts,
         "description": "Discuss project",
         "is_all_day": True,
         "location": "Conference Room",
@@ -108,8 +108,8 @@ def test_calendar_event_permissions(client_and_graph) -> None:
 
     attrs = graph.get_node(event_id)
     assert attrs["title"] == "Meeting"
-    assert attrs["start"] == start_ts
-    assert attrs["end"] == end_ts
+    assert attrs["start_time"] == start_ts
+    assert attrs["end_time"] == end_ts
     assert attrs["description"] == "Discuss project"
     assert attrs["is_all_day"] is True
     assert attrs["location"] == "Conference Room"
@@ -145,7 +145,7 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
         "/v1/calendar/events",
         json={
             "title": "Standup",
-            "start": start,
+            "start_time": start,
             "user_id": "user1",
             "group_id": "group1",
         },
@@ -167,7 +167,7 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     # User creates their own event
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Solo", "start": start, "user_id": "user2"},
+        json={"title": "Solo", "start_time": start, "user_id": "user2"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -204,7 +204,7 @@ def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
         "/v1/calendar/events",
         json={
             "title": "Meeting",
-            "start": start,
+            "start_time": start,
             "user_id": "user1",
             "invitee_ids": ["user2"],
         },
@@ -226,7 +226,7 @@ def test_calendar_event_group_share_requires_editor(client_and_graph) -> None:
         "/v1/calendar/events",
         json={
             "title": "Standup",
-            "start": start,
+            "start_time": start,
             "user_id": "user1",
             "group_id": "group1",
         },
@@ -242,7 +242,7 @@ def test_calendar_event_unauthorized_access(client_and_graph) -> None:
 
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Meeting", "start": start, "user_id": "user1"},
+        json={"title": "Meeting", "start_time": start, "user_id": "user1"},
     )
     assert res.status_code == 401
 
