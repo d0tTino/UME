@@ -191,6 +191,99 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     )
 
 
+def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    # Prepare users, group, and ensure the user has control over the group
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_node("group1", {})
+    graph.add_edge(
+        "group1", "user1", "OWNED_BY", {"permission_level": "editor"}
+    )
+
+    # Create a layer shared with the group so members can access it
+    layer_res = client.post(
+        "/v1/calendar/layers",
+        json={
+            "layer_name": "Team",
+            "color": "blue",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert layer_res.status_code == 200
+    layer_id = layer_res.json()["layer_id"]
+
+    # Additional layer used to ensure filtering by layer_id works
+    layer2_res = client.post(
+        "/v1/calendar/layers",
+        json={"layer_name": "Other", "color": "red", "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert layer2_res.status_code == 200
+    layer2_id = layer2_res.json()["layer_id"]
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    # Event shared with group and tagged with the requested layer
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Visible",
+            "start_time": start,
+            "user_id": "user1",
+            "group_id": "group1",
+            "layer_ids": [layer_id],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    visible_event = res.json()
+
+    # Event shared with group but tagged with a different layer
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "WrongLayer",
+            "start_time": start,
+            "user_id": "user1",
+            "group_id": "group1",
+            "layer_ids": [layer2_id],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    # Event tagged with the layer but not shared with the group
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "NoPerm",
+            "start_time": start,
+            "user_id": "user1",
+            "layer_ids": [layer_id],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    # Query with both group and layer filters should return only the visible event
+    res = client.get(
+        "/v1/calendar/events",
+        params={
+            "user_id": "user2",
+            "group_id": "group1",
+            "layer_id": layer_id,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == [visible_event]
+
+
 def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
