@@ -21,6 +21,7 @@ class UserResponse(BaseModel):
     id: str
     name: str
     email: str | None = None
+    schema_version: str
 
 
 class UserGroupCreateRequest(BaseModel):
@@ -53,9 +54,15 @@ def create_user_node(
         "name": user.name,
         "email": user.email,
         "created_at": int(user.created_at.timestamp()),
+        "schema_version": user.schema_version,
     }
     graph.add_node(user.user_id, attrs)
-    return UserResponse(id=user.user_id, name=user.name, email=user.email)
+    return UserResponse(
+        id=user.user_id,
+        name=user.name,
+        email=user.email,
+        schema_version=user.schema_version,
+    )
 
 
 @router.post("/groups", response_model=UserGroupResponse)
