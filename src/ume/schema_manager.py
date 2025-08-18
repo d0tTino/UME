@@ -100,7 +100,17 @@ class GraphSchemaManager:
                         else:
                             perm_level = attrs
                         new_label = "OWNED_BY" if perm_level == "editor" else "SHARED_WITH"
-                        graph.add_edge(src, tgt, new_label, attrs)
+                        graph.add_edge(
+                            src,
+                            tgt,
+                            new_label,
+                            {"permission_level": "public"},
+                        )
+                        if graph.node_exists(tgt):
+                            node_attrs = graph.get_node(tgt) or {}
+                            node_attrs.setdefault("type", "User")
+                            node_attrs.setdefault("permission_level", "public")
+                            graph.update_node(tgt, node_attrs)
                     elif label in {
                         "REMEMBERS",
                         "ASSOCIATED_WITH",

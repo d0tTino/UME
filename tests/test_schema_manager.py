@@ -5,15 +5,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from ume import (
-    GraphSchemaManager,
-    GraphSchema,
-    PersistentGraph,
-    Event,
-    EventType,
-    apply_event_to_graph,
-    ProcessingError,
-)
+from ume.schema_manager import GraphSchemaManager
+from ume.graph_schema import GraphSchema
+from ume.persistent_graph import PersistentGraph
+from ume.event import Event, EventType
+from ume.processing import apply_event_to_graph, ProcessingError
 
 
 @pytest.fixture
@@ -135,3 +131,28 @@ def test_upgrade_maps_has_permission_edges(
     assert ("doc", "user1", "OWNED_BY", {"permission_level": "public"}) in edges
     assert ("doc", "user2", "SHARED_WITH", {"permission_level": "public"}) in edges
     assert all(lbl != "HAS_PERMISSION" for _, _, lbl, _ in edges)
+
+
+def test_upgrade_permission_nodes_multi_user(graph: PersistentGraph) -> None:
+    graph.add_node("doc", {})
+    graph.add_node("u1", {})
+    graph.add_node("u2", {"name": "Bob"})
+    graph.add_edge("doc", "u1", "HAS_PERMISSION", {"permission_level": "viewer"})
+    graph.add_edge("doc", "u2", "HAS_PERMISSION", {"permission_level": "editor"})
+
+    manager = GraphSchemaManager()
+    manager.upgrade_schema("2.0.0", "3.0.0", graph)
+
+    edges = graph.get_all_edges()
+    assert ("doc", "u1", "SHARED_WITH", {"permission_level": "public"}) in edges
+    assert ("doc", "u2", "OWNED_BY", {"permission_level": "public"}) in edges
+
+    assert graph.get_node("u1") == {
+        "type": "User",
+        "permission_level": "public",
+    }
+    assert graph.get_node("u2") == {
+        "name": "Bob",
+        "type": "User",
+        "permission_level": "public",
+    }
