@@ -286,6 +286,97 @@ The dossier directory is initialized from template files located under
 `src/ume/dossier/dossier_template/` which include `skills.yaml` and
 `values.yaml`.
 
+### POST `/v1/calendar/events`
+Create a calendar event owned by a user and optionally shared with a group.
+
+**Body fields**
+
+- `title` – event title
+- `start_time` – ISO8601 timestamp
+- `user_id` – ID of the owning user *(required)*
+- `group_id` – ID of the owning group *(optional)*
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/v1/calendar/events \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Team Meeting","start_time":"2024-03-10T10:00:00Z","user_id":"u1","group_id":"g1"}'
+```
+
+### GET `/v1/calendar/events`
+List calendar events accessible to a user. Events may also be filtered by group or layer.
+
+**Query parameters**
+
+- `user_id` – ID of the requesting user *(required)*
+- `group_id` – limit to events shared with a group *(optional)*
+- `layer_id` – limit to events tagged with a calendar layer *(optional)*
+- `since` – return events starting at or after this UNIX timestamp *(optional)*
+
+Example request:
+
+```bash
+curl -G -H "Authorization: Bearer <token>" \
+  --data-urlencode "user_id=u1" \
+  --data-urlencode "group_id=g1" \
+  http://localhost:8000/v1/calendar/events
+```
+
+### POST `/v1/decisions`
+Create a decision analysis node.
+
+**Body fields**
+
+- `query` – question being analyzed
+- `user_id` – ID of the owning user *(required)*
+- `group_id` – ID of the owning group *(optional)*
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/v1/decisions \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"Select mitigation","user_id":"u1","group_id":"g1"}'
+```
+
+### POST `/v1/decisions/{analysis_id}/actions`
+Attach a proposed action to a decision analysis.
+
+**Body fields**
+
+- `description` – description of the action
+- `user_id` – ID of the owning user *(required)*
+- `group_id` – ID of the owning group *(optional)*
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/v1/decisions/123/actions \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"description":"Notify users","user_id":"u1","group_id":"g1"}'
+```
+
+### GET `/v1/decisions/{analysis_id}`
+Retrieve a decision analysis and its proposed actions.
+
+**Query parameters**
+
+- `user_id` – ID of the requesting user *(required)*
+- `group_id` – limit to decisions shared with a group *(optional)*
+
+Example request:
+
+```bash
+curl -G -H "Authorization: Bearer <token>" \
+  --data-urlencode "user_id=u1" \
+  --data-urlencode "group_id=g1" \
+  http://localhost:8000/v1/decisions/123
+```
+
 ## API Documentation
 
 To explore the API interactively, run the FastAPI server and open the Swagger UI:
