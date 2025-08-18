@@ -7,6 +7,7 @@ from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
 from ume.models.decision_analysis import SCHEMA_VERSION
+from ume.models import CalendarEventStatus, CalendarEventVisibility
 
 
 def _token(client: TestClient) -> str:
@@ -55,9 +56,9 @@ def test_calendar_event_permissions(client_and_graph) -> None:
             "description": "Discuss project",
             "is_all_day": True,
             "location": "Conference Room",
-            "status": "confirmed",
+            "status": CalendarEventStatus.CONFIRMED.value,
             "rrule": "FREQ=DAILY",
-            "visibility": "public",
+            "visibility": CalendarEventVisibility.PUBLIC.value,
             "user_id": "user1",
             "invitee_ids": ["user2"],
         },
@@ -74,9 +75,9 @@ def test_calendar_event_permissions(client_and_graph) -> None:
         "description": "Discuss project",
         "is_all_day": True,
         "location": "Conference Room",
-        "status": "confirmed",
+        "status": CalendarEventStatus.CONFIRMED.value,
         "rrule": "FREQ=DAILY",
-        "visibility": "public",
+        "visibility": CalendarEventVisibility.PUBLIC.value,
     }
 
     # Owner sees the event with all properties
@@ -113,9 +114,9 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert attrs["description"] == "Discuss project"
     assert attrs["is_all_day"] is True
     assert attrs["location"] == "Conference Room"
-    assert attrs["status"] == "confirmed"
+    assert attrs["status"] == CalendarEventStatus.CONFIRMED.value
     assert attrs["rrule"] == "FREQ=DAILY"
-    assert attrs["visibility"] == "public"
+    assert attrs["visibility"] == CalendarEventVisibility.PUBLIC.value
 
     edges = graph.get_all_edges()
     assert any(

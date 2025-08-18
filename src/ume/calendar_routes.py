@@ -9,7 +9,11 @@ from pydantic import BaseModel
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
-from .models import create_calendar_event
+from .models import (
+    CalendarEventStatus,
+    CalendarEventVisibility,
+    create_calendar_event,
+)
 
 router = APIRouter(prefix="/v1/calendar")
 
@@ -21,9 +25,9 @@ class CalendarEventCreateRequest(BaseModel):
     description: str | None = None
     is_all_day: bool = False
     location: str | None = None
-    status: str | None = None
+    status: CalendarEventStatus | None = None
     rrule: str | None = None
-    visibility: str | None = None
+    visibility: CalendarEventVisibility | None = None
     user_id: str
     group_id: str | None = None
     invitee_ids: List[str] | None = None
@@ -38,9 +42,9 @@ class CalendarEventResponse(BaseModel):
     description: str | None = None
     is_all_day: bool
     location: str | None = None
-    status: str | None = None
+    status: CalendarEventStatus | None = None
     rrule: str | None = None
-    visibility: str | None = None
+    visibility: CalendarEventVisibility | None = None
 
 
 @router.post("/events", response_model=CalendarEventResponse)
@@ -68,9 +72,9 @@ def create_event(
         "description": event.description,
         "is_all_day": event.is_all_day,
         "location": event.location,
-        "status": event.status,
+        "status": event.status.value if event.status else None,
         "rrule": event.rrule,
-        "visibility": event.visibility,
+        "visibility": event.visibility.value if event.visibility else None,
     }
     if not graph.node_exists(req.user_id):
         graph.add_node(req.user_id, {"type": "User"})

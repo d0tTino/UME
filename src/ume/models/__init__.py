@@ -1,7 +1,12 @@
 """Dataclass models representing various graph node types."""
 
 from .users import User, create_user
-from .calendar import CalendarEvent, create_calendar_event
+from .calendar import (
+    CalendarEvent,
+    CalendarEventStatus,
+    CalendarEventVisibility,
+    create_calendar_event,
+)
 from .calendar_layer import CalendarLayer, create_calendar_layer
 from .decision_analysis import DecisionAnalysis, create_decision_analysis
 from .decisions import Decision, create_decision
@@ -15,6 +20,8 @@ __all__ = [
     "User",
     "create_user",
     "CalendarEvent",
+    "CalendarEventStatus",
+    "CalendarEventVisibility",
     "create_calendar_event",
     "CalendarLayer",
     "create_calendar_layer",
