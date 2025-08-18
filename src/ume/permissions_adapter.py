@@ -141,7 +141,8 @@ class PermissionsGraphAdapter(IGraphAdapter):
         attrs: Dict[str, Any] | None = None,
     ) -> None:
         self._require_editor(source_node_id)
-        self._require_editor(target_node_id)
+        if label not in {"OWNED_BY", "SHARED_WITH"}:
+            self._require_editor(target_node_id)
         self._adapter.add_edge(source_node_id, target_node_id, label, attrs)
         self.rebuild_index()
 

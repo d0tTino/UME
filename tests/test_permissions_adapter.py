@@ -97,3 +97,20 @@ def test_find_connected_nodes_filters_by_permissions() -> None:
     assert adapter.find_connected_nodes("Document.d1") == ["Document.d3"]
     with pytest.raises(AccessDeniedError):
         adapter.find_connected_nodes("Document.d2")
+
+
+def test_add_permission_edge_without_target_editor() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("User.u2", {})
+    g.add_node("Document.d1", {})
+    g._edges["Document.d1"].append(("User.u1", "OWNED_BY", {"permission_level": "editor"}))
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+    adapter.add_edge(
+        "Document.d1",
+        "User.u2",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+    )
+    adapter_u2 = PermissionsGraphAdapter(g, user_id="User.u2")
+    assert adapter_u2.get_node("Document.d1") == {}
