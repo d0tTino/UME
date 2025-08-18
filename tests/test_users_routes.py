@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
+from ume.models.users import SCHEMA_VERSION
 
 
 def _token(client: TestClient) -> str:
@@ -39,10 +40,12 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
     user_id = user_data["id"]
     assert user_data["name"] == "Alice"
     assert user_data["email"] == "alice@example.com"
+    assert user_data["schema_version"] == SCHEMA_VERSION
     attrs = graph.get_node(user_id)
     assert attrs["type"] == "User"
     assert attrs["name"] == "Alice"
     assert attrs["email"] == "alice@example.com"
+    assert attrs["schema_version"] == SCHEMA_VERSION
 
     # Create a user group containing the user
     res = client.post(
@@ -74,5 +77,5 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
     )
     assert res.status_code == 200
     edges = graph.get_all_edges()
-    assert ("doc1", user_id, "OWNED_BY", {"permission_level": "public"}) in edges
-    assert ("doc1", group_id, "OWNED_BY", {"permission_level": "public"}) in edges
+    assert ("doc1", user_id, "OWNED_BY", {"permission_level": "editor"}) in edges
+    assert ("doc1", group_id, "OWNED_BY", {"permission_level": "editor"}) in edges

@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import uuid
 
-SCHEMA_VERSION = "3.0"
+# Keep in sync with the default ``schema_version`` on :class:`User`.
+SCHEMA_VERSION = "3.0.0"
 
 
 @dataclass
@@ -17,7 +18,7 @@ class User:
     name: str
     email: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
-    schema_version: str = SCHEMA_VERSION
+    schema_version: str = field(default=SCHEMA_VERSION)
 
     @property
     def id(self) -> str:  # pragma: no cover - compatibility layer
