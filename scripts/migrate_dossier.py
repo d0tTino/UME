@@ -15,8 +15,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
+# Ensure the repo root (which provides a minimal ``yaml`` fallback) is on the
+# path before importing ``yaml``. When executed from the ``scripts`` directory
+# the root isn't otherwise discoverable.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import yaml  # type: ignore  # noqa: E402
 
+# Make the ``ume`` package importable without installation.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 # Provide minimal stubs for optional dependencies when running as a standalone
@@ -44,14 +49,43 @@ if importlib.util.find_spec("prometheus_client") is None:
     prom.CONTENT_TYPE_LATEST = "text/plain"
     sys.modules.setdefault("prometheus_client", prom)
 
-from ume.config.loader import load_settings
+# Lightweight stubs for other optional dependencies used by ume modules.
+if importlib.util.find_spec("numpy") is None:
+    numpy_stub = types.ModuleType("numpy")
+    numpy_stub.asarray = lambda x, dtype=None: list(x)
+    sys.modules.setdefault("numpy", numpy_stub)
+    numpy_typing = types.ModuleType("numpy.typing")
+    from typing import Any as _Any
+    numpy_typing.NDArray = _Any  # type: ignore[attr-defined]
+    sys.modules.setdefault("numpy.typing", numpy_typing)
+
 
 
 def _read_yaml(path: Path) -> Any:
     if not path.is_file():
         return None
     with path.open("r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or None
+        text = f.read()
+    data = yaml.safe_load(text) or None
+    if data:
+        return data
+    # Fallback simple parser for ``key: value`` pairs used in templates.
+    result: dict[str, Any] = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        value = value.strip().strip('"')
+        if value.lower() in {"true", "false"}:
+            parsed: Any = value.lower() == "true"
+        else:
+            try:
+                parsed = int(value)
+            except ValueError:
+                parsed = value
+        result[key.strip()] = parsed
+    return result or None
 
 
 def _load_plain(root: Path) -> dict[str, Any]:
@@ -101,7 +135,6 @@ def migrate_dossier(path: Path, *, encrypt: bool = False) -> None:
             os.environ["UME_ENCRYPTION_KEY"] = key
             print(f"Generated UME_ENCRYPTION_KEY={key}")
 
-    load_settings.cache_clear()
     import ume.dossier as dossier_mod
     importlib.reload(dossier_mod)
 

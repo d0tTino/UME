@@ -8,6 +8,13 @@ from typing import Any, Dict, List, Set, cast
 import networkx as nx
 import numpy as np
 
+try:
+    from networkx import pagerank as _nx_pagerank
+except ImportError:  # networkx>=3 removes the top-level pagerank helper
+    from networkx.algorithms.link_analysis.pagerank_alg import (
+        pagerank as _nx_pagerank,
+    )
+
 from .graph_adapter import IGraphAdapter
 
 
@@ -109,7 +116,7 @@ def pagerank_centrality(graph: IGraphAdapter) -> Dict[str, float]:
 
     g = _to_networkx(graph)
     try:
-        return cast(Dict[str, float], nx.pagerank(g))
+        return cast(Dict[str, float], _nx_pagerank(g))
     except nx.NetworkXException:
         # networkx>=3.5 relies on SciPy; fall back to a numpy implementation
         return _pagerank_numpy(g)
@@ -150,8 +157,8 @@ def graph_similarity(graph1: IGraphAdapter, graph2: IGraphAdapter) -> float:
         except NotImplementedError:
             pass
 
-    edges1 = { (s, t, l) for s, t, l, _ in graph1.get_all_edges() }
-    edges2 = { (s, t, l) for s, t, l, _ in graph2.get_all_edges() }
+    edges1 = {(s, t, label) for s, t, label, _ in graph1.get_all_edges()}
+    edges2 = {(s, t, label) for s, t, label, _ in graph2.get_all_edges()}
     if not edges1 and not edges2:
         return 1.0
     return len(edges1 & edges2) / len(edges1 | edges2)
@@ -225,6 +232,6 @@ def time_varying_centrality(graph: IGraphAdapter, past_n_days: int) -> Dict[str,
     if sub.number_of_nodes() == 0:
         return {}
     try:
-        return cast(Dict[str, float], nx.pagerank(sub))
+        return cast(Dict[str, float], _nx_pagerank(sub))
     except nx.NetworkXException:
         return _pagerank_numpy(sub)
