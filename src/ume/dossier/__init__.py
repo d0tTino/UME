@@ -7,6 +7,7 @@ from uuid import uuid4
 from pathlib import Path
 from typing import Any
 import json
+import os
 
 from filelock import FileLock
 
@@ -24,14 +25,22 @@ else:  # pragma: no cover - cryptography optional
 from ..config import settings
 from ..audit import log_audit_entry
 
-ENCRYPTION_ENABLED = settings.UME_ENCRYPTION_ENABLED
+# ``pydantic`` is an optional dependency in this kata.  When it's missing the
+# ``settings`` object doesn't pick up environment variables which means features
+# like dossier encryption can't be toggled during tests.  Fall back to reading
+# from ``os.environ`` so tests can enable encryption without the full settings
+# stack installed.
+ENCRYPTION_ENABLED = settings.UME_ENCRYPTION_ENABLED or (
+    os.getenv("UME_ENCRYPTION_ENABLED", "").lower() == "true"
+)
 _fernet: Fernet | None
 if ENCRYPTION_ENABLED:
-    if Fernet is None or not settings.UME_ENCRYPTION_KEY:
+    key = settings.UME_ENCRYPTION_KEY or os.getenv("UME_ENCRYPTION_KEY")
+    if Fernet is None or not key:
         raise ValueError(
             "Encryption enabled but cryptography not available or key not set"
         )
-    _fernet = Fernet(settings.UME_ENCRYPTION_KEY.encode())
+    _fernet = Fernet(key.encode())
 else:
     _fernet = None
 
