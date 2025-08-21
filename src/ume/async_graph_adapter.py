@@ -60,6 +60,7 @@ class IAsyncGraphAdapter(ABC):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
         pass
 

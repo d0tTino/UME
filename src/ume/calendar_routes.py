@@ -16,6 +16,8 @@ from .models import (
     create_calendar_event,
 )
 
+EDGE_VERSION = "3.0.0"
+
 router = APIRouter(prefix="/v1/calendar")
 
 
@@ -91,7 +93,11 @@ def create_event(
         )
     except AccessDeniedError:
         graph.add_edge(
-            event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+            event.id,
+            req.user_id,
+            "OWNED_BY",
+            {"permission_level": "editor"},
+            schema_version=EDGE_VERSION,
         )
         perm_graph.rebuild_index()
     for uid in req.invitee_ids or []:

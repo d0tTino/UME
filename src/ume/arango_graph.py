@@ -126,6 +126,7 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
         if not self.node_exists(source_node_id) or not self.node_exists(target_node_id):
             raise ProcessingError(
@@ -142,8 +143,11 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             "redacted": False,
             "created_at": int(time.time()),
         }
-        if attrs:
-            doc["attrs"] = attrs
+        attr_dict: Dict[str, Any] = dict(attrs or {})
+        if schema_version is not None and "schema_version" not in attr_dict:
+            attr_dict["schema_version"] = schema_version
+        if attr_dict:
+            doc["attrs"] = attr_dict
         self._edges.insert(doc)
 
     def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:

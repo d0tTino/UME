@@ -138,6 +138,7 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
         schema.validate_edge_label(label)
@@ -164,8 +165,11 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
             props = {"redacted": False, "created_at": int(time.time())}
-            if attrs:
-                props.update(attrs)
+            attr_dict: Dict[str, Any] = dict(attrs or {})
+            if schema_version is not None and "schema_version" not in attr_dict:
+                attr_dict["schema_version"] = schema_version
+            if attr_dict:
+                props.update(attr_dict)
             session.run(
                 f"MATCH (s {{id: $src}}), (t {{id: $tgt}}) CREATE (s)-[:`{escaped_label}` $props]->(t)",
                 {"src": source_node_id, "tgt": target_node_id, "props": props},

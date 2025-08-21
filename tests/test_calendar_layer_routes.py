@@ -8,6 +8,8 @@ from ume import MockGraph
 from ume.config import settings
 from ume.models.calendar_layer import SCHEMA_VERSION
 
+EDGE_VERSION = "3.0.0"
+
 
 def _token(client: TestClient) -> str:
     res = client.post(
@@ -57,7 +59,7 @@ def test_create_calendar_layer(client_and_graph) -> None:
         layer_id,
         "user1",
         "OWNED_BY",
-        {"permission_level": "editor"},
+        {"permission_level": "editor", "schema_version": EDGE_VERSION},
     ) in edges
 
 
@@ -86,7 +88,7 @@ def test_create_layer_with_group_share(client_and_graph) -> None:
         layer_id,
         "group1",
         "SHARED_WITH",
-        {"permission_level": "viewer"},
+        {"permission_level": "viewer", "schema_version": EDGE_VERSION},
     ) in edges
 
 

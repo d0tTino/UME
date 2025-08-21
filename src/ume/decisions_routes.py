@@ -16,6 +16,8 @@ from .models import (
     create_proposed_action,
 )
 
+EDGE_VERSION = "3.0.0"
+
 router = APIRouter(prefix="/v1/decisions")
 
 
@@ -75,6 +77,7 @@ def create_decision(
         req.user_id,
         "OWNED_BY",
         {"permission_level": "editor"},
+        schema_version=EDGE_VERSION,
     )
     perm_graph.rebuild_index()
     if req.group_id:
@@ -118,6 +121,7 @@ def add_action(
         req.user_id,
         "OWNED_BY",
         {"permission_level": "editor"},
+        schema_version=EDGE_VERSION,
     )
     perm_graph.rebuild_index()
     if req.group_id:
