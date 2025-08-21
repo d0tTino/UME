@@ -60,6 +60,11 @@ class GraphSchemaManager:
             raise KeyError(f"Schema version '{version}' not found")
         return self._schemas[version]
 
+    def get_edge_version(self, label: str, version: str | None = None) -> str:
+        """Retrieve the version string for a specific edge label."""
+        schema = self.get_schema(version)
+        return schema.get_edge_version(label)
+
     def register_schema(
         self, version: str, schema_path: str, proto_module: str
     ) -> None:
@@ -120,6 +125,17 @@ class GraphSchemaManager:
                         "RELATES_TO",
                     }:
                         graph.delete_edge(src, tgt, label)
+
+            # Ensure all edges carry explicit version metadata
+            for src, tgt, label, attrs in list(graph.get_all_edges()):
+                edge_def = new_schema.edge_labels.get(label)
+                if edge_def is None:
+                    continue
+                attr_dict = dict(attrs or {})
+                if attr_dict.get("version") != edge_def.version:
+                    graph.delete_edge(src, tgt, label)
+                    attr_dict["version"] = edge_def.version
+                    graph.add_edge(src, tgt, label, attr_dict)
 
         return new_schema
 

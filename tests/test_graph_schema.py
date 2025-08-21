@@ -31,6 +31,13 @@ def test_validate_unknown_edge_label():
         schema.validate_edge_label("UnknownLabel")
 
 
+def test_get_edge_version():
+    schema = load_default_schema()
+    assert schema.get_edge_version("OWNED_BY") == "3.0.0"
+    with pytest.raises(ProcessingError):
+        schema.get_edge_version("UNKNOWN_LABEL")
+
+
 def test_load_node_properties(tmp_path):
     schema_yaml = {
         "version": "1.0.0",
@@ -70,4 +77,16 @@ def test_validate_node_property(tmp_path):
     schema.validate_node_property("User", "id")
     with pytest.raises(ProcessingError):
         schema.validate_node_property("User", "missing")
+
+
+def test_edge_version_defaults(tmp_path):
+    schema_yaml = {
+        "version": "1.0.0",
+        "node_types": {},
+        "edge_labels": {"RELATES_TO": {}},
+    }
+    path = tmp_path / "schema.yaml"
+    path.write_text(yaml.safe_dump(schema_yaml))
+    schema = GraphSchema.load(str(path))
+    assert schema.get_edge_version("RELATES_TO") == "0.0.0"
 
