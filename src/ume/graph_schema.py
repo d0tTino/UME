@@ -102,6 +102,11 @@ class GraphSchema:
 
             raise ProcessingError(f"Unknown edge label '{label}'")
 
+    def get_edge_version(self, label: str) -> str:
+        """Return the version string for the specified edge label."""
+        self.validate_edge_label(label)
+        return self.edge_labels[label].version
+
     def validate_node_property(self, node_type: str, property_name: str) -> None:
         """Validate that a property exists for a given node type."""
         self.validate_node_type(node_type)

@@ -47,6 +47,11 @@ def test_proto_lookup():
     assert hasattr(proto3, "Graph")
 
 
+def test_get_edge_version_manager():
+    manager = GraphSchemaManager()
+    assert manager.get_edge_version("OWNED_BY") == "3.0.0"
+
+
 def test_register_schema(tmp_path: Path):
     manager = GraphSchemaManager()
     schema_file = tmp_path / "s.yaml"
@@ -90,7 +95,7 @@ def test_upgrade_transforms_graph(graph: PersistentGraph) -> None:
     manager.upgrade_schema("1.0.0", "2.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("a", "b", "LINKS_TO", {}) in edges
+    assert ("a", "b", "LINKS_TO", {"version": "2.0.0"}) in edges
     assert all(lbl != "L" for _, _, lbl, _ in edges)
     assert all(lbl != "TO_DELETE" for _, _, lbl, _ in edges)
 
@@ -107,8 +112,30 @@ def test_upgrade_to_v3_transforms_graph(graph: PersistentGraph) -> None:
     manager.upgrade_schema("1.0.0", "3.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("a", "b", "TAGGED_AS", {"permission_level": "public"}) in edges
+    assert (
+        "a",
+        "b",
+        "TAGGED_AS",
+        {"permission_level": "public", "version": "3.0.0"},
+    ) in edges
     assert all(lbl == "TAGGED_AS" for _, _, lbl, _ in edges)
+
+
+def test_upgrade_sets_edge_version(graph: PersistentGraph) -> None:
+    graph.add_node("a", {})
+    graph.add_node("b", {})
+    graph.add_edge("a", "b", "NEW_LABEL")
+
+    manager = GraphSchemaManager()
+    manager.upgrade_schema("2.0.0", "3.0.0", graph)
+
+    edges = graph.get_all_edges()
+    assert (
+        "a",
+        "b",
+        "TAGGED_AS",
+        {"permission_level": "public", "version": "3.0.0"},
+    ) in edges
 
 
 def test_upgrade_maps_has_permission_edges(
@@ -128,8 +155,18 @@ def test_upgrade_maps_has_permission_edges(
     manager.upgrade_schema("2.0.0", "3.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("doc", "user1", "OWNED_BY", {"permission_level": "public"}) in edges
-    assert ("doc", "user2", "SHARED_WITH", {"permission_level": "public"}) in edges
+    assert (
+        "doc",
+        "user1",
+        "OWNED_BY",
+        {"permission_level": "public", "version": "3.0.0"},
+    ) in edges
+    assert (
+        "doc",
+        "user2",
+        "SHARED_WITH",
+        {"permission_level": "public", "version": "3.0.0"},
+    ) in edges
     assert all(lbl != "HAS_PERMISSION" for _, _, lbl, _ in edges)
 
 
@@ -144,8 +181,18 @@ def test_upgrade_permission_nodes_multi_user(graph: PersistentGraph) -> None:
     manager.upgrade_schema("2.0.0", "3.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("doc", "u1", "SHARED_WITH", {"permission_level": "public"}) in edges
-    assert ("doc", "u2", "OWNED_BY", {"permission_level": "public"}) in edges
+    assert (
+        "doc",
+        "u1",
+        "SHARED_WITH",
+        {"permission_level": "public", "version": "3.0.0"},
+    ) in edges
+    assert (
+        "doc",
+        "u2",
+        "OWNED_BY",
+        {"permission_level": "public", "version": "3.0.0"},
+    ) in edges
 
     assert graph.get_node("u1") == {
         "type": "User",
