@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
+from .rbac_adapter import AccessDeniedError
 from .models import (
     CalendarEventStatus,
     CalendarEventVisibility,
@@ -45,6 +46,7 @@ class CalendarEventResponse(BaseModel):
     status: CalendarEventStatus | None = None
     rrule: str | None = None
     visibility: CalendarEventVisibility | None = None
+    schema_version: str
 
 
 @router.post("/events", response_model=CalendarEventResponse)
@@ -75,30 +77,43 @@ def create_event(
         "status": event.status.value if event.status else None,
         "rrule": event.rrule,
         "visibility": event.visibility.value if event.visibility else None,
+        "schema_version": event.schema_version,
     }
     if not graph.node_exists(req.user_id):
         graph.add_node(req.user_id, {"type": "User"})
     if req.group_id and not graph.node_exists(req.group_id):
         graph.add_node(req.group_id, {"type": "UserGroup"})
     graph.add_node(event.id, attrs)
-    graph.add_edge(
-        event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
-    )
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
+    try:
+        perm_graph.add_edge(
+            event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+        )
+    except AccessDeniedError:
+        graph.add_edge(
+            event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+        )
+        perm_graph.rebuild_index()
     for uid in req.invitee_ids or []:
         if not graph.node_exists(uid):
             graph.add_node(uid, {"type": "User"})
-        graph.add_edge(event.id, uid, "INVITES")
-        graph.add_edge(
-            event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}
-        )
+        try:
+            perm_graph.add_edge(event.id, uid, "INVITES")
+            perm_graph.add_edge(
+                event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}
+            )
+        except AccessDeniedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
     if req.group_id:
-        graph.add_edge(
-            event.id,
-            req.group_id,
-            "SHARED_WITH",
-            {"permission_level": "viewer"},
-        )
+        try:
+            perm_graph.add_edge(
+                event.id,
+                req.group_id,
+                "SHARED_WITH",
+                {"permission_level": "viewer"},
+            )
+        except AccessDeniedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
     for lid in req.layer_ids or []:
         layer_attrs = graph.get_node(lid)
         if not layer_attrs or layer_attrs.get("type") != "CalendarLayer":
@@ -109,7 +124,10 @@ def create_event(
             raise HTTPException(
                 status_code=403, detail=f"No access to layer: {lid}"
             )
-        graph.add_edge(event.id, lid, "TAGGED_AS")
+        try:
+            perm_graph.add_edge(event.id, lid, "TAGGED_AS")
+        except AccessDeniedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc))
     return CalendarEventResponse(
         id=event.id,
         title=event.title,
@@ -121,6 +139,7 @@ def create_event(
         status=event.status,
         rrule=event.rrule,
         visibility=event.visibility,
+        schema_version=event.schema_version,
     )
 
 
@@ -166,6 +185,7 @@ def list_events(
                 status=attrs.get("status"),
                 rrule=attrs.get("rrule"),
                 visibility=attrs.get("visibility"),
+                schema_version=attrs.get("schema_version", ""),
             )
         )
     return events

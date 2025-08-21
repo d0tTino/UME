@@ -21,8 +21,10 @@ def safe_load(data: Data) -> Any:
     input to mirror :func:`yaml.safe_load`.
     If parsing fails, an empty dict is returned as a permissive fallback.
     """
+    if data is None:
+        return None
     if hasattr(data, "read"):
-        data = data.read()  # type: ignore[assignment]
+        data = data.read()
     if not data:
         return None
     if isinstance(data, bytes):
