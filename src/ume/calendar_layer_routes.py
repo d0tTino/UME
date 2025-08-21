@@ -9,6 +9,8 @@ from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .models import create_calendar_layer
 
+EDGE_VERSION = "3.0.0"
+
 router = APIRouter(prefix="/v1/calendar")
 
 
@@ -44,11 +46,16 @@ def create_layer(
     }
     graph.add_node(layer.layer_id, attrs)
     graph.add_edge(
-        layer.layer_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+        layer.layer_id,
+        req.user_id,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+        schema_version=EDGE_VERSION,
     )
     if req.group_id:
         perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
         try:
+            perm_graph._require_editor(req.group_id)
             perm_graph.add_edge(
                 layer.layer_id,
                 req.group_id,

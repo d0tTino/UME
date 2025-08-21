@@ -101,9 +101,12 @@ class TracingGraphAdapter(IGraphAdapter):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
         with self._tracer.start_as_current_span("graph.add_edge"):
-            self._adapter.add_edge(source_node_id, target_node_id, label, attrs)
+            self._adapter.add_edge(
+                source_node_id, target_node_id, label, attrs, schema_version
+            )
 
     def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
         with self._tracer.start_as_current_span("graph.get_all_edges"):

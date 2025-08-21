@@ -127,6 +127,7 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
         *,
         created_at: int | None = None,
     ) -> None:
@@ -142,6 +143,8 @@ class PersistentGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
         attr_dict: Dict[str, Any] = dict(attrs or {})
         if permission_level is not None and "permission_level" not in attr_dict:
             attr_dict["permission_level"] = permission_level
+        if schema_version is not None and "schema_version" not in attr_dict:
+            attr_dict["schema_version"] = schema_version
 
         try:
             with self.conn:

@@ -105,6 +105,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
         """
         Adds a directed, labeled edge between two existing nodes.
@@ -129,6 +130,8 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         attr_dict: Dict[str, Any] = dict(attrs or {})
         if permission_level is not None and "permission_level" not in attr_dict:
             attr_dict["permission_level"] = permission_level
+        if schema_version is not None and "schema_version" not in attr_dict:
+            attr_dict["schema_version"] = schema_version
         self._edges[source_node_id].append((target_node_id, label, attr_dict))
 
     def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:

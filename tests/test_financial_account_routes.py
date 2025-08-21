@@ -6,6 +6,8 @@ from ume import MockGraph
 from ume.config import settings
 from ume.models.financial_account import SCHEMA_VERSION
 
+EDGE_VERSION = "3.0.0"
+
 
 def _token(client: TestClient) -> str:
     res = client.post(
@@ -65,13 +67,13 @@ def test_create_and_get_financial_account(client_and_graph) -> None:
         account_id,
         "user1",
         "OWNED_BY",
-        {"permission_level": "editor"},
+        {"permission_level": "editor", "schema_version": EDGE_VERSION},
     ) in edges
     assert (
         account_id,
         "group1",
         "SHARED_WITH",
-        {"permission_level": "viewer"},
+        {"permission_level": "viewer", "schema_version": EDGE_VERSION},
     ) in edges
 
     get_res = client.get(
@@ -106,5 +108,5 @@ def test_create_financial_account_creates_user_node(client_and_graph) -> None:
         account_id,
         "user2",
         "OWNED_BY",
-        {"permission_level": "editor"},
+        {"permission_level": "editor", "schema_version": EDGE_VERSION},
     ) in edges

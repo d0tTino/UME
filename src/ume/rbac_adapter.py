@@ -65,8 +65,11 @@ class RoleBasedGraphAdapter(IGraphAdapter):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
-        self._adapter.add_edge(source_node_id, target_node_id, label, attrs)
+        self._adapter.add_edge(
+            source_node_id, target_node_id, label, attrs, schema_version
+        )
 
     def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
 

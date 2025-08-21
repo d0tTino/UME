@@ -9,6 +9,8 @@ from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .models import create_financial_account
 
+EDGE_VERSION = "3.0.0"
+
 router = APIRouter(prefix="/v1/accounts")
 
 
@@ -61,6 +63,7 @@ def create_account(
         req.user_id,
         "OWNED_BY",
         {"permission_level": "editor"},
+        schema_version=EDGE_VERSION,
     )
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     if req.group_id:

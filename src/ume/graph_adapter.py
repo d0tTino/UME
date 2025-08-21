@@ -147,6 +147,7 @@ class IGraphAdapter(ABC):
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
         """
         Adds a directed, labeled edge between two existing nodes.
@@ -156,6 +157,7 @@ class IGraphAdapter(ABC):
             target_node_id: The identifier of the target node (destination of the edge).
             label: A string label describing the type of relationship or connection.
             attrs: Optional dictionary of edge attributes.
+            schema_version: Optional schema version for the edge definition.
 
         Raises:
             ProcessingError (or similar): If either the source_node_id or
@@ -322,9 +324,15 @@ class AsyncAdapterMixin:
         target_node_id: str,
         label: str,
         attrs: Dict[str, Any] | None = None,
+        schema_version: str | None = None,
     ) -> None:
         await asyncio.to_thread(
-            self._adapter.add_edge, source_node_id, target_node_id, label, attrs
+            self._adapter.add_edge,
+            source_node_id,
+            target_node_id,
+            label,
+            attrs,
+            schema_version,
         )
 
 

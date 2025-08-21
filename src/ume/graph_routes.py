@@ -27,6 +27,7 @@ from .async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from .query import Neo4jQueryEngine, build_events_query
 from .event import EventError
 from .processing import ProcessingError
+from .graph_schema import DEFAULT_SCHEMA
 from ume.services.ingest import ingest_event, ingest_events_batch
 
 # import shared API dependencies
@@ -302,7 +303,11 @@ async def api_create_edge(
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Create an edge between two nodes."""
-    await _maybe_call(graph, "add_edge", req.source, req.target, req.label)
+    edge_def = DEFAULT_SCHEMA.edge_labels.get(req.label)
+    version = edge_def.version if edge_def else None
+    await _maybe_call(
+        graph, "add_edge", req.source, req.target, req.label, None, version
+    )
     return {"status": "ok"}
 
 
