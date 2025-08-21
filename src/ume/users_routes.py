@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .models import create_user, create_user_group
+from .permissions_adapter import PermissionsGraphAdapter
 
 router = APIRouter(prefix="/v1")
 
@@ -33,6 +34,7 @@ class UserGroupResponse(BaseModel):
     id: str
     name: str
     members: List[str]
+    schema_version: str
 
 
 class OwnedByRequest(BaseModel):
@@ -77,9 +79,15 @@ def create_user_group_node(
         "group_id": group.group_id,
         "name": group.name,
         "members": group.members,
+        "schema_version": group.schema_version,
     }
     graph.add_node(group.group_id, attrs)
-    return UserGroupResponse(id=group.group_id, name=group.name, members=group.members)
+    return UserGroupResponse(
+        id=group.group_id,
+        name=group.name,
+        members=group.members,
+        schema_version=group.schema_version,
+    )
 
 
 @router.post("/owned_by")
@@ -88,7 +96,12 @@ def create_owned_by_edge(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> dict[str, str]:
-    graph.add_edge(
+    owner_attrs = graph.get_node(req.owner_id) or {}
+    if owner_attrs.get("type") == "UserGroup":
+        perm_graph = PermissionsGraphAdapter(graph, group_id=req.owner_id)
+    else:
+        perm_graph = PermissionsGraphAdapter(graph, user_id=req.owner_id)
+    perm_graph.add_edge(
         req.node_id,
         req.owner_id,
         "OWNED_BY",

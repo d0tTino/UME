@@ -4,7 +4,8 @@ from fastapi.testclient import TestClient
 from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
-from ume.models.users import SCHEMA_VERSION
+from ume.models.users import SCHEMA_VERSION as USER_SCHEMA_VERSION
+from ume.models.user_group import SCHEMA_VERSION as GROUP_SCHEMA_VERSION
 
 
 def _token(client: TestClient) -> str:
@@ -40,12 +41,12 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
     user_id = user_data["id"]
     assert user_data["name"] == "Alice"
     assert user_data["email"] == "alice@example.com"
-    assert user_data["schema_version"] == SCHEMA_VERSION
+    assert user_data["schema_version"] == USER_SCHEMA_VERSION
     attrs = graph.get_node(user_id)
     assert attrs["type"] == "User"
     assert attrs["name"] == "Alice"
     assert attrs["email"] == "alice@example.com"
-    assert attrs["schema_version"] == SCHEMA_VERSION
+    assert attrs["schema_version"] == USER_SCHEMA_VERSION
 
     # Create a user group containing the user
     res = client.post(
@@ -57,10 +58,12 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
     group_data = res.json()
     group_id = group_data["id"]
     assert group_data["members"] == [user_id]
+    assert group_data["schema_version"] == GROUP_SCHEMA_VERSION
     attrs = graph.get_node(group_id)
     assert attrs["type"] == "UserGroup"
     assert attrs["name"] == "Team"
     assert attrs["members"] == [user_id]
+    assert attrs["schema_version"] == GROUP_SCHEMA_VERSION
 
     # Prepare a resource node and create OWNED_BY edges
     graph.add_node("doc1", {"type": "Document"})
@@ -69,13 +72,23 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
         json={"node_id": "doc1", "owner_id": user_id},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert res.status_code == 200
+    assert res.status_code == 403
     res = client.post(
         "/v1/owned_by",
         json={"node_id": "doc1", "owner_id": group_id},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert res.status_code == 200
+    assert res.status_code == 403
     edges = graph.get_all_edges()
-    assert ("doc1", user_id, "OWNED_BY", {"permission_level": "editor"}) in edges
-    assert ("doc1", group_id, "OWNED_BY", {"permission_level": "editor"}) in edges
+    assert (
+        "doc1",
+        user_id,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    ) not in edges
+    assert (
+        "doc1",
+        group_id,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    ) not in edges

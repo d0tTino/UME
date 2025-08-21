@@ -50,6 +50,7 @@ def _action_to_dict(action: ProposedAction) -> dict[str, Any]:
         "rank": action.rank,
         "is_optimal": action.is_optimal,
         "outcome_metrics": action.outcome_metrics,
+        "schema_version": action.schema_version,
     }
 
 
@@ -75,10 +76,11 @@ def create_decision(
         "OWNED_BY",
         {"permission_level": "editor"},
     )
+    perm_graph.rebuild_index()
     if req.group_id:
         if not graph.node_exists(req.group_id):
             graph.add_node(req.group_id, {})
-        graph.add_edge(
+        perm_graph.add_edge(
             analysis.analysis_id,
             req.group_id,
             "SHARED_WITH",
@@ -117,6 +119,7 @@ def add_action(
         "OWNED_BY",
         {"permission_level": "editor"},
     )
+    perm_graph.rebuild_index()
     if req.group_id:
         if not graph.node_exists(req.group_id):
             graph.add_node(req.group_id, {})

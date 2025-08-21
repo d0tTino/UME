@@ -7,7 +7,6 @@ from typing import cast
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
-from .rbac_adapter import AccessDeniedError
 from .models import create_financial_account
 
 router = APIRouter(prefix="/v1/accounts")
@@ -28,6 +27,7 @@ class FinancialAccountResponse(BaseModel):
     institution: str
     balance: float
     currency: str
+    schema_version: str
 
 
 @router.post("", response_model=FinancialAccountResponse)
@@ -36,6 +36,11 @@ def create_account(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> FinancialAccountResponse:
+    if not graph.node_exists(req.user_id):
+        graph.add_node(req.user_id, {})
+    if req.group_id and not graph.node_exists(req.group_id):
+        graph.add_node(req.group_id, {})
+
     account = create_financial_account(
         req.account_type,
         req.institution,
@@ -48,20 +53,18 @@ def create_account(
         "institution": account.institution,
         "balance": account.balance,
         "currency": account.currency,
+        "schema_version": account.schema_version,
     }
     graph.add_node(account.account_id, attrs)
-    if not graph.node_exists(req.user_id):
-        graph.add_node(req.user_id, {})
-    if req.group_id and not graph.node_exists(req.group_id):
-        graph.add_node(req.group_id, {})
     graph.add_edge(
         account.account_id,
         req.user_id,
         "OWNED_BY",
         {"permission_level": "editor"},
     )
+    perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     if req.group_id:
-        graph.add_edge(
+        perm_graph.add_edge(
             account.account_id,
             req.group_id,
             "SHARED_WITH",
@@ -74,6 +77,7 @@ def create_account(
         institution=account.institution,
         balance=account.balance,
         currency=account.currency,
+        schema_version=account.schema_version,
     )
 
 
@@ -97,4 +101,5 @@ def get_account(
         institution=cast(str, attrs.get("institution")),
         balance=cast(float, attrs.get("balance")),
         currency=cast(str, attrs.get("currency")),
+        schema_version=cast(str, attrs.get("schema_version")),
     )

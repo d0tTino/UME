@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import json
 from json import JSONDecodeError
-from typing import Any, IO, Union
+import io
+from typing import Any, Union
 
-Data = Union[str, bytes, IO[str], IO[bytes], None]
+Data = Union[str, bytes, io.TextIOBase, io.BufferedIOBase, None]
 
 
 def safe_load(data: Data) -> Any:
@@ -24,6 +25,7 @@ def safe_load(data: Data) -> Any:
     if data is None:
         return None
     if hasattr(data, "read"):
+
         data = data.read()
     if not data:
         return None
