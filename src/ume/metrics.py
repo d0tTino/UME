@@ -26,8 +26,18 @@ try:
         Histogram as _PromHistogram,
         Gauge as _PromGauge,
     )
-    if not all(hasattr(m, "clear") for m in (_PromCounter, _PromHistogram, _PromGauge)):
+    from prometheus_client.registry import CollectorRegistry
+    # Ensure the imported classes expose ``clear`` and counters expose ``_value``
+    # like our simple stub below. If any of these checks fail, fall back to the
+    # lightweight in-memory implementations.
+    if not all(
+        hasattr(m, "clear") for m in (_PromCounter, _PromHistogram, _PromGauge)
+    ):
         raise ImportError("prometheus_client stubs lack clear()")
+    _test_registry = CollectorRegistry()
+    _test_counter = _PromCounter("_ume_test", "", registry=_test_registry)
+    if not hasattr(_test_counter, "_value"):
+        raise ImportError("prometheus_client counter lacks _value")
 except Exception:  # pragma: no cover - library missing or incompatible
     _PromCounter = _PromHistogram = _PromGauge = None
 
@@ -42,6 +52,7 @@ if _PromCounter is None:
         def __init__(self, parent: "_Metric", labels: dict[str, str]):
             self._parent = parent
             self._labels = tuple(labels.get(n, "") for n in parent.labelnames)
+            self._value = _Value(parent, self._labels)
 
         def inc(self, amount: float = 1) -> None:
             self._parent._inc(self._labels, amount)
@@ -51,6 +62,19 @@ if _PromCounter is None:
 
         def set(self, value: float) -> None:
             self._parent._set(self._labels, value)
+
+    class _Value:
+        """Simple container emulating ``prometheus_client``'s Value class."""
+
+        def __init__(self, metric: "_Metric", key: tuple[str, ...]) -> None:
+            self._metric = metric
+            self._key = key
+
+        def set(self, value: float) -> None:
+            self._metric._set(self._key, value)
+
+        def get(self) -> float:
+            return self._metric.values.get(self._key, 0.0)
 
     class _Metric:
         """Minimal in-memory metric used when prometheus_client isn't available."""
@@ -68,6 +92,9 @@ if _PromCounter is None:
             self.kind = kind  # 'counter', 'histogram', 'gauge'
             self.values: dict[tuple[str, ...], float] = {}
             self.sums: dict[tuple[str, ...], float] = {}
+            # Expose a ``_value`` attribute similar to prometheus_client metrics so
+            # tests can reset and inspect the metric directly.
+            self._value = _Value(self, ())
 
         def labels(self, *args: str, **kwargs: str) -> _MetricChild:
             labels = kwargs or dict(zip(self.labelnames, args))
