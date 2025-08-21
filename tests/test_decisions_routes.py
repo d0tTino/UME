@@ -5,6 +5,7 @@ from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
 from ume.models.decision_analysis import SCHEMA_VERSION
+from ume.models.proposed_action import SCHEMA_VERSION as ACTION_SCHEMA_VERSION
 
 
 def _token(client: TestClient) -> str:
@@ -44,6 +45,7 @@ def test_decision_flow(client_and_graph) -> None:
     assert res.status_code == 200
     action = res.json()
     action_id = action["action_id"]
+    assert action["schema_version"] == ACTION_SCHEMA_VERSION
 
     res = client.get(
         f"/v1/decisions/{analysis_id}",
@@ -56,6 +58,7 @@ def test_decision_flow(client_and_graph) -> None:
     assert data["analysis"]["schema_version"] == SCHEMA_VERSION
     assert len(data["actions"]) == 1
     assert data["actions"][0]["action_id"] == action_id
+    assert data["actions"][0]["schema_version"] == ACTION_SCHEMA_VERSION
 
     assert g.get_node(analysis_id)["query"] == "Choose option"
     assert g.get_node(action_id)["description"] == "Option A"
