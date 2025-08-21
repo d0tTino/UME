@@ -22,7 +22,10 @@ def safe_load(data: Data) -> Any:
     input to mirror :func:`yaml.safe_load`.
     If parsing fails, an empty dict is returned as a permissive fallback.
     """
-    if isinstance(data, (io.TextIOBase, io.BufferedIOBase)):
+    if data is None:
+        return None
+    if hasattr(data, "read"):
+
         data = data.read()
     if not data:
         return None

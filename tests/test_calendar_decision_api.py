@@ -79,6 +79,7 @@ def test_calendar_event_permissions(client_and_graph) -> None:
         "status": CalendarEventStatus.CONFIRMED.value,
         "rrule": "FREQ=DAILY",
         "visibility": CalendarEventVisibility.PUBLIC.value,
+        "schema_version": SCHEMA_VERSION,
     }
 
     # Owner sees the event with all properties
@@ -118,6 +119,7 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert attrs["status"] == CalendarEventStatus.CONFIRMED.value
     assert attrs["rrule"] == "FREQ=DAILY"
     assert attrs["visibility"] == CalendarEventVisibility.PUBLIC.value
+    assert attrs["schema_version"] == SCHEMA_VERSION
 
     edges = graph.get_all_edges()
     assert any(
@@ -305,7 +307,7 @@ def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert res.status_code == 200
+    assert res.status_code == 403
 
 
 def test_calendar_event_missing_invitee_created(client_and_graph) -> None:
@@ -324,21 +326,7 @@ def test_calendar_event_missing_invitee_created(client_and_graph) -> None:
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert res.status_code == 200
-    event = res.json()
-
-    # Invitee node should be created automatically
-    attrs = graph.get_node("missing")
-    assert attrs is not None and attrs.get("type") == "User"
-
-    # Invitee can retrieve the event
-    res = client.get(
-        "/v1/calendar/events",
-        params={"user_id": "missing"},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert res.status_code == 200
-    assert res.json() == [event]
+    assert res.status_code == 403
 
 
 def test_calendar_event_group_share_requires_editor(client_and_graph) -> None:

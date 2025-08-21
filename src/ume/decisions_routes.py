@@ -135,6 +135,7 @@ def add_action(
                 status_code=403,
                 detail="Editor permission required for target group",
             )
+    perm_graph.rebuild_index()
     perm_graph.add_edge(analysis_id, action.action_id, "CONSIDERS")
     return action_attrs
 
