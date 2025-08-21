@@ -7,6 +7,7 @@ from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
 from ume.models.decision_analysis import SCHEMA_VERSION
+from ume.models.proposed_action import SCHEMA_VERSION as ACTION_SCHEMA_VERSION
 from ume.models import CalendarEventStatus, CalendarEventVisibility
 
 
@@ -402,7 +403,9 @@ def test_decision_flow(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    action_id = res.json()["action_id"]
+    action = res.json()
+    action_id = action["action_id"]
+    assert action["schema_version"] == ACTION_SCHEMA_VERSION
 
     res = client.get(
         f"/v1/decisions/{analysis_id}",
@@ -414,6 +417,7 @@ def test_decision_flow(client_and_graph) -> None:
     assert data["analysis"]["analysis_id"] == analysis_id
     assert data["analysis"]["schema_version"] == SCHEMA_VERSION
     assert [a["action_id"] for a in data["actions"]] == [action_id]
+    assert data["actions"][0]["schema_version"] == ACTION_SCHEMA_VERSION
 
     assert graph.get_node(analysis_id)["query"] == "Choose option"
     assert graph.get_node(action_id)["description"] == "Option A"

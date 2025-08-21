@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import json
 from json import JSONDecodeError
-from typing import Any, IO, Union
+import io
+from typing import Any, Union
 
-Data = Union[str, bytes, IO[str], IO[bytes], None]
+Data = Union[str, bytes, io.TextIOBase, io.BufferedIOBase, None]
 
 
 def safe_load(data: Data) -> Any:
@@ -21,8 +22,8 @@ def safe_load(data: Data) -> Any:
     input to mirror :func:`yaml.safe_load`.
     If parsing fails, an empty dict is returned as a permissive fallback.
     """
-    if hasattr(data, "read"):
-        data = data.read()  # type: ignore[assignment]
+    if isinstance(data, (io.TextIOBase, io.BufferedIOBase)):
+        data = data.read()
     if not data:
         return None
     if isinstance(data, bytes):
