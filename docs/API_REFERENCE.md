@@ -377,6 +377,36 @@ curl -G -H "Authorization: Bearer <token>" \
   http://localhost:8000/v1/decisions/123
 ```
 
+### GET `/v1/nodes`
+Return node IDs owned by a specific user.
+
+**Query parameters**
+
+- `user_id` – identifier of the owner *(required)*
+
+Example request:
+
+```bash
+curl -G -H "Authorization: Bearer <token>" \
+  --data-urlencode "user_id=User.u1" \
+  http://localhost:8000/v1/nodes
+```
+
+### GET `/v1/nodes/shared`
+Return node IDs shared with a group.
+
+**Query parameters**
+
+- `group_id` – identifier of the group *(required)*
+
+Example request:
+
+```bash
+curl -G -H "Authorization: Bearer <token>" \
+  --data-urlencode "group_id=Group.g1" \
+  http://localhost:8000/v1/nodes/shared
+```
+
 ## API Documentation
 
 To explore the API interactively, run the FastAPI server and open the Swagger UI:
