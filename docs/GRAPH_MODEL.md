@@ -40,7 +40,8 @@ Properties:
 - Other attributes depend on the producer.
 
 ### User
-Represents an individual actor within UME.
+Represents an individual actor within UME. These nodes participate in
+permission edges that grant or restrict access to resources.
 
 Properties:
 - `user_id` *(string, required)*: Stable identifier for the user.
@@ -48,12 +49,21 @@ Properties:
 - `email` *(string)*: Contact address.
 
 ### UserGroup
-Collects users for shared permissions and collaboration.
+Collects users for shared permissions and collaboration. Groups can be
+linked to resources to extend access to multiple users at once.
 
 Properties:
 - `group_id` *(string, required)*: Stable identifier for the group.
 - `name` *(string)*: Human friendly label.
 - `members` *(array)*: List of `user_id` values belonging to the group.
+
+### Resource
+Generic node representing a shareable asset such as a document or calendar
+event.
+
+Properties:
+- `id` *(string, required)*: Stable identifier for the resource.
+- Additional attributes depend on the resource type.
 
 ## Edge Labels
 
@@ -67,6 +77,29 @@ Properties:
 - `OWNED_BY`: Links a resource node to the `User` or `UserGroup` that owns it.
 - `SHARED_WITH`: Grants a `UserGroup` access to a resource. Optional
   `permission_level` property describes viewer/editor rights.
+
+### Permission Levels
+
+The `permission_level` attribute on `OWNED_BY` and `SHARED_WITH` edges
+controls access to resources. Supported values:
+
+- `viewer` – read‑only access.
+- `editor` – read and modify access.
+- `public` – accessible without explicit ownership or sharing.
+
+### Permission Queries
+
+The API exposes helpers for inspecting permissions.
+
+- `GET /v1/nodes` returns nodes owned by a user. It requires the
+  `user_id` query parameter.
+- `GET /v1/nodes/shared` returns nodes shared with a group. It requires the
+  `group_id` query parameter.
+
+```bash
+curl "http://localhost:8000/v1/nodes?user_id=User.u1"
+curl "http://localhost:8000/v1/nodes/shared?group_id=Group.g1"
+```
 
 Example edge creation event:
 
