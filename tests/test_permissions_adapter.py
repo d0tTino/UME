@@ -114,3 +114,64 @@ def test_add_permission_edge_without_target_editor() -> None:
     )
     adapter_u2 = PermissionsGraphAdapter(g, user_id="User.u2")
     assert adapter_u2.get_node("Document.d1") == {}
+
+
+def test_owned_by_edge_sets_schema_version_and_allows_edit() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("User.u2", {})
+    g.add_node("Document.d1", {"title": "doc1"})
+    g._edges["Document.d1"].append(
+        (
+            "User.u1",
+            "OWNED_BY",
+            {"permission_level": "editor", "schema_version": "3.0.0"},
+        )
+    )
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+    adapter.add_edge(
+        "Document.d1",
+        "User.u2",
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
+    edge_attrs = next(
+        attrs
+        for s, t, lbl, attrs in g.get_all_edges()
+        if s == "Document.d1" and t == "User.u2" and lbl == "OWNED_BY"
+    )
+    assert edge_attrs["schema_version"] == "3.0.0"
+    adapter_u2 = PermissionsGraphAdapter(g, user_id="User.u2")
+    adapter_u2.update_node("Document.d1", {"title": "updated"})
+    assert g.get_node("Document.d1") == {"title": "updated"}
+
+
+def test_shared_with_edge_sets_schema_version_and_allows_view_only() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("User.u2", {})
+    g.add_node("Document.d1", {"title": "doc1"})
+    g._edges["Document.d1"].append(
+        (
+            "User.u1",
+            "OWNED_BY",
+            {"permission_level": "editor", "schema_version": "3.0.0"},
+        )
+    )
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+    adapter.add_edge(
+        "Document.d1",
+        "User.u2",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+    )
+    edge_attrs = next(
+        attrs
+        for s, t, lbl, attrs in g.get_all_edges()
+        if s == "Document.d1" and t == "User.u2" and lbl == "SHARED_WITH"
+    )
+    assert edge_attrs["schema_version"] == "3.0.0"
+    adapter_u2 = PermissionsGraphAdapter(g, user_id="User.u2")
+    assert adapter_u2.get_node("Document.d1") == {"title": "doc1"}
+    with pytest.raises(AccessDeniedError):
+        adapter_u2.update_node("Document.d1", {"title": "nope"})
