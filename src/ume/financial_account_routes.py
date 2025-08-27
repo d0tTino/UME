@@ -40,9 +40,13 @@ def create_account(
 ) -> FinancialAccountResponse:
     if not graph.node_exists(req.user_id):
         graph.add_node(req.user_id, {})
-    if req.group_id and not graph.node_exists(req.group_id):
-        graph.add_node(req.group_id, {})
-
+    if req.group_id:
+        group_attrs = graph.get_node(req.group_id)
+        if group_attrs is None or group_attrs.get("type") != "UserGroup":
+            raise HTTPException(status_code=404, detail="Group not found")
+        members = cast(list[str], group_attrs.get("members", []))
+        if req.user_id not in members:
+            raise HTTPException(status_code=403, detail="User not in group")
     account = create_financial_account(
         req.account_type,
         req.institution,
@@ -92,6 +96,13 @@ def get_account(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> FinancialAccountResponse:
+    if group_id:
+        group_attrs = graph.get_node(group_id)
+        if group_attrs is None or group_attrs.get("type") != "UserGroup":
+            raise HTTPException(status_code=404, detail="Group not found")
+        members = cast(list[str], group_attrs.get("members", []))
+        if user_id not in members:
+            raise HTTPException(status_code=403, detail="User not in group")
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )
