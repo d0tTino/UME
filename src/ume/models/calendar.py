@@ -22,7 +22,7 @@ class CalendarEventStatus(str, Enum):
 class CalendarEventVisibility(str, Enum):
     """Visibility levels for a calendar event."""
 
-    PUBLIC = "public"
+    PUBLIC_TO_GROUP = "public_to_group"
     PRIVATE = "private"
 
 
