@@ -203,3 +203,44 @@ def test_upgrade_permission_nodes_multi_user(graph: PersistentGraph) -> None:
         "type": "User",
         "permission_level": "public",
     }
+
+
+def test_upgrade_preserves_schema_version(graph: PersistentGraph) -> None:
+    graph.add_node("a", {"schema_version": "2.0.0"})
+    graph.add_node("b", {"schema_version": "2.0.0"})
+    graph.add_edge(
+        "a", "b", "NEW_LABEL", {"schema_version": "2.0.0"}
+    )
+
+    manager = GraphSchemaManager()
+    manager.upgrade_schema("2.0.0", "3.0.0", graph)
+
+    assert graph.get_node("a")["schema_version"] == "2.0.0"
+    edges = graph.get_all_edges()
+    assert (
+        "a",
+        "b",
+        "TAGGED_AS",
+        {
+            "permission_level": "public",
+            "schema_version": "2.0.0",
+            "version": "3.0.0",
+        },
+    ) in edges
+
+
+def test_upgrade_adds_version_when_missing(graph: PersistentGraph) -> None:
+    graph.add_node("a", {})
+    graph.add_node("b", {})
+    graph.add_edge("a", "b", "TAGGED_AS")
+
+    manager = GraphSchemaManager()
+    manager.upgrade_schema("2.0.0", "3.0.0", graph)
+
+    edges = graph.get_all_edges()
+    assert (
+        "a",
+        "b",
+        "TAGGED_AS",
+        {"permission_level": "public", "version": "3.0.0"},
+    ) in edges
