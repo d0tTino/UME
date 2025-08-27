@@ -162,3 +162,27 @@ def test_get_financial_account_rejects_non_member_group(client_and_graph) -> Non
         headers={"Authorization": f"Bearer {token}"},
     )
     assert get_res.status_code == 403
+
+
+def test_create_financial_account_rejects_user_not_in_group_members(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node(
+        "group1", {"type": "UserGroup", "members": ["user2"]}
+    )
+
+    res = client.post(
+        "/v1/accounts",
+        json={
+            "account_type": "checking",
+            "institution": "ACME Bank",
+            "balance": 100.0,
+            "currency": "USD",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403

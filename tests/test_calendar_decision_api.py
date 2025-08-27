@@ -195,6 +195,42 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     )
 
 
+def test_calendar_event_group_membership_required(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    # Create users and a group with a single member
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_node("group1", {"members": ["user1"]})
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    # Non-member cannot create an event for the group
+    res = client.post(
+        "/v1/calendar/events",
+        json={"title": "Meet", "start_time": start, "user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+
+    # Member creates an event
+    res = client.post(
+        "/v1/calendar/events",
+        json={"title": "Meet", "start_time": start, "user_id": "user1", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    # Non-member cannot list events scoped to the group
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+
+
 def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)

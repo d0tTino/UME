@@ -128,3 +128,24 @@ def test_group_membership_required(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
+
+def test_add_action_requires_group_membership(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+    g.add_node("group1", {"members": ["user2"]})
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "Q", "user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={"description": "Act", "user_id": "user1", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
