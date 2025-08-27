@@ -59,7 +59,7 @@ def test_calendar_event_permissions(client_and_graph) -> None:
             "location": "Conference Room",
             "status": CalendarEventStatus.CONFIRMED.value,
             "rrule": "FREQ=DAILY",
-            "visibility": CalendarEventVisibility.PUBLIC.value,
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
             "user_id": "user1",
             "invitee_ids": ["user2"],
         },
@@ -78,7 +78,7 @@ def test_calendar_event_permissions(client_and_graph) -> None:
         "location": "Conference Room",
         "status": CalendarEventStatus.CONFIRMED.value,
         "rrule": "FREQ=DAILY",
-        "visibility": CalendarEventVisibility.PUBLIC.value,
+        "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
         "schema_version": SCHEMA_VERSION,
     }
 
@@ -118,7 +118,7 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert attrs["location"] == "Conference Room"
     assert attrs["status"] == CalendarEventStatus.CONFIRMED.value
     assert attrs["rrule"] == "FREQ=DAILY"
-    assert attrs["visibility"] == CalendarEventVisibility.PUBLIC.value
+    assert attrs["visibility"] == CalendarEventVisibility.PUBLIC_TO_GROUP.value
     assert attrs["schema_version"] == SCHEMA_VERSION
 
     edges = graph.get_all_edges()
@@ -138,7 +138,7 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     # Pre-create user and group nodes
     graph.add_node("user1", {})
     graph.add_node("user2", {})
-    graph.add_node("group1", {})
+    graph.add_node("group1", {"members": ["user1", "user2"]})
     graph.add_edge(
         "group1", "user1", "SHARED_WITH", {"permission_level": "editor"}
     )
@@ -202,7 +202,7 @@ def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
     # Prepare users, group, and ensure the user has control over the group
     graph.add_node("user1", {})
     graph.add_node("user2", {})
-    graph.add_node("group1", {})
+    graph.add_node("group1", {"members": ["user1", "user2"]})
     graph.add_edge(
         "group1", "user1", "OWNED_BY", {"permission_level": "editor"}
     )
@@ -334,7 +334,7 @@ def test_calendar_event_group_share_requires_editor(client_and_graph) -> None:
     token = _token(client)
 
     graph.add_node("user1", {})
-    graph.add_node("group1", {})
+    graph.add_node("group1", {"members": ["user1"]})
 
     start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
 

@@ -83,8 +83,11 @@ def create_event(
     }
     if not graph.node_exists(req.user_id):
         graph.add_node(req.user_id, {"type": "User"})
-    if req.group_id and not graph.node_exists(req.group_id):
-        graph.add_node(req.group_id, {"type": "UserGroup"})
+    if req.group_id:
+        group_attrs = graph.get_node(req.group_id)
+        members = group_attrs.get("members", []) if group_attrs else []
+        if req.user_id not in members:
+            raise HTTPException(status_code=403, detail="User not in group")
     graph.add_node(event.id, attrs)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     try:
@@ -158,6 +161,11 @@ def list_events(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> List[CalendarEventResponse]:
+    if group_id is not None:
+        group_attrs = graph.get_node(group_id)
+        members = group_attrs.get("members", []) if group_attrs else []
+        if user_id not in members:
+            raise HTTPException(status_code=403, detail="User not in group")
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )
@@ -174,7 +182,7 @@ def list_events(
     events: List[CalendarEventResponse] = []
     for eid in event_ids:
         attrs = graph.get_node(eid)
-        if not attrs:
+        if not attrs or attrs.get("type") != "CalendarEvent":
             continue
         start_ts = attrs.get("start_time")
         if since is not None and (start_ts is None or start_ts < since):
