@@ -79,3 +79,52 @@ def test_decision_flow(client_and_graph) -> None:
         and e.get("permission_level") == "editor"
         for s, t, lbl, e in edges
     )
+
+
+def test_decision_flow_with_group(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+    g.add_node("group1", {"members": ["user1"]})
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "Choose", "user_id": "user1", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+
+    res = client.get(
+        f"/v1/decisions/{analysis_id}",
+        params={"user_id": "user1", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+
+def test_group_membership_required(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+    g.add_node("group2", {"members": ["user2"]})
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "X", "user_id": "user2", "group_id": "group2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "Y", "user_id": "user1", "group_id": "group2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+
+    res = client.get(
+        f"/v1/decisions/{analysis_id}",
+        params={"user_id": "user1", "group_id": "group2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
