@@ -32,9 +32,8 @@ def test_create_and_get_financial_account(client_and_graph) -> None:
     token = _token(client)
 
     graph.add_node("user1", {})
-    graph.add_node("group1", {})
-    graph.add_edge(
-        "group1", "user1", "SHARED_WITH", {"permission_level": "editor"}
+    graph.add_node(
+        "group1", {"type": "UserGroup", "members": ["user1"]}
     )
 
     res = client.post(
@@ -78,7 +77,7 @@ def test_create_and_get_financial_account(client_and_graph) -> None:
 
     get_res = client.get(
         f"/v1/accounts/{account_id}",
-        params={"user_id": "user1"},
+        params={"user_id": "user1", "group_id": "group1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert get_res.status_code == 200
@@ -110,3 +109,56 @@ def test_create_financial_account_creates_user_node(client_and_graph) -> None:
         "OWNED_BY",
         {"permission_level": "editor", "schema_version": EDGE_VERSION},
     ) in edges
+
+
+def test_create_financial_account_rejects_non_member_group(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("group1", {"type": "UserGroup", "members": []})
+
+    res = client.post(
+        "/v1/accounts",
+        json={
+            "account_type": "checking",
+            "institution": "ACME Bank",
+            "balance": 100.0,
+            "currency": "USD",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+
+
+def test_get_financial_account_rejects_non_member_group(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_node("group1", {"type": "UserGroup", "members": ["user1"]})
+
+    res = client.post(
+        "/v1/accounts",
+        json={
+            "account_type": "checking",
+            "institution": "ACME Bank",
+            "balance": 100.0,
+            "currency": "USD",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    account_id = res.json()["id"]
+
+    get_res = client.get(
+        f"/v1/accounts/{account_id}",
+        params={"user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_res.status_code == 403
