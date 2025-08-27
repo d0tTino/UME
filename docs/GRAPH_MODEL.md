@@ -7,62 +7,78 @@ graph representation.
 ## Node Types
 
 ### UserMemory
-Represents memory items about a specific user.  A single user may have many
+
+Represents memory items about a specific user. A single user may have many
 memory nodes capturing different experiences or facts.
 
 Properties:
+
 - `user_id` *(string, required)*: Unique identifier of the user.
-- `data` *(object)*: Free form attributes describing the memory.  Example:
+- `data` *(object)*: Free form attributes describing the memory. Example:
   `{"text": "Alice ordered coffee"}`.
 
 ### AgentIntent
+
 Captures an intention produced by an agent.
 
 Properties:
+
 - `intent_id` *(string, required)*: Unique identifier for the intent.
 - `description` *(string)*: Short human friendly description of the action.
   Example: `"schedule meeting"`.
 
 ### PerceptualContext
+
 Stores sensory observations that provide context for reasoning.
 
 Properties:
+
 - `context_id` *(string, required)*: Unique identifier for the context entry.
 - `modality` *(string)*: E.g. `vision`, `audio`.
 - `payload` *(object)*: Raw or processed perceptual data.
   Example: `{"image": "base64..."}`.
 
 ### NewType
+
 Represents an additional concept introduced in schema version `2.0.0`.
 
 Properties:
+
 - `type_id` *(string, required)*: Unique identifier for the new entity.
 - Other attributes depend on the producer.
 
 ### User
+
 Represents an individual actor within UME. These nodes participate in
 permission edges that grant or restrict access to resources.
 
 Properties:
+
 - `user_id` *(string, required)*: Stable identifier for the user.
 - `name` *(string)*: Display name.
 - `email` *(string)*: Contact address.
 
 ### UserGroup
+
 Collects users for shared permissions and collaboration. Groups can be
 linked to resources to extend access to multiple users at once.
 
 Properties:
+
 - `group_id` *(string, required)*: Stable identifier for the group.
 - `name` *(string)*: Human friendly label.
 - `members` *(array)*: List of `user_id` values belonging to the group.
 
 ### Resource
+
 Generic node representing a shareable asset such as a document or calendar
 event.
 
 Properties:
+
 - `id` *(string, required)*: Stable identifier for the resource.
+- `visibility` *(string)*: `private` or `public_to_group`. When
+  `public_to_group`, all members of the owning group can view the resource.
 - Additional attributes depend on the resource type.
 
 ## Edge Labels
@@ -86,6 +102,33 @@ controls access to resources. Supported values:
 - `viewer` – read‑only access.
 - `editor` – read and modify access.
 - `public` – accessible without explicit ownership or sharing.
+
+### Group Membership Checks
+
+When resolving `SHARED_WITH` edges the graph now verifies that the requesting
+user is listed in the target group's `members` array. A non-member receives an
+access denied error even if the edge grants permissions.
+
+### `PUBLIC_TO_GROUP` Visibility
+
+Resources may include a `visibility` property. Setting it to
+`public_to_group` makes the resource readable by every member of the owning
+`UserGroup`. Editing still requires a `SHARED_WITH` edge with
+`permission_level: editor`.
+
+```json
+{
+  "id": "cal1",
+  "visibility": "public_to_group",
+  "edges": [
+    {"label": "OWNED_BY", "target": "Group.eng"},
+    {"label": "SHARED_WITH", "target": "Group.eng", "permission_level": "editor"}
+  ]
+}
+```
+
+Members of `Group.eng` can view `cal1`. Only those granted `editor` rights may
+modify or delete it; others remain read-only viewers.
 
 ### Permission Queries
 
@@ -135,7 +178,7 @@ vector embeddings consistently.
 
 | Field | Description |
 |-------|-------------|
-| `eventType` | The type of operation, e.g. `CREATE_NODE` or `ENTITY_DISCOVERED`. |
+| `eventType` | Operation type like `CREATE_NODE` or `ENTITY_DISCOVERED`. |
 | `timestamp` | ISO&nbsp;8601 time when the event occurred. |
 | `eventId` | Unique identifier for the event. |
 | `correlationId` | ID linking related events. |
@@ -206,20 +249,27 @@ vector embeddings consistently.
 
 ### Event Flow
 
-```
+```text
 Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-events
     --> Projection Engine --> Graph Adapter --> Graph Storage & Vector Store
 ```
 
 1. Producers emit events following the canonical schema above.
-2. The Privacy Agent validates and redacts sensitive data before forwarding to `ume-clean-events`.
-3. The projection engine processes sanitized events and updates the graph via the chosen adapter.
-4. `VectorStoreListener` automatically indexes any `embedding` vectors during this step.
+2. The Privacy Agent validates and redacts sensitive data before forwarding
+   to `ume-clean-events`.
+3. The projection engine processes sanitized events and updates the graph
+   via the chosen adapter.
+4. `VectorStoreListener` automatically indexes any `embedding` vectors
+   during this step.
 
-As events pass from ingestion through projection they retain the canonical schema, ensuring
-consistent processing across components.
+As events pass from ingestion through projection they retain the canonical
+schema, ensuring consistent processing across components.
 
-As events pass from the ingestion API through the Privacy Agent and into the projection engine, they retain this schema. The engine applies them to the graph and notifies listeners such as `VectorStoreListener`, which adds any embedded vectors to the configured index automatically.
+As events move from the ingestion API through the Privacy Agent
+and into the projection engine, they keep this schema. The engine
+applies them to the graph and notifies listeners such as
+`VectorStoreListener`, which adds embedded vectors to the configured
+index automatically.
 
 ## Versioning
 
@@ -401,7 +451,7 @@ returned schema object can be used for validating future events.
 
 The ``ume`` tool includes two utilities for working with schema versions:
 
-* ``register_schema <version> <schema_path> <proto_module>`` – load an external
+- ``register_schema <version> <schema_path> <proto_module>`` – load an external
   YAML schema file and associated Protobuf module at runtime.
-* ``migrate_schema <old_version> <new_version>`` – apply ``upgrade_schema`` to
+- ``migrate_schema <old_version> <new_version>`` – apply ``upgrade_schema`` to
   the current graph.

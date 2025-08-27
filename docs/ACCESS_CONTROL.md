@@ -35,7 +35,7 @@ wrapped automatically.
 
 ### Example Use Cases
 
-*Running the API with analytics permissions*
+#### Running the API with analytics permissions
 
 ```bash
 UME_API_ROLE=AnalyticsAgent uvicorn ume.api:app
@@ -44,7 +44,7 @@ UME_API_ROLE=AnalyticsAgent uvicorn ume.api:app
 Requests to `/analytics/*` will succeed. If the role is anything else, the API
 responds with HTTP 403.
 
-*Editing a user profile via the CLI*
+#### Editing a user profile via the CLI
 
 ```bash
 UME_ROLE=UserService ume new_node UserProfile.123 '{}'
@@ -62,6 +62,25 @@ introduced in schema version `3.0.0`.
 - Resources link to owners via `OWNED_BY` edges.
 - `SHARED_WITH` edges grant group access and may include a `permission_level`
   property such as `viewer` or `editor`.
+
+### Group Membership Checks
+
+The service now verifies that callers belong to any groups referenced by
+`SHARED_WITH` edges. Membership is taken from the group's `members` list and a
+request from a non-member returns `HTTP 403` even if a share exists. This
+prevents users from escalating privileges by guessing group identifiers.
+
+### `PUBLIC_TO_GROUP` Visibility
+
+Some resources include a `visibility` attribute. When a resource is owned by a
+`UserGroup` and the `visibility` is set to `PUBLIC_TO_GROUP`, all members of that
+group automatically gain viewer permissions. Editing still requires a
+`SHARED_WITH` edge specifying `permission_level: editor`.
+
+For example, a calendar event owned by `Group.eng` with
+`PUBLIC_TO_GROUP` visibility allows every member to read it. If `User.u1` has an
+additional `SHARED_WITH` edge granting `editor` access, they can update or delete
+the event while other members remain read-only viewers.
 
 ### Sample Requests
 
@@ -118,7 +137,8 @@ files and let UME create new, encrypted ones on startup.
 
 ## Sample Rego Rules
 
-The following snippet demonstrates how dossier permissions could be expressed in Rego.
+The following snippet demonstrates how dossier permissions could be expressed
+in Rego.
 
 ```rego
 package ume.dossier
@@ -138,7 +158,8 @@ can_read_projects {
     input.role == "Viewer"
 }
 
-# Allow reading reflections if that section is shareable or the caller has a valid role
+# Allow reading reflections if that section is shareable
+# or the caller has a valid role
 default can_read_reflections = false
 
 can_read_reflections {
