@@ -96,21 +96,19 @@ class GraphSchemaManager:
                 for src, tgt, label, attrs in list(graph.get_all_edges()):
                     if label == "NEW_LABEL":
                         graph.delete_edge(src, tgt, label)
-                        graph.add_edge(src, tgt, "TAGGED_AS")
+                        new_attrs = dict(attrs) if isinstance(attrs, dict) else {}
+                        graph.add_edge(src, tgt, "TAGGED_AS", new_attrs)
                     elif label == "HAS_PERMISSION":
                         graph.delete_edge(src, tgt, label)
-                        perm_level = None
-                        if isinstance(attrs, dict):
-                            perm_level = attrs.get("permission_level")
-                        else:
-                            perm_level = attrs
-                        new_label = "OWNED_BY" if perm_level == "editor" else "SHARED_WITH"
-                        graph.add_edge(
-                            src,
-                            tgt,
-                            new_label,
-                            {"permission_level": "public"},
+                        attr_dict = dict(attrs) if isinstance(attrs, dict) else {}
+                        perm_level = (
+                            attr_dict.get("permission_level")
+                            if isinstance(attrs, dict)
+                            else attrs
                         )
+                        new_label = "OWNED_BY" if perm_level == "editor" else "SHARED_WITH"
+                        attr_dict["permission_level"] = "public"
+                        graph.add_edge(src, tgt, new_label, attr_dict)
                         if graph.node_exists(tgt):
                             node_attrs = graph.get_node(tgt) or {}
                             node_attrs.setdefault("type", "User")
@@ -126,15 +124,24 @@ class GraphSchemaManager:
                     }:
                         graph.delete_edge(src, tgt, label)
 
-            # Ensure all edges carry explicit version metadata
+            # Ensure all edges carry explicit version and permission metadata
             for src, tgt, label, attrs in list(graph.get_all_edges()):
                 edge_def = new_schema.edge_labels.get(label)
                 if edge_def is None:
                     continue
-                attr_dict = dict(attrs or {})
+                attr_dict = dict(attrs) if isinstance(attrs, dict) else {}
+                needs_update = False
+                if (
+                    edge_def.permission_level is not None
+                    and attr_dict.get("permission_level") != edge_def.permission_level
+                ):
+                    attr_dict["permission_level"] = edge_def.permission_level
+                    needs_update = True
                 if attr_dict.get("version") != edge_def.version:
-                    graph.delete_edge(src, tgt, label)
                     attr_dict["version"] = edge_def.version
+                    needs_update = True
+                if needs_update:
+                    graph.delete_edge(src, tgt, label)
                     graph.add_edge(src, tgt, label, attr_dict)
 
         return new_schema
