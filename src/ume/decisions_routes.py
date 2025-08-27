@@ -56,12 +56,21 @@ def _action_to_dict(action: ProposedAction) -> dict[str, Any]:
     }
 
 
+def _ensure_group_member(graph: IGraphAdapter, user_id: str, group_id: str) -> None:
+    group = graph.get_node(group_id)
+    members = group.get("members") if isinstance(group, dict) else None
+    if not members or user_id not in members:
+        raise HTTPException(status_code=403, detail="User not in group")
+
+
 @router.post("")
 def create_decision(
     req: DecisionCreateRequest,
     _: str = Depends(deps.get_current_role),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> dict[str, Any]:
+    if req.group_id:
+        _ensure_group_member(graph, req.user_id, req.group_id)
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=req.user_id, group_id=req.group_id
     )
@@ -99,6 +108,8 @@ def add_action(
     _: str = Depends(deps.get_current_role),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> dict[str, Any]:
+    if req.group_id:
+        _ensure_group_member(graph, req.user_id, req.group_id)
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=req.user_id, group_id=req.group_id
     )
@@ -152,6 +163,8 @@ def get_decision(
     _: str = Depends(deps.get_current_role),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> dict[str, Any]:
+    if group_id:
+        _ensure_group_member(graph, user_id, group_id)
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )
