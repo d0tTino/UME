@@ -154,6 +154,12 @@ class PermissionsGraphAdapter(IGraphAdapter):
             version = "3.0.0"
         else:
             version = None
+        if attrs and "permission_level" in attrs:
+            perm_level = attrs["permission_level"]
+            if perm_level not in {"viewer", "editor"}:
+                raise AccessDeniedError(
+                    f"Invalid permission_level '{perm_level}'"
+                )
         self._adapter.add_edge(
             source_node_id,
             target_node_id,

@@ -175,3 +175,21 @@ def test_shared_with_edge_sets_schema_version_and_allows_view_only() -> None:
     assert adapter_u2.get_node("Document.d1") == {"title": "doc1"}
     with pytest.raises(AccessDeniedError):
         adapter_u2.update_node("Document.d1", {"title": "nope"})
+
+
+def test_add_edge_rejects_invalid_permission_level() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("User.u2", {})
+    g.add_node("Document.d1", {"title": "doc1"})
+    g._edges["Document.d1"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "editor"})
+    )
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+    with pytest.raises(AccessDeniedError):
+        adapter.add_edge(
+            "Document.d1",
+            "User.u2",
+            "SHARED_WITH",
+            {"permission_level": "admin"},
+        )
