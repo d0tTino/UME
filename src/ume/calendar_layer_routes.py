@@ -53,9 +53,20 @@ def create_layer(
         schema_version=EDGE_VERSION,
     )
     if req.group_id:
+        if not graph.node_exists(req.group_id):
+            raise HTTPException(status_code=404, detail="Group not found")
+        is_member = any(
+            s == req.group_id
+            and t == req.user_id
+            and lbl == "OWNED_BY"
+            and isinstance(attrs, dict)
+            and attrs.get("permission_level") == "editor"
+            for s, t, lbl, attrs in graph.get_all_edges()
+        )
+        if not is_member:
+            raise HTTPException(status_code=403, detail="User not in group")
         perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
         try:
-            perm_graph._require_editor(req.group_id)
             perm_graph.add_edge(
                 layer.layer_id,
                 req.group_id,
