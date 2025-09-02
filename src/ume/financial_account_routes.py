@@ -7,7 +7,7 @@ from typing import cast
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
-from .models import create_financial_account
+from .models import create_financial_account, create_user
 
 EDGE_VERSION = "3.0.0"
 
@@ -39,7 +39,16 @@ def create_account(
     _: str = Depends(deps.get_current_role),
 ) -> FinancialAccountResponse:
     if not graph.node_exists(req.user_id):
-        graph.add_node(req.user_id, {})
+        user = create_user(req.user_id, user_id=req.user_id)
+        user_attrs = {
+            "type": "User",
+            "user_id": user.user_id,
+            "name": user.name,
+            "email": user.email,
+            "created_at": int(user.created_at.timestamp()),
+            "schema_version": user.schema_version,
+        }
+        graph.add_node(user.user_id, user_attrs)
     if req.group_id:
         group_attrs = graph.get_node(req.group_id)
         if group_attrs is None or group_attrs.get("type") != "UserGroup":
