@@ -413,13 +413,21 @@ def test_calendar_events_since_returns_only_future(client_and_graph) -> None:
     graph.add_node("user1", {})
 
     past = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
-    future = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
     since = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+    future = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
     # Create a past event
     res = client.post(
         "/v1/calendar/events",
         json={"title": "Past", "start_time": past.isoformat(), "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    # Create an event at the since timestamp
+    res = client.post(
+        "/v1/calendar/events",
+        json={"title": "At", "start_time": since.isoformat(), "user_id": "user1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
