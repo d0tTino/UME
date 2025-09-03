@@ -14,11 +14,28 @@ from .models import (
     CalendarEventStatus,
     CalendarEventVisibility,
     create_calendar_event,
+    create_user,
 )
 
 EDGE_VERSION = "3.0.0"
 
 router = APIRouter(prefix="/v1/calendar")
+
+
+def _ensure_user_node(graph: IGraphAdapter, user_id: str) -> None:
+    """Create a full user node if one does not already exist."""
+    if graph.node_exists(user_id):
+        return
+    user = create_user(user_id, user_id=user_id)
+    attrs = {
+        "type": "User",
+        "user_id": user.user_id,
+        "name": user.name,
+        "email": user.email,
+        "created_at": int(user.created_at.timestamp()),
+        "schema_version": user.schema_version,
+    }
+    graph.add_node(user.user_id, attrs)
 
 
 class CalendarEventCreateRequest(BaseModel):
@@ -81,8 +98,7 @@ def create_event(
         "visibility": event.visibility.value if event.visibility else None,
         "schema_version": event.schema_version,
     }
-    if not graph.node_exists(req.user_id):
-        graph.add_node(req.user_id, {"type": "User"})
+    _ensure_user_node(graph, req.user_id)
     if req.group_id:
         group_attrs = graph.get_node(req.group_id)
         members = group_attrs.get("members", []) if group_attrs else []
@@ -104,8 +120,7 @@ def create_event(
         )
         perm_graph.rebuild_index()
     for uid in req.invitee_ids or []:
-        if not graph.node_exists(uid):
-            graph.add_node(uid, {"type": "User"})
+        _ensure_user_node(graph, uid)
         try:
             perm_graph.add_edge(event.id, uid, "INVITES")
             perm_graph.add_edge(
