@@ -68,6 +68,107 @@ def test_get_nodes_by_user_and_group() -> None:
     assert set(adapter.get_nodes_shared_with("Group.g1")) == {"Document.d2"}
 
 
+def test_get_nodes_by_user_various_permissions() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("Group.g1", {})
+    g.add_node("Group.g2", {})
+
+    # Nodes owned by the user with different permission levels
+    g.add_node("Document.u_viewer", {})
+    g._edges["Document.u_viewer"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "viewer"})
+    )
+    g.add_node("Document.u_editor", {})
+    g._edges["Document.u_editor"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "editor"})
+    )
+
+    # Node shared with a group and owned by the user
+    g.add_node("Document.mixed_user_group1", {})
+    g._edges["Document.mixed_user_group1"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "viewer"})
+    )
+    g._edges["Document.mixed_user_group1"].append(
+        ("Group.g1", "SHARED_WITH", {"permission_level": "editor"})
+    )
+
+    # Nodes only shared with groups should not appear
+    g.add_node("Document.g1_viewer", {})
+    g._edges["Document.g1_viewer"].append(
+        ("Group.g1", "SHARED_WITH", {"permission_level": "viewer"})
+    )
+    g.add_node("Document.g2_editor", {})
+    g._edges["Document.g2_editor"].append(
+        ("Group.g2", "SHARED_WITH", {"permission_level": "editor"})
+    )
+
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1", group_id="Group.g1")
+    result = set(adapter.get_nodes_by_user("User.u1"))
+    assert result == {
+        "Document.u_viewer",
+        "Document.u_editor",
+        "Document.mixed_user_group1",
+    }
+
+
+def test_get_nodes_shared_with_multiple_groups_and_mixed_permissions() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("Group.g1", {})
+    g.add_node("Group.g2", {})
+
+    # Nodes shared with group1
+    g.add_node("Document.g1_viewer", {})
+    g._edges["Document.g1_viewer"].append(
+        ("Group.g1", "SHARED_WITH", {"permission_level": "viewer"})
+    )
+    g.add_node("Document.g1_editor", {})
+    g._edges["Document.g1_editor"].append(
+        ("Group.g1", "SHARED_WITH", {"permission_level": "editor"})
+    )
+
+    # Nodes shared with group2
+    g.add_node("Document.g2_viewer", {})
+    g._edges["Document.g2_viewer"].append(
+        ("Group.g2", "SHARED_WITH", {"permission_level": "viewer"})
+    )
+    g.add_node("Document.g2_editor", {})
+    g._edges["Document.g2_editor"].append(
+        ("Group.g2", "SHARED_WITH", {"permission_level": "editor"})
+    )
+
+    # Mixed cases
+    g.add_node("Document.mixed_user_group1", {})
+    g._edges["Document.mixed_user_group1"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "viewer"})
+    )
+    g._edges["Document.mixed_user_group1"].append(
+        ("Group.g1", "SHARED_WITH", {"permission_level": "editor"})
+    )
+    g.add_node("Document.mixed_groups", {})
+    g._edges["Document.mixed_groups"].append(
+        ("Group.g1", "SHARED_WITH", {"permission_level": "viewer"})
+    )
+    g._edges["Document.mixed_groups"].append(
+        ("Group.g2", "SHARED_WITH", {"permission_level": "editor"})
+    )
+
+    adapter_g1 = PermissionsGraphAdapter(g, group_id="Group.g1")
+    assert set(adapter_g1.get_nodes_shared_with("Group.g1")) == {
+        "Document.g1_viewer",
+        "Document.g1_editor",
+        "Document.mixed_user_group1",
+        "Document.mixed_groups",
+    }
+
+    adapter_g2 = PermissionsGraphAdapter(g, group_id="Group.g2")
+    assert set(adapter_g2.get_nodes_shared_with("Group.g2")) == {
+        "Document.g2_viewer",
+        "Document.g2_editor",
+        "Document.mixed_groups",
+    }
+
 def test_add_edge_requires_editor_and_preserves_attrs() -> None:
     g = MockGraph()
     g.add_node("User.u1", {})
