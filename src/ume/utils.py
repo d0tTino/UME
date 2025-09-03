@@ -1,6 +1,10 @@
 from typing import Any, Dict
 import os
 
+from fastapi import HTTPException
+
+from .graph_adapter import IGraphAdapter
+
 
 def ssl_config() -> Dict[str, str]:
     """Return Kafka SSL configuration if cert env vars are set."""
@@ -15,6 +19,14 @@ def ssl_config() -> Dict[str, str]:
             "ssl.key.location": key,
         }
     return {}
+
+
+def ensure_group_member(graph: IGraphAdapter, user_id: str, group_id: str) -> None:
+    """Raise ``HTTPException`` if ``user_id`` is not a member of ``group_id``."""
+    group = graph.get_node(group_id)
+    members = group.get("members", []) if isinstance(group, dict) else []
+    if user_id not in members:
+        raise HTTPException(status_code=403, detail="User not in group")
 
 
 # ----------------------------------------------------------------------------
