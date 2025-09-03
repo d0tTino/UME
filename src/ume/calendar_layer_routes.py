@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from typing import List, cast
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
@@ -98,6 +97,7 @@ def list_layers(
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )
+
     layer_ids = set(perm_graph.get_nodes_by_user(user_id))
     if group_id is not None:
         layer_ids |= set(perm_graph.get_nodes_shared_with(group_id))
@@ -109,9 +109,10 @@ def list_layers(
         layers.append(
             CalendarLayerResponse(
                 layer_id=lid,
-                layer_name=attrs.get("layer_name", ""),
-                color=attrs.get("color", ""),
-                schema_version=attrs.get("schema_version", ""),
+                layer_name=cast(str, attrs.get("layer_name")),
+                color=cast(str, attrs.get("color")),
+                schema_version=cast(str, attrs.get("schema_version")),
+
             )
         )
     return layers
