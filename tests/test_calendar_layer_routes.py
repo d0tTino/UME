@@ -67,7 +67,6 @@ def test_create_layer_with_group_share(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
     graph.add_node("user1", {})
-    graph.add_node("group1", {"type": "UserGroup", "members": ["user1"]})
     res = client.post(
         "/v1/calendar/layers",
         json={
@@ -199,7 +198,7 @@ def test_list_layers_shared_with_group(client_and_graph) -> None:
     token = _token(client)
     graph.add_node("user1", {})
     graph.add_node("user2", {})
-    graph.add_node("group1", {"type": "UserGroup", "members": ["user1", "user2"]})
+
     res = client.post(
         "/v1/calendar/layers",
         json={

@@ -55,9 +55,11 @@ def create_layer(
         schema_version=EDGE_VERSION,
     )
     if req.group_id:
-        if not graph.node_exists(req.group_id):
+        group = graph.get_node(req.group_id)
+        if group is None:
             raise HTTPException(status_code=404, detail="Group not found")
         ensure_group_member(graph, req.user_id, req.group_id)
+
         perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
         try:
             perm_graph.add_edge(
