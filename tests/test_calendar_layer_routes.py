@@ -67,7 +67,6 @@ def test_create_layer_with_group_share(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
     graph.add_node("user1", {})
-    graph.add_node("group1", {"members": ["user1"]})
     res = client.post(
         "/v1/calendar/layers",
         json={
@@ -93,7 +92,7 @@ def test_create_layer_group_permission_required(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
     graph.add_node("user1", {})
-    graph.add_node("group1", {})
+    graph.add_node("group1", {"type": "UserGroup", "members": []})
     res = client.post(
         "/v1/calendar/layers",
         json={
@@ -199,7 +198,7 @@ def test_list_layers_shared_with_group(client_and_graph) -> None:
     token = _token(client)
     graph.add_node("user1", {})
     graph.add_node("user2", {})
-    graph.add_node("group1", {"members": ["user1", "user2"]})
+
     res = client.post(
         "/v1/calendar/layers",
         json={
@@ -228,9 +227,26 @@ def test_list_layers_shared_with_group(client_and_graph) -> None:
         }
     ]
 
+
+def test_list_layers_shared_with_group_permission_required(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_node("group1", {"type": "UserGroup", "members": ["user1"]})
+    res = client.post(
+        "/v1/calendar/layers",
+        json={
+            "layer_name": "Work",
+            "color": "blue",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
     res = client.get(
         "/v1/calendar/layers",
-        params={"user_id": "user3", "group_id": "group1"},
+        params={"user_id": "user2", "group_id": "group1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
