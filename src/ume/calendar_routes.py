@@ -195,7 +195,7 @@ def list_events(
         if not attrs or attrs.get("type") != "CalendarEvent":
             continue
         start_ts = attrs.get("start_time")
-        if since is not None and (start_ts is None or start_ts < since):
+        if since is not None and (start_ts is None or start_ts <= since):
             continue
         events.append(
             CalendarEventResponse(
