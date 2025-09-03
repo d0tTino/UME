@@ -80,8 +80,8 @@ def create_layer(
     return CalendarLayerResponse(
         layer_id=layer.layer_id,
         layer_name=layer.layer_name,
-        color=layer.color,
-        schema_version=layer.schema_version,
+       color=layer.color,
+       schema_version=layer.schema_version,
     )
 
 
@@ -97,6 +97,7 @@ def list_layers(
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )
+
     layer_ids = set(perm_graph.get_nodes_by_user(user_id))
     if group_id is not None:
         layer_ids |= set(perm_graph.get_nodes_shared_with(group_id))
@@ -111,6 +112,7 @@ def list_layers(
                 layer_name=cast(str, attrs.get("layer_name")),
                 color=cast(str, attrs.get("color")),
                 schema_version=cast(str, attrs.get("schema_version")),
+
             )
         )
     return layers

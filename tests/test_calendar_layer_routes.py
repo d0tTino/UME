@@ -214,6 +214,7 @@ def test_list_layers_shared_with_group(client_and_graph) -> None:
         json={
             "layer_name": "Work",
             "color": "blue",
+
             "user_id": "user1",
             "group_id": "group1",
         },
@@ -242,3 +243,4 @@ def test_list_layers_shared_with_group(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
