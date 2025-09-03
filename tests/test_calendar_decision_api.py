@@ -405,6 +405,44 @@ def test_calendar_event_unauthorized_access(client_and_graph) -> None:
     assert res.status_code == 401
 
 
+def test_calendar_events_since_returns_only_future(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    # Pre-create user node for permission edges
+    graph.add_node("user1", {})
+
+    past = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
+    future = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    since = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+    # Create a past event
+    res = client.post(
+        "/v1/calendar/events",
+        json={"title": "Past", "start_time": past.isoformat(), "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    # Create a future event
+    res = client.post(
+        "/v1/calendar/events",
+        json={"title": "Future", "start_time": future.isoformat(), "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    future_event = res.json()
+
+    # Query events since the middle timestamp
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user1", "since": int(since.timestamp())},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == [future_event]
+
+
 def test_decision_flow(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
