@@ -160,3 +160,85 @@ def test_event_with_existing_layer(client_and_graph) -> None:
         s == event_id and t == layer_id and lbl == "TAGGED_AS" for s, t, lbl, _ in edges
 
     )
+
+
+def test_list_layers_for_owner(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+    graph.add_node("user1", {})
+    res = client.post(
+        "/v1/calendar/layers",
+        json={"layer_name": "Work", "color": "blue", "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    layer_id = res.json()["layer_id"]
+
+    res = client.get(
+        "/v1/calendar/layers",
+        params={"user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == [
+        {
+            "layer_id": layer_id,
+            "layer_name": "Work",
+            "color": "blue",
+            "schema_version": SCHEMA_VERSION,
+        }
+    ]
+
+    res = client.get(
+        "/v1/calendar/layers",
+        params={"user_id": "user2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+def test_list_layers_shared_with_group(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_node("group1", {"members": ["user1", "user2"]})
+    graph.add_edge(
+        "group1", "user1", "OWNED_BY", {"permission_level": "editor"}
+    )
+    graph.add_edge(
+        "group1", "user2", "OWNED_BY", {"permission_level": "editor"}
+    )
+    res = client.post(
+        "/v1/calendar/layers",
+        json={
+            "layer_name": "Work",
+            "color": "blue",
+            "user_id": "user1",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    layer_id = res.json()["layer_id"]
+
+    res = client.get(
+        "/v1/calendar/layers",
+        params={"user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == [
+        {
+            "layer_id": layer_id,
+            "layer_name": "Work",
+            "color": "blue",
+            "schema_version": SCHEMA_VERSION,
+        }
+    ]
+
+    res = client.get(
+        "/v1/calendar/layers",
+        params={"user_id": "user3", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
