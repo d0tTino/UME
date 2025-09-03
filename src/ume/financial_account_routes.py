@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import cast
 
@@ -8,6 +8,7 @@ from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .models import create_financial_account, create_user
+from .utils import ensure_group_member
 
 EDGE_VERSION = "3.0.0"
 
@@ -53,9 +54,7 @@ def create_account(
         group_attrs = graph.get_node(req.group_id)
         if group_attrs is None or group_attrs.get("type") != "UserGroup":
             raise HTTPException(status_code=404, detail="Group not found")
-        members = cast(list[str], group_attrs.get("members", []))
-        if req.user_id not in members:
-            raise HTTPException(status_code=403, detail="User not in group")
+        ensure_group_member(graph, req.user_id, req.group_id)
     account = create_financial_account(
         req.account_type,
         req.institution,
@@ -109,9 +108,7 @@ def get_account(
         group_attrs = graph.get_node(group_id)
         if group_attrs is None or group_attrs.get("type") != "UserGroup":
             raise HTTPException(status_code=404, detail="Group not found")
-        members = cast(list[str], group_attrs.get("members", []))
-        if user_id not in members:
-            raise HTTPException(status_code=403, detail="User not in group")
+        ensure_group_member(graph, user_id, group_id)
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )

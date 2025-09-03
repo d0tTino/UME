@@ -3,13 +3,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
+from .utils import ensure_group_member
 from .models import (
     CalendarEventStatus,
     CalendarEventVisibility,
@@ -100,10 +101,7 @@ def create_event(
     }
     _ensure_user_node(graph, req.user_id)
     if req.group_id:
-        group_attrs = graph.get_node(req.group_id)
-        members = group_attrs.get("members", []) if group_attrs else []
-        if req.user_id not in members:
-            raise HTTPException(status_code=403, detail="User not in group")
+        ensure_group_member(graph, req.user_id, req.group_id)
     graph.add_node(event.id, attrs)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     try:
@@ -177,10 +175,7 @@ def list_events(
     _: str = Depends(deps.get_current_role),
 ) -> List[CalendarEventResponse]:
     if group_id is not None:
-        group_attrs = graph.get_node(group_id)
-        members = group_attrs.get("members", []) if group_attrs else []
-        if user_id not in members:
-            raise HTTPException(status_code=403, detail="User not in group")
+        ensure_group_member(graph, user_id, group_id)
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )
