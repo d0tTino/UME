@@ -78,6 +78,7 @@ def create_event(
     if req.end_time is not None and req.end_time <= req.start_time:
         raise HTTPException(
             status_code=400, detail="end_time must be after start_time"
+
         )
     event = create_calendar_event(
         req.title,
