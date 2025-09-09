@@ -23,7 +23,7 @@ node_types:
     CalendarEvent:
       version: "3.0.0"
     properties:
-      id:
+      event_id:
         version: "3.0.0"
       title:
         version: "3.0.0"

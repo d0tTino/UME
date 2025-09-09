@@ -15,7 +15,7 @@ def test_create_calendar_event_defaults_and_schema_version() -> None:
     event = create_calendar_event("Meeting", start)
 
     assert isinstance(event, CalendarEvent)
-    uuid.UUID(event.id)
+    uuid.UUID(event.event_id)
     assert event.end_time is None
     assert event.description is None
     assert event.is_all_day is False

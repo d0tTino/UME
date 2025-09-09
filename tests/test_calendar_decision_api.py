@@ -67,9 +67,9 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     )
     assert res.status_code == 200
     event_data = res.json()
-    event_id = event_data["id"]
+    event_id = event_data["event_id"]
     assert event_data == {
-        "id": event_id,
+        "event_id": event_id,
         "title": "Meeting",
         "start_time": start_ts,
         "end_time": end_ts,
@@ -157,7 +157,7 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     )
     assert res.status_code == 200
     event_data = res.json()
-    event_id = event_data["id"]
+    event_id = event_data["event_id"]
 
     # Unrelated user without group access cannot see the event
     res = client.get(
@@ -184,8 +184,8 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert sorted(res.json(), key=lambda e: e["id"]) == sorted(
-        [event_data, own_event], key=lambda e: e["id"]
+    assert sorted(res.json(), key=lambda e: e["event_id"]) == sorted(
+        [event_data, own_event], key=lambda e: e["event_id"]
     )
 
     edges = graph.get_all_edges()

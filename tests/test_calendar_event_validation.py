@@ -52,7 +52,7 @@ def test_valid_event_creation(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    event_id = res.json()["id"]
+    event_id = res.json()["event_id"]
     attrs = graph.get_node(event_id)
     assert attrs["start_time"] == int(start_dt.timestamp())
     assert attrs["end_time"] == int(end_dt.timestamp())

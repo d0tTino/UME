@@ -110,7 +110,9 @@ def test_calendar_mixed_access(client_and_graph) -> None:
 
     graph.add_node("owner", {})
     graph.add_node("other", {})
-    graph.add_node("group1", {})
+    graph.add_node(
+        "group1", {"type": "UserGroup", "members": ["owner", "other"]}
+    )
 
     start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
 
@@ -126,7 +128,7 @@ def test_calendar_mixed_access(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    event_id = res.json()["id"]
+    event_id = res.json()["event_id"]
 
     res = client.get(
         "/v1/calendar/events",
@@ -142,7 +144,7 @@ def test_calendar_mixed_access(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert res.json()[0]["id"] == event_id
+    assert res.json()[0]["event_id"] == event_id
 
     res = client.get(
         "/v1/calendar/events",
@@ -157,7 +159,7 @@ def test_decision_mixed_access(client_and_graph) -> None:
 
     graph.add_node("u1", {})
     graph.add_node("u2", {})
-    graph.add_node("g1", {})
+    graph.add_node("g1", {"type": "UserGroup", "members": ["u1", "u2"]})
 
     res = client.post(
         "/v1/decisions",
@@ -203,7 +205,9 @@ def test_financial_account_mixed_access(client_and_graph) -> None:
 
     graph.add_node("u1", {})
     graph.add_node("u2", {})
-    graph.add_node("group1", {})
+    graph.add_node(
+        "group1", {"type": "UserGroup", "members": ["u1", "u2"]}
+    )
     graph.add_edge("group1", "u1", "SHARED_WITH", {"permission_level": "editor"})
     graph.add_edge("group1", "u2", "SHARED_WITH", {"permission_level": "viewer"})
 

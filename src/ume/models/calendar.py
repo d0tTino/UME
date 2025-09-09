@@ -30,7 +30,7 @@ class CalendarEventVisibility(str, Enum):
 class CalendarEvent:
     """Represents a calendar event in the graph."""
 
-    id: str
+    event_id: str
     title: str
     start_time: datetime
     end_time: datetime | None = None
@@ -59,7 +59,7 @@ def create_calendar_event(
     """Factory helper to build :class:`CalendarEvent` instances."""
 
     return CalendarEvent(
-        id=event_id or str(uuid.uuid4()),
+        event_id=event_id or str(uuid.uuid4()),
         title=title,
         start_time=start_time,
         end_time=end_time,

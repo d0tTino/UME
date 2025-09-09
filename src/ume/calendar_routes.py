@@ -56,7 +56,7 @@ class CalendarEventCreateRequest(BaseModel):
 
 
 class CalendarEventResponse(BaseModel):
-    id: str
+    event_id: str
     title: str
     start_time: int
     end_time: int | None = None
@@ -107,15 +107,15 @@ def create_event(
     _ensure_user_node(graph, req.user_id)
     if req.group_id:
         ensure_group_member(graph, req.user_id, req.group_id)
-    graph.add_node(event.id, attrs)
+    graph.add_node(event.event_id, attrs)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     try:
         perm_graph.add_edge(
-            event.id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+            event.event_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
         )
     except AccessDeniedError:
         graph.add_edge(
-            event.id,
+            event.event_id,
             req.user_id,
             "OWNED_BY",
             {"permission_level": "editor"},
@@ -125,16 +125,16 @@ def create_event(
     for uid in req.invitee_ids or []:
         _ensure_user_node(graph, uid)
         try:
-            perm_graph.add_edge(event.id, uid, "INVITES")
+            perm_graph.add_edge(event.event_id, uid, "INVITES")
             perm_graph.add_edge(
-                event.id, uid, "SHARED_WITH", {"permission_level": "viewer"}
+                event.event_id, uid, "SHARED_WITH", {"permission_level": "viewer"}
             )
         except AccessDeniedError as exc:
             raise HTTPException(status_code=403, detail=str(exc))
     if req.group_id:
         try:
             perm_graph.add_edge(
-                event.id,
+                event.event_id,
                 req.group_id,
                 "SHARED_WITH",
                 {"permission_level": "viewer"},
@@ -152,11 +152,11 @@ def create_event(
                 status_code=403, detail=f"No access to layer: {lid}"
             )
         try:
-            perm_graph.add_edge(event.id, lid, "TAGGED_AS")
+            perm_graph.add_edge(event.event_id, lid, "TAGGED_AS")
         except AccessDeniedError as exc:
             raise HTTPException(status_code=403, detail=str(exc))
     return CalendarEventResponse(
-        id=event.id,
+        event_id=event.event_id,
         title=event.title,
         start_time=attrs["start_time"],
         end_time=attrs["end_time"],
@@ -204,7 +204,7 @@ def list_events(
             continue
         events.append(
             CalendarEventResponse(
-                id=eid,
+                event_id=eid,
                 title=attrs.get("title", ""),
                 start_time=start_ts,
                 end_time=attrs.get("end_time"),
