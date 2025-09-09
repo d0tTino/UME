@@ -294,3 +294,20 @@ def test_add_edge_rejects_invalid_permission_level() -> None:
             "SHARED_WITH",
             {"permission_level": "admin"},
         )
+
+
+def test_add_edge_invalid_permission_level_on_non_permission_edge() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("Document.d1", {})
+    g.add_node("Document.d2", {})
+    g._edges["Document.d1"].append(("User.u1", "OWNED_BY", {"permission_level": "editor"}))
+    g._edges["Document.d2"].append(("User.u1", "OWNED_BY", {"permission_level": "editor"}))
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+    with pytest.raises(AccessDeniedError):
+        adapter.add_edge(
+            "Document.d1",
+            "Document.d2",
+            "RELATED",
+            {"permission_level": "owner"},
+        )
