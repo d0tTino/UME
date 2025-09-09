@@ -21,12 +21,34 @@ def ssl_config() -> Dict[str, str]:
     return {}
 
 
-def ensure_group_member(graph: IGraphAdapter, user_id: str, group_id: str) -> None:
-    """Raise ``HTTPException`` if ``user_id`` is not a member of ``group_id``."""
+def ensure_group_member(
+    graph: IGraphAdapter, user_id: str, group_id: str, *, should_exist: bool = True
+) -> None:
+    """Validate membership of ``user_id`` in ``group_id``.
+
+    Parameters
+    ----------
+    graph:
+        Graph adapter used to fetch group information.
+    user_id:
+        The user identifier whose membership is being validated.
+    group_id:
+        The group identifier to check against.
+    should_exist:
+        If ``True`` (default), ensure the user is already a member of the
+        group, raising ``HTTPException`` with status 403 if not. If ``False``,
+        ensure the user is **not** a member, raising ``HTTPException`` with
+        status 400 if they already belong to the group.
+    """
+
     group = graph.get_node(group_id)
     members = group.get("members", []) if isinstance(group, dict) else []
-    if user_id not in members:
-        raise HTTPException(status_code=403, detail="User not in group")
+    if should_exist:
+        if user_id not in members:
+            raise HTTPException(status_code=403, detail="User not in group")
+    else:
+        if user_id in members:
+            raise HTTPException(status_code=400, detail="User already in group")
 
 
 # ----------------------------------------------------------------------------

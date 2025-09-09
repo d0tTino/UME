@@ -92,3 +92,66 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
         "OWNED_BY",
         {"permission_level": "editor"},
     ) not in edges
+
+
+def test_group_member_add_remove(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    # Create two users
+    res = client.post(
+        "/v1/users",
+        json={"name": "Alice"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    user1 = res.json()["id"]
+    res = client.post(
+        "/v1/users",
+        json={"name": "Bob"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    user2 = res.json()["id"]
+
+    # Create a group with the first user
+    res = client.post(
+        "/v1/groups",
+        json={"name": "Team", "members": [user1]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    group_id = res.json()["id"]
+
+    # Add the second user to the group
+    res = client.patch(
+        f"/v1/groups/{group_id}/add_member",
+        json={"user_id": user2},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json()["members"] == [user1, user2]
+    assert graph.get_node(group_id)["members"] == [user1, user2]
+
+    # Adding the same user again should fail
+    res = client.patch(
+        f"/v1/groups/{group_id}/add_member",
+        json={"user_id": user2},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
+
+    # Remove the first user
+    res = client.patch(
+        f"/v1/groups/{group_id}/remove_member",
+        json={"user_id": user1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json()["members"] == [user2]
+    assert graph.get_node(group_id)["members"] == [user2]
+
+    # Removing a non-member should fail
+    res = client.patch(
+        f"/v1/groups/{group_id}/remove_member",
+        json={"user_id": user1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403

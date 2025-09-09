@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
 from .models import create_user, create_user_group
 from .permissions_adapter import PermissionsGraphAdapter
+from .utils import ensure_group_member
 
 router = APIRouter(prefix="/v1")
 
@@ -41,6 +42,10 @@ class OwnedByRequest(BaseModel):
     node_id: str
     owner_id: str
     permission_level: str = "editor"
+
+
+class GroupMemberRequest(BaseModel):
+    user_id: str
 
 
 @router.post("/users", response_model=UserResponse)
@@ -108,3 +113,50 @@ def create_owned_by_edge(
         {"permission_level": req.permission_level},
     )
     return {"status": "ok"}
+
+
+@router.patch("/groups/{group_id}/add_member", response_model=UserGroupResponse)
+def add_group_member(
+    group_id: str,
+    req: GroupMemberRequest,
+    graph: IGraphAdapter = Depends(deps.get_graph),
+    _: str = Depends(deps.get_current_role),
+) -> UserGroupResponse:
+    group_attrs = graph.get_node(group_id)
+    if not group_attrs or group_attrs.get("type") != "UserGroup":
+        raise HTTPException(status_code=404, detail="Group not found")
+    ensure_group_member(graph, req.user_id, group_id, should_exist=False)
+    members = list(group_attrs.get("members", []))
+    members.append(req.user_id)
+    graph.update_node(group_id, {"members": members})
+    name: str = group_attrs["name"]
+    schema_version: str = group_attrs["schema_version"]
+    return UserGroupResponse(
+        id=group_id,
+        name=name,
+        members=members,
+        schema_version=schema_version,
+    )
+
+
+@router.patch("/groups/{group_id}/remove_member", response_model=UserGroupResponse)
+def remove_group_member(
+    group_id: str,
+    req: GroupMemberRequest,
+    graph: IGraphAdapter = Depends(deps.get_graph),
+    _: str = Depends(deps.get_current_role),
+) -> UserGroupResponse:
+    group_attrs = graph.get_node(group_id)
+    if not group_attrs or group_attrs.get("type") != "UserGroup":
+        raise HTTPException(status_code=404, detail="Group not found")
+    ensure_group_member(graph, req.user_id, group_id)
+    members = [mid for mid in group_attrs.get("members", []) if mid != req.user_id]
+    graph.update_node(group_id, {"members": members})
+    name: str = group_attrs["name"]
+    schema_version: str = group_attrs["schema_version"]
+    return UserGroupResponse(
+        id=group_id,
+        name=name,
+        members=members,
+        schema_version=schema_version,
+    )
