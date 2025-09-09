@@ -1,8 +1,7 @@
 version: "3.0.0"
 node_types:
-  User:
-    version: "3.0.0"
-    permission_level: "public"
+    User:
+      version: "3.0.0"
     properties:
       user_id:
         version: "3.0.0"
@@ -12,9 +11,8 @@ node_types:
         version: "3.0.0"
       created_at:
         version: "3.0.0"
-  UserGroup:
-    version: "3.0.0"
-    permission_level: "public"
+    UserGroup:
+      version: "3.0.0"
     properties:
       group_id:
         version: "3.0.0"
@@ -22,9 +20,8 @@ node_types:
         version: "3.0.0"
       members:
         version: "3.0.0"
-  CalendarEvent:
-    version: "3.0.0"
-    permission_level: "public"
+    CalendarEvent:
+      version: "3.0.0"
     properties:
       id:
         version: "3.0.0"
@@ -46,9 +43,8 @@ node_types:
         version: "3.0.0"
       visibility:
         version: "3.0.0"
-  CalendarLayer:
-    version: "3.0.0"
-    permission_level: "public"
+    CalendarLayer:
+      version: "3.0.0"
     properties:
       layer_id:
         version: "3.0.0"
@@ -56,9 +52,8 @@ node_types:
         version: "3.0.0"
       color:
         version: "3.0.0"
-  DecisionAnalysis:
-    version: "3.0.0"
-    permission_level: "public"
+    DecisionAnalysis:
+      version: "3.0.0"
     properties:
       analysis_id:
         version: "3.0.0"
@@ -66,9 +61,8 @@ node_types:
         version: "3.0.0"
       created_at:
         version: "3.0.0"
-  ProposedAction:
-    version: "3.0.0"
-    permission_level: "public"
+    ProposedAction:
+      version: "3.0.0"
     properties:
       action_id:
         version: "3.0.0"
@@ -80,9 +74,8 @@ node_types:
         version: "3.0.0"
       outcome_metrics:
         version: "3.0.0"
-  FinancialAccount:
-    version: "3.0.0"
-    permission_level: "public"
+    FinancialAccount:
+      version: "3.0.0"
     properties:
       account_id:
         version: "3.0.0"
@@ -97,16 +90,11 @@ node_types:
 edge_labels:
   OWNED_BY:
     version: "3.0.0"
-    permission_level: "public"
   SHARED_WITH:
     version: "3.0.0"
-    permission_level: "public"
   INVITES:
     version: "3.0.0"
-    permission_level: "public"
   TAGGED_AS:
     version: "3.0.0"
-    permission_level: "public"
   CONSIDERS:
     version: "3.0.0"
-    permission_level: "public"
