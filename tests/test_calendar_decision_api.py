@@ -152,6 +152,7 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
             "start_time": start,
             "user_id": "user1",
             "group_id": "group1",
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -168,14 +169,19 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     assert res.status_code == 200
     assert res.json() == []
 
-    # User creates their own event
+    # User creates their own private event
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Solo", "start_time": start, "user_id": "user2"},
+        json={
+            "title": "Solo",
+            "start_time": start,
+            "user_id": "user2",
+            "visibility": CalendarEventVisibility.PRIVATE.value,
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    own_event = res.json()
+    _own_event = res.json()
 
     # Group-scoped retrieval returns the event
     res = client.get(
@@ -184,9 +190,7 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert sorted(res.json(), key=lambda e: e["event_id"]) == sorted(
-        [event_data, own_event], key=lambda e: e["event_id"]
-    )
+    assert res.json() == [event_data]
 
     edges = graph.get_all_edges()
     assert any(
@@ -209,7 +213,13 @@ def test_calendar_event_group_membership_required(client_and_graph) -> None:
     # Non-member cannot create an event for the group
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Meet", "start_time": start, "user_id": "user2", "group_id": "group1"},
+        json={
+            "title": "Meet",
+            "start_time": start,
+            "user_id": "user2",
+            "group_id": "group1",
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
@@ -217,7 +227,13 @@ def test_calendar_event_group_membership_required(client_and_graph) -> None:
     # Member creates an event
     res = client.post(
         "/v1/calendar/events",
-        json={"title": "Meet", "start_time": start, "user_id": "user1", "group_id": "group1"},
+        json={
+            "title": "Meet",
+            "start_time": start,
+            "user_id": "user1",
+            "group_id": "group1",
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -277,6 +293,7 @@ def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
             "user_id": "user1",
             "group_id": "group1",
             "layer_ids": [layer_id],
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -292,6 +309,7 @@ def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
             "user_id": "user1",
             "group_id": "group1",
             "layer_ids": [layer2_id],
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -381,10 +399,34 @@ def test_calendar_event_group_share_requires_editor(client_and_graph) -> None:
             "start_time": start,
             "user_id": "user1",
             "group_id": "group1",
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+
+
+def test_calendar_event_private_group_rejected(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("group1", {"members": ["user1"]})
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Hidden",
+            "start_time": start,
+            "user_id": "user1",
+            "group_id": "group1",
+            "visibility": CalendarEventVisibility.PRIVATE.value,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
 
 
 def test_calendar_event_unauthorized_access(client_and_graph) -> None:

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
+from ume.models import CalendarEventVisibility
 
 
 def _token(client: TestClient) -> str:
@@ -56,3 +57,26 @@ def test_valid_event_creation(client_and_graph) -> None:
     attrs = graph.get_node(event_id)
     assert attrs["start_time"] == int(start_dt.timestamp())
     assert attrs["end_time"] == int(end_dt.timestamp())
+
+
+def test_group_event_private_visibility_rejected(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("group1", {"members": ["user1"]})
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Hidden",
+            "start_time": start,
+            "user_id": "user1",
+            "group_id": "group1",
+            "visibility": CalendarEventVisibility.PRIVATE.value,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
