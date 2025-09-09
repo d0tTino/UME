@@ -49,7 +49,7 @@ def test_calendar_event_invites_create_edges_and_access(client_and_graph) -> Non
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    event_id = res.json()["id"]
+    event_id = res.json()["event_id"]
 
     edges = graph.get_all_edges()
     for uid in ["invitee1", "invitee2"]:
