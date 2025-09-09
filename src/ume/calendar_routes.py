@@ -107,6 +107,11 @@ def create_event(
     _ensure_user_node(graph, req.user_id)
     if req.group_id:
         ensure_group_member(graph, req.user_id, req.group_id)
+        if event.visibility != CalendarEventVisibility.PUBLIC_TO_GROUP:
+            raise HTTPException(
+                status_code=400,
+                detail="Group events must have visibility public_to_group",
+            )
     graph.add_node(event.event_id, attrs)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     try:
@@ -198,6 +203,12 @@ def list_events(
     for eid in event_ids:
         attrs = graph.get_node(eid)
         if not attrs or attrs.get("type") != "CalendarEvent":
+            continue
+        if (
+            group_id is not None
+            and attrs.get("visibility")
+            != CalendarEventVisibility.PUBLIC_TO_GROUP.value
+        ):
             continue
         start_ts = attrs.get("start_time")
         if since is not None and (start_ts is None or start_ts <= since):
