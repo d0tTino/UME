@@ -46,9 +46,7 @@ class PermissionsGraphAdapter(IGraphAdapter):
             perm_level = attrs.get("permission_level") if isinstance(attrs, dict) else attrs
             if perm_level == perm:
                 return True
-            if perm == "viewer" and perm_level in {"editor", "public"}:
-                return True
-            if perm == "editor" and perm_level == "public":
+            if perm == "viewer" and perm_level == "editor":
                 return True
         return False
 

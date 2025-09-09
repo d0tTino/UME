@@ -190,7 +190,7 @@ def test_add_edge_success(graph: PersistentGraph):
     graph.add_node("nodeS", {})
     graph.add_node("nodeT", {})
     graph.add_edge("nodeS", "nodeT", "RELATES_TO")
-    # Ensure the edge is present via the public API
+    # Ensure the edge is present via the API
     all_edges = graph.get_all_edges()
     assert len(all_edges) == 1
     assert ("nodeS", "nodeT", "RELATES_TO", {}) in all_edges
