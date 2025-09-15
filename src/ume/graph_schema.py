@@ -55,14 +55,32 @@ class GraphSchema:
                 data = json.load(f)
         node_types = {}
         for name, info in data.get("node_types", {}).items():
-            properties = {
-                prop_name: Property(
+            if not isinstance(info, dict):
+                from .processing import ProcessingError
+
+                raise ProcessingError(
+                    f"Node type '{name}' must be a mapping",
+                )
+            properties_data = info.get("properties")
+            if properties_data is None or not isinstance(properties_data, dict):
+                from .processing import ProcessingError
+
+                raise ProcessingError(
+                    f"Node type '{name}' must include a 'properties' mapping",
+                )
+            properties = {}
+            for prop_name, prop_info in properties_data.items():
+                if not isinstance(prop_info, dict):
+                    from .processing import ProcessingError
+
+                    raise ProcessingError(
+                        f"Property '{prop_name}' for node type '{name}' must be a mapping",
+                    )
+                properties[prop_name] = Property(
                     name=prop_name,
                     version=str(prop_info.get("version", "0.0.0")),
                     permission_level=prop_info.get("permission_level"),
                 )
-                for prop_name, prop_info in info.get("properties", {}).items()
-            }
             node_types[name] = NodeType(
                 name=name,
                 version=str(info.get("version", "0.0.0")),
