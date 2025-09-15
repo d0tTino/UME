@@ -2,12 +2,16 @@ version: "2.0.0"
 node_types:
   UserMemory:
     version: "2.0.0"
+    properties: {}
   AgentIntent:
     version: "2.0.0"
+    properties: {}
   PerceptualContext:
     version: "2.0.0"
+    properties: {}
   NewType:
     version: "2.0.0"
+    properties: {}
 edge_labels:
   REMEMBERS:
     version: "2.0.0"

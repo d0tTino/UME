@@ -19,6 +19,27 @@ def test_load_bad_yaml(tmp_path):
         GraphSchema.load(str(path))
 
 
+@pytest.mark.parametrize(
+    "node_def",
+    [
+        [],
+        {"version": "1.0.0"},
+        {"version": "1.0.0", "properties": []},
+        {"version": "1.0.0", "properties": {"id": []}},
+    ],
+)
+def test_load_malformed_node_type(tmp_path, node_def):
+    schema_yaml = {
+        "version": "1.0.0",
+        "node_types": {"User": node_def},
+        "edge_labels": {},
+    }
+    path = tmp_path / "schema.yaml"
+    path.write_text(yaml.safe_dump(schema_yaml))
+    with pytest.raises(ProcessingError):
+        GraphSchema.load(str(path))
+
+
 def test_validate_unknown_node_type():
     schema = load_default_schema()
     with pytest.raises(ProcessingError):

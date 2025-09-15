@@ -2,91 +2,91 @@ version: "3.0.0"
 node_types:
     User:
       version: "3.0.0"
-    properties:
-      user_id:
-        version: "3.0.0"
-      name:
-        version: "3.0.0"
-      email:
-        version: "3.0.0"
-      created_at:
-        version: "3.0.0"
+      properties:
+        user_id:
+          version: "3.0.0"
+        name:
+          version: "3.0.0"
+        email:
+          version: "3.0.0"
+        created_at:
+          version: "3.0.0"
     UserGroup:
       version: "3.0.0"
-    properties:
-      group_id:
-        version: "3.0.0"
-      name:
-        version: "3.0.0"
-      members:
-        version: "3.0.0"
+      properties:
+        group_id:
+          version: "3.0.0"
+        name:
+          version: "3.0.0"
+        members:
+          version: "3.0.0"
     CalendarEvent:
       version: "3.0.0"
-    properties:
-      event_id:
-        version: "3.0.0"
-      title:
-        version: "3.0.0"
-      start_time:
-        version: "3.0.0"
-      end_time:
-        version: "3.0.0"
-      description:
-        version: "3.0.0"
-      is_all_day:
-        version: "3.0.0"
-      location:
-        version: "3.0.0"
-      status:
-        version: "3.0.0"
-      rrule:
-        version: "3.0.0"
-      visibility:
-        version: "3.0.0"
+      properties:
+        event_id:
+          version: "3.0.0"
+        title:
+          version: "3.0.0"
+        start_time:
+          version: "3.0.0"
+        end_time:
+          version: "3.0.0"
+        description:
+          version: "3.0.0"
+        is_all_day:
+          version: "3.0.0"
+        location:
+          version: "3.0.0"
+        status:
+          version: "3.0.0"
+        rrule:
+          version: "3.0.0"
+        visibility:
+          version: "3.0.0"
     CalendarLayer:
       version: "3.0.0"
-    properties:
-      layer_id:
-        version: "3.0.0"
-      layer_name:
-        version: "3.0.0"
-      color:
-        version: "3.0.0"
+      properties:
+        layer_id:
+          version: "3.0.0"
+        layer_name:
+          version: "3.0.0"
+        color:
+          version: "3.0.0"
     DecisionAnalysis:
       version: "3.0.0"
-    properties:
-      analysis_id:
-        version: "3.0.0"
-      query:
-        version: "3.0.0"
-      created_at:
-        version: "3.0.0"
+      properties:
+        analysis_id:
+          version: "3.0.0"
+        query:
+          version: "3.0.0"
+        created_at:
+          version: "3.0.0"
     ProposedAction:
       version: "3.0.0"
-    properties:
-      action_id:
-        version: "3.0.0"
-      description:
-        version: "3.0.0"
-      rank:
-        version: "3.0.0"
-      is_optimal:
-        version: "3.0.0"
-      outcome_metrics:
-        version: "3.0.0"
+      properties:
+        action_id:
+          version: "3.0.0"
+        description:
+          version: "3.0.0"
+        rank:
+          version: "3.0.0"
+        is_optimal:
+          version: "3.0.0"
+        outcome_metrics:
+          version: "3.0.0"
     FinancialAccount:
       version: "3.0.0"
-    properties:
-      account_id:
-        version: "3.0.0"
-      account_type:
-        version: "3.0.0"
-      institution:
-        version: "3.0.0"
-      balance:
-        version: "3.0.0"
-      currency:
-        version: "3.0.0"
+      properties:
+        account_id:
+          version: "3.0.0"
+        account_type:
+          version: "3.0.0"
+        institution:
+          version: "3.0.0"
+        balance:
+          version: "3.0.0"
+        currency:
+          version: "3.0.0"
 edge_labels:
   OWNED_BY:
     version: "3.0.0"
