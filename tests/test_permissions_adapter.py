@@ -177,12 +177,17 @@ def test_add_edge_requires_editor_and_preserves_attrs() -> None:
     g._edges["Document.d1"].append(("User.u1", "OWNED_BY", {"permission_level": "editor"}))
     adapter = PermissionsGraphAdapter(g, user_id="User.u1")
     with pytest.raises(AccessDeniedError):
-        adapter.add_edge("Document.d1", "Document.d2", "RELATED", {"weight": 1})
+        adapter.add_edge("Document.d1", "Document.d2", "TAGGED_AS", {"weight": 1})
     g._edges["Document.d2"].append(("User.u1", "OWNED_BY", {"permission_level": "editor"}))
     adapter.rebuild_index()
-    adapter.add_edge("Document.d1", "Document.d2", "RELATED", {"weight": 1})
+    adapter.add_edge("Document.d1", "Document.d2", "TAGGED_AS", {"weight": 1})
     assert adapter.get_all_edges() == [
-        ("Document.d1", "Document.d2", "RELATED", {"weight": 1})
+        (
+            "Document.d1",
+            "Document.d2",
+            "TAGGED_AS",
+            {"weight": 1, "schema_version": "3.0.0"},
+        )
     ]
 
 
@@ -308,6 +313,6 @@ def test_add_edge_invalid_permission_level_on_non_permission_edge() -> None:
         adapter.add_edge(
             "Document.d1",
             "Document.d2",
-            "RELATED",
+            "TAGGED_AS",
             {"permission_level": "owner"},
         )
