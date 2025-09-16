@@ -145,7 +145,12 @@ def add_action(
                 detail="Editor permission required for target group",
             )
     perm_graph.rebuild_index()
-    perm_graph.add_edge(analysis_id, action.action_id, "CONSIDERS")
+    try:
+        perm_graph.add_edge(analysis_id, action.action_id, "CONSIDERS")
+    except AccessDeniedError:
+        perm_graph.redact_node(action.action_id)
+        perm_graph.rebuild_index()
+        raise HTTPException(status_code=403)
     return action_attrs
 
 

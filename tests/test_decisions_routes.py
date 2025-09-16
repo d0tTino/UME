@@ -6,6 +6,7 @@ from ume import MockGraph
 from ume.config import settings
 from ume.models.decision_analysis import SCHEMA_VERSION
 from ume.models.proposed_action import SCHEMA_VERSION as ACTION_SCHEMA_VERSION
+from ume.decisions_routes import EDGE_VERSION
 
 
 def _token(client: TestClient) -> str:
@@ -149,3 +150,35 @@ def test_add_action_requires_group_membership(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
+
+def test_viewer_cannot_add_action(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "Q", "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+
+    g.add_node("user2", {})
+    g.add_edge(
+        analysis_id,
+        "user2",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+        schema_version=EDGE_VERSION,
+    )
+
+    nodes_before = set(g.get_all_node_ids())
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={"description": "Act", "user_id": "user2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+    nodes_after = set(g.get_all_node_ids())
+    assert nodes_after == nodes_before
