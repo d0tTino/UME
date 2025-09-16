@@ -7,6 +7,7 @@ from typing import Any, DefaultDict, Dict, List, Optional
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .graph_schema import DEFAULT_SCHEMA
+from .processing import ProcessingError
 
 
 class PermissionsGraphAdapter(IGraphAdapter):
@@ -143,20 +144,19 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self._require_editor(source_node_id)
         if label not in {"OWNED_BY", "SHARED_WITH", "INVITES"}:
             self._require_editor(target_node_id)
-        edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
-        if schema_version is not None:
-            version = schema_version
-        elif edge_def is not None:
-            version = edge_def.version
-        elif label in {"OWNED_BY", "SHARED_WITH", "INVITES", "TAGGED_AS", "CONSIDERS"}:
-            version = "3.0.0"
-        else:
-            version = None
-        perm_level = attrs.get("permission_level") if attrs else None
+        try:
+            DEFAULT_SCHEMA.validate_edge_label(label)
+        except ProcessingError as exc:
+            raise AccessDeniedError(str(exc)) from exc
+        edge_def = DEFAULT_SCHEMA.edge_labels[label]
+        version = edge_def.version
+        attrs = dict(attrs or {})
+        perm_level = attrs.get("permission_level")
         if perm_level is not None and perm_level not in {"viewer", "editor"}:
             raise AccessDeniedError(
                 f"Invalid permission_level '{perm_level}'"
             )
+        attrs.pop("schema_version", None)
         self._adapter.add_edge(
             source_node_id,
             target_node_id,
