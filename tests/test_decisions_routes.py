@@ -182,3 +182,13 @@ def test_viewer_cannot_add_action(client_and_graph) -> None:
     assert res.status_code == 403
     nodes_after = set(g.get_all_node_ids())
     assert nodes_after == nodes_before
+    proposed_action_nodes = [
+        node_id
+        for node_id in nodes_after
+        if (
+            (node_attrs := g.get_node(node_id))
+            and {"description", "rank", "is_optimal", "outcome_metrics"}.issubset(node_attrs.keys())
+        )
+    ]
+    assert proposed_action_nodes == []
+    assert all(lbl != "CONSIDERS" for _, _, lbl, _ in g.get_all_edges())
