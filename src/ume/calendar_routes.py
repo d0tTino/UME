@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from datetime import datetime
 from typing import List
 
@@ -115,51 +116,56 @@ def create_event(
     graph.add_node(event.event_id, attrs)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     try:
-        perm_graph.add_edge(
-            event.event_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
-        )
-    except AccessDeniedError:
-        graph.add_edge(
-            event.event_id,
-            req.user_id,
-            "OWNED_BY",
-            {"permission_level": "editor"},
-            schema_version=EDGE_VERSION,
-        )
-        perm_graph.rebuild_index()
-    for uid in req.invitee_ids or []:
-        _ensure_user_node(graph, uid)
         try:
-            perm_graph.add_edge(event.event_id, uid, "INVITES")
             perm_graph.add_edge(
-                event.event_id, uid, "SHARED_WITH", {"permission_level": "viewer"}
+                event.event_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
             )
-        except AccessDeniedError as exc:
-            raise HTTPException(status_code=403, detail=str(exc))
-    if req.group_id:
-        try:
-            perm_graph.add_edge(
+        except AccessDeniedError:
+            graph.add_edge(
                 event.event_id,
-                req.group_id,
-                "SHARED_WITH",
-                {"permission_level": "viewer"},
+                req.user_id,
+                "OWNED_BY",
+                {"permission_level": "editor"},
+                schema_version=EDGE_VERSION,
             )
-        except AccessDeniedError as exc:
-            raise HTTPException(status_code=403, detail=str(exc))
-    for lid in req.layer_ids or []:
-        layer_attrs = graph.get_node(lid)
-        if not layer_attrs or layer_attrs.get("type") != "CalendarLayer":
-            raise HTTPException(
-                status_code=400, detail=f"Invalid layer_id: {lid}"
-            )
-        if not perm_graph.node_exists(lid):
-            raise HTTPException(
-                status_code=403, detail=f"No access to layer: {lid}"
-            )
-        try:
-            perm_graph.add_edge(event.event_id, lid, "TAGGED_AS")
-        except AccessDeniedError as exc:
-            raise HTTPException(status_code=403, detail=str(exc))
+            perm_graph.rebuild_index()
+        for uid in req.invitee_ids or []:
+            _ensure_user_node(graph, uid)
+            try:
+                perm_graph.add_edge(event.event_id, uid, "INVITES")
+                perm_graph.add_edge(
+                    event.event_id, uid, "SHARED_WITH", {"permission_level": "viewer"}
+                )
+            except AccessDeniedError as exc:
+                raise HTTPException(status_code=403, detail=str(exc))
+        if req.group_id:
+            try:
+                perm_graph.add_edge(
+                    event.event_id,
+                    req.group_id,
+                    "SHARED_WITH",
+                    {"permission_level": "viewer"},
+                )
+            except AccessDeniedError as exc:
+                raise HTTPException(status_code=403, detail=str(exc))
+        for lid in req.layer_ids or []:
+            layer_attrs = graph.get_node(lid)
+            if not layer_attrs or layer_attrs.get("type") != "CalendarLayer":
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid layer_id: {lid}"
+                )
+            if not perm_graph.node_exists(lid):
+                raise HTTPException(
+                    status_code=403, detail=f"No access to layer: {lid}"
+                )
+            try:
+                perm_graph.add_edge(event.event_id, lid, "TAGGED_AS")
+            except AccessDeniedError as exc:
+                raise HTTPException(status_code=403, detail=str(exc))
+    except Exception:
+        with suppress(Exception):
+            graph.redact_node(event.event_id)
+        raise
     return CalendarEventResponse(
         event_id=event.event_id,
         title=event.title,
