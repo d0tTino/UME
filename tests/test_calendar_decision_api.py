@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 
 from ume.api import app, configure_graph
 from ume import MockGraph
+from ume.permissions_adapter import PermissionsGraphAdapter
+from ume.rbac_adapter import AccessDeniedError
 from ume.config import settings
 from ume.models.decision_analysis import SCHEMA_VERSION
 from ume.models.proposed_action import SCHEMA_VERSION as ACTION_SCHEMA_VERSION
@@ -362,6 +364,59 @@ def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+
+
+def test_create_event_rollback(monkeypatch, client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    original_add_edge = PermissionsGraphAdapter.add_edge
+    created_event_ids: list[str] = []
+
+    def fail_on_invites(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs=None,
+        schema_version=None,
+    ):
+        if label == "INVITES":
+            created_event_ids.append(source_node_id)
+            raise AccessDeniedError("Invite creation failed")
+        return original_add_edge(
+            self, source_node_id, target_node_id, label, attrs, schema_version
+        )
+
+    monkeypatch.setattr(PermissionsGraphAdapter, "add_edge", fail_on_invites)
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Rollback",
+            "start_time": start,
+            "user_id": "owner",
+            "invitee_ids": ["invitee"],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 403
+    assert res.json() == {"detail": "Invite creation failed"}
+
+    assert created_event_ids
+    event_id = created_event_ids[0]
+    assert event_id not in graph.get_all_node_ids()
+    assert graph.get_node(event_id) is None
+
+    visible_events = [
+        nid
+        for nid in graph.get_all_node_ids()
+        if (graph.get_node(nid) or {}).get("type") == "CalendarEvent"
+    ]
+    assert visible_events == []
 
 
 def test_calendar_event_missing_invitee_created(client_and_graph) -> None:
