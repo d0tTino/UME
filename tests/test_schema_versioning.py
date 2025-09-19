@@ -37,3 +37,5 @@ def test_permission_edge_schema_version() -> None:
         if s == "Document.d1" and t == "User.u2" and lbl == "SHARED_WITH"
     )
     assert edge_attrs["schema_version"] == "3.0.0"
+    assert edge_attrs["permission_level"] == "viewer"
+    assert "version" not in edge_attrs
