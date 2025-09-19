@@ -95,7 +95,7 @@ def test_upgrade_transforms_graph(graph: PersistentGraph) -> None:
     manager.upgrade_schema("1.0.0", "2.0.0", graph)
 
     edges = graph.get_all_edges()
-    assert ("a", "b", "LINKS_TO", {"version": "2.0.0"}) in edges
+    assert ("a", "b", "LINKS_TO", {"schema_version": "2.0.0"}) in edges
     assert all(lbl != "L" for _, _, lbl, _ in edges)
     assert all(lbl != "TO_DELETE" for _, _, lbl, _ in edges)
 
@@ -116,7 +116,7 @@ def test_upgrade_to_v3_transforms_graph(graph: PersistentGraph) -> None:
         "a",
         "b",
         "TAGGED_AS",
-        {"version": "3.0.0"},
+        {"schema_version": "3.0.0"},
     ) in edges
     assert all(lbl == "TAGGED_AS" for _, _, lbl, _ in edges)
 
@@ -134,7 +134,7 @@ def test_upgrade_sets_edge_version(graph: PersistentGraph) -> None:
         "a",
         "b",
         "TAGGED_AS",
-        {"version": "3.0.0"},
+        {"schema_version": "3.0.0"},
     ) in edges
 
 
@@ -159,13 +159,13 @@ def test_upgrade_maps_has_permission_edges(
         "doc",
         "user1",
         "OWNED_BY",
-        {"permission_level": "editor", "version": "3.0.0"},
+        {"permission_level": "editor", "schema_version": "3.0.0"},
     ) in edges
     assert (
         "doc",
         "user2",
         "SHARED_WITH",
-        {"permission_level": "viewer", "version": "3.0.0"},
+        {"permission_level": "viewer", "schema_version": "3.0.0"},
     ) in edges
     assert all(lbl != "HAS_PERMISSION" for _, _, lbl, _ in edges)
 
@@ -185,21 +185,23 @@ def test_upgrade_permission_nodes_multi_user(graph: PersistentGraph) -> None:
         "doc",
         "u1",
         "SHARED_WITH",
-        {"permission_level": "viewer", "version": "3.0.0"},
+        {"permission_level": "viewer", "schema_version": "3.0.0"},
     ) in edges
     assert (
         "doc",
         "u2",
         "OWNED_BY",
-        {"permission_level": "editor", "version": "3.0.0"},
+        {"permission_level": "editor", "schema_version": "3.0.0"},
     ) in edges
 
     assert graph.get_node("u1") == {
         "type": "User",
+        "schema_version": "3.0.0",
     }
     assert graph.get_node("u2") == {
         "name": "Bob",
         "type": "User",
+        "schema_version": "3.0.0",
     }
 
 
@@ -219,7 +221,7 @@ def test_upgrade_preserves_schema_version(graph: PersistentGraph) -> None:
         "a",
         "b",
         "TAGGED_AS",
-        {"schema_version": "2.0.0", "version": "3.0.0"},
+        {"schema_version": "3.0.0"},
     ) in edges
 
 
@@ -236,5 +238,7 @@ def test_upgrade_adds_version_when_missing(graph: PersistentGraph) -> None:
         "a",
         "b",
         "TAGGED_AS",
-        {"version": "3.0.0"},
+        {"schema_version": "3.0.0"},
     ) in edges
+    assert graph.get_node("a")["schema_version"] == "3.0.0"
+    assert graph.get_node("b")["schema_version"] == "3.0.0"
