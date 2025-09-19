@@ -18,6 +18,7 @@ from .models import (
     create_calendar_event,
     create_user,
 )
+from .processing import ProcessingError
 
 EDGE_VERSION = "3.0.0"
 
@@ -92,6 +93,8 @@ def create_event(
         rrule=req.rrule,
         visibility=req.visibility,
     )
+    invitee_ids = list(req.invitee_ids or [])
+    layer_ids = list(req.layer_ids or [])
     attrs = {
         "type": "CalendarEvent",
         "title": event.title,
@@ -106,6 +109,16 @@ def create_event(
         "schema_version": event.schema_version,
     }
     _ensure_user_node(graph, req.user_id)
+    graph.add_node(event.event_id, attrs)
+    for uid in invitee_ids:
+        _ensure_user_node(graph, uid)
+    for lid in layer_ids:
+        if not graph.node_exists(lid):
+            with suppress(ProcessingError):
+                graph.redact_node(event.event_id)
+            raise HTTPException(
+                status_code=400, detail=f"Invalid layer_id: {lid}"
+            )
     if req.group_id:
         ensure_group_member(graph, req.user_id, req.group_id)
         if event.visibility != CalendarEventVisibility.PUBLIC_TO_GROUP:
@@ -131,7 +144,6 @@ def create_event(
             perm_graph.rebuild_index()
 
         for uid in invitee_ids:
-
             try:
                 perm_graph.add_edge(event.event_id, uid, "INVITES")
                 perm_graph.add_edge(
@@ -152,13 +164,13 @@ def create_event(
                 raise HTTPException(status_code=403, detail=str(exc))
 
         for lid in layer_ids:
-
             try:
                 perm_graph.add_edge(event.event_id, lid, "TAGGED_AS")
             except AccessDeniedError as exc:
                 raise HTTPException(status_code=403, detail=str(exc))
     except Exception:
-        graph.redact_node(event.event_id)
+        with suppress(ProcessingError):
+            graph.redact_node(event.event_id)
 
         raise
     return CalendarEventResponse(

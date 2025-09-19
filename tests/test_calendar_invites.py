@@ -31,10 +31,8 @@ def test_calendar_event_invites_create_edges_and_access(client_and_graph) -> Non
     client, graph = client_and_graph
     token = _token(client)
 
-    # Pre-create nodes for owner and invitees
+    # Pre-create node for the owner only; invitees should be auto-created
     graph.add_node("owner", {"type": "User"})
-    graph.add_node("invitee1", {"type": "User"})
-    graph.add_node("invitee2", {"type": "User"})
 
     start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
 
@@ -53,6 +51,10 @@ def test_calendar_event_invites_create_edges_and_access(client_and_graph) -> Non
 
     edges = graph.get_all_edges()
     for uid in ["invitee1", "invitee2"]:
+        attrs = graph.get_node(uid)
+        assert attrs is not None
+        assert attrs["type"] == "User"
+        assert attrs["user_id"] == uid
         assert any(
             s == event_id and t == uid and lbl == "INVITES" for s, t, lbl, _ in edges
         )

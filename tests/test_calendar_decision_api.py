@@ -112,6 +112,7 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     assert res.json() == []
 
     attrs = graph.get_node(event_id)
+    assert attrs["type"] == "CalendarEvent"
     assert attrs["title"] == "Meeting"
     assert attrs["start_time"] == start_ts
     assert attrs["end_time"] == end_ts
@@ -183,7 +184,7 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    _own_event = res.json()
+    own_event = res.json()
 
     # Group-scoped retrieval returns the event
     res = client.get(
@@ -197,6 +198,10 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     edges = graph.get_all_edges()
     assert any(
         s == event_id and t == "group1" and lbl == "SHARED_WITH"
+        for s, t, lbl, _ in edges
+    )
+    assert not any(
+        s == own_event["event_id"] and t == "group1" and lbl == "SHARED_WITH"
         for s, t, lbl, _ in edges
     )
 
@@ -316,6 +321,7 @@ def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+    wrong_layer_event = res.json()
 
     # Event tagged with the layer but not shared with the group
     res = client.post(
@@ -329,6 +335,7 @@ def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+    no_group_event = res.json()
 
     # Query with both group and layer filters should return only the visible event
     res = client.get(
@@ -342,6 +349,36 @@ def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
     )
     assert res.status_code == 200
     assert res.json() == [visible_event]
+
+    edges = graph.get_all_edges()
+    assert any(
+        s == visible_event["event_id"] and t == "group1" and lbl == "SHARED_WITH"
+        for s, t, lbl, _ in edges
+    )
+    assert any(
+        s == visible_event["event_id"] and t == layer_id and lbl == "TAGGED_AS"
+        for s, t, lbl, _ in edges
+    )
+    assert any(
+        s == wrong_layer_event["event_id"] and t == "group1" and lbl == "SHARED_WITH"
+        for s, t, lbl, _ in edges
+    )
+    assert any(
+        s == wrong_layer_event["event_id"] and t == layer2_id and lbl == "TAGGED_AS"
+        for s, t, lbl, _ in edges
+    )
+    assert not any(
+        s == wrong_layer_event["event_id"] and t == layer_id and lbl == "TAGGED_AS"
+        for s, t, lbl, _ in edges
+    )
+    assert any(
+        s == no_group_event["event_id"] and t == layer_id and lbl == "TAGGED_AS"
+        for s, t, lbl, _ in edges
+    )
+    assert not any(
+        s == no_group_event["event_id"] and t == "group1" and lbl == "SHARED_WITH"
+        for s, t, lbl, _ in edges
+    )
 
 
 def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
@@ -417,6 +454,8 @@ def test_create_event_rollback(monkeypatch, client_and_graph) -> None:
         if (graph.get_node(nid) or {}).get("type") == "CalendarEvent"
     ]
     assert visible_events == []
+    remaining_edges = graph.get_all_edges()
+    assert all(event_id not in (s, t) for s, t, *_ in remaining_edges)
 
 
 def test_calendar_event_missing_invitee_created(client_and_graph) -> None:
@@ -436,6 +475,20 @@ def test_calendar_event_missing_invitee_created(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+    event_id = res.json()["event_id"]
+    invitee_attrs = graph.get_node("missing")
+    assert invitee_attrs is not None
+    assert invitee_attrs["type"] == "User"
+    assert invitee_attrs["user_id"] == "missing"
+    edges = graph.get_all_edges()
+    assert any(
+        s == event_id and t == "missing" and lbl == "INVITES"
+        for s, t, lbl, _ in edges
+    )
+    assert any(
+        s == event_id and t == "missing" and lbl == "SHARED_WITH"
+        for s, t, lbl, _ in edges
+    )
 
 
 def test_calendar_event_group_share_requires_editor(client_and_graph) -> None:
