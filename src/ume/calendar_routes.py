@@ -19,6 +19,7 @@ from .models import (
     create_calendar_event,
     create_user,
 )
+from .processing import ProcessingError
 
 EDGE_VERSION = "3.0.0"
 
@@ -116,6 +117,8 @@ def create_event(
         rrule=req.rrule,
         visibility=req.visibility,
     )
+    invitee_ids = list(req.invitee_ids or [])
+    layer_ids = list(req.layer_ids or [])
     attrs = {
         "type": "CalendarEvent",
         "title": event.title,
@@ -135,6 +138,7 @@ def create_event(
     _ensure_user_node(graph, req.user_id)
     for uid in invitee_ids:
         _ensure_user_node(graph, uid)
+
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
 
     try:
@@ -172,6 +176,7 @@ def create_event(
             perm_graph.add_edge(
                 event.event_id, uid, "SHARED_WITH", {"permission_level": "viewer"}
             )
+
 
         for lid in layer_ids:
             layer_attrs = graph.get_node(lid)

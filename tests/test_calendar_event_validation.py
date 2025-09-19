@@ -54,9 +54,37 @@ def test_valid_event_creation(client_and_graph) -> None:
     )
     assert res.status_code == 200
     event_id = res.json()["event_id"]
+    assert graph.node_exists(event_id)
     attrs = graph.get_node(event_id)
+    assert attrs["type"] == "CalendarEvent"
     assert attrs["start_time"] == int(start_dt.timestamp())
     assert attrs["end_time"] == int(end_dt.timestamp())
+
+
+def test_invalid_layer_id_returns_message(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Layered",
+            "start_time": start,
+            "user_id": "user1",
+            "layer_ids": ["missing-layer"],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 400
+    assert res.json() == {"detail": "Invalid layer_id: missing-layer"}
+    calendar_nodes = [
+        nid
+        for nid in graph.get_all_node_ids()
+        if (graph.get_node(nid) or {}).get("type") == "CalendarEvent"
+    ]
+    assert calendar_nodes == []
 
 
 def test_group_event_private_visibility_rejected(client_and_graph) -> None:
