@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib import import_module, resources
 from types import ModuleType
-from typing import Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from .graph_adapter import IGraphAdapter
 
@@ -84,11 +84,37 @@ class GraphSchemaManager:
         new_schema = self.get_schema(new_version)
 
         if graph is not None:
+            # NOTE: Upgrades now rely on schema-aware metadata propagation.
+            # When we rewrite edges we must provide the target edge's
+            # ``schema_version`` so downstream adapters no longer depend on the
+            # legacy ``version`` attribute. Keeping this helper local to the
+            # upgrade flow documents that expectation for future migrations.
+
+            def _prepare_edge_attrs(
+                target_label: str, attrs: dict[str, Any] | None = None
+            ) -> tuple[dict[str, Any], str | None]:
+                attr_dict: dict[str, Any] = dict(attrs or {})
+                attr_dict.pop("version", None)
+                attr_dict.pop("schema_version", None)
+                edge_def = new_schema.edge_labels.get(target_label)
+                if edge_def and edge_def.permission_level is not None:
+                    attr_dict["permission_level"] = edge_def.permission_level
+                schema_version = edge_def.version if edge_def else None
+                return attr_dict, schema_version
+
             if old_version == "1.0.0":
                 for src, tgt, label, *_ in list(graph.get_all_edges()):
                     if label == "L":
                         graph.delete_edge(src, tgt, label)
-                        graph.add_edge(src, tgt, "LINKS_TO")
+                        attrs_to_add, schema_version = _prepare_edge_attrs("LINKS_TO")
+                        if schema_version is not None:
+                            graph.add_edge(
+                                src,
+                                tgt,
+                                "LINKS_TO",
+                                attrs_to_add,
+                                schema_version=schema_version,
+                            )
                     elif label == "TO_DELETE":
                         graph.delete_edge(src, tgt, label)
 
@@ -97,7 +123,16 @@ class GraphSchemaManager:
                     if label == "NEW_LABEL":
                         graph.delete_edge(src, tgt, label)
                         new_attrs = dict(attrs) if isinstance(attrs, dict) else {}
-                        graph.add_edge(src, tgt, "TAGGED_AS", new_attrs)
+                        normalized_attrs, schema_version = _prepare_edge_attrs(
+                            "TAGGED_AS", new_attrs
+                        )
+                        graph.add_edge(
+                            src,
+                            tgt,
+                            "TAGGED_AS",
+                            normalized_attrs,
+                            schema_version=schema_version,
+                        )
                     elif label == "HAS_PERMISSION":
                         graph.delete_edge(src, tgt, label)
                         attr_dict = dict(attrs) if isinstance(attrs, dict) else {}
@@ -107,10 +142,26 @@ class GraphSchemaManager:
                             else attrs
                         )
                         new_label = "OWNED_BY" if perm_level == "editor" else "SHARED_WITH"
-                        graph.add_edge(src, tgt, new_label, attr_dict)
+                        attr_dict["permission_level"] = perm_level
+                        normalized_attrs, schema_version = _prepare_edge_attrs(
+                            new_label, attr_dict
+                        )
+                        graph.add_edge(
+                            src,
+                            tgt,
+                            new_label,
+                            normalized_attrs,
+                            schema_version=schema_version,
+                        )
                         if graph.node_exists(tgt):
                             node_attrs = graph.get_node(tgt) or {}
                             node_attrs.setdefault("type", "User")
+                            user_def = new_schema.node_types.get(
+                                node_attrs.get("type", "User")
+                            )
+                            node_attrs["schema_version"] = (
+                                user_def.version if user_def else new_schema.version
+                            )
                             graph.update_node(tgt, node_attrs)
                     elif label in {
                         "REMEMBERS",
@@ -122,7 +173,7 @@ class GraphSchemaManager:
                     }:
                         graph.delete_edge(src, tgt, label)
 
-            # Ensure all edges carry explicit version and permission metadata
+            # Ensure all edges carry explicit schema metadata for permission checks
             for src, tgt, label, attrs in list(graph.get_all_edges()):
                 edge_def = new_schema.edge_labels.get(label)
                 if edge_def is None:
@@ -135,12 +186,20 @@ class GraphSchemaManager:
                 ):
                     attr_dict["permission_level"] = edge_def.permission_level
                     needs_update = True
-                if attr_dict.get("version") != edge_def.version:
-                    attr_dict["version"] = edge_def.version
+                if attr_dict.get("schema_version") != edge_def.version:
                     needs_update = True
                 if needs_update:
                     graph.delete_edge(src, tgt, label)
-                    graph.add_edge(src, tgt, label, attr_dict)
+                    normalized_attrs, schema_version = _prepare_edge_attrs(
+                        label, attr_dict
+                    )
+                    graph.add_edge(
+                        src,
+                        tgt,
+                        label,
+                        normalized_attrs,
+                        schema_version=schema_version,
+                    )
 
         return new_schema
 
