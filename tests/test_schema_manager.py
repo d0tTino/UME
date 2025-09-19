@@ -240,3 +240,5 @@ def test_upgrade_adds_version_when_missing(graph: PersistentGraph) -> None:
         "TAGGED_AS",
         {"schema_version": "3.0.0"},
     ) in edges
+    assert graph.get_node("a")["schema_version"] == "3.0.0"
+    assert graph.get_node("b")["schema_version"] == "3.0.0"

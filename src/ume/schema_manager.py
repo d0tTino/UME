@@ -115,6 +115,7 @@ class GraphSchemaManager:
                                 attrs_to_add,
                                 schema_version=schema_version,
                             )
+
                     elif label == "TO_DELETE":
                         graph.delete_edge(src, tgt, label)
 
@@ -126,12 +127,14 @@ class GraphSchemaManager:
                         normalized_attrs, schema_version = _prepare_edge_attrs(
                             "TAGGED_AS", new_attrs
                         )
+
                         graph.add_edge(
                             src,
                             tgt,
                             "TAGGED_AS",
                             normalized_attrs,
                             schema_version=schema_version,
+
                         )
                     elif label == "HAS_PERMISSION":
                         graph.delete_edge(src, tgt, label)
@@ -146,12 +149,14 @@ class GraphSchemaManager:
                         normalized_attrs, schema_version = _prepare_edge_attrs(
                             new_label, attr_dict
                         )
+
                         graph.add_edge(
                             src,
                             tgt,
                             new_label,
                             normalized_attrs,
                             schema_version=schema_version,
+
                         )
                         if graph.node_exists(tgt):
                             node_attrs = graph.get_node(tgt) or {}
@@ -174,6 +179,7 @@ class GraphSchemaManager:
                         graph.delete_edge(src, tgt, label)
 
             # Ensure all edges carry explicit schema metadata for permission checks
+
             for src, tgt, label, attrs in list(graph.get_all_edges()):
                 edge_def = new_schema.edge_labels.get(label)
                 if edge_def is None:
@@ -193,6 +199,7 @@ class GraphSchemaManager:
                     normalized_attrs, schema_version = _prepare_edge_attrs(
                         label, attr_dict
                     )
+
                     graph.add_edge(
                         src,
                         tgt,
@@ -200,6 +207,7 @@ class GraphSchemaManager:
                         normalized_attrs,
                         schema_version=schema_version,
                     )
+
 
         return new_schema
 
