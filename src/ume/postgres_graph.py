@@ -12,6 +12,7 @@ from .graph_algorithms import GraphAlgorithmsMixin
 from .audit import log_audit_entry
 from .config import settings
 from .replay import replay_from_ledger
+from .graph_schema import DEFAULT_SCHEMA
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .event_ledger import EventLedger
@@ -48,14 +49,70 @@ class PostgresGraph(GraphAlgorithmsMixin, IGraphAdapter):
                     source TEXT,
                     target TEXT,
                     label TEXT,
+                    attributes JSONB DEFAULT '{}'::jsonb,
                     redacted BOOLEAN DEFAULT FALSE,
                     created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()),
                     PRIMARY KEY (source, target, label)
                 )
+            """
+        )
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target)")
+
+        # Ensure the attributes column exists and uses JSONB for legacy databases.
+        cur.execute(
+            """
+            SELECT data_type
+            FROM information_schema.columns
+            WHERE table_name = 'edges' AND column_name = 'attributes'
+            """
+        )
+        column_info = cur.fetchone()
+        if column_info is None:
+            cur.execute(
+                "ALTER TABLE edges ADD COLUMN attributes JSONB DEFAULT '{}'::jsonb"
+            )
+        elif column_info[0] != "jsonb":
+            cur.execute(
+                """
+                ALTER TABLE edges
+                ALTER COLUMN attributes TYPE JSONB USING (
+                    CASE
+                        WHEN attributes IS NULL OR attributes = '' THEN '{}'::jsonb
+                        ELSE attributes::jsonb
+                    END
+                )
                 """
             )
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target)")
+            cur.execute(
+                "ALTER TABLE edges ALTER COLUMN attributes SET DEFAULT '{}'::jsonb"
+            )
+        else:
+            cur.execute(
+                "ALTER TABLE edges ALTER COLUMN attributes SET DEFAULT '{}'::jsonb"
+            )
+
+        cur.execute(
+            "UPDATE edges SET attributes='{}'::jsonb WHERE attributes IS NULL"
+        )
+
+        # Backfill permission metadata for historical permission edges.
+        cur.execute(
+            """
+            UPDATE edges
+            SET attributes = jsonb_set(COALESCE(attributes, '{}'::jsonb), '{permission_level}', '"editor"'::jsonb, true)
+            WHERE label = 'OWNED_BY'
+              AND (attributes->>'permission_level') IS NULL
+            """
+        )
+        cur.execute(
+            """
+            UPDATE edges
+            SET attributes = jsonb_set(COALESCE(attributes, '{}'::jsonb), '{permission_level}', '"viewer"'::jsonb, true)
+            WHERE label = 'SHARED_WITH'
+              AND (attributes->>'permission_level') IS NULL
+            """
+        )
 
     # ---- Resource management -------------------------------------------------
     def close(self) -> None:
@@ -151,23 +208,51 @@ class PostgresGraph(GraphAlgorithmsMixin, IGraphAdapter):
                 raise ProcessingError(
                     f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
                 )
+            edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
+            permission_level = edge_def.permission_level if edge_def else None
+            attr_dict: Dict[str, Any] = dict(attrs or {})
+            if permission_level is not None and "permission_level" not in attr_dict:
+                attr_dict["permission_level"] = permission_level
+            if schema_version is not None and "schema_version" not in attr_dict:
+                attr_dict["schema_version"] = schema_version
             cur.execute(
-                "INSERT INTO edges(source, target, label, created_at) VALUES(%s, %s, %s, %s)",
-                (source_node_id, target_node_id, label, int(time.time())),
+                "INSERT INTO edges(source, target, label, attributes, created_at) VALUES(%s, %s, %s, %s, %s)",
+                (
+                    source_node_id,
+                    target_node_id,
+                    label,
+                    json.dumps(attr_dict),
+                    int(time.time()),
+                ),
             )
 
     def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         with self._conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT e.source, e.target, e.label
+                SELECT e.source, e.target, e.label, e.attributes
                 FROM edges e
                 JOIN nodes s ON e.source = s.id
                 JOIN nodes t ON e.target = t.id
                 WHERE e.redacted=false AND s.redacted=false AND t.redacted=false
                 """
             )
-            return [(row[0], row[1], row[2], {}) for row in cur.fetchall()]
+            edges: List[Tuple[str, str, str, Dict[str, Any]]] = []
+            for source, target, label, raw_attrs in cur.fetchall():
+                if raw_attrs in (None, ""):
+                    attr_dict: Dict[str, Any] = {}
+                elif isinstance(raw_attrs, (dict, list)):
+                    attr_dict = dict(cast(Dict[str, Any], raw_attrs))
+                elif isinstance(raw_attrs, memoryview):
+                    attr_dict = cast(
+                        Dict[str, Any], json.loads(raw_attrs.tobytes())
+                    )
+                else:
+                    attr_dict = cast(Dict[str, Any], json.loads(raw_attrs))
+                if not isinstance(attr_dict, dict):
+                    attr_dict = {}
+                edges.append((source, target, label, attr_dict))
+            return edges
 
     def delete_edge(
         self,
