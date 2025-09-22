@@ -19,7 +19,23 @@ def test_postgres_graph_crud(postgres_service):
     graph.add_node("n2", {})
     graph.add_edge("n1", "n2", "R")
     assert ("n1", "n2", "R", {}) in graph.get_all_edges()
+    graph.add_node("n3", {})
+    graph.add_edge(
+        "n1",
+        "n3",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+        schema_version="3.0.0",
+    )
+    edges = graph.get_all_edges()
+    assert (
+        "n1",
+        "n3",
+        "SHARED_WITH",
+        {"permission_level": "viewer", "schema_version": "3.0.0"},
+    ) in edges
     graph.delete_edge("n1", "n2", "R")
+    graph.delete_edge("n1", "n3", "SHARED_WITH")
     assert graph.get_all_edges() == []
     graph.clear()
     graph.close()
