@@ -11,6 +11,7 @@ from .graph_algorithms import GraphAlgorithmsMixin
 from .audit import log_audit_entry
 from .config import settings
 from .replay import replay_from_ledger
+from .graph_schema import DEFAULT_SCHEMA
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .event_ledger import EventLedger
@@ -25,6 +26,7 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
     NODE_PREFIX = "node:"
     EDGE_PREFIX = "edge:"
     EDGE_SET_KEY = f"{EDGE_PREFIX}all"
+    EDGE_ATTR_HASH_KEY = f"{EDGE_PREFIX}attrs"
     REDACTED_NODES_KEY = "redacted_nodes"
     REDACTED_EDGES_KEY = "redacted_edges"
 
@@ -123,10 +125,21 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(
                 f"Edge ({source_node_id}, {target_node_id}, {label}) already exists."
             )
-        self._client.sadd(self.EDGE_SET_KEY, member)
+        edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
+        permission_level = edge_def.permission_level if edge_def else None
+        attr_dict: Dict[str, Any] = dict(attrs or {})
+        if permission_level is not None and "permission_level" not in attr_dict:
+            attr_dict["permission_level"] = permission_level
+        if schema_version is not None and "schema_version" not in attr_dict:
+            attr_dict["schema_version"] = schema_version
+        pipe = self._client.pipeline()
+        pipe.sadd(self.EDGE_SET_KEY, member)
+        pipe.hset(self.EDGE_ATTR_HASH_KEY, member, json.dumps(attr_dict))
+        pipe.execute()
 
     def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         result: List[Tuple[str, str, str, Dict[str, Any]]] = []
+        attr_map = self._client.hgetall(self.EDGE_ATTR_HASH_KEY)
         for b in self._client.smembers(self.EDGE_SET_KEY):
             member = b.decode()
             if self._client.sismember(self.REDACTED_EDGES_KEY, member):
@@ -137,7 +150,39 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
                 tgt,
             ):
                 continue
-            result.append((src, tgt, lbl, {}))
+            raw_attrs = attr_map.get(b)
+            attrs: Dict[str, Any]
+            needs_store = False
+            if raw_attrs is None:
+                attrs = {}
+                needs_store = True
+            else:
+                try:
+                    decoded = raw_attrs.decode()
+                    loaded = json.loads(decoded)
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    attrs = {}
+                    needs_store = True
+                else:
+                    if isinstance(loaded, dict):
+                        attrs = cast(Dict[str, Any], loaded)
+                    else:
+                        attrs = {}
+                        needs_store = True
+            edge_def = DEFAULT_SCHEMA.edge_labels.get(lbl)
+            if edge_def is not None:
+                if (
+                    edge_def.permission_level is not None
+                    and "permission_level" not in attrs
+                ):
+                    attrs["permission_level"] = edge_def.permission_level
+                    needs_store = True
+                if "schema_version" not in attrs:
+                    attrs["schema_version"] = edge_def.version
+                    needs_store = True
+            if needs_store:
+                self._client.hset(self.EDGE_ATTR_HASH_KEY, member, json.dumps(attrs))
+            result.append((src, tgt, lbl, dict(attrs)))
         return result
 
     def delete_edge(
@@ -152,7 +197,10 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(
                 f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be deleted."
             )
-        self._client.srem(self.REDACTED_EDGES_KEY, member)
+        pipe = self._client.pipeline()
+        pipe.srem(self.REDACTED_EDGES_KEY, member)
+        pipe.hdel(self.EDGE_ATTR_HASH_KEY, member)
+        pipe.execute()
 
     def find_connected_nodes(self, node_id: str, edge_label: Optional[str] = None) -> List[str]:
         if not self.node_exists(node_id):
@@ -185,7 +233,10 @@ class RedisGraphAdapter(GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(
                 f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be redacted."
             )
-        self._client.sadd(self.REDACTED_EDGES_KEY, member)
+        pipe = self._client.pipeline()
+        pipe.sadd(self.REDACTED_EDGES_KEY, member)
+        pipe.hdel(self.EDGE_ATTR_HASH_KEY, member)
+        pipe.execute()
         log_audit_entry(
             settings.UME_AGENT_ID,
             f"redact_edge {source_node_id} {target_node_id} {label}",
