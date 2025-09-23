@@ -3,6 +3,7 @@ import pytest
 
 from ume.postgres_graph import PostgresGraph
 from ume.redis_graph_adapter import RedisGraphAdapter
+from ume.neo4j_graph import Neo4jGraph
 from ume.permissions_adapter import PermissionsGraphAdapter
 from ume.graph_schema import DEFAULT_SCHEMA
 import redis
@@ -125,6 +126,62 @@ def test_permissions_adapter_with_redis(redis_service):
 
         permissions_graph = PermissionsGraphAdapter(graph, user_id=user_id)
         assert resource_id in permissions_graph.get_nodes_by_user(user_id)
+    finally:
+        graph.clear()
+        graph.close()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.environ.get("UME_DOCKER_TESTS"), reason="Docker tests disabled")
+def test_permissions_adapter_with_neo4j(neo4j_service):
+    graph = Neo4jGraph(
+        neo4j_service["uri"],
+        neo4j_service["user"],
+        neo4j_service["password"],
+    )
+    resource_id = "Document.neo4j_doc"
+    shared_id = "Document.neo4j_shared"
+    user_id = "User.neo4j_owner"
+    owned_perm = DEFAULT_SCHEMA.edge_labels.get("OWNED_BY")
+    shared_perm = DEFAULT_SCHEMA.edge_labels.get("SHARED_WITH")
+    expected_owned_perm = owned_perm.permission_level if owned_perm else None
+    if expected_owned_perm is None:
+        expected_owned_perm = "editor"
+    expected_shared_perm = shared_perm.permission_level if shared_perm else None
+    if expected_shared_perm is None:
+        expected_shared_perm = "viewer"
+    owned_version = DEFAULT_SCHEMA.get_edge_version("OWNED_BY")
+    shared_version = DEFAULT_SCHEMA.get_edge_version("SHARED_WITH")
+    try:
+        graph.clear()
+        graph.add_node(resource_id, {"type": "Document"})
+        graph.add_node(shared_id, {"type": "Document"})
+        graph.add_node(user_id, {"type": "User"})
+        graph.add_edge(resource_id, user_id, "OWNED_BY")
+        graph.add_edge(shared_id, user_id, "SHARED_WITH")
+
+        edges = graph.get_all_edges()
+        assert any(
+            s == resource_id
+            and t == user_id
+            and lbl == "OWNED_BY"
+            and edge_attrs.get("permission_level") == expected_owned_perm
+            and edge_attrs.get("schema_version") == owned_version
+            for s, t, lbl, edge_attrs in edges
+        )
+        assert any(
+            s == shared_id
+            and t == user_id
+            and lbl == "SHARED_WITH"
+            and edge_attrs.get("permission_level") == expected_shared_perm
+            and edge_attrs.get("schema_version") == shared_version
+            for s, t, lbl, edge_attrs in edges
+        )
+
+        permissions_graph = PermissionsGraphAdapter(graph, user_id=user_id)
+        nodes = permissions_graph.get_nodes_by_user(user_id)
+        assert resource_id in nodes
+        assert shared_id in nodes
     finally:
         graph.clear()
         graph.close()

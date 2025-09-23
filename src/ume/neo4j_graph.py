@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, Dict, List, Optional, cast
 import time
 
@@ -14,6 +15,34 @@ from .graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .graph_algorithms import GraphAlgorithmsMixin
 from .replay_mixin import ReplayMixin
+
+
+def _apply_edge_metadata_defaults(
+    label: str,
+    attrs: Dict[str, Any],
+    *,
+    edge_def: Any | None,
+    schema_version: str | None = None,
+) -> None:
+    """Populate permission and schema metadata defaults for an edge."""
+
+    perm_level = None
+    if edge_def is not None:
+        perm_level = getattr(edge_def, "permission_level", None)
+    if perm_level is None:
+        if label == "OWNED_BY":
+            perm_level = "editor"
+        elif label == "SHARED_WITH":
+            perm_level = "viewer"
+    if perm_level is not None:
+        attrs.setdefault("permission_level", perm_level)
+
+    if schema_version is not None:
+        attrs.setdefault("schema_version", schema_version)
+    elif edge_def is not None:
+        version = getattr(edge_def, "version", None)
+        if version is not None:
+            attrs.setdefault("schema_version", version)
 
 
 class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
@@ -142,6 +171,7 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
     ) -> None:
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
         schema.validate_edge_label(label)
+        edge_def = schema.edge_labels.get(label)
         escaped_label = label.replace("`", "``")
         with self._driver.session() as session:
             result = session.run(
@@ -166,8 +196,12 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 )
             props = {"redacted": False, "created_at": int(time.time())}
             attr_dict: Dict[str, Any] = dict(attrs or {})
-            if schema_version is not None and "schema_version" not in attr_dict:
-                attr_dict["schema_version"] = schema_version
+            _apply_edge_metadata_defaults(
+                label,
+                attr_dict,
+                edge_def=edge_def,
+                schema_version=schema_version,
+            )
             if attr_dict:
                 props.update(attr_dict)
             session.run(
@@ -176,6 +210,7 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             )
 
     def get_all_edges(self) -> List[tuple[str, str, str, Dict[str, Any]]]:
+        schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
         with self._driver.session() as session:
             result = session.run(
                 "MATCH (s)-[r]->(t) "
@@ -184,7 +219,23 @@ class Neo4jGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
                 "AND coalesce(t.redacted, false) = false "
                 "RETURN s.id AS src, t.id AS tgt, type(r) AS label, properties(r) AS attrs"
             )
-            return [(rec["src"], rec["tgt"], rec["label"], {}) for rec in result]
+            edges: List[tuple[str, str, str, Dict[str, Any]]] = []
+            for rec in result:
+                raw_attrs = rec["attrs"]
+                if raw_attrs is None:
+                    attrs: Dict[str, Any] = {}
+                elif isinstance(raw_attrs, Mapping):
+                    attrs = dict(raw_attrs)
+                else:
+                    try:
+                        attrs = dict(raw_attrs)
+                    except TypeError:
+                        attrs = {}
+                label = cast(str, rec["label"])
+                edge_def = schema.edge_labels.get(label)
+                _apply_edge_metadata_defaults(label, attrs, edge_def=edge_def)
+                edges.append((cast(str, rec["src"]), cast(str, rec["tgt"]), label, attrs))
+            return edges
 
 
     def delete_edge(
