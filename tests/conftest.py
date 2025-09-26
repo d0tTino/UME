@@ -6,6 +6,7 @@ import importlib
 from typing import Generator
 from pathlib import Path
 import os
+import time
 
 # Force pure-Python protobuf implementation for compatibility with Python 3.12
 os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
@@ -344,6 +345,41 @@ def redis_service():
     port = container.get_exposed_port(6379)  # type: ignore[no-untyped-call]
     host = container.get_container_host_ip()
     yield {"url": f"redis://{host}:{port}/0"}
+    container.stop()  # type: ignore[no-untyped-call]
+
+
+@pytest.fixture(scope="session")
+def arango_service():
+    """Launch an ArangoDB container for integration tests."""
+    if not _docker_enabled():
+        pytest.skip("Docker-based tests disabled")
+    if DockerContainer is None:
+        pytest.skip("Docker test container support not available")
+    try:
+        from arango import ArangoClient  # type: ignore
+    except Exception:  # pragma: no cover - optional dependency missing
+        pytest.skip("python-arango not installed")
+    container = DockerContainer("arangodb:3.11")
+    container.with_env("ARANGO_ROOT_PASSWORD", "test")  # type: ignore[no-untyped-call]
+    container.with_exposed_ports(8529)  # type: ignore[no-untyped-call]
+    try:
+        container.start()  # type: ignore[no-untyped-call]
+    except Exception as exc:  # pragma: no cover - environment issues
+        pytest.skip(f"ArangoDB not available: {exc}")
+    host = container.get_container_host_ip()
+    port = container.get_exposed_port(8529)  # type: ignore[no-untyped-call]
+    url = f"http://{host}:{port}"
+    client = ArangoClient(hosts=url)
+    for _ in range(30):
+        try:
+            client.db("_system", username="root", password="test")
+            break
+        except Exception:
+            time.sleep(1)
+    else:  # pragma: no cover - container failed to start
+        container.stop()  # type: ignore[no-untyped-call]
+        pytest.skip("ArangoDB did not become ready in time")
+    yield {"url": url, "user": "root", "password": "test"}
     container.stop()  # type: ignore[no-untyped-call]
 
 

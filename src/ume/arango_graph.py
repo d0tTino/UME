@@ -132,9 +132,13 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(
                 f"Both source node '{source_node_id}' and target node '{target_node_id}' must exist to add an edge."
             )
+        from .graph_schema import DEFAULT_SCHEMA  # local import to avoid circular deps
+
         key = self._edge_key(source_node_id, target_node_id, label)
         if self._edges.has(key):
             raise ProcessingError(f"Edge ({source_node_id}, {target_node_id}, {label}) already exists.")
+        edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
+        permission_level = edge_def.permission_level if edge_def else None
         doc = {
             "_key": key,
             "source": source_node_id,
@@ -144,20 +148,48 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             "created_at": int(time.time()),
         }
         attr_dict: Dict[str, Any] = dict(attrs or {})
+        if permission_level is not None and "permission_level" not in attr_dict:
+            attr_dict["permission_level"] = permission_level
         if schema_version is not None and "schema_version" not in attr_dict:
             attr_dict["schema_version"] = schema_version
-        if attr_dict:
-            doc["attrs"] = attr_dict
+        doc["attrs"] = attr_dict
         self._edges.insert(doc)
 
     def get_all_edges(self) -> List[Tuple[str, str, str, Dict[str, Any]]]:
         result: List[Tuple[str, str, str, Dict[str, Any]]] = []
+        from .graph_schema import DEFAULT_SCHEMA  # local import to avoid circular deps
+
         for e in cast(Iterable[Dict[str, Any]], self._edges.all()):
             if e.get("redacted"):
                 continue
             if not self.node_exists(e["source"]) or not self.node_exists(e["target"]):
                 continue
-            result.append((e["source"], e["target"], e["label"], {}))
+            raw_attrs = e.get("attrs")
+            needs_update = False
+            if isinstance(raw_attrs, dict):
+                attr_dict = dict(raw_attrs)
+            else:
+                attr_dict = {}
+                if raw_attrs not in (None, ""):
+                    needs_update = True
+            if raw_attrs is None:
+                needs_update = True
+            edge_def = DEFAULT_SCHEMA.edge_labels.get(e["label"])
+            if edge_def is not None:
+                if (
+                    edge_def.permission_level is not None
+                    and "permission_level" not in attr_dict
+                ):
+                    attr_dict["permission_level"] = edge_def.permission_level
+                    needs_update = True
+                if "schema_version" not in attr_dict:
+                    attr_dict["schema_version"] = edge_def.version
+                    needs_update = True
+            if needs_update:
+                updated = e.copy()
+                updated["attrs"] = attr_dict
+                self._edges.update(updated)
+            result.append((e["source"], e["target"], e["label"], dict(attr_dict)))
 
         return result
 
@@ -204,8 +236,10 @@ class ArangoGraph(ReplayMixin, GraphAlgorithmsMixin, IGraphAdapter):
             raise ProcessingError(
                 f"Edge {(source_node_id, target_node_id, label)} does not exist and cannot be redacted."
             )
-        doc["redacted"] = True
-        self._edges.update(doc)
+        sanitized = doc.copy()
+        sanitized["redacted"] = True
+        sanitized["attrs"] = {}
+        self._edges.update(sanitized)
         log_audit_entry(settings.UME_AGENT_ID, f"redact_edge {source_node_id} {target_node_id} {label}")
 
     # ---- Misc utilities -----------------------------------------------------
