@@ -4,6 +4,7 @@ import pytest
 from ume.arango_graph import ArangoGraph
 from ume.postgres_graph import PostgresGraph
 from ume.redis_graph_adapter import RedisGraphAdapter
+from ume.neo4j_graph import Neo4jGraph
 from ume.permissions_adapter import PermissionsGraphAdapter
 from ume.graph_schema import DEFAULT_SCHEMA
 import redis
@@ -157,6 +158,7 @@ def test_permissions_adapter_with_arango(arango_service):
             schema_version=schema_version,
         )
 
+
         edges = graph.get_all_edges()
         assert any(
             s == resource_id
@@ -164,11 +166,13 @@ def test_permissions_adapter_with_arango(arango_service):
             and lbl == "OWNED_BY"
             and edge_attrs.get("permission_level") == "editor"
             and edge_attrs.get("schema_version") == schema_version
+
             for s, t, lbl, edge_attrs in edges
         )
 
         permissions_graph = PermissionsGraphAdapter(graph, user_id=user_id)
         assert resource_id in permissions_graph.get_nodes_by_user(user_id)
+
     finally:
         graph.clear()
         graph.close()

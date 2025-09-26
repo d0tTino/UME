@@ -1,10 +1,12 @@
 import pytest
 
+from types import MappingProxyType
 from typing import cast
 
 from neo4j import Driver
 from ume.neo4j_graph import Neo4jGraph
-from ume.processing import ProcessingError
+from ume.processing import ProcessingError, DEFAULT_VERSION
+from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
 
 
 class DummyResult:
@@ -63,14 +65,14 @@ def test_node_and_edge_crud():
 
     graph.add_node("n1", {})
     graph.add_node("n2", {})
-    graph.add_edge("n1", "n2", "RELATES_TO")
-    graph.delete_edge("n1", "n2", "RELATES_TO")
+    graph.add_edge("n1", "n2", "TAGGED_AS")
+    graph.delete_edge("n1", "n2", "TAGGED_AS")
 
     assert len(driver.session_obj.calls) == 8
 
 
 def test_add_edge_parameterized_label():
-    label = "RELATES_TO"
+    label = "TAGGED_AS"
     results = [
         DummyResult({"scnt": 1, "tcnt": 1}),  # check nodes exist
         DummyResult({"cnt": 0}),  # check existing edge
@@ -94,7 +96,7 @@ def test_add_edge_parameterized_label():
     assert check_params == {"src": "s1", "tgt": "t1"}
     assert create_params["src"] == "s1"
     assert create_params["tgt"] == "t1"
-    assert isinstance(create_params.get("ts"), int)
+    assert isinstance(create_params["props"]["created_at"], int)
 
 
 def test_add_node_duplicate_raises():
@@ -202,3 +204,63 @@ def test_purge_old_records_issues_queries() -> None:
     assert "n.created_at < $cutoff" in delete_nodes_query
     assert delete_edges_params == delete_nodes_params
     assert isinstance(delete_edges_params["cutoff"], int)
+
+
+def test_add_edge_populates_permission_metadata() -> None:
+    results = [
+        DummyResult({"scnt": 1, "tcnt": 1}),
+        DummyResult({"cnt": 0}),
+        DummyResult(None),
+    ]
+    driver = DummyDriver(results)
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
+
+    graph.add_edge("doc", "user", "SHARED_WITH")
+
+    _, params = driver.session_obj.calls[-1]
+    props = params["props"]
+    schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
+    edge_def = schema.edge_labels["SHARED_WITH"]
+    expected_perm = edge_def.permission_level or "viewer"
+    assert props["permission_level"] == expected_perm
+    assert props["schema_version"] == edge_def.version
+    assert props["redacted"] is False
+
+
+def test_get_all_edges_returns_plain_dict_with_defaults() -> None:
+    raw_attrs = MappingProxyType({"redacted": False})
+    records = [
+        {
+            "src": "Document.d1",
+            "tgt": "User.u1",
+            "label": "SHARED_WITH",
+            "attrs": raw_attrs,
+        }
+    ]
+    driver = DummyDriver([records])
+    graph = Neo4jGraph(
+        "bolt://localhost:7687",
+        "neo4j",
+        "pass",
+        driver=cast(Driver, driver),
+    )
+
+    edges = graph.get_all_edges()
+    assert len(edges) == 1
+    src, tgt, label, attrs = edges[0]
+    assert src == "Document.d1"
+    assert tgt == "User.u1"
+    assert label == "SHARED_WITH"
+    assert isinstance(attrs, dict)
+    assert attrs is not raw_attrs
+    schema = DEFAULT_SCHEMA_MANAGER.get_schema(DEFAULT_VERSION)
+    edge_def = schema.edge_labels["SHARED_WITH"]
+    expected_perm = edge_def.permission_level or "viewer"
+    assert attrs["permission_level"] == expected_perm
+    assert attrs["schema_version"] == edge_def.version
+    assert attrs["redacted"] is False
