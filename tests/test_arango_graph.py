@@ -73,7 +73,10 @@ def test_node_and_edge_crud():
     graph.update_node("n1", {"v": 2})
     assert graph.get_node("n1")["v"] == 2
     graph.add_edge("n1", "n2", "R")
-    assert ("n1", "n2", "R", {}) in graph.get_all_edges()
+    edges = graph.get_all_edges()
+    assert ("n1", "n2", "R", {}) in edges
+    key = graph._edge_key("n1", "n2", "R")
+    assert db.collection("edges").docs[key]["attrs"] == {}
     graph.delete_edge("n1", "n2", "R")
     assert graph.get_all_edges() == []
 
@@ -95,3 +98,53 @@ def test_find_connected_nodes_filters_label():
     graph.add_edge("a", "b", "L1")
     graph.add_edge("a", "c", "L2")
     assert graph.find_connected_nodes("a", edge_label="L1") == ["b"]
+
+
+def test_add_edge_records_attrs():
+    db = DummyDatabase()
+    graph = ArangoGraph("http://localhost:8529", "root", "pass", db=db)
+    graph.add_node("doc", {"type": "Document"})
+    graph.add_node("user", {"type": "User"})
+    schema_version = "3.0.0"
+    graph.add_edge(
+        "doc",
+        "user",
+        "OWNED_BY",
+        {"permission_level": "editor"},
+        schema_version=schema_version,
+    )
+    edges = graph.get_all_edges()
+    assert edges == [
+        (
+            "doc",
+            "user",
+            "OWNED_BY",
+            {"permission_level": "editor", "schema_version": schema_version},
+        )
+    ]
+    key = graph._edge_key("doc", "user", "OWNED_BY")
+    stored = db.collection("edges").docs[key]
+    assert stored["attrs"] == {
+        "permission_level": "editor",
+        "schema_version": schema_version,
+    }
+
+
+def test_redact_edge_clears_attrs():
+    db = DummyDatabase()
+    graph = ArangoGraph("http://localhost:8529", "root", "pass", db=db)
+    graph.add_node("doc", {"type": "Document"})
+    graph.add_node("user", {"type": "User"})
+    schema_version = "3.0.0"
+    graph.add_edge(
+        "doc",
+        "user",
+        "OWNED_BY",
+        {"permission_level": "editor"},
+        schema_version=schema_version,
+    )
+    graph.redact_edge("doc", "user", "OWNED_BY")
+    key = graph._edge_key("doc", "user", "OWNED_BY")
+    stored = db.collection("edges").docs[key]
+    assert stored["redacted"] is True
+    assert stored["attrs"] == {}

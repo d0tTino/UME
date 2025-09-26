@@ -1,6 +1,7 @@
 import os
 import pytest
 
+from ume.arango_graph import ArangoGraph
 from ume.postgres_graph import PostgresGraph
 from ume.redis_graph_adapter import RedisGraphAdapter
 from ume.permissions_adapter import PermissionsGraphAdapter
@@ -101,6 +102,49 @@ def test_permissions_adapter_with_redis(redis_service):
     graph = RedisGraphAdapter(redis_service["url"])
     resource_id = "Document.redis_doc"
     user_id = "User.redis_owner"
+    schema_version = DEFAULT_SCHEMA.get_edge_version("OWNED_BY")
+    try:
+        graph.add_node(resource_id, {"type": "Document"})
+        graph.add_node(user_id, {"type": "User"})
+        graph.add_edge(
+            resource_id,
+            user_id,
+            "OWNED_BY",
+            {"permission_level": "editor"},
+            schema_version=schema_version,
+        )
+
+        edges = graph.get_all_edges()
+        assert any(
+            s == resource_id
+            and t == user_id
+            and lbl == "OWNED_BY"
+            and edge_attrs.get("permission_level") == "editor"
+            and edge_attrs.get("schema_version") == schema_version
+            for s, t, lbl, edge_attrs in edges
+        )
+
+        permissions_graph = PermissionsGraphAdapter(graph, user_id=user_id)
+        assert resource_id in permissions_graph.get_nodes_by_user(user_id)
+    finally:
+        graph.clear()
+        graph.close()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.environ.get("UME_DOCKER_TESTS"), reason="Docker tests disabled")
+def test_permissions_adapter_with_arango(arango_service):
+    try:
+        graph = ArangoGraph(
+            arango_service["url"],
+            arango_service["user"],
+            arango_service["password"],
+        )
+    except ImportError:  # pragma: no cover - optional dependency missing
+        pytest.skip("python-arango not installed")
+
+    resource_id = "Document.arango_doc"
+    user_id = "User.arango_owner"
     schema_version = DEFAULT_SCHEMA.get_edge_version("OWNED_BY")
     try:
         graph.add_node(resource_id, {"type": "Document"})
