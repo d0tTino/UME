@@ -4,7 +4,6 @@ import pytest
 from ume.arango_graph import ArangoGraph
 from ume.postgres_graph import PostgresGraph
 from ume.redis_graph_adapter import RedisGraphAdapter
-from ume.neo4j_graph import Neo4jGraph
 from ume.permissions_adapter import PermissionsGraphAdapter
 from ume.graph_schema import DEFAULT_SCHEMA
 import redis
@@ -54,7 +53,24 @@ def test_redis_graph_crud(redis_service):
     graph.add_node("n2", {})
     graph.add_edge("n1", "n2", "R")
     assert ("n1", "n2", "R", {}) in graph.get_all_edges()
+    graph.add_node("n3", {})
+    schema_version = DEFAULT_SCHEMA.get_edge_version("SHARED_WITH")
+    graph.add_edge(
+        "n1",
+        "n3",
+        "SHARED_WITH",
+        {"permission_level": "viewer"},
+        schema_version=schema_version,
+    )
+    edges = graph.get_all_edges()
+    assert (
+        "n1",
+        "n3",
+        "SHARED_WITH",
+        {"permission_level": "viewer", "schema_version": schema_version},
+    ) in edges
     graph.delete_edge("n1", "n2", "R")
+    graph.delete_edge("n1", "n3", "SHARED_WITH")
     assert graph.get_all_edges() == []
     graph.clear()
     graph.close()
