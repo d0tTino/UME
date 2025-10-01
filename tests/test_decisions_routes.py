@@ -6,6 +6,8 @@ from ume import MockGraph
 from ume.config import settings
 from ume.models.decision_analysis import SCHEMA_VERSION
 from ume.models.proposed_action import SCHEMA_VERSION as ACTION_SCHEMA_VERSION
+from ume.models.user_group import SCHEMA_VERSION as GROUP_SCHEMA_VERSION
+from ume.models.users import SCHEMA_VERSION as USER_SCHEMA_VERSION
 from ume.decisions_routes import EDGE_VERSION
 
 
@@ -37,6 +39,13 @@ def test_decision_flow(client_and_graph) -> None:
     analysis = res.json()
     analysis_id = analysis["analysis_id"]
     assert analysis["schema_version"] == SCHEMA_VERSION
+    user_attrs = g.get_node("user1")
+    assert user_attrs is not None
+    assert user_attrs["type"] == "User"
+    assert user_attrs["schema_version"] == USER_SCHEMA_VERSION
+    assert user_attrs["user_id"] == "user1"
+    assert user_attrs["name"] == "user1"
+    assert isinstance(user_attrs["created_at"], int)
 
     res = client.post(
         f"/v1/decisions/{analysis_id}/actions",
@@ -94,6 +103,13 @@ def test_decision_flow_with_group(client_and_graph) -> None:
     )
     assert res.status_code == 200
     analysis_id = res.json()["analysis_id"]
+    group_attrs = g.get_node("group1")
+    assert group_attrs is not None
+    assert group_attrs["type"] == "UserGroup"
+    assert group_attrs["schema_version"] == GROUP_SCHEMA_VERSION
+    assert group_attrs["group_id"] == "group1"
+    assert group_attrs["name"] == "group1"
+    assert group_attrs["members"] == ["user1"]
 
     res = client.get(
         f"/v1/decisions/{analysis_id}",
@@ -182,6 +198,10 @@ def test_viewer_cannot_add_action(client_and_graph) -> None:
     assert res.status_code == 403
     nodes_after = set(g.get_all_node_ids())
     assert nodes_after == nodes_before
+    user2_attrs = g.get_node("user2")
+    assert user2_attrs is not None
+    assert user2_attrs["type"] == "User"
+    assert user2_attrs["schema_version"] == USER_SCHEMA_VERSION
     proposed_action_nodes = [
         node_id
         for node_id in nodes_after
