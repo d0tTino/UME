@@ -7,6 +7,7 @@ from ume.api import app, configure_graph
 from ume import MockGraph
 from ume.config import settings
 from ume.models.calendar_layer import SCHEMA_VERSION
+from ume.models.users import SCHEMA_VERSION as USER_SCHEMA_VERSION
 
 EDGE_VERSION = "3.0.0"
 
@@ -61,6 +62,30 @@ def test_create_calendar_layer(client_and_graph) -> None:
         "OWNED_BY",
         {"permission_level": "editor", "schema_version": EDGE_VERSION},
     ) in edges
+
+
+def test_create_calendar_layer_provisions_owner_user(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    res = client.post(
+        "/v1/calendar/layers",
+        json={"layer_name": "Work", "color": "blue", "user_id": "missing"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 200
+    user_attrs = graph.get_node("missing")
+    assert user_attrs is not None
+    assert user_attrs == {
+        "type": "User",
+        "user_id": "missing",
+        "name": "missing",
+        "email": None,
+        "created_at": user_attrs["created_at"],
+        "schema_version": USER_SCHEMA_VERSION,
+    }
+    assert isinstance(user_attrs["created_at"], int)
 
 
 def test_create_layer_with_group_share(client_and_graph) -> None:

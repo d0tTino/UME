@@ -6,6 +6,7 @@ from typing import List, cast
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
+from .calendar_routes import _ensure_user_node
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .models import create_calendar_layer
@@ -47,6 +48,7 @@ def create_layer(
         "schema_version": layer.schema_version,
     }
     graph.add_node(layer.layer_id, attrs)
+    _ensure_user_node(graph, req.user_id)
     graph.add_edge(
         layer.layer_id,
         req.user_id,
