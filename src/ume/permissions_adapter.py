@@ -152,6 +152,11 @@ class PermissionsGraphAdapter(IGraphAdapter):
         version = edge_def.version
         attrs = dict(attrs or {})
         perm_level = attrs.get("permission_level")
+        if label in {"OWNED_BY", "SHARED_WITH"}:
+            if perm_level is None or (isinstance(perm_level, str) and not perm_level):
+                raise AccessDeniedError(
+                    "permission_level is required for OWNED_BY/SHARED_WITH edges"
+                )
         if perm_level is not None and perm_level not in {"viewer", "editor"}:
             raise AccessDeniedError(
                 f"Invalid permission_level '{perm_level}'"

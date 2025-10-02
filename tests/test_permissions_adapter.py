@@ -191,6 +191,31 @@ def test_add_edge_requires_editor_and_preserves_attrs() -> None:
     ]
 
 
+def test_add_permission_edge_requires_permission_level() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("User.u2", {})
+    g.add_node("Document.d1", {})
+    g._edges["Document.d1"].append(("User.u1", "OWNED_BY", {"permission_level": "editor"}))
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+
+    with pytest.raises(AccessDeniedError) as excinfo:
+        adapter.add_edge("Document.d1", "User.u2", "SHARED_WITH")
+    assert "permission_level is required" in str(excinfo.value)
+    assert not any(
+        tgt == "User.u2" and lbl == "SHARED_WITH"
+        for _, tgt, lbl, _ in g.get_all_edges()
+    )
+
+    with pytest.raises(AccessDeniedError):
+        adapter.add_edge(
+            "Document.d1",
+            "User.u2",
+            "SHARED_WITH",
+            {"permission_level": ""},
+        )
+
+
 def test_find_connected_nodes_filters_by_permissions() -> None:
     g = build_graph()
     g.add_node("Document.d3", {})
