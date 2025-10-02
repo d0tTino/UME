@@ -27,7 +27,7 @@ def client_and_graph():
 def _seed_graph(graph: MockGraph) -> None:
     # Subjects
     graph.add_node("user1", {"type": "User"})
-    graph.add_node("group1", {"type": "UserGroup"})
+    graph.add_node("group1", {"type": "UserGroup", "members": ["user1"]})
     graph.add_node("other", {"type": "User"})
 
     # User-only nodes
@@ -81,7 +81,7 @@ def test_get_nodes_shared_with_filters_viewer_editor(client_and_graph):
 
     res = client.get(
         "/v1/nodes/shared",
-        params={"group_id": "group1"},
+        params={"user_id": "user1", "group_id": "group1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -113,13 +113,27 @@ def test_get_nodes_shared_with_excludes_nodes_without_permission_level(
 
     res = client.get(
         "/v1/nodes/shared",
-        params={"group_id": "group1"},
+        params={"user_id": "user1", "group_id": "group1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
     nodes = set(res.json()["nodes"])
     assert "g_no_perm" not in nodes
     assert "g_invalid" not in nodes
+
+
+def test_get_nodes_shared_with_requires_group_membership(client_and_graph) -> None:
+    client, graph = client_and_graph
+    _seed_graph(graph)
+    token = _token(client)
+
+    res = client.get(
+        "/v1/nodes/shared",
+        params={"user_id": "other", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 403
 
 
 def test_editor_vs_viewer_permissions(client_and_graph) -> None:
