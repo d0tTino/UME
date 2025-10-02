@@ -136,6 +136,22 @@ def test_get_nodes_shared_with_requires_group_membership(client_and_graph) -> No
     assert res.status_code == 403
 
 
+def test_get_nodes_shared_with_missing_group_returns_404(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {"type": "User"})
+
+    res = client.get(
+        "/v1/nodes/shared",
+        params={"user_id": "user1", "group_id": "missing"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Group not found"}
+
+
 def test_editor_vs_viewer_permissions(client_and_graph) -> None:
     _, graph = client_and_graph
     _seed_graph(graph)

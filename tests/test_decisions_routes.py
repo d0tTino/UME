@@ -147,6 +147,20 @@ def test_group_membership_required(client_and_graph) -> None:
     assert res.status_code == 403
 
 
+def test_group_missing_returns_404(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "Z", "user_id": "user1", "group_id": "missing"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Group not found"}
+
+
 def test_add_action_requires_group_membership(client_and_graph) -> None:
     client, g = client_and_graph
     token = _token(client)
