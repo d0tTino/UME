@@ -254,6 +254,22 @@ def test_calendar_event_group_membership_required(client_and_graph) -> None:
     assert res.status_code == 403
 
 
+def test_calendar_event_missing_group_returns_404(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user1", "group_id": "missing"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Group not found"}
+
+
 def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)

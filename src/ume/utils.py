@@ -42,7 +42,10 @@ def ensure_group_member(
     """
 
     group = graph.get_node(group_id)
-    members = group.get("members", []) if isinstance(group, dict) else []
+    if not isinstance(group, dict):
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    members = group.get("members", [])
     if should_exist:
         if user_id not in members:
             raise HTTPException(status_code=403, detail="User not in group")
