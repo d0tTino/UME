@@ -94,7 +94,7 @@ def test_decision_flow(client_and_graph) -> None:
 def test_decision_flow_with_group(client_and_graph) -> None:
     client, g = client_and_graph
     token = _token(client)
-    g.add_node("group1", {"members": ["user1"]})
+    g.add_node("group1", {"members": ["user1", "user2"]})
 
     res = client.post(
         "/v1/decisions",
@@ -109,7 +109,16 @@ def test_decision_flow_with_group(client_and_graph) -> None:
     assert group_attrs["schema_version"] == GROUP_SCHEMA_VERSION
     assert group_attrs["group_id"] == "group1"
     assert group_attrs["name"] == "group1"
-    assert group_attrs["members"] == ["user1"]
+    assert group_attrs["members"] == ["user1", "user2"]
+
+    edges = g.get_all_edges()
+    assert any(
+        s == analysis_id
+        and t == "group1"
+        and lbl == "SHARED_WITH"
+        and e.get("permission_level") == "editor"
+        for s, t, lbl, e in edges
+    )
 
     res = client.get(
         f"/v1/decisions/{analysis_id}",
@@ -117,6 +126,94 @@ def test_decision_flow_with_group(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+
+    # Group editor can add an action and share it back with editor access
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={
+            "description": "Team option",
+            "user_id": "user2",
+            "group_id": "group1",
+            "group_permission_level": "editor",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    action_id = res.json()["action_id"]
+
+    edges = g.get_all_edges()
+    assert any(
+        s == action_id
+        and t == "group1"
+        and lbl == "SHARED_WITH"
+        and e.get("permission_level") == "editor"
+        for s, t, lbl, e in edges
+    )
+
+
+def test_decision_group_viewer_share_limits_editing(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+    g.add_node("group1", {"members": ["user1", "user2"]})
+
+    res = client.post(
+        "/v1/decisions",
+        json={
+            "query": "Choose",
+            "user_id": "user1",
+            "group_id": "group1",
+            "group_permission_level": "viewer",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+
+    edges = g.get_all_edges()
+    assert any(
+        s == analysis_id
+        and t == "group1"
+        and lbl == "SHARED_WITH"
+        and e.get("permission_level") == "viewer"
+        for s, t, lbl, e in edges
+    )
+
+    nodes_before = set(g.get_all_node_ids())
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={"description": "Team option", "user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+    nodes_after = set(g.get_all_node_ids())
+    new_nodes = nodes_after - nodes_before
+    assert new_nodes <= {"user2"}
+    assert not any(
+        (g.get_node(node_id) or {}).get("type") == "ProposedAction"
+        for node_id in new_nodes
+    )
+
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={
+            "description": "Owner action",
+            "user_id": "user1",
+            "group_id": "group1",
+            "group_permission_level": "viewer",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    action_id = res.json()["action_id"]
+
+    edges = g.get_all_edges()
+    assert any(
+        s == action_id
+        and t == "group1"
+        and lbl == "SHARED_WITH"
+        and e.get("permission_level") == "viewer"
+        for s, t, lbl, e in edges
+    )
 
 
 def test_group_membership_required(client_and_graph) -> None:
