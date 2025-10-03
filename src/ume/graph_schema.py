@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from importlib import resources
-from typing import Dict
+from typing import Dict, NoReturn
 import json
 import yaml
 
@@ -16,6 +16,7 @@ class Property:
     name: str
     version: str
     permission_level: str | None = None
+    permission_level_values: tuple[str, ...] = ()
 
 
 @dataclass
@@ -25,6 +26,7 @@ class NodeType:
     name: str
     version: str
     permission_level: str | None = None
+    permission_level_values: tuple[str, ...] = ()
     properties: Dict[str, Property] = field(default_factory=dict)
 
 
@@ -35,6 +37,7 @@ class EdgeLabel:
     label: str
     version: str
     permission_level: str | None = None
+    permission_level_values: tuple[str, ...] = ()
 
 
 @dataclass
@@ -53,6 +56,38 @@ class GraphSchema:
                 data = yaml.safe_load(f)
             else:
                 data = json.load(f)
+
+        def _parse_permission(
+            value: object, context: str
+        ) -> tuple[str | None, tuple[str, ...]]:
+            def _error(message: str) -> NoReturn:
+                from .processing import ProcessingError
+
+                raise ProcessingError(message)
+
+            if value is None:
+                return None, ()
+            if isinstance(value, str):
+                value_str = str(value)
+                return value_str, (value_str,)
+            if isinstance(value, dict):
+                default = value.get("default")
+                accepted = value.get("accepted_values")
+                default_str = str(default) if default is not None else None
+                if accepted is None:
+                    values: list[str] = []
+                elif isinstance(accepted, (list, tuple, set)):
+                    values = [str(v) for v in accepted]
+                else:
+                    _error(
+                        f"{context} permission_level accepted_values must be a sequence of strings"
+                    )
+                if default_str is not None and default_str not in values:
+                    values.append(default_str)
+                values = list(dict.fromkeys(values))
+                return default_str, tuple(values)
+            _error(f"{context} permission_level must be a string or mapping")
+
         node_types = {}
         for name, info in data.get("node_types", {}).items():
             if not isinstance(info, dict):
@@ -76,25 +111,43 @@ class GraphSchema:
                     raise ProcessingError(
                         f"Property '{prop_name}' for node type '{name}' must be a mapping",
                     )
+                prop_perm, prop_perm_values = _parse_permission(
+                    prop_info.get("permission_level"),
+                    f"Property '{prop_name}' for node type '{name}'",
+                )
                 properties[prop_name] = Property(
                     name=prop_name,
                     version=str(prop_info.get("version", "0.0.0")),
-                    permission_level=prop_info.get("permission_level"),
+                    permission_level=prop_perm,
+                    permission_level_values=prop_perm_values,
                 )
+            node_perm, node_perm_values = _parse_permission(
+                info.get("permission_level"), f"Node type '{name}'"
+            )
             node_types[name] = NodeType(
                 name=name,
                 version=str(info.get("version", "0.0.0")),
-                permission_level=info.get("permission_level"),
+                permission_level=node_perm,
+                permission_level_values=node_perm_values,
                 properties=properties,
             )
-        edge_labels = {
-            label: EdgeLabel(
+        edge_labels: Dict[str, EdgeLabel] = {}
+        for label, info in data.get("edge_labels", {}).items():
+            if not isinstance(info, dict):
+                from .processing import ProcessingError
+
+                raise ProcessingError(
+                    f"Edge label '{label}' must be a mapping",
+                )
+            edge_perm, edge_perm_values = _parse_permission(
+                info.get("permission_level"), f"Edge label '{label}'"
+            )
+            edge_labels[label] = EdgeLabel(
                 label=label,
                 version=str(info.get("version", "0.0.0")),
-                permission_level=info.get("permission_level"),
+                permission_level=edge_perm,
+                permission_level_values=edge_perm_values,
             )
-            for label, info in data.get("edge_labels", {}).items()
-        }
         version = str(data.get("version", "0.0.0"))
         return GraphSchema(
             version=version, node_types=node_types, edge_labels=edge_labels

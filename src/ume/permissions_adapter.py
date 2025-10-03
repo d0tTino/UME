@@ -157,10 +157,18 @@ class PermissionsGraphAdapter(IGraphAdapter):
                 raise AccessDeniedError(
                     "permission_level is required for OWNED_BY/SHARED_WITH edges"
                 )
-        if perm_level is not None and perm_level not in {"viewer", "editor"}:
-            raise AccessDeniedError(
-                f"Invalid permission_level '{perm_level}'"
-            )
+        if perm_level is not None:
+            if not isinstance(perm_level, str) or not perm_level:
+                raise AccessDeniedError(
+                    "permission_level must be a non-empty string when provided"
+                )
+            accepted = set(edge_def.permission_level_values)
+            if not accepted and edge_def.permission_level is not None:
+                accepted.add(edge_def.permission_level)
+            if not accepted or perm_level not in accepted:
+                raise AccessDeniedError(
+                    f"Invalid permission_level '{perm_level}'"
+                )
         attrs.pop("schema_version", None)
         self._adapter.add_edge(
             source_node_id,
