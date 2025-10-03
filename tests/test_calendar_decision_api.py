@@ -195,14 +195,48 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     assert res.status_code == 200
     assert res.json() == [event_data]
 
+    # Event shared with the group granting editor rights
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Planning",
+            "start_time": start,
+            "user_id": "user1",
+            "group_id": "group1",
+            "group_permission_level": "editor",
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    editor_event = res.json()
+
+    # Group-scoped retrieval now returns both events
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    returned_ids = {evt["event_id"] for evt in res.json()}
+    assert returned_ids == {event_data["event_id"], editor_event["event_id"]}
+
     edges = graph.get_all_edges()
     assert any(
         s == event_id and t == "group1" and lbl == "SHARED_WITH"
-        for s, t, lbl, _ in edges
+        and attrs.get("permission_level") == "viewer"
+        for s, t, lbl, attrs in edges
     )
     assert not any(
         s == own_event["event_id"] and t == "group1" and lbl == "SHARED_WITH"
         for s, t, lbl, _ in edges
+    )
+    assert any(
+        s == editor_event["event_id"]
+        and t == "group1"
+        and lbl == "SHARED_WITH"
+        and attrs.get("permission_level") == "editor"
+        for s, t, lbl, attrs in edges
     )
 
 

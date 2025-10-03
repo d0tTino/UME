@@ -20,6 +20,7 @@ from .models import (
 )
 
 EDGE_VERSION = "3.0.0"
+VALID_GROUP_PERMISSION_LEVELS = {"viewer", "editor"}
 
 router = APIRouter(prefix="/v1/decisions")
 
@@ -28,6 +29,7 @@ class DecisionCreateRequest(BaseModel):
     query: str
     user_id: str
     group_id: str | None = None
+    group_permission_level: str | None = None
 
 
 class ActionCreateRequest(BaseModel):
@@ -37,6 +39,7 @@ class ActionCreateRequest(BaseModel):
     outcome_metrics: dict[str, float] | None = None
     user_id: str
     group_id: str | None = None
+    group_permission_level: str | None = None
 
 
 def _analysis_to_dict(analysis: DecisionAnalysis) -> dict[str, Any]:
@@ -130,6 +133,9 @@ def create_decision(
     if req.group_id:
         ensure_group_member(graph, req.user_id, req.group_id)
         _ensure_group_node(graph, req.group_id)
+        group_permission_level = req.group_permission_level or "editor"
+        if group_permission_level not in VALID_GROUP_PERMISSION_LEVELS:
+            raise HTTPException(status_code=400, detail="Invalid group_permission_level")
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=req.user_id, group_id=req.group_id
     )
@@ -152,7 +158,7 @@ def create_decision(
             analysis.analysis_id,
             req.group_id,
             "SHARED_WITH",
-            {"permission_level": "editor"},
+            {"permission_level": group_permission_level},
         )
     return attrs
 
@@ -167,6 +173,9 @@ def add_action(
     if req.group_id:
         ensure_group_member(graph, req.user_id, req.group_id)
         _ensure_group_node(graph, req.group_id)
+        group_permission_level = req.group_permission_level or "viewer"
+        if group_permission_level not in VALID_GROUP_PERMISSION_LEVELS:
+            raise HTTPException(status_code=400, detail="Invalid group_permission_level")
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=req.user_id, group_id=req.group_id
     )
@@ -197,7 +206,7 @@ def add_action(
                 action.action_id,
                 req.group_id,
                 "SHARED_WITH",
-                {"permission_level": "viewer"},
+                {"permission_level": group_permission_level},
             )
         except AccessDeniedError:
             raise HTTPException(

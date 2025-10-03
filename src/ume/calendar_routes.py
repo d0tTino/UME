@@ -22,6 +22,7 @@ from .models import (
 from .processing import ProcessingError
 
 EDGE_VERSION = "3.0.0"
+VALID_GROUP_PERMISSION_LEVELS = {"viewer", "editor"}
 
 router = APIRouter(prefix="/v1/calendar")
 
@@ -77,6 +78,7 @@ class CalendarEventCreateRequest(BaseModel):
     visibility: CalendarEventVisibility | None = None
     user_id: str
     group_id: str | None = None
+    group_permission_level: str | None = None
     invitee_ids: List[str] | None = None
     layer_ids: List[str] | None = None
 
@@ -149,6 +151,9 @@ def create_event(
                     status_code=400,
                     detail="Group events must have visibility public_to_group",
                 )
+            group_permission_level = req.group_permission_level or "viewer"
+            if group_permission_level not in VALID_GROUP_PERMISSION_LEVELS:
+                raise HTTPException(status_code=400, detail="Invalid group_permission_level")
         try:
             perm_graph.add_edge(
                 event.event_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
@@ -168,7 +173,7 @@ def create_event(
                 event.event_id,
                 req.group_id,
                 "SHARED_WITH",
-                {"permission_level": "viewer"},
+                {"permission_level": group_permission_level},
             )
 
         for uid in invitee_ids:
