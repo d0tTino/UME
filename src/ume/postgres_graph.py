@@ -97,22 +97,40 @@ class PostgresGraph(GraphAlgorithmsMixin, IGraphAdapter):
         )
 
         # Backfill permission metadata for historical permission edges.
-        cur.execute(
-            """
-            UPDATE edges
-            SET attributes = jsonb_set(COALESCE(attributes, '{}'::jsonb), '{permission_level}', '"editor"'::jsonb, true)
-            WHERE label = 'OWNED_BY'
-              AND (attributes->>'permission_level') IS NULL
-            """
-        )
-        cur.execute(
-            """
-            UPDATE edges
-            SET attributes = jsonb_set(COALESCE(attributes, '{}'::jsonb), '{permission_level}', '"viewer"'::jsonb, true)
-            WHERE label = 'SHARED_WITH'
-              AND (attributes->>'permission_level') IS NULL
-            """
-        )
+        owned_def = DEFAULT_SCHEMA.edge_labels.get("OWNED_BY")
+        owned_default = owned_def.permission_level if owned_def else None
+        if owned_default is not None:
+            cur.execute(
+                """
+                UPDATE edges
+                SET attributes = jsonb_set(
+                    COALESCE(attributes, '{}'::jsonb),
+                    '{permission_level}',
+                    %s::jsonb,
+                    true
+                )
+                WHERE label = %s
+                  AND (attributes->>'permission_level') IS NULL
+                """,
+                (json.dumps(owned_default), "OWNED_BY"),
+            )
+        shared_def = DEFAULT_SCHEMA.edge_labels.get("SHARED_WITH")
+        shared_default = shared_def.permission_level if shared_def else None
+        if shared_default is not None:
+            cur.execute(
+                """
+                UPDATE edges
+                SET attributes = jsonb_set(
+                    COALESCE(attributes, '{}'::jsonb),
+                    '{permission_level}',
+                    %s::jsonb,
+                    true
+                )
+                WHERE label = %s
+                  AND (attributes->>'permission_level') IS NULL
+                """,
+                (json.dumps(shared_default), "SHARED_WITH"),
+            )
 
     # ---- Resource management -------------------------------------------------
     def close(self) -> None:

@@ -100,6 +100,17 @@ def test_get_edge_version():
         schema.get_edge_version("UNKNOWN_LABEL")
 
 
+def test_permission_level_metadata():
+    schema = load_default_schema()
+    owned = schema.edge_labels["OWNED_BY"]
+    shared = schema.edge_labels["SHARED_WITH"]
+
+    assert owned.permission_level == "editor"
+    assert set(owned.permission_level_values) == {"viewer", "editor"}
+    assert shared.permission_level == "viewer"
+    assert set(shared.permission_level_values) == {"viewer", "editor"}
+
+
 def test_load_node_properties(tmp_path):
     schema_yaml = {
         "version": "1.0.0",

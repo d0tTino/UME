@@ -90,8 +90,18 @@ node_types:
 edge_labels:
   OWNED_BY:
     version: "3.0.0"
+    permission_level:
+      default: "editor"
+      accepted_values:
+        - "viewer"
+        - "editor"
   SHARED_WITH:
     version: "3.0.0"
+    permission_level:
+      default: "viewer"
+      accepted_values:
+        - "viewer"
+        - "editor"
   INVITES:
     version: "3.0.0"
   TAGGED_AS:

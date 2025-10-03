@@ -26,14 +26,7 @@ def _apply_edge_metadata_defaults(
 ) -> None:
     """Populate permission and schema metadata defaults for an edge."""
 
-    perm_level = None
-    if edge_def is not None:
-        perm_level = getattr(edge_def, "permission_level", None)
-    if perm_level is None:
-        if label == "OWNED_BY":
-            perm_level = "editor"
-        elif label == "SHARED_WITH":
-            perm_level = "viewer"
+    perm_level = getattr(edge_def, "permission_level", None) if edge_def else None
     if perm_level is not None:
         attrs.setdefault("permission_level", perm_level)
 
