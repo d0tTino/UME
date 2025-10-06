@@ -24,6 +24,7 @@ from .reliability import filter_low_confidence
 import inspect
 from .graph_adapter import IGraphAdapter
 from .async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
+from .permissions_adapter import PermissionsGraphAdapter
 from .query import Neo4jQueryEngine, build_events_query
 from .event import EventError
 from .processing import ProcessingError
@@ -45,6 +46,24 @@ async def _maybe_call(graph: IGraphAdapter, name: str, *args: Any) -> Any:
     if inspect.isawaitable(result):
         result = await result
     return result
+
+
+async def _ensure_viewable(
+    node_id: str,
+    perm_graph: PermissionsGraphAdapter,
+    graph: IGraphAdapter,
+    not_found_detail: str,
+) -> Dict[str, Any]:
+    """Return node attributes if visible or raise 403/404."""
+
+    attrs = perm_graph.get_node(node_id)
+    if attrs is not None:
+        return attrs
+
+    existing = await _maybe_call(graph, "get_node", node_id)
+    if existing is not None:
+        raise HTTPException(status_code=403, detail="Access denied")
+    raise HTTPException(status_code=404, detail=not_found_detail)
 
 
 class ShortestPathRequest(BaseModel):
@@ -80,6 +99,7 @@ class EdgeCreateRequest(BaseModel):
     source: str
     target: str
     label: str
+    attrs: Dict[str, Any] | None = None
 
 
 class RedactEdgeRequest(BaseModel):
@@ -124,23 +144,39 @@ def run_cypher(
 
 
 @router.post("/analytics/shortest_path")
-def api_shortest_path(
+async def api_shortest_path(
     req: ShortestPathRequest,
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Return the shortest path between two nodes."""
-    path = shortest_path(graph, req.source, req.target)
+
+    await _ensure_viewable(
+        req.source, perm_graph, graph, "Source node not found"
+    )
+    await _ensure_viewable(
+        req.target, perm_graph, graph, "Target node not found"
+    )
+    path = shortest_path(perm_graph, req.source, req.target)
     filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
     return {"path": filtered}
 
 
 @router.post("/analytics/path")
-def api_constrained_path(
+async def api_constrained_path(
     req: PathRequest,
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Find a path subject to optional depth or label constraints."""
-    raw_path = graph.constrained_path(
+
+    await _ensure_viewable(
+        req.source, perm_graph, graph, "Source node not found"
+    )
+    await _ensure_viewable(
+        req.target, perm_graph, graph, "Target node not found"
+    )
+    raw_path = perm_graph.constrained_path(
         req.source,
         req.target,
         req.max_depth,
@@ -160,13 +196,17 @@ async def api_constrained_path_stream(
     edge_label: str | None = Query(None),
     since_timestamp: int | None = Query(None),
     _: str = Depends(deps.get_current_role),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
     graph: IGraphAdapter = Depends(deps.get_graph),
     __: None = Depends(RateLimiter(times=2, seconds=1)),
 ) -> EventSourceResponse:
     """Stream path nodes one by one as an SSE feed."""
 
+    await _ensure_viewable(source, perm_graph, graph, "Source node not found")
+    await _ensure_viewable(target, perm_graph, graph, "Target node not found")
+
     async def _gen() -> AsyncGenerator[dict[str, str], None]:
-        path = graph.constrained_path(
+        path = perm_graph.constrained_path(
             source, target, max_depth, edge_label, since_timestamp
         )
         filtered = filter_low_confidence(path, settings.UME_RELIABILITY_THRESHOLD)
@@ -178,12 +218,17 @@ async def api_constrained_path_stream(
 
 
 @router.post("/analytics/subgraph")
-def api_subgraph(
+async def api_subgraph(
     req: SubgraphRequest,
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Extract a subgraph starting from ``start`` to the given ``depth``."""
-    sg = graph.extract_subgraph(
+
+    await _ensure_viewable(
+        req.start, perm_graph, graph, "Start node not found"
+    )
+    sg = perm_graph.extract_subgraph(
         req.start,
         req.depth,
         req.edge_label,
@@ -205,10 +250,10 @@ def api_subgraph(
 @router.post("/redact/node/{node_id}")
 async def api_redact_node(
     node_id: str,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Redact (delete) a node by its ID."""
-    await _maybe_call(graph, "redact_node", node_id)
+    await _maybe_call(perm_graph, "redact_node", node_id)
     return {"status": "ok"}
 
 
@@ -259,20 +304,22 @@ async def api_store_events_batch(
 @router.post("/redact/edge")
 async def api_redact_edge(
     req: RedactEdgeRequest,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Redact an edge between two nodes."""
-    await _maybe_call(graph, "redact_edge", req.source, req.target, req.label)
+    await _maybe_call(
+        perm_graph, "redact_edge", req.source, req.target, req.label
+    )
     return {"status": "ok"}
 
 
 @router.post("/nodes")
 async def api_create_node(
     req: NodeCreateRequest,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Create a node with optional attributes."""
-    await _maybe_call(graph, "add_node", req.id, req.attributes or {})
+    await _maybe_call(perm_graph, "add_node", req.id, req.attributes or {})
     return {"status": "ok"}
 
 
@@ -280,33 +327,40 @@ async def api_create_node(
 async def api_update_node(
     node_id: str,
     req: NodeUpdateRequest,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Update attributes of an existing node."""
-    await _maybe_call(graph, "update_node", node_id, req.attributes)
+    await _maybe_call(perm_graph, "update_node", node_id, req.attributes)
     return {"status": "ok"}
 
 
 @router.delete("/nodes/{node_id}")
 async def api_delete_node(
     node_id: str,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Remove a node from the graph."""
-    await _maybe_call(graph, "redact_node", node_id)
+    await _maybe_call(perm_graph, "redact_node", node_id)
     return {"status": "ok"}
 
 
 @router.post("/edges")
 async def api_create_edge(
     req: EdgeCreateRequest,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Create an edge between two nodes."""
     edge_def = DEFAULT_SCHEMA.edge_labels.get(req.label)
     version = edge_def.version if edge_def else None
+    attrs = dict(req.attrs or {})
     await _maybe_call(
-        graph, "add_edge", req.source, req.target, req.label, None, version
+        perm_graph,
+        "add_edge",
+        req.source,
+        req.target,
+        req.label,
+        attrs,
+        version,
     )
     return {"status": "ok"}
 
@@ -316,22 +370,22 @@ async def api_delete_edge(
     source: str,
     target: str,
     label: str,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Delete an edge identified by source, target and label."""
-    await _maybe_call(graph, "delete_edge", source, target, label)
+    await _maybe_call(perm_graph, "delete_edge", source, target, label)
     return {"status": "ok"}
 
 
 @router.post("/tweets")
 async def api_post_tweet(
     req: TweetCreateRequest,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Create a tweet node used by the Tweet-bot."""
     node_id = f"tweet:{uuid4()}"
     await _maybe_call(
-        graph,
+        perm_graph,
         "add_node",
         node_id,
         {"text": req.text, "timestamp": int(time.time())},
@@ -342,13 +396,13 @@ async def api_post_tweet(
 @router.post("/documents")
 async def api_upload_document(
     req: DocumentUploadRequest,
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Upload a document for Document Guru."""
     node_id = f"doc:{uuid4()}"
     cleaned = reformat_document(req.content)
     await _maybe_call(
-        graph,
+        perm_graph,
         "add_node",
         node_id,
         {"content": cleaned, "timestamp": int(time.time())},
@@ -359,12 +413,13 @@ async def api_upload_document(
 @router.get("/documents/{document_id}")
 async def api_get_document(
     document_id: str,
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
     graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Return a previously uploaded document."""
-    doc = await _maybe_call(graph, "get_node", document_id)
-    if doc is None:
-        raise HTTPException(status_code=404, detail="Document not found")
+    doc = await _ensure_viewable(
+        document_id, perm_graph, graph, "Document not found"
+    )
     return {"id": document_id, "content": doc.get("content", "")}
 
 

@@ -7,7 +7,6 @@ from typing import Any, DefaultDict, Dict, List, Optional
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .graph_schema import DEFAULT_SCHEMA
-from .processing import ProcessingError
 
 
 class PermissionsGraphAdapter(IGraphAdapter):
@@ -144,12 +143,8 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self._require_editor(source_node_id)
         if label not in {"OWNED_BY", "SHARED_WITH", "INVITES"}:
             self._require_editor(target_node_id)
-        try:
-            DEFAULT_SCHEMA.validate_edge_label(label)
-        except ProcessingError as exc:
-            raise AccessDeniedError(str(exc)) from exc
-        edge_def = DEFAULT_SCHEMA.edge_labels[label]
-        version = edge_def.version
+        edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
+        version = edge_def.version if edge_def else schema_version
         attrs = dict(attrs or {})
         perm_level = attrs.get("permission_level")
         if label in {"OWNED_BY", "SHARED_WITH"}:

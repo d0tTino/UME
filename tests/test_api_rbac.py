@@ -1,5 +1,6 @@
 import os
 from typing import cast
+
 from fastapi.testclient import TestClient
 
 from ume.api import app, configure_graph
@@ -7,11 +8,31 @@ from ume import MockGraph, RoleBasedGraphAdapter
 from ume.config import settings
 
 
+USER_ID = "User.analytics"
+
+
+def _params(user_id: str = USER_ID) -> dict[str, str]:
+    return {"user_id": user_id}
+
+
 def build_graph() -> MockGraph:
     g = MockGraph()
     g.add_node("a", {})
     g.add_node("b", {})
     g.add_edge("a", "b", "L")
+    g.add_node(USER_ID, {"type": "User"})
+    g.add_edge(
+        "a",
+        USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
+    g.add_edge(
+        "b",
+        USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
     return g
 
 
@@ -45,6 +66,7 @@ def test_shortest_path_allowed_for_analytics_agent() -> None:
         "/analytics/shortest_path",
         json=payload,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 200
     assert res.json() == {"path": ["a", "b"]}
@@ -62,6 +84,7 @@ def test_path_and_subgraph_allowed_for_analytics_agent() -> None:
         "/analytics/path",
         json=payload,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 200
     assert res.json() == {"path": ["a", "b"]}
@@ -71,6 +94,7 @@ def test_path_and_subgraph_allowed_for_analytics_agent() -> None:
         "/analytics/subgraph",
         json=sub,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 200
     assert set(res.json()["nodes"].keys()) == {"a", "b"}
@@ -88,6 +112,7 @@ def test_shortest_path_forbidden_for_other_roles() -> None:
         "/analytics/shortest_path",
         json=payload,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 403
 
@@ -95,6 +120,7 @@ def test_shortest_path_forbidden_for_other_roles() -> None:
         "/analytics/path",
         json=payload,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 403
 
@@ -103,6 +129,7 @@ def test_shortest_path_forbidden_for_other_roles() -> None:
         "/analytics/subgraph",
         json=sub,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 403
 
@@ -118,6 +145,7 @@ def test_path_forbidden_with_role_based_adapter() -> None:
         "/analytics/path",
         json=payload,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 403
 
@@ -133,6 +161,7 @@ def test_subgraph_forbidden_with_role_based_adapter() -> None:
         "/analytics/subgraph",
         json=sub,
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 403
 
@@ -146,6 +175,7 @@ def test_redact_node_forbidden_with_role_based_adapter() -> None:
     res = client.post(
         "/redact/node/a",
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 403
 
@@ -160,5 +190,6 @@ def test_redact_edge_forbidden_with_role_based_adapter() -> None:
         "/redact/edge",
         json={"source": "a", "target": "b", "label": "L"},
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 403

@@ -7,6 +7,13 @@ from ume.reliability import filter_low_confidence
 from ume.config import settings
 
 
+USER_ID = "User.reliability"
+
+
+def _params() -> dict[str, str]:
+    return {"user_id": USER_ID}
+
+
 def _token(client: TestClient) -> str:
     res = client.post(
         "/auth/token",
@@ -27,6 +34,21 @@ def test_shortest_path_low_confidence(monkeypatch: MonkeyPatch) -> None:
     g.add_node("good", {})
     g.add_node("bad1", {})
     g.add_edge("good", "bad1", "L")
+    g.add_node(USER_ID, {"type": "User"})
+    g.add_edge(
+        "good",
+        USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
+    g.add_edge(
+        "bad1",
+        USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
+    monkeypatch.setenv("UME_API_ROLE", "AnalyticsAgent")
+    object.__setattr__(settings, "UME_API_ROLE", "AnalyticsAgent")
     configure_graph(g)
 
     monkeypatch.setattr(settings, "UME_RELIABILITY_THRESHOLD", 0.9)
@@ -37,6 +59,7 @@ def test_shortest_path_low_confidence(monkeypatch: MonkeyPatch) -> None:
         "/analytics/shortest_path",
         json={"source": "good", "target": "bad1"},
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 200
     assert res.json()["path"] == ["good"]
@@ -47,6 +70,21 @@ def test_constrained_path_low_confidence(monkeypatch: MonkeyPatch) -> None:
     g.add_node("good", {})
     g.add_node("bad2", {})
     g.add_edge("good", "bad2", "L")
+    g.add_node(USER_ID, {"type": "User"})
+    g.add_edge(
+        "good",
+        USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
+    g.add_edge(
+        "bad2",
+        USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
+    monkeypatch.setenv("UME_API_ROLE", "AnalyticsAgent")
+    object.__setattr__(settings, "UME_API_ROLE", "AnalyticsAgent")
     configure_graph(g)
 
     monkeypatch.setattr(settings, "UME_RELIABILITY_THRESHOLD", 0.9)
@@ -57,6 +95,7 @@ def test_constrained_path_low_confidence(monkeypatch: MonkeyPatch) -> None:
         "/analytics/path",
         json={"source": "good", "target": "bad2"},
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 200
     assert res.json()["path"] == ["good"]
@@ -70,6 +109,16 @@ def test_subgraph_low_confidence(monkeypatch: MonkeyPatch) -> None:
     g.add_edge("good", "good2", "L")
     g.add_edge("good", "good2", "123")
     g.add_edge("good", "bad3", "L")
+    g.add_node(USER_ID, {"type": "User"})
+    for node in ("good", "good2", "bad3"):
+        g.add_edge(
+            node,
+            USER_ID,
+            "OWNED_BY",
+            {"permission_level": "editor"},
+        )
+    monkeypatch.setenv("UME_API_ROLE", "AnalyticsAgent")
+    object.__setattr__(settings, "UME_API_ROLE", "AnalyticsAgent")
     configure_graph(g)
 
     monkeypatch.setattr(settings, "UME_RELIABILITY_THRESHOLD", 0.8)
@@ -80,6 +129,7 @@ def test_subgraph_low_confidence(monkeypatch: MonkeyPatch) -> None:
         "/analytics/subgraph",
         json={"start": "good", "depth": 1},
         headers={"Authorization": f"Bearer {token}"},
+        params=_params(),
     )
     assert res.status_code == 200
     data = res.json()
