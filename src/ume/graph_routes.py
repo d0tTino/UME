@@ -14,7 +14,8 @@ except Exception:  # pragma: no cover - provide stub for tests without limiter
             return None
 
         return _noop
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
+from pydantic_core import PydanticCustomError
 from sse_starlette.sse import EventSourceResponse
 
 from .analytics import shortest_path
@@ -100,6 +101,18 @@ class EdgeCreateRequest(BaseModel):
     target: str
     label: str
     attrs: Dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _require_permission_level(self) -> "EdgeCreateRequest":
+        if self.label in {"OWNED_BY", "SHARED_WITH"}:
+            attrs = self.attrs or {}
+            perm = attrs.get("permission_level")
+            if not isinstance(perm, str) or not perm:
+                raise PydanticCustomError(
+                    "permission_level_missing",
+                    "permission_level is required for OWNED_BY/SHARED_WITH edges",
+                )
+        return self
 
 
 class RedactEdgeRequest(BaseModel):
