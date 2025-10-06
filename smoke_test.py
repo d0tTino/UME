@@ -1,7 +1,6 @@
 import subprocess
 import sys
 import time
-import os
 
 """
 A minimal smoke test for UME.
