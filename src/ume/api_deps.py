@@ -7,7 +7,7 @@ import time
 import threading
 import inspect
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict, Annotated
 
 from fastapi import Depends, HTTPException, Query
 from fastapi.security import OAuth2PasswordBearer
@@ -123,6 +123,17 @@ def get_graph(role: str = Depends(get_current_role)) -> IGraphAdapter:
 
 
 def get_permissions_graph(
+    graph: IGraphAdapter = Depends(get_graph),
+    user_id: Annotated[str | None, Query()] = None,
+    group_id: Annotated[str | None, Query()] = None,
+) -> PermissionsGraphAdapter:
+    """Return a :class:`PermissionsGraphAdapter` scoped to the request subject."""
+
+    if user_id is None and group_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="A user_id or group_id is required to evaluate permissions",
+        )
     user_id: str = Query(..., description="User performing the request"),
     group_id: str | None = Query(None, description="Optional group context"),
     graph: IGraphAdapter = Depends(get_graph),
@@ -165,4 +176,18 @@ async def get_entity(
         raise HTTPException(status_code=404, detail="Entity not found")
 
     raise HTTPException(status_code=403, detail="Access denied")
+
+
+__all__ = [
+    "configure_graph",
+    "configure_vector_store",
+    "remove_expired_tokens",
+    "get_current_role",
+    "require_token",
+    "get_query_engine",
+    "get_graph",
+    "get_permissions_graph",
+    "get_vector_store",
+    "get_entity",
+]
 

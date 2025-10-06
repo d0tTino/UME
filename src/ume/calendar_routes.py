@@ -19,7 +19,6 @@ from .models import (
     create_calendar_event,
     create_user,
 )
-from .processing import ProcessingError
 
 EDGE_VERSION = "3.0.0"
 VALID_GROUP_PERMISSION_LEVELS = {"viewer", "editor"}

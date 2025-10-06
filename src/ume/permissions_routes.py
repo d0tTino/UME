@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
@@ -14,27 +14,32 @@ router = APIRouter(prefix="/v1/nodes")
 
 @router.get("")
 def get_nodes_by_user(
-    user_id: str = Query(...),
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
     _: str = Depends(deps.get_current_role),
 ) -> Dict[str, List[str]]:
     """Return nodes owned by the specified user."""
-    perm_graph = PermissionsGraphAdapter(graph, user_id=user_id)
+
+    user_id = perm_graph.user_id
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="user_id is required")
     node_ids = perm_graph.get_nodes_by_user(user_id)
     return {"nodes": node_ids}
 
 
 @router.get("/shared")
 def get_nodes_shared_with(
-    user_id: str = Query(...),
-    group_id: str = Query(...),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> Dict[str, List[str]]:
     """Return nodes shared with the specified group."""
+
+    user_id = perm_graph.user_id
+    group_id = perm_graph.group_id
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    if group_id is None:
+        raise HTTPException(status_code=400, detail="group_id is required")
     ensure_group_member(graph, user_id, group_id)
-    perm_graph = PermissionsGraphAdapter(
-        graph, user_id=user_id, group_id=group_id
-    )
     node_ids = perm_graph.get_nodes_shared_with(group_id)
     return {"nodes": node_ids}
