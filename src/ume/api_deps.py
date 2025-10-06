@@ -9,7 +9,7 @@ import inspect
 from pathlib import Path
 from typing import Dict, Any
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
 from fastapi.security import OAuth2PasswordBearer
 
 from .config import settings
@@ -18,6 +18,7 @@ from .graph_adapter import IGraphAdapter
 from .async_graph_adapter import IAsyncGraphAdapter
 from .query import Neo4jQueryEngine
 from . import VectorStore
+from .permissions_adapter import PermissionsGraphAdapter
 
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,18 @@ def get_graph(role: str = Depends(get_current_role)) -> IGraphAdapter:
     return graph
 
 
+def get_permissions_graph(
+    user_id: str = Query(..., description="User performing the request"),
+    group_id: str | None = Query(None, description="Optional group context"),
+    graph: IGraphAdapter = Depends(get_graph),
+) -> PermissionsGraphAdapter:
+    """Return a :class:`PermissionsGraphAdapter` for the current request."""
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    return PermissionsGraphAdapter(graph, user_id=user_id, group_id=group_id)
+
+
 def get_vector_store() -> VectorStore:
     from .api import app  # Local import to avoid circular dependency
 
@@ -133,15 +146,23 @@ def get_vector_store() -> VectorStore:
 async def get_entity(
     type: str,
     id: str,
+    perm_graph: PermissionsGraphAdapter = Depends(get_permissions_graph),
     graph: IGraphAdapter = Depends(get_graph),
 ) -> Dict[str, Any]:
     """Return attributes for node ``id`` if its ``type`` matches."""
+
+    attrs = perm_graph.get_node(id)
+    if attrs is not None and attrs.get("type") == type:
+        return attrs
+
     func = getattr(graph, "get_node")
     if inspect.iscoroutinefunction(func) or isinstance(graph, IAsyncGraphAdapter):
-        attrs = await func(id)  # type: ignore[misc]
+        base_attrs = await func(id)  # type: ignore[misc]
     else:
-        attrs = func(id)
-    if attrs is None or attrs.get("type") != type:
+        base_attrs = func(id)
+
+    if base_attrs is None or base_attrs.get("type") != type:
         raise HTTPException(status_code=404, detail="Entity not found")
-    return attrs
+
+    raise HTTPException(status_code=403, detail="Access denied")
 

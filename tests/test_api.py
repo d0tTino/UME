@@ -19,6 +19,9 @@ from ume.config import settings
 from pytest import MonkeyPatch, LogCaptureFixture
 
 
+AUTH_USER_ID = "User.authcheck"
+
+
 def setup_module(_: object) -> None:
     # configure app state for tests
     object.__setattr__(settings, "UME_API_TOKEN", "secret-token")
@@ -29,6 +32,19 @@ def setup_module(_: object) -> None:
     g.add_node("a", {})
     g.add_node("b", {})
     g.add_edge("a", "b", "L")
+    g.add_node(AUTH_USER_ID, {"type": "User"})
+    g.add_edge(
+        "a",
+        AUTH_USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
+    g.add_edge(
+        "b",
+        AUTH_USER_ID,
+        "OWNED_BY",
+        {"permission_level": "editor"},
+    )
     configure_graph(g)
 
 
@@ -380,16 +396,41 @@ def test_semantic_search_invalid_k(monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.parametrize(  # type: ignore[misc]
     "method,path,body,params",
     [
-        ("post", "/analytics/shortest_path", {"source": "a", "target": "b"}, None),
-        ("post", "/analytics/path", {"source": "a", "target": "b"}, None),
-        ("post", "/analytics/subgraph", {"start": "a", "depth": 1}, None),
-        ("post", "/redact/node/a", None, None),
-        ("post", "/redact/edge", {"source": "a", "target": "b", "label": "L"}, None),
-        ("post", "/nodes", {"id": "x"}, None),
-        ("patch", "/nodes/a", {"attributes": {}}, None),
-        ("delete", "/nodes/a", None, None),
-        ("post", "/edges", {"source": "a", "target": "b", "label": "L"}, None),
-        ("delete", "/edges/a/b/L", None, None),
+        (
+            "post",
+            "/analytics/shortest_path",
+            {"source": "a", "target": "b"},
+            [("user_id", AUTH_USER_ID)],
+        ),
+        (
+            "post",
+            "/analytics/path",
+            {"source": "a", "target": "b"},
+            [("user_id", AUTH_USER_ID)],
+        ),
+        (
+            "post",
+            "/analytics/subgraph",
+            {"start": "a", "depth": 1},
+            [("user_id", AUTH_USER_ID)],
+        ),
+        ("post", "/redact/node/a", None, [("user_id", AUTH_USER_ID)]),
+        (
+            "post",
+            "/redact/edge",
+            {"source": "a", "target": "b", "label": "L"},
+            [("user_id", AUTH_USER_ID)],
+        ),
+        ("post", "/nodes", {"id": "x"}, [("user_id", AUTH_USER_ID)]),
+        ("patch", "/nodes/a", {"attributes": {}}, [("user_id", AUTH_USER_ID)]),
+        ("delete", "/nodes/a", None, [("user_id", AUTH_USER_ID)]),
+        (
+            "post",
+            "/edges",
+            {"source": "a", "target": "b", "label": "L"},
+            [("user_id", AUTH_USER_ID)],
+        ),
+        ("delete", "/edges/a/b/L", None, [("user_id", AUTH_USER_ID)]),
         (
             "get",
             "/vectors/search",
@@ -411,12 +452,13 @@ def test_endpoints_require_authentication(
 ) -> None:
     client = TestClient(app)
     request = getattr(client, method)
+    kwargs = {"params": params} if params is not None else {}
     if method == "get":
-        res = request(path, params=params)
+        res = request(path, **kwargs)
     elif body is not None:
-        res = request(path, json=body)
+        res = request(path, json=body, **kwargs)
     else:
-        res = request(path)
+        res = request(path, **kwargs)
     assert res.status_code == 401
 
 
