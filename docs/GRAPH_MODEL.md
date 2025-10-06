@@ -103,6 +103,56 @@ controls access to resources. Supported values:
 - `editor` – read and modify access.
 - `public` – accessible without explicit ownership or sharing.
 
+When creating these edges through `/edges` or `/events`, include the
+`permission_level` field in the payload. The API also requires `user_id` (and
+optionally `group_id`) query parameters on generic graph endpoints so the
+server can evaluate these permissions at request time.
+
+```bash
+curl -X POST http://localhost:8000/edges \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "user_id": "User.owner",
+        "group_id": "Group.ops",
+        "source": "Resource.1",
+        "target": "Group.ops",
+        "label": "SHARED_WITH",
+        "permission_level": "viewer"
+      }'
+```
+
+Successful edge creation responses echo the stored permission level:
+
+```json
+{
+  "status": "ok",
+  "edge": {
+    "source": "Resource.1",
+    "target": "Group.ops",
+    "label": "SHARED_WITH",
+    "permission_level": "viewer"
+  }
+}
+```
+
+If the acting `user_id` does not have `editor` rights on the resource, the
+request fails with `403 Forbidden`:
+
+```json
+{
+  "detail": {
+    "error": "permission_denied",
+    "message": "User.helper cannot grant viewer access on Resource.1",
+    "required_permission": "editor"
+  }
+}
+```
+
+> **Migration note:** Clients must supply the new query parameters and explicit
+> `permission_level` values before schema version `3.0.0` becomes the default.
+> Older requests that omit them will be rejected once the migration completes.
+
 ### Group Membership Checks
 
 When resolving `SHARED_WITH` edges the graph now verifies that the requesting

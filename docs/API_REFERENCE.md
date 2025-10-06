@@ -9,6 +9,69 @@ For gRPC clients, send the configured `UME_GRPC_TOKEN` as a bearer token in the
 `authorization` metadata. The helper class `AsyncUMEClient` accepts this token
 via its `token` argument and attaches it automatically.
 
+## Graph Request Context Requirements
+
+Graph endpoints now require a `user_id` query parameter that identifies the
+requesting principal. Optionally include `group_id` when the caller is acting on
+behalf of a delegated team or workspace. The API enforces permissions by
+inspecting ownership (`OWNED_BY`) and sharing (`SHARED_WITH`) edges that include
+an explicit `permission_level` property. Supported values remain `viewer`,
+`editor`, and `public`.
+
+When creating or updating these edges, include the `permission_level` field in
+the payload. Omitting it for ownership edges defaults to `editor` for backwards
+compatibility, but clients should begin providing it explicitly ahead of schema
+version `3.0.0` when the default will be removed.
+
+### Example: Querying Nodes with Context
+
+```bash
+curl -G "http://localhost:8000/nodes" \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "user_id=User.u1" \
+  --data-urlencode "group_id=Group.eng"
+```
+
+Successful responses scope results to the caller's permissions:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "resource-42",
+      "attributes": {
+        "title": "Launch Checklist"
+      },
+      "edges": [
+        {
+          "label": "OWNED_BY",
+          "target": "User.u1",
+          "permission_level": "editor"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Requests made without sufficient permission return an HTTP `403` status with
+context about the failing edge check:
+
+```json
+{
+  "detail": {
+    "error": "permission_denied",
+    "message": "User.u2 lacks viewer access to resource-42 via Group.eng",
+    "required_permission": "viewer"
+  }
+}
+```
+
+> **Migration note:** Update existing clients to supply `user_id`, propagate
+> any acting `group_id`, and include `permission_level` on ownership and sharing
+> edges before schema version `3.0.0` becomes the default. Requests missing this
+> context will be rejected once the migration window closes.
+
 The gRPC service also exposes `SaveSnapshot` and `LoadSnapshot` RPCs which
 mirror the `/snapshot/save` and `/snapshot/load` HTTP endpoints. Both accept a
 `SnapshotPath` message containing the target file path and return an empty
