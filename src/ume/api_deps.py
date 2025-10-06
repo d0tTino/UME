@@ -124,8 +124,14 @@ def get_graph(role: str = Depends(get_current_role)) -> IGraphAdapter:
 
 def get_permissions_graph(
     graph: IGraphAdapter = Depends(get_graph),
-    user_id: Annotated[str | None, Query()] = None,
-    group_id: Annotated[str | None, Query()] = None,
+    user_id: Annotated[
+        str | None,
+        Query(description="User performing the request"),
+    ] = None,
+    group_id: Annotated[
+        str | None,
+        Query(description="Optional group context"),
+    ] = None,
 ) -> PermissionsGraphAdapter:
     """Return a :class:`PermissionsGraphAdapter` scoped to the request subject."""
 
@@ -134,13 +140,7 @@ def get_permissions_graph(
             status_code=400,
             detail="A user_id or group_id is required to evaluate permissions",
         )
-    user_id: str = Query(..., description="User performing the request"),
-    group_id: str | None = Query(None, description="Optional group context"),
-    graph: IGraphAdapter = Depends(get_graph),
-) -> PermissionsGraphAdapter:
-    """Return a :class:`PermissionsGraphAdapter` for the current request."""
-
-    if not user_id:
+    if user_id is None:
         raise HTTPException(status_code=400, detail="user_id is required")
     return PermissionsGraphAdapter(graph, user_id=user_id, group_id=group_id)
 
