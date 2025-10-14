@@ -22,3 +22,9 @@ def test_create_proposed_action_custom_values() -> None:
     assert action.rank == 1
     assert action.is_optimal is True
     assert action.outcome_metrics == metrics
+
+
+def test_create_proposed_action_allows_non_float_metrics() -> None:
+    metrics = {"status": "good", "details": {"notes": "ok"}}
+    action = create_proposed_action("ship", outcome_metrics=metrics)
+    assert action.outcome_metrics == metrics

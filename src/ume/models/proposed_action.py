@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import uuid
+
+from dataclasses import dataclass, field
+from typing import Any
 
 
 SCHEMA_VERSION = "3.0.0"
@@ -26,7 +28,7 @@ class ProposedAction:
     description: str
     rank: int = 0
     is_optimal: bool = False
-    outcome_metrics: dict[str, float] = field(default_factory=dict)
+    outcome_metrics: dict[str, Any] = field(default_factory=dict)
     schema_version: str = SCHEMA_VERSION
 
 
@@ -36,7 +38,7 @@ def create_proposed_action(
     action_id: str | None = None,
     rank: int = 0,
     is_optimal: bool = False,
-    outcome_metrics: dict[str, float] | None = None,
+    outcome_metrics: dict[str, Any] | None = None,
 ) -> ProposedAction:
     """Factory helper to build :class:`ProposedAction` instances."""
 

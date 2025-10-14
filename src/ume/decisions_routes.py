@@ -36,7 +36,7 @@ class ActionCreateRequest(BaseModel):
     description: str
     rank: int = 0
     is_optimal: bool = False
-    outcome_metrics: dict[str, float] | None = None
+    outcome_metrics: dict[str, Any] | None = None
     user_id: str
     group_id: str | None = None
     group_permission_level: str | None = None
