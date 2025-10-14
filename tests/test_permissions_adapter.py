@@ -341,3 +341,32 @@ def test_add_edge_invalid_permission_level_on_non_permission_edge() -> None:
             "TAGGED_AS",
             {"permission_level": "owner"},
         )
+
+
+def test_delete_shared_with_and_invites_without_target_editor() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("User.u2", {})
+    g.add_node("Group.g1", {})
+    g.add_node("Document.d1", {})
+    g._edges["Document.d1"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "editor"})
+    )
+    g._edges["Document.d1"].append(
+        ("Group.g1", "SHARED_WITH", {"permission_level": "viewer"})
+    )
+    g._edges["Document.d1"].append(("User.u2", "INVITES", {}))
+
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+
+    adapter.delete_edge("Document.d1", "Group.g1", "SHARED_WITH")
+    assert not any(
+        s == "Document.d1" and t == "Group.g1" and lbl == "SHARED_WITH"
+        for s, t, lbl, _ in g.get_all_edges()
+    )
+
+    adapter.delete_edge("Document.d1", "User.u2", "INVITES")
+    assert not any(
+        s == "Document.d1" and t == "User.u2" and lbl == "INVITES"
+        for s, t, lbl, _ in g.get_all_edges()
+    )
