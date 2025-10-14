@@ -216,6 +216,37 @@ def test_decision_group_viewer_share_limits_editing(client_and_graph) -> None:
     )
 
 
+def test_add_action_preserves_outcome_metrics(client_and_graph) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "Q", "user_id": "user1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+
+    metrics_payload = {"score": 1, "notes": "high", "metadata": {"tags": ["x"]}}
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={
+            "description": "Act",
+            "user_id": "user1",
+            "outcome_metrics": metrics_payload,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    action_id = res.json()["action_id"]
+    assert res.json()["outcome_metrics"] == metrics_payload
+
+    node_attrs = g.get_node(action_id)
+    assert node_attrs is not None
+    assert node_attrs["outcome_metrics"] == metrics_payload
+
+
 def test_group_membership_required(client_and_graph) -> None:
     client, g = client_and_graph
     token = _token(client)
