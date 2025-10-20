@@ -12,6 +12,27 @@ def build_graph() -> MockGraph:
     return g
 
 
+def test_get_nodes_by_user_handles_empty_and_rebuilt_indices() -> None:
+    graph = build_graph()
+    adapter = PermissionsGraphAdapter(graph, user_id="User.u1")
+
+    # Initially only d1 is owned by the user.
+    assert adapter.get_nodes_by_user("User.u1") == ["Document.d1"]
+
+    # Add another ownership edge directly on the underlying graph and rebuild the index.
+    graph._edges["Document.d2"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "viewer"})
+    )
+    adapter.rebuild_index()
+    assert set(adapter.get_nodes_by_user("User.u1")) == {"Document.d1", "Document.d2"}
+
+    # Remove all edges and ensure rebuild clears the cached lookups.
+    graph._edges["Document.d1"].clear()
+    graph._edges["Document.d2"].clear()
+    adapter.rebuild_index()
+    assert adapter.get_nodes_by_user("User.u1") == []
+
+
 def test_update_requires_editor_permission() -> None:
     graph = build_graph()
     graph._edges["Document.d2"].append(
