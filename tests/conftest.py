@@ -7,6 +7,149 @@ from typing import Generator
 from pathlib import Path
 import os
 import time
+import pytest
+
+# Provide lightweight stubs for optional dependencies that aren't available in
+# the execution environment. The test suite depends on ``fastapi`` imports
+# during collection because importing :mod:`ume` pulls in API routers. When the
+# real package is missing we emulate just enough of its surface area so imports
+# succeed and the suite can be skipped gracefully later on.
+if importlib.util.find_spec("fastapi") is None:
+    fastapi_stub = types.ModuleType("fastapi")
+    fastapi_stub.__spec__ = importlib.machinery.ModuleSpec("fastapi", loader=None)
+
+    class _HTTPException(Exception):  # pragma: no cover - minimal placeholder
+        def __init__(self, status_code: int = 500, detail: object | None = None):
+            super().__init__(detail)
+            self.status_code = status_code
+            self.detail = detail
+
+    def _identity(value: object | None = None, *args: object, **kwargs: object) -> object:
+        return value
+
+    class _Request:  # pragma: no cover - basic request stand-in
+        def __init__(self, *_, **__):
+            pass
+
+    class _Response:  # pragma: no cover - basic response stand-in
+        def __init__(self, content: object | None = None, status_code: int = 200):
+            self.content = content
+            self.status_code = status_code
+
+    class _JSONResponse(_Response):  # pragma: no cover - inherits behavior
+        pass
+
+    class _StreamingResponse(_Response):  # pragma: no cover - simple stub
+        pass
+
+    class _UploadFile:  # pragma: no cover - minimal file stub
+        def __init__(self, *_, **__):
+            self.filename = ""
+            self.content_type = ""
+
+    class _RouterBase:  # pragma: no cover - decorator helpers
+        def __init__(self, *_, **__):
+            pass
+
+        def add_api_route(self, *_, **__):
+            return None
+
+        def _decorator(self, func):
+            return func
+
+        def get(self, *_, **__):
+            return self._decorator
+
+        def post(self, *_, **__):
+            return self._decorator
+
+        def put(self, *_, **__):
+            return self._decorator
+
+        def delete(self, *_, **__):
+            return self._decorator
+
+    class _FastAPI(_RouterBase):  # pragma: no cover - shares router behavior
+        def __call__(self, *_, **__):
+            return None
+
+    class _APIRouter(_RouterBase):  # pragma: no cover
+        pass
+
+    fastapi_stub.FastAPI = _FastAPI  # type: ignore[attr-defined]
+    fastapi_stub.APIRouter = _APIRouter  # type: ignore[attr-defined]
+    fastapi_stub.Depends = _identity  # type: ignore[attr-defined]
+    fastapi_stub.Query = _identity  # type: ignore[attr-defined]
+    fastapi_stub.Body = _identity  # type: ignore[attr-defined]
+    fastapi_stub.File = _identity  # type: ignore[attr-defined]
+    fastapi_stub.HTTPException = _HTTPException  # type: ignore[attr-defined]
+    fastapi_stub.UploadFile = _UploadFile  # type: ignore[attr-defined]
+    fastapi_stub.Request = _Request  # type: ignore[attr-defined]
+    fastapi_stub.Response = _Response  # type: ignore[attr-defined]
+
+    responses = types.ModuleType("fastapi.responses")
+    responses.__spec__ = importlib.machinery.ModuleSpec("fastapi.responses", loader=None)
+    responses.Response = _Response  # type: ignore[attr-defined]
+    responses.JSONResponse = _JSONResponse  # type: ignore[attr-defined]
+    responses.StreamingResponse = _StreamingResponse  # type: ignore[attr-defined]
+
+    exceptions = types.ModuleType("fastapi.exceptions")
+    exceptions.__spec__ = importlib.machinery.ModuleSpec("fastapi.exceptions", loader=None)
+
+    class _RequestValidationError(Exception):  # pragma: no cover - placeholder
+        pass
+
+    exceptions.RequestValidationError = _RequestValidationError  # type: ignore[attr-defined]
+
+    security = types.ModuleType("fastapi.security")
+    security.__spec__ = importlib.machinery.ModuleSpec("fastapi.security", loader=None)
+
+    class _OAuth2PasswordBearer:  # pragma: no cover - minimal callable stub
+        def __init__(self, *_, **__):
+            pass
+
+        async def __call__(self, *_, **__):  # noqa: D401 - mimic dependency call
+            """Return a dummy token."""
+
+            return ""
+
+    class _OAuth2PasswordRequestForm:  # pragma: no cover - minimal form stub
+        def __init__(self, *_, **__):
+            self.username = ""
+            self.password = ""
+            self.scopes: list[str] = []
+
+    security.OAuth2PasswordBearer = _OAuth2PasswordBearer  # type: ignore[attr-defined]
+    security.OAuth2PasswordRequestForm = _OAuth2PasswordRequestForm  # type: ignore[attr-defined]
+
+    sys.modules.setdefault("fastapi", fastapi_stub)
+    sys.modules.setdefault("fastapi.responses", responses)
+    sys.modules.setdefault("fastapi.exceptions", exceptions)
+    sys.modules.setdefault("fastapi.security", security)
+
+
+def _ensure_stub(module_name: str) -> types.ModuleType:
+    module = types.ModuleType(module_name)
+    module.__spec__ = importlib.machinery.ModuleSpec(module_name, loader=None)
+    sys.modules.setdefault(module_name, module)
+    return module
+
+
+for _pkg in ("nbformat", "nbconvert", "respx"):
+    if importlib.util.find_spec(_pkg) is None:
+        _ensure_stub(_pkg)
+
+try:
+    _protobuf_spec = importlib.util.find_spec("google.protobuf")
+except ModuleNotFoundError:
+    _protobuf_spec = None
+
+if _protobuf_spec is None:
+    google_pkg = sys.modules.setdefault("google", types.ModuleType("google"))
+    if getattr(google_pkg, "__spec__", None) is None:
+        google_pkg.__spec__ = importlib.machinery.ModuleSpec("google", loader=None)
+    _ensure_stub("google.protobuf")
+
 
 # Force pure-Python protobuf implementation for compatibility with Python 3.12
 os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
@@ -18,8 +161,6 @@ try:
 except Exception:  # pragma: no cover - optional dependency may be missing
     DockerContainer = None  # type: ignore[assignment,misc]
     Neo4jContainer = None  # type: ignore[assignment]
-
-import pytest
 
 # Skip the test suite when core optional dependencies are missing. Many tests
 # rely on packages like FastAPI and nbformat which aren't installed in the
@@ -40,6 +181,10 @@ for _pkg in _REQUIRED_TEST_PKGS:
             _missing.append(_pkg)
     except ModuleNotFoundError:
         _missing.append(_pkg)
+
+for _stub in ("fastapi", "nbformat", "nbconvert", "google.protobuf", "respx"):
+    if _stub in _missing and _stub in sys.modules:
+        _missing.remove(_stub)
 
 
 def pytest_configure(config: pytest.Config) -> None:

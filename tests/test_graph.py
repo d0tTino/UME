@@ -1,11 +1,9 @@
 # tests/test_graph.py
 import pytest
 import re
-from ume import (
-    MockGraph,
-    PersistentGraph,
-    ProcessingError,
-)  # IGraphAdapter is implicitly tested by testing MockGraph's adherence
+from ume.graph import MockGraph
+from ume.persistent_graph import PersistentGraph
+from ume.processing import ProcessingError
 from ume.graph_adapter import IGraphAdapter  # Import for isinstance check if needed
 
 
@@ -260,6 +258,20 @@ def test_get_all_edges_populated(graph: MockGraph):
     # Test that it returns a copy
     edges.append(("n3", "n1", "L4_local_copy", {}))
     assert len(graph.get_all_edges()) == 3
+
+
+def test_add_edge_creates_entry_without_prior_source_defaultdict_behavior() -> None:
+    """Ensure edges can be added and retrieved without prior key initialization."""
+    graph = MockGraph()
+    graph.add_node("source", {})
+    graph.add_node("target", {})
+
+    # Adding the edge should not raise, even though no edges existed for "source" yet.
+    graph.add_edge("source", "target", "LINKS_TO")
+
+    edges = graph.get_all_edges()
+
+    assert edges == [("source", "target", "LINKS_TO", {})]
 
 
 # --- find_connected_nodes tests ---
