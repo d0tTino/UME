@@ -1,4 +1,5 @@
 # src/ume/graph.py
+from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Optional, Tuple
 
 from .graph_adapter import IGraphAdapter
@@ -26,7 +27,7 @@ class MockGraph(GraphAlgorithmsMixin, IGraphAdapter):
         self._redacted_edges: set[Tuple[str, str, str]] = set()
         # Store edges in an adjacency list for faster lookups:
         #   source_id -> [(target_id, label, attrs), ...]
-        self._edges: DefaultDict[str, List[Tuple[str, str, Dict[str, Any]]]] = DefaultDict(list)
+        self._edges: DefaultDict[str, List[Tuple[str, str, Dict[str, Any]]]] = defaultdict(list)
 
     def add_node(self, node_id: str, attributes: Dict[str, Any]) -> None:
         """
