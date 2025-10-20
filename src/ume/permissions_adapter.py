@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Optional
 
 from .graph_adapter import IGraphAdapter
@@ -22,8 +23,8 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self._adapter = adapter
         self.user_id = user_id
         self.group_id = group_id
-        self._edges_by_source: DefaultDict[str, List[tuple[str, str, Any]]] = DefaultDict(list)
-        self._edges_by_target: DefaultDict[str, List[tuple[str, str, Any]]] = DefaultDict(list)
+        self._edges_by_source: DefaultDict[str, List[tuple[str, str, Any]]] = defaultdict(list)
+        self._edges_by_target: DefaultDict[str, List[tuple[str, str, Any]]] = defaultdict(list)
         self.rebuild_index()
 
     # ------------------------------------------------------------------
