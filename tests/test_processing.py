@@ -3,6 +3,7 @@ import pytest
 import time
 import re
 from ume import (
+    DEFAULT_SCHEMA_MANAGER,
     Event,
     EventType,
     PersistentGraph,
@@ -21,7 +22,7 @@ def test_apply_create_node_event_success(graph: PersistentGraph):
     """Test successfully creating a new node."""
     event_id = "event1"
     node_id = "node1"
-    attributes = {"name": "Test Node", "value": 100, "type": "UserMemory"}
+    attributes = {"name": "Test Node", "value": 100, "type": "User"}
     event = Event(
         event_id=event_id,
         event_type=EventType.CREATE_NODE,
@@ -72,7 +73,7 @@ def test_apply_create_node_event_already_exists(graph: PersistentGraph):
         timestamp=int(time.time()),
         payload={
             "node_id": node_id,
-            "attributes": {"name": "New Node", "type": "UserMemory"},
+            "attributes": {"name": "New Node", "type": "User"},
         },
     )
     with pytest.raises(ProcessingError, match=f"Node '{node_id}' already exists"):
@@ -261,14 +262,91 @@ def test_apply_create_edge_event_success(graph: PersistentGraph):
         timestamp=int(time.time()),
         node_id="source_node",
         target_node_id="target_node",
-        label="RELATES_TO",
+        label="TAGGED_AS",
         payload={},  # Explicitly empty for clarity, though parse_event would default
     )
 
     apply_event_to_graph(event, graph)
 
     # Verify edge was added (PersistentGraph stores edges as list of tuples)
-    assert ("source_node", "target_node", "RELATES_TO", {}) in graph.get_all_edges()
+    edges = graph.get_all_edges()
+    assert len(edges) == 1
+    src, tgt, label, attrs = edges[0]
+    assert (src, tgt, label) == ("source_node", "target_node", "TAGGED_AS")
+    expected_version = DEFAULT_SCHEMA_MANAGER.get_edge_version("TAGGED_AS")
+    assert attrs == {"schema_version": expected_version}
+
+
+def test_apply_create_edge_event_permission_attributes(graph: PersistentGraph) -> None:
+    """Explicit permission metadata should be preserved on the stored edge."""
+    graph.add_node("owner", {})
+    graph.add_node("resource", {})
+
+    event = Event(
+        event_type=EventType.CREATE_EDGE,
+        timestamp=int(time.time()),
+        node_id="owner",
+        target_node_id="resource",
+        label="OWNED_BY",
+        payload={"attributes": {"permission_level": "editor", "note": "custom"}},
+    )
+
+    apply_event_to_graph(event, graph)
+
+    edges = graph.get_all_edges()
+    assert len(edges) == 1
+    source, target, label, attrs = edges[0]
+    assert (source, target, label) == ("owner", "resource", "OWNED_BY")
+    assert attrs["permission_level"] == "editor"
+    assert attrs["note"] == "custom"
+    expected_version = DEFAULT_SCHEMA_MANAGER.get_edge_version("OWNED_BY")
+    assert attrs["schema_version"] == expected_version
+
+
+def test_apply_create_edge_event_permission_defaults(graph: PersistentGraph) -> None:
+    """Permissioned edges without metadata should fall back to schema defaults."""
+    graph.add_node("owner", {})
+    graph.add_node("shared", {})
+
+    event = Event(
+        event_type=EventType.CREATE_EDGE,
+        timestamp=int(time.time()),
+        node_id="owner",
+        target_node_id="shared",
+        label="SHARED_WITH",
+        payload={},
+    )
+
+    apply_event_to_graph(event, graph)
+
+    edges = graph.get_all_edges()
+    assert len(edges) == 1
+    _, _, label, attrs = edges[0]
+    assert label == "SHARED_WITH"
+    expected_version = DEFAULT_SCHEMA_MANAGER.get_edge_version("SHARED_WITH")
+    assert attrs["permission_level"] == "viewer"
+    assert attrs["schema_version"] == expected_version
+
+
+def test_apply_create_edge_event_invalid_permission_level(graph: PersistentGraph) -> None:
+    """Invalid permission metadata should raise a processing error."""
+    graph.add_node("owner", {})
+    graph.add_node("resource", {})
+
+    event = Event(
+        event_type=EventType.CREATE_EDGE,
+        timestamp=int(time.time()),
+        node_id="owner",
+        target_node_id="resource",
+        label="OWNED_BY",
+        payload={"attributes": {"permission_level": "invalid"}},
+    )
+
+    with pytest.raises(
+        ProcessingError,
+        match="Invalid permission_level 'invalid' for edge label 'OWNED_BY'",
+    ):
+        apply_event_to_graph(event, graph)
 
 
 def test_apply_create_edge_event_missing_source_node(graph: PersistentGraph):
@@ -279,7 +357,7 @@ def test_apply_create_edge_event_missing_source_node(graph: PersistentGraph):
         timestamp=int(time.time()),
         node_id="missing_source",
         target_node_id="target_node",
-        label="LINKS_TO",
+        label="TAGGED_AS",
         payload={},
     )
     with pytest.raises(
@@ -297,7 +375,7 @@ def test_apply_create_edge_event_missing_target_node(graph: PersistentGraph):
         timestamp=int(time.time()),
         node_id="source_node",
         target_node_id="missing_target",
-        label="CONNECTS_TO",
+        label="TAGGED_AS",
         payload={},
     )
     with pytest.raises(
@@ -323,7 +401,7 @@ def test_apply_create_edge_event_invalid_field_types_propagates_error(
         timestamp=int(time.time()),
         node_id="source_node",
         target_node_id=123,  # type: ignore[arg-type]
-        label="LINKS_TO",
+        label="TAGGED_AS",
         payload={},
     )
     with pytest.raises(
@@ -434,7 +512,11 @@ def test_apply_data_source_queried_adds_edge(graph: PersistentGraph, monkeypatch
         payload={},
     )
     apply_event_to_graph(event, graph)
-    assert ("job1", "ds1", "RELATES_TO", {}) in graph.get_all_edges()
+    edges = graph.get_all_edges()
+    assert len(edges) == 1
+    src, tgt, label, attrs = edges[0]
+    assert (src, tgt, label) == ("job1", "ds1", "RELATES_TO")
+    assert attrs == {"schema_version": "1.0.0"}
 
 
 def test_apply_entity_discovered_creates_node_and_edge(graph: PersistentGraph, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -454,7 +536,11 @@ def test_apply_entity_discovered_creates_node_and_edge(graph: PersistentGraph, m
     apply_event_to_graph(event, graph)
     assert graph.node_exists("ent1")
     assert graph.get_node("ent1") == {"name": "E1", "tokens": ["E1"]}
-    assert ("job1", "ent1", "RELATES_TO", {}) in graph.get_all_edges()
+    edges = graph.get_all_edges()
+    assert len(edges) == 1
+    src, tgt, label, attrs = edges[0]
+    assert (src, tgt, label) == ("job1", "ent1", "RELATES_TO")
+    assert attrs == {"name": "E1", "schema_version": "1.0.0"}
 
 
 def test_apply_document_archived_updates_node(graph: PersistentGraph) -> None:
