@@ -63,6 +63,7 @@ def create_account(
     )
     attrs = {
         "type": "FinancialAccount",
+        "account_id": account.account_id,
         "account_type": account.account_type,
         "institution": account.institution,
         "balance": account.balance,

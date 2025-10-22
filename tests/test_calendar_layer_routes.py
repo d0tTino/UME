@@ -51,6 +51,7 @@ def test_create_calendar_layer(client_and_graph) -> None:
     attrs = graph.get_node(layer_id)
     assert attrs == {
         "type": "CalendarLayer",
+        "layer_id": layer_id,
         "layer_name": "Work",
         "color": "blue",
         "schema_version": SCHEMA_VERSION,

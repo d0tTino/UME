@@ -122,6 +122,7 @@ def create_event(
     layer_ids = list(req.layer_ids or [])
     attrs = {
         "type": "CalendarEvent",
+        "event_id": event.event_id,
         "title": event.title,
         "start_time": int(event.start_time.timestamp()),
         "end_time": int(event.end_time.timestamp()) if event.end_time else None,

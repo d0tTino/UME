@@ -43,6 +43,7 @@ def create_layer(
     )
     attrs = {
         "type": "CalendarLayer",
+        "layer_id": layer.layer_id,
         "layer_name": layer.layer_name,
         "color": layer.color,
         "schema_version": layer.schema_version,
@@ -75,8 +76,8 @@ def create_layer(
     return CalendarLayerResponse(
         layer_id=layer.layer_id,
         layer_name=layer.layer_name,
-       color=layer.color,
-       schema_version=layer.schema_version,
+        color=layer.color,
+        schema_version=layer.schema_version,
     )
 
 
