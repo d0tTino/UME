@@ -135,12 +135,22 @@ app.include_router(users_router)
 # ``add_route``. Guard the GraphQL route registration so those tests can import
 # this module without the real FastAPI implementation.
 if GraphQLApp is not None and graphql_schema is not None and hasattr(app, "add_route"):
+    async def _graphql_context(request: Request) -> dict[str, Any]:
+        user_id = request.query_params.get("user_id") or request.headers.get("x-user-id")
+        group_id = request.query_params.get("group_id") or request.headers.get("x-group-id")
+        return {
+            "app": app,
+            "request": request,
+            "user_id": user_id,
+            "group_id": group_id,
+        }
+
     app.add_route(
         "/graphql",
         GraphQLApp(
             graphql_schema,
             on_get=make_graphiql_handler(),
-            context_value=lambda request: {"app": app},
+            context_value=_graphql_context,
         ),
         methods=["GET", "POST"],
     )
