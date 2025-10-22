@@ -113,6 +113,7 @@ def test_calendar_event_permissions(client_and_graph) -> None:
 
     attrs = graph.get_node(event_id)
     assert attrs["type"] == "CalendarEvent"
+    assert attrs["event_id"] == event_id
     assert attrs["title"] == "Meeting"
     assert attrs["start_time"] == start_ts
     assert attrs["end_time"] == end_ts

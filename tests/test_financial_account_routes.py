@@ -60,6 +60,7 @@ def test_create_and_get_financial_account(client_and_graph) -> None:
         "schema_version": SCHEMA_VERSION,
     }
     attrs = graph.get_node(account_id)
+    assert attrs["account_id"] == account_id
     assert attrs["schema_version"] == SCHEMA_VERSION
     edges = graph.get_all_edges()
     assert (
