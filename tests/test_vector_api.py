@@ -8,6 +8,10 @@ from ume.vector_backends import get_backend
 from ume.api import app, configure_vector_store
 from ume.config import settings
 
+USER_ID = "User.alice"
+OTHER_USER_ID = "User.bob"
+GROUP_ID = "Group.collab"
+
 faiss = pytest.importorskip("faiss")
 if not hasattr(faiss, "IndexFlatL2"):
     pytest.skip("faiss is missing required functionality", allow_module_level=True)
@@ -126,6 +130,9 @@ def test_recall_by_query(monkeypatch, store_cls) -> None:
     graph = MockGraph()
     graph.add_node("a", {"val": 1})
     graph.add_node("b", {"val": 2})
+    graph.add_node(USER_ID, {})
+    graph.add_edge("a", USER_ID, "OWNED_BY", {"permission_level": "viewer"})
+    graph.add_edge("b", USER_ID, "OWNED_BY", {"permission_level": "viewer"})
     configure_graph(graph)
     store = app.state.vector_store
     store.add("a", [1.0, 0.0])
@@ -139,7 +146,7 @@ def test_recall_by_query(monkeypatch, store_cls) -> None:
     ).json()["access_token"]
     res = client.get(
         "/recall",
-        params={"query": "foo", "k": 1},
+        params={"query": "foo", "k": 1, "user_id": USER_ID},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -154,6 +161,7 @@ def test_recall_invalid_dimension(store_cls) -> None:
 
     graph = MockGraph()
     graph.add_node("a", {})
+    graph.add_node(USER_ID, {})
     configure_graph(graph)
     client = TestClient(app)
     token = client.post(
@@ -162,7 +170,7 @@ def test_recall_invalid_dimension(store_cls) -> None:
     ).json()["access_token"]
     res = client.get(
         "/recall",
-        params=[("vector", 0.0)],
+        params=[("vector", 0.0), ("user_id", USER_ID)],
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 400
@@ -189,6 +197,8 @@ def test_recall_stream(store_cls, monkeypatch) -> None:
 
     graph = MockGraph()
     graph.add_node("a", {"val": 1})
+    graph.add_node(USER_ID, {})
+    graph.add_edge("a", USER_ID, "OWNED_BY", {"permission_level": "viewer"})
     configure_graph(graph)
     store = app.state.vector_store
     store.add("a", [1.0, 0.0])
@@ -201,12 +211,81 @@ def test_recall_stream(store_cls, monkeypatch) -> None:
         with client.stream(
             "GET",
             "/recall/stream",
-            params={"query": "foo", "k": 1},
+            params={"query": "foo", "k": 1, "user_id": USER_ID},
             headers={"Authorization": f"Bearer {token}"},
         ) as res:
             assert res.status_code == 200
             lines = [line for line in res.iter_lines() if line.startswith("data:")]
         assert lines
+
+
+def test_semantic_search_hides_inaccessible_nodes(monkeypatch, store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+
+    graph = MockGraph()
+    graph.add_node("a", {"val": 1})
+    graph.add_node("b", {"val": 2})
+    graph.add_node(USER_ID, {})
+    graph.add_node(OTHER_USER_ID, {})
+    graph.add_edge("a", USER_ID, "OWNED_BY", {"permission_level": "viewer"})
+    graph.add_edge("b", OTHER_USER_ID, "OWNED_BY", {"permission_level": "viewer"})
+    configure_graph(graph)
+    store = app.state.vector_store
+    store.add("a", [1.0, 0.0])
+    store.add("b", [0.0, 1.0])
+
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda q: [1.0, 0.0])
+    client = TestClient(app)
+    token = client.post(
+        "/auth/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    ).json()["access_token"]
+    res = client.post(
+        "/search/semantic",
+        json={"query": "foo", "k": 2},
+        params={"user_id": USER_ID},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"nodes": [{"id": "a", "attributes": {"val": 1}}]}
+
+
+def test_recall_includes_group_shares(monkeypatch, store_cls) -> None:
+    configure_vector_store(store_cls(dim=2, use_gpu=False))
+    from ume import MockGraph
+    from ume.api import configure_graph
+
+    graph = MockGraph()
+    graph.add_node("shared", {"val": 5})
+    graph.add_node(USER_ID, {})
+    graph.add_node(OTHER_USER_ID, {})
+    graph.add_node(GROUP_ID, {})
+    graph.add_edge("shared", OTHER_USER_ID, "OWNED_BY", {"permission_level": "editor"})
+    graph.add_edge("shared", GROUP_ID, "SHARED_WITH", {"permission_level": "viewer"})
+    configure_graph(graph)
+    store = app.state.vector_store
+    store.add("shared", [1.0, 0.0])
+
+    monkeypatch.setattr("ume.embedding.generate_embedding", lambda q: [1.0, 0.0])
+    client = TestClient(app)
+    token = client.post(
+        "/auth/token",
+        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
+    ).json()["access_token"]
+    res = client.get(
+        "/recall",
+        params={
+            "query": "foo",
+            "k": 1,
+            "user_id": USER_ID,
+            "group_id": GROUP_ID,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"nodes": [{"id": "shared", "attributes": {"val": 5}}]}
 
 
 def test_semantic_search_async_adapter(store_cls, monkeypatch) -> None:
@@ -217,6 +296,10 @@ def test_semantic_search_async_adapter(store_cls, monkeypatch) -> None:
 
     graph = AsyncGraphAdapterWrapper(MockGraph())
     graph._adapter.add_node("a", {"val": 1})  # type: ignore[attr-defined]
+    graph._adapter.add_node(USER_ID, {})  # type: ignore[attr-defined]
+    graph._adapter.add_edge(
+        "a", USER_ID, "OWNED_BY", {"permission_level": "viewer"}
+    )  # type: ignore[attr-defined]
     configure_graph(graph)
     store = app.state.vector_store
     store.add("a", [1.0, 0.0])
@@ -229,6 +312,7 @@ def test_semantic_search_async_adapter(store_cls, monkeypatch) -> None:
     res = client.post(
         "/search/semantic",
         json={"query": "foo", "k": 1},
+        params={"user_id": USER_ID},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -243,6 +327,10 @@ def test_recall_async_adapter(store_cls, monkeypatch) -> None:
 
     graph = AsyncGraphAdapterWrapper(MockGraph())
     graph._adapter.add_node("a", {"val": 1})  # type: ignore[attr-defined]
+    graph._adapter.add_node(USER_ID, {})  # type: ignore[attr-defined]
+    graph._adapter.add_edge(
+        "a", USER_ID, "OWNED_BY", {"permission_level": "viewer"}
+    )  # type: ignore[attr-defined]
     configure_graph(graph)
     store = app.state.vector_store
     store.add("a", [1.0, 0.0])
@@ -254,7 +342,7 @@ def test_recall_async_adapter(store_cls, monkeypatch) -> None:
     ).json()["access_token"]
     res = client.get(
         "/recall",
-        params={"query": "foo", "k": 1},
+        params={"query": "foo", "k": 1, "user_id": USER_ID},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200

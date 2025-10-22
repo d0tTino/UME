@@ -11,8 +11,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from . import api_deps as deps
+from .permissions_adapter import PermissionsGraphAdapter
 from .vector_store import VectorStore
-from .graph_adapter import IGraphAdapter
 from .graph_routes import _maybe_call
 from . import embedding
 from .metrics import (
@@ -67,7 +67,7 @@ async def api_semantic_search(
     req: SemanticSearchRequest,
     _: str = Depends(deps.get_current_role),
     store: VectorStore = Depends(deps.get_vector_store),
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Return attributes for the ``k`` nearest nodes to ``req.query``."""
     start = time.perf_counter()
@@ -79,7 +79,7 @@ async def api_semantic_search(
     ids = store.query(vector, k=req.k)
     nodes = []
     for node_id in ids:
-        attrs = await _maybe_call(graph, "get_node", node_id)
+        attrs = await _maybe_call(perm_graph, "get_node", node_id)
         if attrs is not None:
             nodes.append({"id": node_id, "attributes": attrs})
     SEMANTIC_SEARCH_LATENCY.observe(time.perf_counter() - start)
@@ -93,7 +93,7 @@ async def api_recall(
     k: int = 5,
     _: str = Depends(deps.get_current_role),
     store: VectorStore = Depends(deps.get_vector_store),
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> Dict[str, Any]:
     """Return attributes for the ``k`` nearest nodes to ``query`` or ``vector``."""
     if query is None and vector is None:
@@ -107,15 +107,16 @@ async def api_recall(
     ids = store.query(vector, k=k)
     nodes = []
     for node_id in ids:
-        attrs = await _maybe_call(graph, "get_node", node_id)
-        if attrs is not None:
-            emb = attrs.get("embedding")
-            if isinstance(emb, list) and len(emb) == len(vector):
-                try:
-                    RECALL_SCORE.observe(math.dist(vector, emb))
-                except TypeError:
-                    pass
-            nodes.append({"id": node_id, "attributes": attrs})
+        attrs = await _maybe_call(perm_graph, "get_node", node_id)
+        if attrs is None:
+            continue
+        emb = attrs.get("embedding")
+        if isinstance(emb, list) and len(emb) == len(vector):
+            try:
+                RECALL_SCORE.observe(math.dist(vector, emb))
+            except TypeError:
+                pass
+        nodes.append({"id": node_id, "attributes": attrs})
     duration = time.perf_counter() - start
     RECALL_LATENCY.observe(duration)
     RECALL_LATENCY_MS.observe(duration * 1000)
@@ -129,7 +130,7 @@ async def api_recall_stream(
     k: int = 5,
     _: str = Depends(deps.get_current_role),
     store: VectorStore = Depends(deps.get_vector_store),
-    graph: IGraphAdapter = Depends(deps.get_graph),
+    perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
 ) -> StreamingResponse:
     """Stream nearest nodes one by one as they are found."""
     if query is None and vector is None:
@@ -144,16 +145,18 @@ async def api_recall_stream(
         start = time.perf_counter()
         ids = store.query(vector, k=k)
         for node_id in ids:
-            attrs = await _maybe_call(graph, "get_node", node_id)
-            if attrs is not None:
-                emb = attrs.get("embedding")
-                if isinstance(emb, list) and len(emb) == len(vector):
-                    try:
-                        RECALL_SCORE.observe(math.dist(vector, emb))
-                    except TypeError:
-                        pass
-                payload = {"id": node_id, "attributes": attrs}
-                yield f"data: {json.dumps(payload)}\n\n"
+            attrs = await _maybe_call(perm_graph, "get_node", node_id)
+            if attrs is None:
+                await asyncio.sleep(0)
+                continue
+            emb = attrs.get("embedding")
+            if isinstance(emb, list) and len(emb) == len(vector):
+                try:
+                    RECALL_SCORE.observe(math.dist(vector, emb))
+                except TypeError:
+                    pass
+            payload = {"id": node_id, "attributes": attrs}
+            yield f"data: {json.dumps(payload)}\n\n"
             await asyncio.sleep(0)
         duration = time.perf_counter() - start
         RECALL_LATENCY.observe(duration)
