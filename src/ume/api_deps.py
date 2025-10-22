@@ -142,7 +142,39 @@ def get_permissions_graph(
         )
     if user_id is None:
         raise HTTPException(status_code=400, detail="user_id is required")
-    return PermissionsGraphAdapter(graph, user_id=user_id, group_id=group_id)
+
+    base_graph: IGraphAdapter | IAsyncGraphAdapter = graph
+
+    if isinstance(base_graph, PermissionsGraphAdapter):
+        base_graph = base_graph._adapter  # type: ignore[attr-defined]
+
+    # Unwrap adapters that contain asynchronous implementations so that the
+    # permissions wrapper always sees a synchronous :class:`IGraphAdapter`.
+    while True:
+        adapter = getattr(base_graph, "_adapter", None)
+        if adapter is None or adapter is base_graph:
+            break
+        if isinstance(adapter, IAsyncGraphAdapter):
+            base_graph = adapter
+            continue
+        break
+
+    if isinstance(base_graph, IAsyncGraphAdapter):
+        sync_adapter = getattr(base_graph, "_adapter", None)
+        if not isinstance(sync_adapter, IGraphAdapter):
+            raise HTTPException(
+                status_code=500,
+                detail="Async graphs are not supported for permission checks",
+            )
+        base_graph = sync_adapter
+
+    if not isinstance(base_graph, IGraphAdapter):
+        raise HTTPException(
+            status_code=500,
+            detail="Graph does not support permission checks",
+        )
+
+    return PermissionsGraphAdapter(base_graph, user_id=user_id, group_id=group_id)
 
 
 def get_vector_store() -> VectorStore:
