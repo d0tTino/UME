@@ -3,6 +3,7 @@ import uuid
 
 from ume.models import (
     CalendarEvent,
+    CalendarEventStatus,
     Decision,
     create_calendar_event,
     create_decision,
@@ -25,6 +26,17 @@ def test_create_calendar_event_defaults_and_schema_version() -> None:
     assert event.visibility is None
     assert event.schema_version == "3.0.0"
     assert event.start_time == start
+
+
+def test_calendar_event_accepts_status_enum() -> None:
+    start = datetime.utcnow()
+    event = create_calendar_event(
+        "Planning Session",
+        start,
+        status=CalendarEventStatus.CONFIRMED,
+    )
+
+    assert event.status is CalendarEventStatus.CONFIRMED
 
 
 def test_create_decision_defaults_and_schema_version() -> None:

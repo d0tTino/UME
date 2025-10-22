@@ -10,7 +10,6 @@ import uuid
 SCHEMA_VERSION = "3.0.0"
 
 
-@dataclass
 class CalendarEventStatus(str, Enum):
     """Possible participation statuses for a calendar event."""
 
