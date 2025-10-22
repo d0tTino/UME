@@ -144,6 +144,19 @@ class DummyStore:
         return self.ids
 
 
+class PermissionStore(DummyStore):
+    def __init__(self, ids: list[str]) -> None:
+        super().__init__(ids)
+        self.dim = 2
+
+
+def _metadata(user_id: str, group_id: str | None = None) -> list[tuple[str, str]]:
+    pairs = [("ume-user-id", user_id)]
+    if group_id is not None:
+        pairs.append(("ume-group-id", group_id))
+    return pairs
+
+
 def test_run_cypher():
     svc = UMEServicer(DummyEngine([{"a": 1}]), DummyStore())  # type: ignore[arg-type]
     req = ume_pb2.CypherQuery(cypher="MATCH n RETURN n")
@@ -374,6 +387,21 @@ def _build_envelope(node_id: str) -> events_pb2.EventEnvelope:
     return events_pb2.EventEnvelope(create_node=events_pb2.CreateNode(meta=meta))
 
 
+def _build_update_envelope(node_id: str, **attributes: object) -> events_pb2.EventEnvelope:
+    payload = events_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
+    payload.update({"node_id": node_id, "attributes": attributes})
+    meta = events_pb2.BaseEvent(
+        event_id="u1",
+        event_type="UPDATE_NODE_ATTRIBUTES",
+        timestamp=2,
+        node_id=node_id,
+        payload=payload,
+    )
+    return events_pb2.EventEnvelope(
+        update_node_attributes=events_pb2.UpdateNodeAttributes(meta=meta)
+    )
+
+
 async def _run_no_graph_server(port_holder: list[int]) -> None:
     server = serve(DummyEngine(), DummyStore(), graph=None, port=0)
     port_holder.append(server.add_insecure_port("localhost:0"))
@@ -389,6 +417,141 @@ async def _run_no_graph_test(port: int) -> None:
         await stub.PublishEvent(ume_pb2.PublishEventRequest(envelope=env))
     assert exc.value.code() == grpc.StatusCode.FAILED_PRECONDITION
     await channel.close()
+
+
+async def _run_permission_recall_server(
+    port_holder: list[int],
+    graph,
+    store: PermissionStore,
+) -> None:
+    server = grpc.aio.server()
+    svc = UMEServicer(DummyEngine(), store, graph)
+    ume_pb2_grpc.add_UMEServicer_to_server(svc, server)
+    port_holder.append(server.add_insecure_port("localhost:0"))
+    await server.start()
+    await server.wait_for_termination()
+
+
+async def _run_recall_permission_test(port: int) -> None:
+    channel = grpc.aio.insecure_channel(f"localhost:{port}")
+    stub = ume_pb2_grpc.UMEStub(channel)
+    request = ume_pb2.RecallRequest(vector=[0.1, 0.2], k=5)
+
+    response = await stub.Recall(request, metadata=_metadata("User.user1"))
+    assert [node.id for node in response.nodes] == ["doc1"]
+
+    streamed = [
+        node.id
+        async for node in stub.StreamRecall(
+            request, metadata=_metadata("User.user1")
+        )
+    ]
+    assert streamed == ["doc1"]
+
+    empty = await stub.Recall(request, metadata=_metadata("User.unknown"))
+    assert list(empty.nodes) == []
+
+    with pytest.raises(grpc.aio.AioRpcError) as exc:
+        await stub.Recall(request)
+    assert exc.value.code() == grpc.StatusCode.PERMISSION_DENIED
+
+    await channel.close()
+
+
+async def _run_permission_publish_server(port_holder: list[int], graph) -> None:
+    server = grpc.aio.server()
+    store = PermissionStore(["doc1"])
+    svc = UMEServicer(DummyEngine(), store, graph)
+    ume_pb2_grpc.add_UMEServicer_to_server(svc, server)
+    port_holder.append(server.add_insecure_port("localhost:0"))
+    await server.start()
+    await server.wait_for_termination()
+
+
+async def _run_publish_permission_test(port: int, graph) -> None:
+    channel = grpc.aio.insecure_channel(f"localhost:{port}")
+    stub = ume_pb2_grpc.UMEStub(channel)
+    envelope = _build_update_envelope("doc1", name="updated")
+
+    with pytest.raises(grpc.aio.AioRpcError) as exc:
+        await stub.PublishEvent(
+            ume_pb2.PublishEventRequest(envelope=envelope),
+            metadata=_metadata("User.viewer"),
+        )
+    assert exc.value.code() == grpc.StatusCode.PERMISSION_DENIED
+    assert graph.get_node("doc1").get("name") == "original"
+
+    await stub.PublishEvent(
+        ume_pb2.PublishEventRequest(envelope=envelope),
+        metadata=_metadata("User.editor"),
+    )
+    assert graph.get_node("doc1").get("name") == "updated"
+
+    await channel.close()
+
+
+def test_recall_enforces_permissions() -> None:
+    from ume.graph import MockGraph
+
+    graph = MockGraph()
+    graph.add_node("doc1", {"name": "doc1"})
+    graph.add_node("doc2", {"name": "doc2"})
+    graph.add_node("User.user1", {})
+    graph.add_node("User.user2", {})
+    graph.add_edge("doc1", "User.user1", "OWNED_BY", {"permission_level": "viewer"})
+    graph.add_edge("doc2", "User.user2", "OWNED_BY", {"permission_level": "viewer"})
+
+    ports: list[int] = []
+    store = PermissionStore(["doc1", "doc2"])
+
+    async def runner() -> None:
+        server_task = asyncio.create_task(
+            _run_permission_recall_server(ports, graph, store)
+        )
+        while not ports:
+            await asyncio.sleep(0.01)
+        await _run_recall_permission_test(ports[0])
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
+
+
+def test_publish_event_permission_enforced(monkeypatch) -> None:
+    from ume.graph import MockGraph
+    import ume.services.ingest as ingest_module
+
+    monkeypatch.setattr(ingest_module, "classify_event", lambda event: [])
+    monkeypatch.setattr(
+        ingest_module._anomaly_detector,
+        "process_event",
+        lambda event: None,
+    )
+
+    graph = MockGraph()
+    graph.add_node("doc1", {"name": "original"})
+    graph.add_node("User.viewer", {})
+    graph.add_node("User.editor", {})
+    graph.add_edge("doc1", "User.viewer", "OWNED_BY", {"permission_level": "viewer"})
+    graph.add_edge("doc1", "User.editor", "OWNED_BY", {"permission_level": "editor"})
+
+    ports: list[int] = []
+
+    async def runner() -> None:
+        server_task = asyncio.create_task(_run_permission_publish_server(ports, graph))
+        while not ports:
+            await asyncio.sleep(0.01)
+        await _run_publish_permission_test(ports[0], graph)
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(runner())
 
 
 def test_publish_event_missing_graph() -> None:

@@ -21,10 +21,12 @@ from ..embedding import generate_embedding
 from ..metrics import RECALL_SCORE, RECALL_LATENCY_MS
 from ..event import EventError
 from ..processing import ProcessingError
+from ..permissions_adapter import PermissionsGraphAdapter
 from ..snapshot import snapshot_graph_to_file, load_graph_into_existing
-from ume.services.ingest import ingest_envelope, ingest_envelope_async
+from ume.services.ingest import ingest_envelope
 from ..async_graph_adapter import IAsyncGraphAdapter
 from ..event_ledger import event_ledger
+from ..rbac_adapter import AccessDeniedError
 import inspect
 
 from ume_client import ume_pb2, ume_pb2_grpc  # type: ignore
@@ -48,29 +50,76 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         self.api_token = api_token if api_token is not None else settings.UME_GRPC_TOKEN
         self.auth_callback = auth_callback
 
-    async def _require_auth(self, context: grpc.aio.ServicerContext) -> None:
+    async def _require_auth(
+        self, context: grpc.aio.ServicerContext | None
+    ) -> dict[str, str]:
+        metadata: dict[str, str] = {}
+        if context is not None:
+            metadata = {k.lower(): v for k, v in context.invocation_metadata()}
+
         if self.api_token is None and self.auth_callback is None:
-            return
+            return metadata
         if self.api_token == "":
             logging.getLogger(__name__).warning(
                 "UME_GRPC_TOKEN is empty; rejecting unauthenticated requests"
             )
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
-            return
-        metadata = {k.lower(): v for k, v in context.invocation_metadata()}
+            return metadata
         header = metadata.get("authorization")
         if not header or not header.lower().startswith("bearer "):
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Missing token")
-            return
+            return metadata
         token = header.split(" ", 1)[1]
         if self.api_token is not None:
             if token != self.api_token:
                 await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
-                return
-            return
+                return metadata
+            return metadata
         if self.auth_callback is not None and not self.auth_callback(token):
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid token")
-            return
+            return metadata
+
+        return metadata
+
+    async def _get_permissions_graph(
+        self,
+        metadata: dict[str, str],
+        context: grpc.aio.ServicerContext | None,
+    ) -> PermissionsGraphAdapter:
+        if self.graph is None:
+            raise RuntimeError("graph is not configured")
+
+        def _first(keys: tuple[str, ...]) -> str | None:
+            for key in keys:
+                value = metadata.get(key)
+                if value:
+                    return value
+            return None
+
+        user_id = _first(("ume-user-id", "user-id", "x-ume-user-id"))
+        group_id = _first(("ume-group-id", "group-id", "x-ume-group-id"))
+
+        if user_id is None:
+            message = "user_id metadata is required for permissions"
+            if context is not None:
+                await context.abort(grpc.StatusCode.PERMISSION_DENIED, message)
+            raise RuntimeError(message)
+
+        base_graph = self.graph
+        if isinstance(base_graph, PermissionsGraphAdapter):
+            base_graph = base_graph._adapter  # type: ignore[attr-defined]
+
+        if isinstance(base_graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+            getattr(base_graph, "get_node", None)
+        ):
+            if context is not None:
+                await context.abort(
+                    grpc.StatusCode.UNIMPLEMENTED,
+                    "Async graphs are not supported for permission checks",
+                )
+            raise RuntimeError("Async graphs are not supported for permission checks")
+
+        return PermissionsGraphAdapter(base_graph, user_id=user_id, group_id=group_id)
 
     async def RunCypher(
         self, request: ume_pb2.CypherQuery, context: grpc.aio.ServicerContext
@@ -108,7 +157,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         request: ume_pb2.RecallRequest,
         context: grpc.aio.ServicerContext,
     ) -> ume_pb2.RecallResponse:
-        await self._require_auth(context)
+        metadata = await self._require_auth(context)
 
         if not request.query and not request.vector:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "query or vector required")
@@ -123,14 +172,13 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         if self.graph is None:
             await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
 
+        permissions_graph = await self._get_permissions_graph(metadata, context)
+
         start = time.perf_counter()
         ids = self.store.query(vector, k=request.k or 5)
         nodes = []
         for node_id in ids:
-            if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(getattr(self.graph, "get_node", None)):
-                attrs = await self.graph.get_node(node_id)  # type: ignore[misc]
-            else:
-                attrs = self.graph.get_node(node_id)  # type: ignore[call-arg]
+            attrs = permissions_graph.get_node(node_id)
             if attrs is not None:
                 struct = struct_pb2.Struct()
                 struct.update(attrs)
@@ -149,7 +197,7 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         request: ume_pb2.RecallRequest,
         context: grpc.aio.ServicerContext,
     ) -> typing.AsyncIterator[ume_pb2.Node]:
-        await self._require_auth(context)
+        metadata = await self._require_auth(context)
 
         if not request.query and not request.vector:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "query or vector required")
@@ -164,15 +212,12 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
         if self.graph is None:
             await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
 
+        permissions_graph = await self._get_permissions_graph(metadata, context)
+
         start = time.perf_counter()
         ids = self.store.query(vector, k=request.k or 5)
         for node_id in ids:
-            if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
-                getattr(self.graph, "get_node", None)
-            ):
-                attrs = await self.graph.get_node(node_id)  # type: ignore[misc]
-            else:
-                attrs = self.graph.get_node(node_id)  # type: ignore[call-arg]
+            attrs = permissions_graph.get_node(node_id)
             if attrs is not None:
                 struct = struct_pb2.Struct()
                 struct.update(attrs)
@@ -208,18 +253,23 @@ class UMEServicer(ume_pb2_grpc.UMEServicer):
     async def PublishEvent(
         self, request: ume_pb2.PublishEventRequest, context: grpc.aio.ServicerContext
     ) -> empty_pb2.Empty:
-        await self._require_auth(context)
+        metadata = await self._require_auth(context)
         if self.graph is None:
             await context.abort(grpc.StatusCode.FAILED_PRECONDITION, "graph not configured")
 
         try:
             envelope = request.envelope
+            permissions_graph = await self._get_permissions_graph(metadata, context)
             if isinstance(self.graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
                 getattr(self.graph, "add_node", None)
             ):
-                await ingest_envelope_async(envelope, self.graph)  # type: ignore[arg-type]
-            else:
-                ingest_envelope(envelope, self.graph)
+                await context.abort(
+                    grpc.StatusCode.UNIMPLEMENTED,
+                    "Async graphs are not supported for permission checks",
+                )
+            ingest_envelope(envelope, permissions_graph)
+        except AccessDeniedError as exc:
+            await context.abort(grpc.StatusCode.PERMISSION_DENIED, str(exc))
         except (EventError, ProcessingError) as exc:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
 
