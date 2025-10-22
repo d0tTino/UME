@@ -159,17 +159,47 @@ def apply_event_to_graph(
         assert isinstance(label, str)
         schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
         schema.validate_edge_label(label)
-        if event.event_type == EventType.ENTITY_DISCOVERED and not graph.node_exists(target_node_id):
-            attrs = event.payload.get("attributes", {})
-            if not isinstance(attrs, dict):
-                raise ProcessingError(
-                    f"'attributes' must be a dictionary for ENTITY_DISCOVERED event: {event.event_id}"
-                )
-            _add_tokens(attrs)
-            graph.add_node(target_node_id, attrs)
+        raw_edge_attrs = event.payload.get("attributes")
+        if raw_edge_attrs is not None and not isinstance(raw_edge_attrs, dict):
+            raise ProcessingError(
+                f"'attributes' must be a dictionary for {event.event_type.value} event: {event.event_id}"
+            )
+        edge_attrs = dict(raw_edge_attrs) if isinstance(raw_edge_attrs, dict) else None
+
+        edge_def = schema.edge_labels.get(label)
+        edge_schema_version = edge_def.version if edge_def else schema.version
+
+        if edge_def and edge_attrs is not None:
+            permission_level = edge_attrs.get("permission_level")
+            if permission_level is not None:
+                if not isinstance(permission_level, str) or not permission_level:
+                    raise ProcessingError(
+                        "permission_level must be a non-empty string when provided for permissioned edges"
+                    )
+                accepted_levels = set(edge_def.permission_level_values)
+                if not accepted_levels and edge_def.permission_level is not None:
+                    accepted_levels.add(edge_def.permission_level)
+                if accepted_levels and permission_level not in accepted_levels:
+                    raise ProcessingError(
+                        f"Invalid permission_level '{permission_level}' for edge label '{label}'"
+                    )
+
+        if (
+            event.event_type == EventType.ENTITY_DISCOVERED
+            and not graph.node_exists(target_node_id)
+        ):
+            node_attrs = dict(edge_attrs) if edge_attrs is not None else {}
+            _add_tokens(node_attrs)
+            graph.add_node(target_node_id, node_attrs)
             for listener in get_registered_listeners():
-                listener.on_node_created(target_node_id, attrs)
-        graph.add_edge(source_node_id, target_node_id, label)
+                listener.on_node_created(target_node_id, node_attrs)
+        graph.add_edge(
+            source_node_id,
+            target_node_id,
+            label,
+            edge_attrs,
+            schema_version=edge_schema_version,
+        )
         for listener in get_registered_listeners():
             listener.on_edge_created(source_node_id, target_node_id, label)
 
