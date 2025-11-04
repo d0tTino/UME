@@ -21,17 +21,51 @@ except Exception:  # pragma: no cover - optional kafka
 
 logger = logging.getLogger(__name__)
 
-TARGET_VERSION = "2.0.0"
+TARGET_VERSION = "3.0.0"
+
+_DEPRECATED_EDGE_LABELS = {
+    "REMEMBERS",
+    "ASSOCIATED_WITH",
+    "CAUSES",
+    "LINKS_TO",
+    "CONNECTS_TO",
+    "RELATES_TO",
+}
 
 
 def _migrate_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Transform an event dictionary for ``TARGET_VERSION``."""
-    etype = event.get("event_type")
+    etype = event.get("event_type") or event.get("eventType")
     if etype in {"CREATE_EDGE", "DELETE_EDGE"}:
         label = event.get("label")
         if label == "L":
-            event["label"] = "LINKS_TO"
-        elif label == "TO_DELETE":
+            label = "LINKS_TO"
+            event["label"] = label
+
+        if label == "NEW_LABEL":
+            label = "TAGGED_AS"
+            event["label"] = label
+
+        if label == "HAS_PERMISSION":
+            payload = event.get("payload")
+            if not isinstance(payload, dict):
+                payload = {}
+            attrs = payload.get("attributes")
+            if not isinstance(attrs, dict):
+                attrs = {}
+
+            perm_level = attrs.get("permission_level")
+            if not isinstance(perm_level, str) or not perm_level:
+                perm_level = "viewer"
+            new_label = "OWNED_BY" if perm_level == "editor" else "SHARED_WITH"
+
+            attrs["permission_level"] = perm_level
+            payload["attributes"] = attrs
+            event["payload"] = payload
+            event["label"] = new_label
+            label = new_label
+
+        if label in _DEPRECATED_EDGE_LABELS or label == "TO_DELETE":
             return None
     return event
 
@@ -82,6 +116,8 @@ def migrate_events(source: str = "ledger") -> Iterable[Dict[str, Any]]:
         events = _iter_ledger_events(event_ledger)
 
     for evt in events:
+        if isinstance(evt, dict) and "event" in evt and isinstance(evt["event"], dict):
+            evt = evt["event"]
         new_evt = _migrate_event(evt)
         if new_evt is None:
             continue
