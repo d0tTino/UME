@@ -44,6 +44,10 @@ def test_migrate_events_ledger_path(monkeypatch: pytest.MonkeyPatch) -> None:
     assert owned["payload"]["attributes"]["permission_level"] == "editor"
     assert shared["label"] == "SHARED_WITH"
     assert shared["payload"]["attributes"]["permission_level"] == "viewer"
+    assert {owned["target_node_id"], shared["target_node_id"]} == {
+        "user_editor",
+        "user_viewer",
+    }
 
 
 def test_migrate_events_kafka_envelopes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -64,5 +68,6 @@ def test_migrate_events_kafka_envelopes(monkeypatch: pytest.MonkeyPatch) -> None
     assert envelope["schema_version"] == "3.0.0"
     event = envelope["event"]
     assert event["label"] == "SHARED_WITH"
+    assert event["target_node_id"] == "user_default"
     attrs = event["payload"]["attributes"]
     assert attrs["permission_level"] == "viewer"
