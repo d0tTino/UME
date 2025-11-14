@@ -155,26 +155,42 @@ def _migrate_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     if label == "TO_DELETE":
         return None
+
     if label == "L":
         label = "LINKS_TO"
-
-    payload = _ensure_payload(event)
-    attrs, perm_hint = _extract_edge_attributes(payload)
-
-    if label == "NEW_LABEL":
+    elif label == "NEW_LABEL":
         label = "TAGGED_AS"
-    elif label == "HAS_PERMISSION":
-        perm_value = attrs.get("permission_level")
-        normalized_perm = _normalize_permission_value(
-            perm_value if isinstance(perm_value, str) else perm_hint
-        )
-        if normalized_perm is not None:
-            attrs["permission_level"] = normalized_perm
-        else:
-            attrs.pop("permission_level", None)
 
+    # ``HAS_PERMISSION`` edges require special handling to determine the
+    # replacement label and normalize permission metadata.
+    if label == "HAS_PERMISSION":
+        payload = _ensure_payload(event)
+        attrs, perm_hint = _extract_edge_attributes(payload)
+
+        normalized_perm = _normalize_permission_value(
+            attrs.get("permission_level")
+        ) or perm_hint
+        normalized_perm = _normalize_permission_value(normalized_perm) or "viewer"
+
+        attrs["permission_level"] = normalized_perm
         label = "OWNED_BY" if normalized_perm == "editor" else "SHARED_WITH"
-    event["label"] = label
+        event["label"] = label
+
+        if etype == "CREATE_EDGE":
+            payload.pop("permission_level", None)
+            payload["attributes"] = _apply_edge_defaults(attrs, label)
+        else:
+            # DELETE_EDGE events rarely carry payload data; ensure structure is clean.
+            if attrs:
+                payload["attributes"] = attrs
+    else:
+        event["label"] = label
+
+        if etype == "CREATE_EDGE":
+            payload = _ensure_payload(event)
+            attrs, _ = _extract_edge_attributes(payload)
+            payload.pop("permission_level", None)
+            payload["attributes"] = _apply_edge_defaults(attrs, label)
 
     if label in _DEPRECATED_EDGE_LABELS:
         return None
@@ -182,43 +198,6 @@ def _migrate_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if _edge_metadata(label) is None:
         return None
 
-    if etype == "CREATE_EDGE":
-        payload.pop("permission_level", None)
-        normalized_attrs = _apply_edge_defaults(attrs, label)
-        payload["attributes"] = normalized_attrs
-
-    etype = event.get("event_type") or event.get("eventType")
-    if etype in {"CREATE_EDGE", "DELETE_EDGE"}:
-        label = event.get("label")
-        if label == "L":
-            label = "LINKS_TO"
-            event["label"] = label
-
-        if label == "NEW_LABEL":
-            label = "TAGGED_AS"
-            event["label"] = label
-
-        if label == "HAS_PERMISSION":
-            payload = event.get("payload")
-            if not isinstance(payload, dict):
-                payload = {}
-            attrs = payload.get("attributes")
-            if not isinstance(attrs, dict):
-                attrs = {}
-
-            perm_level = attrs.get("permission_level")
-            if not isinstance(perm_level, str) or not perm_level:
-                perm_level = "viewer"
-            new_label = "OWNED_BY" if perm_level == "editor" else "SHARED_WITH"
-
-            attrs["permission_level"] = perm_level
-            payload["attributes"] = attrs
-            event["payload"] = payload
-            event["label"] = new_label
-            label = new_label
-
-        if label in _DEPRECATED_EDGE_LABELS or label == "TO_DELETE":
-            return None
     return event
 
 
