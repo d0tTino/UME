@@ -221,10 +221,22 @@ async def apply_event_to_async_graph(
         raise ProcessingError(f"Unknown event_type '{event.event_type}'")
 
 
-async def ingest_event_async(data: Dict[str, Any], graph: IAsyncGraphAdapter) -> None:
+async def ingest_event_async(
+    data: Dict[str, Any],
+    graph: IAsyncGraphAdapter,
+    *,
+    schema_version: str | None = None,
+) -> None:
     """Validate ``data`` and apply the resulting event to ``graph`` asynchronously."""
-    event = parse_event(data)
-    await apply_event_to_async_graph(event, graph)
+    if "event" in data and isinstance(data["event"], dict):
+        event_dict = cast(Dict[str, Any], data["event"])
+        detected_version = cast(str | None, data.get("schema_version"))
+    else:
+        event_dict = data
+        detected_version = cast(str | None, data.get("schema_version"))
+    event = parse_event(event_dict)
+    effective_version = schema_version or detected_version or DEFAULT_VERSION
+    await apply_event_to_async_graph(event, graph, schema_version=effective_version)
 
 
 __all__ = [
