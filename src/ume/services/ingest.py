@@ -13,6 +13,7 @@ from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..classification import classify_event
 from ..anomaly_detection import AnomalyDetector
+from ..schema_manager import DEFAULT_SCHEMA_MANAGER
 
 if TYPE_CHECKING:  # pragma: no cover - typing import for mypy
     from ume_client import events_pb2 as events_pb2_type
@@ -40,13 +41,35 @@ def validate_event(data: Dict[str, Any]) -> Event:
     return parse_event(data)
 
 
-def apply_event(event: Event, graph: IGraphAdapter) -> None:
+def apply_event(
+    event: Event, graph: IGraphAdapter, *, schema_version: str | None = None
+) -> None:
     """Apply ``event`` to ``graph`` using :func:`~ume.processing.apply_event_to_graph`."""
-    apply_event_to_graph(event, graph)
+
+    if schema_version is None:
+        apply_event_to_graph(event, graph)
+    else:
+        apply_event_to_graph(event, graph, schema_version=schema_version)
+
+
+def _fallback_schema_version() -> str:
+    try:
+        return DEFAULT_SCHEMA_MANAGER.get_schema().version
+    except Exception:  # pragma: no cover - schema resources missing
+        return ""
+
+
+def _normalize_schema_version(value: Any) -> str | None:
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped:
+            return stripped
+    return None
 
 
 def ingest_event(data: Dict[str, Any], graph: IGraphAdapter) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
+    schema_version = _normalize_schema_version(data.get("schema_version"))
     event = validate_event(data)
 
     tag_results = classify_event(event)
@@ -72,7 +95,7 @@ def ingest_event(data: Dict[str, Any], graph: IGraphAdapter) -> None:
             if r.sensitivity and "sensitivity" not in attributes:
                 attributes["sensitivity"] = r.sensitivity
 
-    apply_event(event, graph)
+    apply_event(event, graph, schema_version=schema_version)
 
     anomaly_event = _anomaly_detector.process_event(event)
     if anomaly_event is not None:
@@ -96,6 +119,9 @@ def ingest_events_batch(events: Iterable[Dict[str, Any]], graph: IGraphAdapter) 
 def dict_to_envelope(data: Dict[str, Any]) -> Any:
     """Convert a raw event dictionary to :class:`~ume_client.events_pb2.EventEnvelope`."""
     evt = validate_event(data)
+    schema_version = _normalize_schema_version(data.get("schema_version"))
+    if not schema_version:
+        schema_version = _fallback_schema_version()
     struct_payload = struct_pb2.Struct()
     struct_payload.update(evt.payload)
     meta = events_pb2.BaseEvent(
@@ -109,20 +135,31 @@ def dict_to_envelope(data: Dict[str, Any]) -> Any:
         payload=struct_payload,
     )
     if evt.event_type == EventType.CREATE_NODE.value:
-        return events_pb2.EventEnvelope(create_node=events_pb2.CreateNode(meta=meta))
+        return events_pb2.EventEnvelope(
+            schema_version=schema_version,
+            create_node=events_pb2.CreateNode(meta=meta),
+        )
     if evt.event_type == EventType.UPDATE_NODE_ATTRIBUTES.value:
         return events_pb2.EventEnvelope(
-            update_node_attributes=events_pb2.UpdateNodeAttributes(meta=meta)
+            schema_version=schema_version,
+            update_node_attributes=events_pb2.UpdateNodeAttributes(meta=meta),
         )
     if evt.event_type == EventType.CREATE_EDGE.value:
-        return events_pb2.EventEnvelope(create_edge=events_pb2.CreateEdge(meta=meta))
+        return events_pb2.EventEnvelope(
+            schema_version=schema_version,
+            create_edge=events_pb2.CreateEdge(meta=meta),
+        )
     if evt.event_type == EventType.DELETE_EDGE.value:
-        return events_pb2.EventEnvelope(delete_edge=events_pb2.DeleteEdge(meta=meta))
+        return events_pb2.EventEnvelope(
+            schema_version=schema_version,
+            delete_edge=events_pb2.DeleteEdge(meta=meta),
+        )
     raise ValueError(evt.event_type)
 
 
 def envelope_to_event_dict(envelope: Any) -> Dict[str, Any]:
     """Convert an :class:`~ume_client.events_pb2.EventEnvelope` into a raw event dictionary."""
+    schema_version = envelope.schema_version or _fallback_schema_version()
     if envelope.HasField("create_node"):
         meta = envelope.create_node.meta
     elif envelope.HasField("update_node_attributes"):
@@ -134,7 +171,7 @@ def envelope_to_event_dict(envelope: Any) -> Dict[str, Any]:
     else:
         raise EventError("Envelope missing payload")
 
-    return {
+    event_dict = {
         "eventId": meta.event_id,
         "eventType": meta.event_type,
         "timestamp": meta.timestamp,
@@ -144,6 +181,9 @@ def envelope_to_event_dict(envelope: Any) -> Dict[str, Any]:
         "target_node_id": meta.target_node_id or None,
         "label": meta.label or None,
     }
+    if schema_version:
+        event_dict["schema_version"] = schema_version
+    return event_dict
 
 
 def ingest_envelope(envelope: Any, graph: IGraphAdapter) -> None:

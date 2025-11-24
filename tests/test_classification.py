@@ -10,9 +10,12 @@ def test_ingest_event_classifies_and_persists_tags(monkeypatch) -> None:
     graph = MockGraph()
     captured: dict[str, object] = {}
 
-    def fake_apply_event(event, g):
+    def fake_apply_event(event, g, *, schema_version: str | None = None):
         captured["event"] = event
-        apply_event_to_graph(event, g)
+        if schema_version is None:
+            apply_event_to_graph(event, g)
+        else:
+            apply_event_to_graph(event, g, schema_version=schema_version)
 
     monkeypatch.setattr(ingest_module, "apply_event", fake_apply_event)
 
