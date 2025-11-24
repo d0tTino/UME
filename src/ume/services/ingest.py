@@ -8,7 +8,7 @@ from google.protobuf.json_format import MessageToDict
 from ume_client import events_pb2 as _events_pb2
 from google.protobuf import struct_pb2
 from ..event import Event, EventError, EventType, parse_event
-from ..processing import apply_event_to_graph
+from ..processing import DEFAULT_VERSION, apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..classification import classify_event
@@ -34,6 +34,16 @@ __all__ = [
     "ingest_envelope_async",
     "dict_to_envelope",
 ]
+
+
+def _unwrap_envelope(data: Dict[str, Any]) -> tuple[Dict[str, Any], str | None]:
+    """Return the canonical event dictionary and optional schema version."""
+
+    if "event" in data and isinstance(data["event"], dict):
+        return cast(Dict[str, Any], data["event"]), cast(
+            str | None, data.get("schema_version")
+        )
+    return data, cast(str | None, data.get("schema_version"))
 
 
 def validate_event(data: Dict[str, Any]) -> Event:
@@ -67,7 +77,9 @@ def _normalize_schema_version(value: Any) -> str | None:
     return None
 
 
-def ingest_event(data: Dict[str, Any], graph: IGraphAdapter) -> None:
+def ingest_event(
+    data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
+) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
     schema_version = _normalize_schema_version(data.get("schema_version"))
     event = validate_event(data)
@@ -107,13 +119,19 @@ def ingest_event(data: Dict[str, Any], graph: IGraphAdapter) -> None:
                 "sourceService": anomaly_event.source,
             },
             graph,
+            schema_version=effective_version,
         )
 
 
-def ingest_events_batch(events: Iterable[Dict[str, Any]], graph: IGraphAdapter) -> None:
+def ingest_events_batch(
+    events: Iterable[Dict[str, Any]],
+    graph: IGraphAdapter,
+    *,
+    schema_version: str | None = None,
+) -> None:
     """Sequentially ingest multiple events into ``graph``."""
     for data in events:
-        ingest_event(data, graph)
+        ingest_event(data, graph, schema_version=schema_version)
 
 
 def dict_to_envelope(data: Dict[str, Any]) -> Any:
@@ -134,6 +152,8 @@ def dict_to_envelope(data: Dict[str, Any]) -> Any:
         label=evt.label or "",
         payload=struct_payload,
     )
+    envelope_kwargs = {"schema_version": schema_version or DEFAULT_VERSION}
+    envelope = events_pb2.EventEnvelope(**envelope_kwargs)
     if evt.event_type == EventType.CREATE_NODE.value:
         return events_pb2.EventEnvelope(
             schema_version=schema_version,
@@ -144,6 +164,7 @@ def dict_to_envelope(data: Dict[str, Any]) -> Any:
             schema_version=schema_version,
             update_node_attributes=events_pb2.UpdateNodeAttributes(meta=meta),
         )
+        return envelope
     if evt.event_type == EventType.CREATE_EDGE.value:
         return events_pb2.EventEnvelope(
             schema_version=schema_version,
@@ -186,13 +207,26 @@ def envelope_to_event_dict(envelope: Any) -> Dict[str, Any]:
     return event_dict
 
 
-def ingest_envelope(envelope: Any, graph: IGraphAdapter) -> None:
+def ingest_envelope(
+    envelope: Any, graph: IGraphAdapter, *, schema_version: str | None = None
+) -> None:
     """Ingest an :class:`EventEnvelope` into ``graph``."""
-    ingest_event(envelope_to_event_dict(envelope), graph)
+    ingest_event(
+        envelope_to_event_dict(envelope),
+        graph,
+        schema_version=schema_version,
+    )
 
 
 async def ingest_envelope_async(
-    envelope: Any, graph: IAsyncGraphAdapter
+    envelope: Any,
+    graph: IAsyncGraphAdapter,
+    *,
+    schema_version: str | None = None,
 ) -> None:
     """Asynchronously ingest an :class:`EventEnvelope` into ``graph``."""
-    await ingest_event_async(envelope_to_event_dict(envelope), graph)
+    await ingest_event_async(
+        envelope_to_event_dict(envelope),
+        graph,
+        schema_version=schema_version,
+    )
