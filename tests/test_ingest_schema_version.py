@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+from types import SimpleNamespace
+from typing import Dict
+
+import pytest
+
+from ume.graph import MockGraph
+from ume.graph_schema import EdgeLabel, GraphSchema
+from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
+from ume.services.ingest import (
+    dict_to_envelope,
+    envelope_to_event_dict,
+    ingest_event,
+)
+
+
+class SpyGraph(MockGraph):
+    """Graph adapter that captures schema metadata for edges."""
+
+    def __init__(self, perm_defaults: Dict[str, str]) -> None:
+        super().__init__()
+        self._perm_defaults = perm_defaults
+        self.recorded_versions: list[str | None] = []
+
+    def add_edge(
+        self,
+        source_node_id: str,
+        target_node_id: str,
+        label: str,
+        attrs: Dict[str, object] | None = None,
+        schema_version: str | None = None,
+    ) -> None:
+        self.recorded_versions.append(schema_version)
+        attr_dict = dict(attrs or {})
+        if schema_version is not None:
+            attr_dict.setdefault("schema_version", schema_version)
+            default = self._perm_defaults.get(schema_version)
+            if default is not None:
+                attr_dict.setdefault("permission_level", default)
+        super().add_edge(
+            source_node_id,
+            target_node_id,
+            label,
+            attr_dict,
+            schema_version=schema_version,
+        )
+
+
+@pytest.fixture(autouse=True)
+def _silence_classification(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ume.services.ingest as ingest_module
+
+    monkeypatch.setattr(ingest_module, "classify_event", lambda event: [])
+    monkeypatch.setattr(
+        ingest_module,
+        "_anomaly_detector",
+        SimpleNamespace(process_event=lambda event: None),
+    )
+
+
+@pytest.fixture
+def legacy_schema_version() -> str:
+    version = "2.9.9"
+    schema = GraphSchema(
+        version=version,
+        node_types={},
+        edge_labels={
+            "SHARED_WITH": EdgeLabel(
+                label="SHARED_WITH",
+                version=version,
+                permission_level="legacy_viewer",
+                permission_level_values=("legacy_viewer", "legacy_editor"),
+            )
+        },
+    )
+    previous = DEFAULT_SCHEMA_MANAGER._schemas.get(version)
+    DEFAULT_SCHEMA_MANAGER._schemas[version] = schema
+    try:
+        yield version
+    finally:
+        if previous is None:
+            DEFAULT_SCHEMA_MANAGER._schemas.pop(version, None)
+        else:
+            DEFAULT_SCHEMA_MANAGER._schemas[version] = previous
+
+
+def _permission_event(target: str, schema_version: str) -> dict[str, object]:
+    return {
+        "schema_version": schema_version,
+        "eventType": "CREATE_EDGE",
+        "timestamp": 1,
+        "node_id": "doc",
+        "target_node_id": target,
+        "label": "SHARED_WITH",
+        "payload": {},
+    }
+
+
+def test_ingest_respects_envelope_schema_versions(legacy_schema_version: str) -> None:
+    modern_version = "3.0.0"
+    events = [
+        _permission_event("current_user", modern_version),
+        _permission_event("legacy_user", legacy_schema_version),
+    ]
+
+    envelopes = [dict_to_envelope(evt) for evt in events]
+    assert [env.schema_version for env in envelopes] == [
+        modern_version,
+        legacy_schema_version,
+    ]
+
+    round_tripped = [envelope_to_event_dict(env) for env in envelopes]
+    assert [evt["schema_version"] for evt in round_tripped] == [
+        modern_version,
+        legacy_schema_version,
+    ]
+
+    graph = SpyGraph({modern_version: "viewer", legacy_schema_version: "legacy_viewer"})
+    graph.add_node("doc", {"type": "Document"})
+    graph.add_node("current_user", {"type": "User"})
+    graph.add_node("legacy_user", {"type": "User"})
+
+    for payload in round_tripped:
+        ingest_event(payload, graph)
+
+    assert graph.recorded_versions == [modern_version, legacy_schema_version]
+
+    attrs_by_target = {
+        target: attrs
+        for _src, target, _label, attrs in graph.get_all_edges()
+    }
+
+    modern_attrs = attrs_by_target["current_user"]
+    legacy_attrs = attrs_by_target["legacy_user"]
+
+    assert modern_attrs["schema_version"] == modern_version
+    assert modern_attrs["permission_level"] == "viewer"
+
+    assert legacy_attrs["schema_version"] == legacy_schema_version
+    assert legacy_attrs["permission_level"] == "legacy_viewer"
