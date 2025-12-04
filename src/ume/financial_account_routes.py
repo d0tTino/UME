@@ -71,14 +71,15 @@ def create_account(
         "schema_version": account.schema_version,
     }
     graph.add_node(account.account_id, attrs)
-    graph.add_edge(
-        account.account_id,
-        req.user_id,
-        "OWNED_BY",
-        {"permission_level": "editor"},
-        schema_version=EDGE_VERSION,
-    )
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
+    with perm_graph.bootstrap_owner(account.account_id):
+        perm_graph.add_edge(
+            account.account_id,
+            req.user_id,
+            "OWNED_BY",
+            {"permission_level": "editor"},
+            schema_version=EDGE_VERSION,
+        )
     if req.group_id:
         perm_graph.add_edge(
             account.account_id,
