@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from contextlib import contextmanager
 from typing import Any, DefaultDict, Dict, List, Optional
 
 from .graph_adapter import IGraphAdapter
@@ -25,6 +26,7 @@ class PermissionsGraphAdapter(IGraphAdapter):
         self.group_id = group_id
         self._edges_by_source: DefaultDict[str, List[tuple[str, str, Any]]] = defaultdict(list)
         self._edges_by_target: DefaultDict[str, List[tuple[str, str, Any]]] = defaultdict(list)
+        self._bootstrap_owner_nodes: set[str] = set()
         self.rebuild_index()
 
     # ------------------------------------------------------------------
@@ -133,6 +135,16 @@ class PermissionsGraphAdapter(IGraphAdapter):
         connected = self._adapter.find_connected_nodes(node_id, edge_label)
         return self._filter_visible(connected)
 
+    @contextmanager
+    def bootstrap_owner(self, node_id: str):
+        """Temporarily allow setting the initial OWNED_BY edge for a node."""
+
+        self._bootstrap_owner_nodes.add(node_id)
+        try:
+            yield
+        finally:
+            self._bootstrap_owner_nodes.discard(node_id)
+
     def add_edge(
         self,
         source_node_id: str,
@@ -141,11 +153,18 @@ class PermissionsGraphAdapter(IGraphAdapter):
         attrs: Dict[str, Any] | None = None,
         schema_version: str | None = None,
     ) -> None:
-        self._require_editor(source_node_id)
+        is_bootstrap_owner = (
+            label == "OWNED_BY" and source_node_id in self._bootstrap_owner_nodes
+        )
+        if not is_bootstrap_owner:
+            self._require_editor(source_node_id)
         if label not in {"OWNED_BY", "SHARED_WITH", "INVITES"}:
-            self._require_editor(target_node_id)
+            if not is_bootstrap_owner:
+                self._require_editor(target_node_id)
         edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
         version = edge_def.version if edge_def else schema_version
+        if attrs is not None and not isinstance(attrs, dict):
+            raise AccessDeniedError("Edge attributes must be a mapping when provided")
         attrs = dict(attrs or {})
         perm_level = attrs.get("permission_level")
         if label in {"OWNED_BY", "SHARED_WITH"}:
@@ -158,6 +177,8 @@ class PermissionsGraphAdapter(IGraphAdapter):
                 raise AccessDeniedError(
                     "permission_level must be a non-empty string when provided"
                 )
+            if edge_def is None:
+                raise AccessDeniedError("permission_level not allowed for unknown edge")
             accepted = set(edge_def.permission_level_values)
             if not accepted and edge_def.permission_level is not None:
                 accepted.add(edge_def.permission_level)

@@ -50,20 +50,20 @@ def create_layer(
     }
     graph.add_node(layer.layer_id, attrs)
     _ensure_user_node(graph, req.user_id)
-    graph.add_edge(
-        layer.layer_id,
-        req.user_id,
-        "OWNED_BY",
-        {"permission_level": "editor"},
-        schema_version=EDGE_VERSION,
-    )
+    perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
+    with perm_graph.bootstrap_owner(layer.layer_id):
+        perm_graph.add_edge(
+            layer.layer_id,
+            req.user_id,
+            "OWNED_BY",
+            {"permission_level": "editor"},
+            schema_version=EDGE_VERSION,
+        )
     if req.group_id:
         group = graph.get_node(req.group_id)
         if group is None:
             raise HTTPException(status_code=404, detail="Group not found")
         ensure_group_member(graph, req.user_id, req.group_id)
-
-        perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
         try:
             perm_graph.add_edge(
                 layer.layer_id,
