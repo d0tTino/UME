@@ -111,6 +111,7 @@ def ingest_event(
 
     anomaly_event = _anomaly_detector.process_event(event)
     if anomaly_event is not None:
+        effective_version = schema_version or _fallback_schema_version()
         ingest_event(
             {
                 "eventType": anomaly_event.event_type,

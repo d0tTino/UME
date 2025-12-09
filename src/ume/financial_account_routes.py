@@ -5,13 +5,12 @@ from pydantic import BaseModel
 from typing import cast
 
 from . import api_deps as deps
+from .graph_schema import get_default_edge_version
 from .graph_adapter import IGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .permissions_adapter import PermissionsGraphAdapter
 from .models import create_financial_account, create_user
 from .utils import ensure_group_member
-
-EDGE_VERSION = "3.0.0"
 
 router = APIRouter(prefix="/v1/accounts")
 

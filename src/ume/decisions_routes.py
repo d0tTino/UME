@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
+from .graph_schema import get_default_edge_version
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .utils import ensure_group_member
@@ -19,8 +20,9 @@ from .models import (
     create_user_group,
 )
 
-EDGE_VERSION = "3.0.0"
 VALID_GROUP_PERMISSION_LEVELS = {"viewer", "editor"}
+
+EDGE_VERSION = get_default_edge_version("OWNED_BY")
 
 router = APIRouter(prefix="/v1/decisions")
 

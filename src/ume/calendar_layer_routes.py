@@ -11,8 +11,7 @@ from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .models import create_calendar_layer
 from .utils import ensure_group_member
-
-EDGE_VERSION = "3.0.0"
+from .graph_schema import get_default_edge_version
 
 router = APIRouter(prefix="/v1/calendar")
 

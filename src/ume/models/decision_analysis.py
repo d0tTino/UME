@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from datetime import datetime
 import uuid
 
-SCHEMA_VERSION = "3.0.0"
+from ..graph_schema import get_default_node_version
+
+SCHEMA_VERSION = get_default_node_version("DecisionAnalysis")
 
 
 @dataclass

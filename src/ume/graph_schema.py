@@ -196,3 +196,21 @@ def load_default_schema() -> GraphSchema:
 
 # Load schema on module import for convenience
 DEFAULT_SCHEMA = load_default_schema()
+
+
+def get_default_node_version(node_type: str) -> str:
+    """Return the version string for a node type in :data:`DEFAULT_SCHEMA`."""
+
+    node_def = DEFAULT_SCHEMA.node_types.get(node_type)
+    if node_def is None:
+        return DEFAULT_SCHEMA.version
+    return node_def.version
+
+
+def get_default_edge_version(label: str) -> str:
+    """Return the version string for an edge label in :data:`DEFAULT_SCHEMA`."""
+
+    edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
+    if edge_def is None:
+        return DEFAULT_SCHEMA.version
+    return edge_def.version
