@@ -7,8 +7,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..graph_schema import get_default_node_version
 
-SCHEMA_VERSION = "3.0.0"
+
+SCHEMA_VERSION = get_default_node_version("ProposedAction")
 
 
 @dataclass

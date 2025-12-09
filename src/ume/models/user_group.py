@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import uuid
 
-SCHEMA_VERSION = "3.0.0"
+from ..graph_schema import get_default_node_version
+
+SCHEMA_VERSION = get_default_node_version("UserGroup")
 
 
 @dataclass
