@@ -6,8 +6,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import uuid
 
+from ..graph_schema import get_default_node_version
+
 # Keep in sync with the default ``schema_version`` on :class:`User`.
-SCHEMA_VERSION = "3.0.0"
+SCHEMA_VERSION = get_default_node_version("User")
 
 
 @dataclass

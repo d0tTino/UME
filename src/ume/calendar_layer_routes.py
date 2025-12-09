@@ -11,8 +11,7 @@ from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .models import create_calendar_layer
 from .utils import ensure_group_member
-
-EDGE_VERSION = "3.0.0"
+from .graph_schema import get_default_edge_version
 
 router = APIRouter(prefix="/v1/calendar")
 
@@ -57,7 +56,7 @@ def create_layer(
             req.user_id,
             "OWNED_BY",
             {"permission_level": "editor"},
-            schema_version=EDGE_VERSION,
+            schema_version=get_default_edge_version("OWNED_BY"),
         )
     if req.group_id:
         group = graph.get_node(req.group_id)

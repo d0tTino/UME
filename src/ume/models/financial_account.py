@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 import uuid
 
+from ..graph_schema import get_default_node_version
 
-SCHEMA_VERSION = "3.0.0"
+SCHEMA_VERSION = get_default_node_version("FinancialAccount")
 
 
 @dataclass
