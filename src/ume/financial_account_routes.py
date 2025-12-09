@@ -14,6 +14,8 @@ from .utils import ensure_group_member
 
 router = APIRouter(prefix="/v1/accounts")
 
+EDGE_VERSION = get_default_edge_version("OWNED_BY")
+
 
 class FinancialAccountCreateRequest(BaseModel):
     account_type: str
