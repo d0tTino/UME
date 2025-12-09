@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from . import api_deps as deps
+from .graph_schema import get_default_edge_version
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
@@ -20,7 +21,7 @@ from .models import (
     create_user,
 )
 
-EDGE_VERSION = "3.0.0"
+EDGE_VERSION = get_default_edge_version("OWNED_BY")
 VALID_GROUP_PERMISSION_LEVELS = {"viewer", "editor"}
 
 router = APIRouter(prefix="/v1/calendar")

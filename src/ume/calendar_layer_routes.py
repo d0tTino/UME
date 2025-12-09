@@ -15,6 +15,8 @@ from .graph_schema import get_default_edge_version
 
 router = APIRouter(prefix="/v1/calendar")
 
+EDGE_VERSION = get_default_edge_version("OWNED_BY")
+
 
 class CalendarLayerCreateRequest(BaseModel):
     layer_name: str

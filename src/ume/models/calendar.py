@@ -7,7 +7,9 @@ from datetime import datetime
 from enum import Enum
 import uuid
 
-SCHEMA_VERSION = "3.0.0"
+from ..graph_schema import get_default_node_version
+
+SCHEMA_VERSION = get_default_node_version("CalendarEvent")
 
 
 class CalendarEventStatus(str, Enum):
