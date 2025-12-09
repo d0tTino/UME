@@ -50,28 +50,28 @@ def create_layer(
     graph.add_node(layer.layer_id, attrs)
     _ensure_user_node(graph, req.user_id)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
-    with perm_graph.bootstrap_owner(layer.layer_id):
-        perm_graph.add_edge(
-            layer.layer_id,
-            req.user_id,
-            "OWNED_BY",
-            {"permission_level": "editor"},
-            schema_version=get_default_edge_version("OWNED_BY"),
-        )
-    if req.group_id:
-        group = graph.get_node(req.group_id)
-        if group is None:
-            raise HTTPException(status_code=404, detail="Group not found")
-        ensure_group_member(graph, req.user_id, req.group_id)
-        try:
+    try:
+        with perm_graph.bootstrap_owner(layer.layer_id):
+            perm_graph.add_edge(
+                layer.layer_id,
+                req.user_id,
+                "OWNED_BY",
+                {"permission_level": "editor"},
+                schema_version=EDGE_VERSION,
+            )
+        if req.group_id:
+            group = graph.get_node(req.group_id)
+            if group is None:
+                raise HTTPException(status_code=404, detail="Group not found")
+            ensure_group_member(graph, req.user_id, req.group_id)
             perm_graph.add_edge(
                 layer.layer_id,
                 req.group_id,
                 "SHARED_WITH",
                 {"permission_level": "viewer"},
             )
-        except AccessDeniedError as exc:  # pragma: no cover - ensure 403 response
-            raise HTTPException(status_code=403, detail=str(exc))
+    except AccessDeniedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     return CalendarLayerResponse(
         layer_id=layer.layer_id,
         layer_name=layer.layer_name,

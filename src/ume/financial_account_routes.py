@@ -7,6 +7,7 @@ from typing import cast
 from . import api_deps as deps
 from .graph_schema import get_default_edge_version
 from .graph_adapter import IGraphAdapter
+from .rbac_adapter import AccessDeniedError
 from .permissions_adapter import PermissionsGraphAdapter
 from .models import create_financial_account, create_user
 from .utils import ensure_group_member
@@ -71,21 +72,24 @@ def create_account(
     }
     graph.add_node(account.account_id, attrs)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
-    with perm_graph.bootstrap_owner(account.account_id):
-        perm_graph.add_edge(
-            account.account_id,
-            req.user_id,
-            "OWNED_BY",
-            {"permission_level": "editor"},
-            schema_version=get_default_edge_version("OWNED_BY"),
-        )
-    if req.group_id:
-        perm_graph.add_edge(
-            account.account_id,
-            req.group_id,
-            "SHARED_WITH",
-            {"permission_level": "viewer"},
-        )
+    try:
+        with perm_graph.bootstrap_owner(account.account_id):
+            perm_graph.add_edge(
+                account.account_id,
+                req.user_id,
+                "OWNED_BY",
+                {"permission_level": "editor"},
+                schema_version=EDGE_VERSION,
+            )
+        if req.group_id:
+            perm_graph.add_edge(
+                account.account_id,
+                req.group_id,
+                "SHARED_WITH",
+                {"permission_level": "viewer"},
+            )
+    except AccessDeniedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return FinancialAccountResponse(
         id=account.account_id,
