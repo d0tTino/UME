@@ -368,10 +368,12 @@ def test_load_graph_from_file_invalid_structure_edge_element_not_string(
     with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump({"nodes": {}, "edges": [("n1", "n2", 123, {})]}, f)  # Label is int
 
-    with pytest.raises(
-        SnapshotError,
-        match="Invalid snapshot format for edge at index 0: expected \(source:str, target:str, label:str, attrs:dict\).",
-    ):
+    expected_msg = (
+        "Invalid snapshot format for edge at index 0: "
+        "expected (source:str, target:str, label:str, attrs:dict)."
+    )
+
+    with pytest.raises(SnapshotError, match=re.escape(expected_msg)):
         load_graph_from_file(snapshot_file)
 
 
