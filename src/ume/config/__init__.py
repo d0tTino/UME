@@ -1,7 +1,7 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Extra
-from typing import Any
 import logging
+from typing import Any
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 DEFAULT_AUDIT_SIGNING_KEY = "default-key"
@@ -9,7 +9,7 @@ DEFAULT_AUDIT_SIGNING_KEY = "default-key"
 
 class Settings(BaseSettings):  # type: ignore[misc]
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra=Extra.ignore
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # UME Core
