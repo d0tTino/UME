@@ -199,3 +199,191 @@ def test_decision_access_for_owner_and_group(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
+
+def test_calendar_event_layer_permissions(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("owner", {})
+    graph.add_node("viewer", {})
+    graph.add_node("outsider", {})
+    graph.add_node("group1", {"type": "UserGroup", "members": ["owner", "viewer"]})
+
+    layer_res = client.post(
+        "/v1/calendar/layers",
+        json={"layer_name": "Work", "color": "yellow", "user_id": "owner", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert layer_res.status_code == 200
+    layer_id = layer_res.json()["layer_id"]
+
+    start = datetime(2024, 6, 1, 9, 0, tzinfo=timezone.utc).isoformat()
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Owner event",
+            "start_time": start,
+            "user_id": "owner",
+            "group_id": "group1",
+            "layer_ids": [layer_id],
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    event_id = res.json()["event_id"]
+
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Viewer attempt",
+            "start_time": start,
+            "user_id": "viewer",
+            "group_id": "group1",
+            "layer_ids": [layer_id],
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
+
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "viewer", "group_id": "group1", "layer_id": layer_id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert [evt["event_id"] for evt in res.json()] == [event_id]
+
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "outsider", "group_id": "group1", "layer_id": layer_id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+
+
+def test_financial_account_group_sharing_permissions(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("owner", {})
+    graph.add_node("viewer", {})
+    graph.add_node("outsider", {})
+    graph.add_node("group1", {"type": "UserGroup", "members": ["owner", "viewer"]})
+
+    res = client.post(
+        "/v1/accounts",
+        json={
+            "account_type": "brokerage",
+            "institution": "Wealth",
+            "balance": 25.0,
+            "currency": "USD",
+            "user_id": "owner",
+            "group_id": "group1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    account_id = res.json()["id"]
+
+    res = client.get(
+        f"/v1/accounts/{account_id}",
+        params={"user_id": "owner"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+
+    res = client.get(
+        f"/v1/accounts/{account_id}",
+        params={"user_id": "viewer", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json()["schema_version"] == ACCOUNT_SCHEMA_VERSION
+
+    res = client.get(
+        f"/v1/accounts/{account_id}",
+        params={"user_id": "viewer"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 404
+
+    res = client.get(
+        f"/v1/accounts/{account_id}",
+        params={"user_id": "outsider", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+
+
+def test_decision_group_member_retrieval(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("owner", {})
+    graph.add_node("member", {})
+    graph.add_node("outsider", {})
+    graph.add_node("group1", {"type": "UserGroup", "members": ["owner", "member"]})
+
+    res = client.post(
+        "/v1/decisions",
+        json={
+            "query": "Choose option",
+            "user_id": "owner",
+            "group_id": "group1",
+            "group_permission_level": "viewer",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+
+    res = client.post(
+        f"/v1/decisions/{analysis_id}/actions",
+        json={
+            "description": "Consider choice",
+            "user_id": "owner",
+            "group_id": "group1",
+            "group_permission_level": "viewer",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    action_id = res.json()["action_id"]
+
+    res = client.get(
+        f"/v1/decisions/{analysis_id}",
+        params={"user_id": "owner"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    owner_data = res.json()
+    assert owner_data["analysis"]["analysis_id"] == analysis_id
+    assert [action["action_id"] for action in owner_data["actions"]] == [action_id]
+
+    res = client.get(
+        f"/v1/decisions/{analysis_id}",
+        params={"user_id": "member"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 404
+
+    res = client.get(
+        f"/v1/decisions/{analysis_id}",
+        params={"user_id": "member", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    member_data = res.json()
+    assert member_data["analysis"]["analysis_id"] == analysis_id
+    assert [action["action_id"] for action in member_data["actions"]] == [action_id]
+
+    res = client.get(
+        f"/v1/decisions/{analysis_id}",
+        params={"user_id": "outsider", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
