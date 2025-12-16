@@ -11,9 +11,18 @@
       "description": "Type of event"
     },
     "timestamp": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Timestamp when the event occurred in ISO 8601 format"
+      "description": "Timestamp when the event occurred",
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the event occurred in ISO 8601 format"
+        },
+        {
+          "type": "integer",
+          "description": "Timestamp when the event occurred as a Unix epoch in seconds"
+        }
+      ]
     },
     "eventId": {
       "type": "string",
