@@ -4,7 +4,13 @@
   "description": "Schema for DELETE_EDGE events emitted by UME producers.",
   "version": "1.0.0",
   "type": "object",
-  "required": ["eventType", "timestamp", "node_id", "target_node_id", "label"],
+  "required": [
+    "eventType",
+    "timestamp",
+    "node_id",
+    "target_node_id",
+    "label"
+  ],
   "properties": {
     "eventType": {
       "type": "string",
@@ -12,10 +18,18 @@
       "description": "Type of event"
     },
     "timestamp": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Timestamp when the event occurred in ISO 8601 format"
-
+      "description": "Timestamp when the event occurred",
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the event occurred in ISO 8601 format"
+        },
+        {
+          "type": "integer",
+          "description": "Timestamp when the event occurred as a Unix epoch in seconds"
+        }
+      ]
     },
     "eventId": {
       "type": "string",
@@ -27,8 +41,18 @@
     },
     "subjectEntity": {
       "type": "object",
-      "required": ["id", "type"],
-      "properties": {"id": {"type": "string"}, "type": {"type": "string"}},
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
       "description": "Entity this event pertains to"
     },
     "sourceService": {
