@@ -432,6 +432,67 @@ def test_calendar_event_group_and_layer_filter(client_and_graph) -> None:
     )
 
 
+def test_calendar_event_group_query_includes_owned_private(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("user1", {})
+    graph.add_node("user2", {})
+    graph.add_node("group1", {"members": ["user1", "user2"]})
+    graph.add_edge(
+        "group1", "user1", "OWNED_BY", {"permission_level": "editor"}
+    )
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+
+    private_res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Private",
+            "start_time": start,
+            "user_id": "user1",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert private_res.status_code == 200
+    private_event = private_res.json()
+
+    public_res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Group Public",
+            "start_time": start,
+            "user_id": "user1",
+            "group_id": "group1",
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert public_res.status_code == 200
+    public_event = public_res.json()
+
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user1", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert {event["event_id"] for event in res.json()} == {
+        private_event["event_id"],
+        public_event["event_id"],
+    }
+
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": "user2", "group_id": "group1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert {event["event_id"] for event in res.json()} == {
+        public_event["event_id"]
+    }
+
+
 def test_calendar_event_invite_requires_editor(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)

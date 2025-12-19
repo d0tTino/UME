@@ -232,6 +232,11 @@ def list_events(
     perm_graph = PermissionsGraphAdapter(
         graph, user_id=user_id, group_id=group_id
     )
+    owned_event_ids = {
+        src
+        for src, tgt, lbl, _ in perm_graph.get_all_edges()
+        if lbl == "OWNED_BY" and tgt == user_id
+    }
     event_ids = set(perm_graph.get_nodes_by_user(user_id))
     if group_id is not None:
         event_ids |= set(perm_graph.get_nodes_shared_with(group_id))
@@ -251,6 +256,7 @@ def list_events(
             group_id is not None
             and attrs.get("visibility")
             != CalendarEventVisibility.PUBLIC_TO_GROUP.value
+            and eid not in owned_event_ids
         ):
             continue
         start_ts = attrs.get("start_time")
