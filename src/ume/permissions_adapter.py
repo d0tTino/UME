@@ -47,11 +47,24 @@ class PermissionsGraphAdapter(IGraphAdapter):
             if tgt != subject or lbl not in {"OWNED_BY", "SHARED_WITH"}:
                 continue
             perm_level = attrs.get("permission_level") if isinstance(attrs, dict) else attrs
+            if not self._is_valid_permission_level(lbl, perm_level):
+                continue
             if perm_level == perm:
                 return True
             if perm == "viewer" and perm_level == "editor":
                 return True
         return False
+
+    def _is_valid_permission_level(self, label: str, perm_level: Any) -> bool:
+        if not isinstance(perm_level, str) or not perm_level:
+            return False
+        edge_def = DEFAULT_SCHEMA.edge_labels.get(label)
+        if edge_def is None:
+            return False
+        accepted = set(edge_def.permission_level_values)
+        if not accepted and edge_def.permission_level is not None:
+            accepted.add(edge_def.permission_level)
+        return bool(accepted) and perm_level in accepted
 
     def _has_permission(self, node_id: str, perm: str) -> bool:
         for subject in self._subjects():
@@ -113,7 +126,7 @@ class PermissionsGraphAdapter(IGraphAdapter):
             if lbl not in labels:
                 continue
             perm_level = attrs.get("permission_level") if isinstance(attrs, dict) else attrs
-            if perm_level:
+            if self._is_valid_permission_level(lbl, perm_level):
                 nodes.add(src)
         return list(nodes)
 

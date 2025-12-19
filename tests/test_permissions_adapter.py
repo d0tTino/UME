@@ -190,6 +190,33 @@ def test_get_nodes_shared_with_multiple_groups_and_mixed_permissions() -> None:
         "Document.mixed_groups",
     }
 
+
+def test_invalid_owned_by_permission_level_denies_access() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("Document.d1", {"title": "doc1"})
+    g._edges["Document.d1"].append(
+        ("User.u1", "OWNED_BY", {"permission_level": "admin"})
+    )
+
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+    assert adapter.get_node("Document.d1") is None
+    with pytest.raises(AccessDeniedError):
+        adapter.update_node("Document.d1", {"title": "nope"})
+
+
+def test_invalid_shared_with_permission_level_denies_access() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("Document.d1", {"title": "doc1"})
+    g._edges["Document.d1"].append(
+        ("User.u1", "SHARED_WITH", {"permission_level": "owner"})
+    )
+
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+    assert adapter.get_node("Document.d1") is None
+    assert adapter.get_nodes_by_user("User.u1") == []
+
 def test_add_edge_requires_editor_and_preserves_attrs() -> None:
     g = MockGraph()
     g.add_node("User.u1", {})
