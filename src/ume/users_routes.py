@@ -7,11 +7,15 @@ from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
+from .graph_schema import get_default_edge_version
 from .models import create_user, create_user_group
 from .permissions_adapter import PermissionsGraphAdapter
+from .rbac_adapter import AccessDeniedError
 from .utils import ensure_group_member
 
 router = APIRouter(prefix="/v1")
+
+EDGE_VERSION = get_default_edge_version("OWNED_BY")
 
 
 class UserCreateRequest(BaseModel):
@@ -29,6 +33,7 @@ class UserResponse(BaseModel):
 class UserGroupCreateRequest(BaseModel):
     name: str
     members: List[str] | None = None
+    user_id: str | None = None
 
 
 class UserGroupResponse(BaseModel):
@@ -87,6 +92,19 @@ def create_user_group_node(
         "schema_version": group.schema_version,
     }
     graph.add_node(group.group_id, attrs)
+    if req.user_id:
+        perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
+        try:
+            with perm_graph.bootstrap_owner(group.group_id):
+                perm_graph.add_edge(
+                    group.group_id,
+                    req.user_id,
+                    "OWNED_BY",
+                    {"permission_level": "editor"},
+                    schema_version=EDGE_VERSION,
+                )
+        except AccessDeniedError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     return UserGroupResponse(
         id=group.group_id,
         name=group.name,

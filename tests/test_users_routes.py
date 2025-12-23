@@ -6,6 +6,7 @@ from ume import MockGraph
 from ume.config import settings
 from ume.models.users import SCHEMA_VERSION as USER_SCHEMA_VERSION
 from ume.models.user_group import SCHEMA_VERSION as GROUP_SCHEMA_VERSION
+from ume.graph_schema import get_default_edge_version
 
 
 def _token(client: TestClient) -> str:
@@ -29,6 +30,7 @@ def client_and_graph():
 def test_user_group_and_owned_by(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
+    edge_version = get_default_edge_version("OWNED_BY")
 
     # Create a user
     res = client.post(
@@ -51,7 +53,7 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
     # Create a user group containing the user
     res = client.post(
         "/v1/groups",
-        json={"name": "Team", "members": [user_id]},
+        json={"name": "Team", "members": [user_id], "user_id": user_id},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
@@ -64,6 +66,13 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
     assert attrs["name"] == "Team"
     assert attrs["members"] == [user_id]
     assert attrs["schema_version"] == GROUP_SCHEMA_VERSION
+    edges = graph.get_all_edges()
+    assert (
+        group_id,
+        user_id,
+        "OWNED_BY",
+        {"permission_level": "editor", "schema_version": edge_version},
+    ) in edges
 
     # Prepare a resource node and create OWNED_BY edges
     graph.add_node("doc1", {"type": "Document"})
@@ -79,7 +88,6 @@ def test_user_group_and_owned_by(client_and_graph) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
-    edges = graph.get_all_edges()
     assert (
         "doc1",
         user_id,
