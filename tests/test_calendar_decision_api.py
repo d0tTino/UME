@@ -241,6 +241,59 @@ def test_calendar_event_group_permissions(client_and_graph) -> None:
     )
 
 
+def test_calendar_event_group_sharing_without_seeded_ownership(
+    client_and_graph,
+) -> None:
+    client, _ = client_and_graph
+    token = _token(client)
+
+    user1_res = client.post(
+        "/v1/users",
+        json={"name": "Owner"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert user1_res.status_code == 200
+    user1 = user1_res.json()["id"]
+    user2_res = client.post(
+        "/v1/users",
+        json={"name": "Member"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert user2_res.status_code == 200
+    user2 = user2_res.json()["id"]
+
+    group_res = client.post(
+        "/v1/groups",
+        json={"name": "Team", "members": [user1, user2], "user_id": user1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert group_res.status_code == 200
+    group_id = group_res.json()["id"]
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+    event_res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Shared",
+            "start_time": start,
+            "user_id": user1,
+            "group_id": group_id,
+            "visibility": CalendarEventVisibility.PUBLIC_TO_GROUP.value,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert event_res.status_code == 200
+    event_data = event_res.json()
+
+    res = client.get(
+        "/v1/calendar/events",
+        params={"user_id": user2, "group_id": group_id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    assert res.json() == [event_data]
+
+
 def test_calendar_event_group_membership_required(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)
