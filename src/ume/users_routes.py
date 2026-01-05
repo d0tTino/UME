@@ -1,21 +1,34 @@
 from __future__ import annotations
 
-from typing import List
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
 from .graph_adapter import IGraphAdapter
-from .graph_schema import get_default_edge_version
 from .models import create_user, create_user_group
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
+from .processing import ProcessingError
+from .schema_manager import DEFAULT_SCHEMA_MANAGER
+from .schema_validation import validate_edge, validate_node_attributes
 from .utils import ensure_group_member
 
 router = APIRouter(prefix="/v1")
 
-EDGE_VERSION = get_default_edge_version("OWNED_BY")
+def _validate_node_or_http(attrs: dict[str, Any], schema) -> str:
+    try:
+        return validate_node_attributes(attrs, schema=schema)
+    except ProcessingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _validate_edge_or_http(label: str, attrs: dict[str, Any] | None, schema) -> str:
+    try:
+        return validate_edge(label, attrs, schema_version=None, schema=schema)
+    except ProcessingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 class UserCreateRequest(BaseModel):
@@ -59,6 +72,7 @@ def create_user_node(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> UserResponse:
+    schema = DEFAULT_SCHEMA_MANAGER.get_schema()
     user = create_user(req.name, email=req.email)
     attrs = {
         "type": "User",
@@ -66,14 +80,15 @@ def create_user_node(
         "name": user.name,
         "email": user.email,
         "created_at": int(user.created_at.timestamp()),
-        "schema_version": user.schema_version,
+        "schema_version": schema.node_types["User"].version,
     }
+    _validate_node_or_http(attrs, schema)
     graph.add_node(user.user_id, attrs)
     return UserResponse(
         id=user.user_id,
         name=user.name,
         email=user.email,
-        schema_version=user.schema_version,
+        schema_version=attrs["schema_version"],
     )
 
 
@@ -83,14 +98,16 @@ def create_user_group_node(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> UserGroupResponse:
+    schema = DEFAULT_SCHEMA_MANAGER.get_schema()
     group = create_user_group(req.name, members=req.members)
     attrs = {
         "type": "UserGroup",
         "group_id": group.group_id,
         "name": group.name,
         "members": group.members,
-        "schema_version": group.schema_version,
+        "schema_version": schema.node_types["UserGroup"].version,
     }
+    _validate_node_or_http(attrs, schema)
     graph.add_node(group.group_id, attrs)
     if req.user_id:
         perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
@@ -101,7 +118,9 @@ def create_user_group_node(
                     req.user_id,
                     "OWNED_BY",
                     {"permission_level": "editor"},
-                    schema_version=EDGE_VERSION,
+                    schema_version=_validate_edge_or_http(
+                        "OWNED_BY", {"permission_level": "editor"}, schema
+                    ),
                 )
         except AccessDeniedError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -109,7 +128,7 @@ def create_user_group_node(
         id=group.group_id,
         name=group.name,
         members=group.members,
-        schema_version=group.schema_version,
+        schema_version=attrs["schema_version"],
     )
 
 
@@ -119,6 +138,7 @@ def create_owned_by_edge(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> dict[str, str]:
+    schema = DEFAULT_SCHEMA_MANAGER.get_schema()
     owner_attrs = graph.get_node(req.owner_id) or {}
     if owner_attrs.get("type") == "UserGroup":
         perm_graph = PermissionsGraphAdapter(graph, group_id=req.owner_id)
@@ -129,6 +149,9 @@ def create_owned_by_edge(
         req.owner_id,
         "OWNED_BY",
         {"permission_level": req.permission_level},
+        schema_version=_validate_edge_or_http(
+            "OWNED_BY", {"permission_level": req.permission_level}, schema
+        ),
     )
     return {"status": "ok"}
 

@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from contextlib import suppress
 from datetime import datetime
-from typing import List
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .graph_schema import get_default_edge_version
 from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .processing import ProcessingError
+from .schema_manager import DEFAULT_SCHEMA_MANAGER
+from .schema_validation import validate_edge, validate_node_attributes
 from .utils import ensure_group_member
 from .models import (
     CalendarEventStatus,
@@ -21,13 +22,26 @@ from .models import (
     create_user,
 )
 
-EDGE_VERSION = get_default_edge_version("OWNED_BY")
 VALID_GROUP_PERMISSION_LEVELS = {"viewer", "editor"}
 
 router = APIRouter(prefix="/v1/calendar")
 
 
-def _ensure_user_node(graph: IGraphAdapter, user_id: str) -> None:
+def _validate_node_or_http(attrs: dict[str, Any], schema) -> str:
+    try:
+        return validate_node_attributes(attrs, schema=schema)
+    except ProcessingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _validate_edge_or_http(label: str, attrs: dict[str, Any] | None, schema) -> str:
+    try:
+        return validate_edge(label, attrs, schema_version=None, schema=schema)
+    except ProcessingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _ensure_user_node(graph: IGraphAdapter, user_id: str, schema) -> None:
     """Create a full user node if one does not already exist."""
     if graph.node_exists(user_id):
         return
@@ -38,8 +52,9 @@ def _ensure_user_node(graph: IGraphAdapter, user_id: str) -> None:
         "name": user.name,
         "email": user.email,
         "created_at": int(user.created_at.timestamp()),
-        "schema_version": user.schema_version,
+        "schema_version": schema.node_types["User"].version,
     }
+    _validate_node_or_http(attrs, schema)
     graph.add_node(user.user_id, attrs)
 
 
@@ -103,6 +118,7 @@ def create_event(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> CalendarEventResponse:
+    schema = DEFAULT_SCHEMA_MANAGER.get_schema()
     if req.end_time is not None and req.end_time <= req.start_time:
         raise HTTPException(
             status_code=400, detail="end_time must be after start_time"
@@ -133,14 +149,15 @@ def create_event(
         "status": event.status.value if event.status else None,
         "rrule": event.rrule,
         "visibility": event.visibility.value if event.visibility else None,
-        "schema_version": event.schema_version,
+        "schema_version": schema.node_types["CalendarEvent"].version,
     }
+    _validate_node_or_http(attrs, schema)
     graph.add_node(event.event_id, attrs)
     invitee_ids = req.invitee_ids or []
     layer_ids = req.layer_ids or []
-    _ensure_user_node(graph, req.user_id)
+    _ensure_user_node(graph, req.user_id, schema)
     for uid in invitee_ids:
-        _ensure_user_node(graph, uid)
+        _ensure_user_node(graph, uid, schema)
 
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
 
@@ -157,7 +174,13 @@ def create_event(
                 raise HTTPException(status_code=400, detail="Invalid group_permission_level")
         try:
             perm_graph.add_edge(
-                event.event_id, req.user_id, "OWNED_BY", {"permission_level": "editor"}
+                event.event_id,
+                req.user_id,
+                "OWNED_BY",
+                {"permission_level": "editor"},
+                schema_version=_validate_edge_or_http(
+                    "OWNED_BY", {"permission_level": "editor"}, schema
+                ),
             )
         except AccessDeniedError:
             graph.add_edge(
@@ -165,7 +188,9 @@ def create_event(
                 req.user_id,
                 "OWNED_BY",
                 {"permission_level": "editor"},
-                schema_version=EDGE_VERSION,
+                schema_version=_validate_edge_or_http(
+                    "OWNED_BY", {"permission_level": "editor"}, schema
+                ),
             )
             perm_graph.rebuild_index()
 
@@ -175,12 +200,26 @@ def create_event(
                 req.group_id,
                 "SHARED_WITH",
                 {"permission_level": group_permission_level},
+                schema_version=_validate_edge_or_http(
+                    "SHARED_WITH", {"permission_level": group_permission_level}, schema
+                ),
             )
 
         for uid in invitee_ids:
-            perm_graph.add_edge(event.event_id, uid, "INVITES")
             perm_graph.add_edge(
-                event.event_id, uid, "SHARED_WITH", {"permission_level": "viewer"}
+                event.event_id,
+                uid,
+                "INVITES",
+                schema_version=_validate_edge_or_http("INVITES", {}, schema),
+            )
+            perm_graph.add_edge(
+                event.event_id,
+                uid,
+                "SHARED_WITH",
+                {"permission_level": "viewer"},
+                schema_version=_validate_edge_or_http(
+                    "SHARED_WITH", {"permission_level": "viewer"}, schema
+                ),
             )
 
 
@@ -190,7 +229,12 @@ def create_event(
                 raise HTTPException(status_code=400, detail=f"Invalid layer_id: {lid}")
             if not _user_has_editor_access_to_layer(graph, req.user_id, lid):
                 raise HTTPException(status_code=400, detail=f"Invalid layer_id: {lid}")
-            perm_graph.add_edge(event.event_id, lid, "TAGGED_AS")
+            perm_graph.add_edge(
+                event.event_id,
+                lid,
+                "TAGGED_AS",
+                schema_version=_validate_edge_or_http("TAGGED_AS", {}, schema),
+            )
     except HTTPException:
         with suppress(ProcessingError):
             graph.redact_node(event.event_id)
@@ -214,7 +258,7 @@ def create_event(
         status=event.status,
         rrule=event.rrule,
         visibility=event.visibility,
-        schema_version=event.schema_version,
+        schema_version=attrs["schema_version"],
     )
 
 
