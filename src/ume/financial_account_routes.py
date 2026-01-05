@@ -1,20 +1,35 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import cast
 
 from . import api_deps as deps
-from .graph_schema import get_default_edge_version
 from .graph_adapter import IGraphAdapter
-from .rbac_adapter import AccessDeniedError
 from .permissions_adapter import PermissionsGraphAdapter
+from .rbac_adapter import AccessDeniedError
+from .schema_manager import DEFAULT_SCHEMA_MANAGER
+from .schema_validation import validate_edge, validate_node_attributes
 from .models import create_financial_account, create_user
+from .processing import ProcessingError
 from .utils import ensure_group_member
 
 router = APIRouter(prefix="/v1/accounts")
 
-EDGE_VERSION = get_default_edge_version("OWNED_BY")
+
+def _validate_node_or_http(attrs: dict[str, Any], schema) -> str:
+    try:
+        return validate_node_attributes(attrs, schema=schema)
+    except ProcessingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _validate_edge_or_http(label: str, attrs: dict[str, Any] | None, schema) -> str:
+    try:
+        return validate_edge(label, attrs, schema_version=None, schema=schema)
+    except ProcessingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 class FinancialAccountCreateRequest(BaseModel):
@@ -41,6 +56,7 @@ def create_account(
     graph: IGraphAdapter = Depends(deps.get_graph),
     _: str = Depends(deps.get_current_role),
 ) -> FinancialAccountResponse:
+    schema = DEFAULT_SCHEMA_MANAGER.get_schema()
     if not graph.node_exists(req.user_id):
         user = create_user(req.user_id, user_id=req.user_id)
         user_attrs = {
@@ -49,8 +65,9 @@ def create_account(
             "name": user.name,
             "email": user.email,
             "created_at": int(user.created_at.timestamp()),
-            "schema_version": user.schema_version,
+            "schema_version": schema.node_types["User"].version,
         }
+        _validate_node_or_http(user_attrs, schema)
         graph.add_node(user.user_id, user_attrs)
     if req.group_id:
         group_attrs = graph.get_node(req.group_id)
@@ -70,8 +87,9 @@ def create_account(
         "institution": account.institution,
         "balance": account.balance,
         "currency": account.currency,
-        "schema_version": account.schema_version,
+        "schema_version": schema.node_types["FinancialAccount"].version,
     }
+    _validate_node_or_http(attrs, schema)
     graph.add_node(account.account_id, attrs)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     try:
@@ -81,7 +99,9 @@ def create_account(
                 req.user_id,
                 "OWNED_BY",
                 {"permission_level": "editor"},
-                schema_version=EDGE_VERSION,
+                schema_version=_validate_edge_or_http(
+                    "OWNED_BY", {"permission_level": "editor"}, schema
+                ),
             )
         if req.group_id:
             perm_graph.add_edge(
@@ -89,6 +109,9 @@ def create_account(
                 req.group_id,
                 "SHARED_WITH",
                 {"permission_level": "viewer"},
+                schema_version=_validate_edge_or_http(
+                    "SHARED_WITH", {"permission_level": "viewer"}, schema
+                ),
             )
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -99,7 +122,7 @@ def create_account(
         institution=account.institution,
         balance=account.balance,
         currency=account.currency,
-        schema_version=account.schema_version,
+        schema_version=attrs["schema_version"],
     )
 
 
