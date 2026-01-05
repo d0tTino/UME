@@ -295,6 +295,23 @@ def test_add_permission_edge_without_target_editor() -> None:
     assert adapter_u2.get_node("Document.d1") == {}
 
 
+def test_owned_by_requires_bootstrap_when_no_editor_exists() -> None:
+    g = MockGraph()
+    g.add_node("User.u1", {})
+    g.add_node("Document.d1", {})
+    adapter = PermissionsGraphAdapter(g, user_id="User.u1")
+
+    with pytest.raises(AccessDeniedError) as excinfo:
+        adapter.add_edge(
+            "Document.d1",
+            "User.u1",
+            "OWNED_BY",
+            {"permission_level": "editor"},
+        )
+    assert "bootstrapped" in str(excinfo.value)
+    assert g.get_all_edges() == []
+
+
 def test_owned_by_edge_sets_schema_version_and_allows_edit() -> None:
     g = MockGraph()
     g.add_node("User.u1", {})
