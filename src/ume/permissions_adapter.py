@@ -170,6 +170,12 @@ class PermissionsGraphAdapter(IGraphAdapter):
             label == "OWNED_BY" and source_node_id in self._bootstrap_owner_nodes
         )
         if not is_bootstrap_owner:
+            if label == "OWNED_BY" and not self._has_permission(
+                source_node_id, "editor"
+            ):
+                raise AccessDeniedError(
+                    "OWNED_BY edges must be bootstrapped before an editor exists"
+                )
             self._require_editor(source_node_id)
         if label not in {"OWNED_BY", "SHARED_WITH", "INVITES"}:
             if not is_bootstrap_owner:

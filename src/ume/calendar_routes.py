@@ -172,7 +172,7 @@ def create_event(
             group_permission_level = req.group_permission_level or "viewer"
             if group_permission_level not in VALID_GROUP_PERMISSION_LEVELS:
                 raise HTTPException(status_code=400, detail="Invalid group_permission_level")
-        try:
+        with perm_graph.bootstrap_owner(event.event_id):
             perm_graph.add_edge(
                 event.event_id,
                 req.user_id,
@@ -182,17 +182,6 @@ def create_event(
                     "OWNED_BY", {"permission_level": "editor"}, schema
                 ),
             )
-        except AccessDeniedError:
-            graph.add_edge(
-                event.event_id,
-                req.user_id,
-                "OWNED_BY",
-                {"permission_level": "editor"},
-                schema_version=_validate_edge_or_http(
-                    "OWNED_BY", {"permission_level": "editor"}, schema
-                ),
-            )
-            perm_graph.rebuild_index()
 
         if req.group_id:
             perm_graph.add_edge(
@@ -242,7 +231,8 @@ def create_event(
     except AccessDeniedError as exc:
         with suppress(ProcessingError):
             graph.redact_node(event.event_id)
-        raise HTTPException(status_code=403, detail=str(exc))
+        status = 400 if "bootstrapped" in str(exc) else 403
+        raise HTTPException(status_code=status, detail=str(exc))
     except ProcessingError as exc:
         with suppress(ProcessingError):
             graph.redact_node(event.event_id)
