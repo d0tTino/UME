@@ -46,6 +46,7 @@ class ActionCreateRequest(BaseModel):
 
 def _analysis_to_dict(analysis: DecisionAnalysis) -> dict[str, Any]:
     return {
+        "type": "DecisionAnalysis",
         "analysis_id": analysis.analysis_id,
         "query": analysis.query,
         "created_at": int(analysis.created_at.timestamp()),
@@ -55,6 +56,7 @@ def _analysis_to_dict(analysis: DecisionAnalysis) -> dict[str, Any]:
 
 def _action_to_dict(action: ProposedAction) -> dict[str, Any]:
     return {
+        "type": "ProposedAction",
         "action_id": action.action_id,
         "description": action.description,
         "rank": action.rank,

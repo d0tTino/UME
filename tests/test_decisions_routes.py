@@ -38,6 +38,7 @@ def test_decision_flow(client_and_graph) -> None:
     assert res.status_code == 200
     analysis = res.json()
     analysis_id = analysis["analysis_id"]
+    assert analysis["type"] == "DecisionAnalysis"
     assert analysis["schema_version"] == SCHEMA_VERSION
     user_attrs = g.get_node("user1")
     assert user_attrs is not None
@@ -55,6 +56,7 @@ def test_decision_flow(client_and_graph) -> None:
     assert res.status_code == 200
     action = res.json()
     action_id = action["action_id"]
+    assert action["type"] == "ProposedAction"
     assert action["schema_version"] == ACTION_SCHEMA_VERSION
 
     res = client.get(
@@ -65,13 +67,21 @@ def test_decision_flow(client_and_graph) -> None:
     assert res.status_code == 200
     data = res.json()
     assert data["analysis"]["analysis_id"] == analysis_id
+    assert data["analysis"]["type"] == "DecisionAnalysis"
     assert data["analysis"]["schema_version"] == SCHEMA_VERSION
     assert len(data["actions"]) == 1
     assert data["actions"][0]["action_id"] == action_id
+    assert data["actions"][0]["type"] == "ProposedAction"
     assert data["actions"][0]["schema_version"] == ACTION_SCHEMA_VERSION
 
+    analysis_attrs = g.get_node(analysis_id)
+    assert analysis_attrs is not None
+    assert analysis_attrs["type"] == "DecisionAnalysis"
     assert g.get_node(analysis_id)["query"] == "Choose option"
-    assert g.get_node(action_id)["description"] == "Option A"
+    action_attrs = g.get_node(action_id)
+    assert action_attrs is not None
+    assert action_attrs["type"] == "ProposedAction"
+    assert action_attrs["description"] == "Option A"
     assert g.find_connected_nodes(analysis_id, edge_label="CONSIDERS") == [action_id]
     # Permission edges created
     edges = g.get_all_edges()
