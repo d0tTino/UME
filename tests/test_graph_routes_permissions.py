@@ -127,6 +127,33 @@ def test_permission_edge_requires_permission_level(
     )
 
 
+def test_invalid_permission_level_value(
+    client_with_graph: tuple[TestClient, MockGraph, dict[str, str]]
+) -> None:
+    client, graph, headers = client_with_graph
+
+    graph.add_node("doc", {"type": "Document"})
+    graph.add_node("owner", {"type": "User"})
+    graph.add_node("target", {"type": "User"})
+    graph.add_edge("doc", "owner", "OWNED_BY", {"permission_level": "editor"})
+
+    params = {"user_id": "owner"}
+    response = client.post(
+        "/edges",
+        json={
+            "source": "doc",
+            "target": "target",
+            "label": "SHARED_WITH",
+            "attrs": {"permission_level": "admin"},
+        },
+        headers=headers,
+        params=params,
+    )
+
+    assert response.status_code == 403
+    assert "Invalid permission_level" in response.json()["detail"]
+
+
 def test_subgraph_filters_view_only_subjects(
     client_with_graph: tuple[TestClient, MockGraph, dict[str, str]]
 ) -> None:

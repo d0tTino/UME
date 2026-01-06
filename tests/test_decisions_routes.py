@@ -364,3 +364,44 @@ def test_viewer_cannot_add_action(client_and_graph) -> None:
     ]
     assert proposed_action_nodes == []
     assert all(lbl != "CONSIDERS" for _, _, lbl, _ in g.get_all_edges())
+
+
+def test_viewer_cannot_set_permission_edges_on_decision(
+    client_and_graph,
+) -> None:
+    client, g = client_and_graph
+    token = _token(client)
+
+    res = client.post(
+        "/v1/decisions",
+        json={"query": "Q", "user_id": "owner"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    analysis_id = res.json()["analysis_id"]
+    assert res.json()["schema_version"] == SCHEMA_VERSION
+
+    g.add_node("viewer", {"type": "User"})
+    g.add_node("other_user", {"type": "User"})
+    g.add_edge(
+        analysis_id,
+        "viewer",
+        "SHARED_WITH",
+        {"permission_level": "viewer", "schema_version": EDGE_VERSION},
+        schema_version=EDGE_VERSION,
+    )
+
+    response = client.post(
+        "/edges",
+        json={
+            "source": analysis_id,
+            "target": "other_user",
+            "label": "SHARED_WITH",
+            "attrs": {"permission_level": "viewer"},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+        params={"user_id": "viewer"},
+    )
+
+    assert response.status_code == 403
+    assert "Editor permission required" in response.json()["detail"]
