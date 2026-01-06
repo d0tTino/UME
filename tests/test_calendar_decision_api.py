@@ -135,6 +135,54 @@ def test_calendar_event_permissions(client_and_graph) -> None:
     )
 
 
+def test_viewer_cannot_assign_permission_edges_to_calendar_event(
+    client_and_graph,
+) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("owner", {"type": "User"})
+    graph.add_node("viewer", {"type": "User"})
+    graph.add_node("other_user", {"type": "User"})
+
+    start = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc).isoformat()
+    res = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "Blocked",
+            "start_time": start,
+            "user_id": "owner",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 200
+    event_id = res.json()["event_id"]
+    assert res.json()["schema_version"] == SCHEMA_VERSION
+
+    graph.add_edge(
+        event_id,
+        "viewer",
+        "SHARED_WITH",
+        {"permission_level": "viewer", "schema_version": SCHEMA_VERSION},
+        schema_version=SCHEMA_VERSION,
+    )
+
+    response = client.post(
+        "/edges",
+        json={
+            "source": event_id,
+            "target": "other_user",
+            "label": "SHARED_WITH",
+            "attrs": {"permission_level": "viewer"},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+        params={"user_id": "viewer"},
+    )
+
+    assert response.status_code == 403
+    assert "Editor permission required" in response.json()["detail"]
+
+
 def test_calendar_event_group_permissions(client_and_graph) -> None:
     client, graph = client_and_graph
     token = _token(client)

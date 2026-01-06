@@ -187,3 +187,51 @@ def test_create_financial_account_rejects_user_not_in_group_members(client_and_g
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 403
+
+
+def test_viewer_cannot_assign_permission_edges_on_account(client_and_graph) -> None:
+    client, graph = client_and_graph
+    token = _token(client)
+
+    graph.add_node("viewer", {})
+    graph.add_node("other_user", {})
+
+    create_res = client.post(
+        "/v1/accounts",
+        json={
+            "account_type": "checking",
+            "institution": "ACME Bank",
+            "balance": 25.0,
+            "currency": "USD",
+            "user_id": "owner",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert create_res.status_code == 200
+    account_id = create_res.json()["id"]
+    assert create_res.json()["schema_version"] == SCHEMA_VERSION
+
+    graph.add_edge(
+        account_id,
+        "viewer",
+        "SHARED_WITH",
+        {"permission_level": "viewer", "schema_version": EDGE_VERSION},
+        schema_version=EDGE_VERSION,
+    )
+
+    response = client.post(
+        "/edges",
+        json={
+            "source": account_id,
+            "target": "other_user",
+            "label": "OWNED_BY",
+            "attrs": {"permission_level": "editor"},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+        params={"user_id": "viewer"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"].startswith(
+        "OWNED_BY edges must be bootstrapped"
+    )
