@@ -12,23 +12,54 @@ from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .processing import ProcessingError
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
-from .schema_validation import validate_edge, validate_node_attributes
+from .graph_mutations import add_edge_with_schema_validation, add_node_with_schema_validation
 from .utils import ensure_group_member
 
 router = APIRouter(prefix="/v1")
 
-def _validate_node_or_http(attrs: dict[str, Any], schema) -> str:
+
+def _add_node_or_http(
+    graph: IGraphAdapter,
+    node_id: str,
+    attrs: dict[str, Any],
+    schema,
+) -> dict[str, Any]:
     try:
-        return validate_node_attributes(attrs, schema=schema)
+        return add_node_with_schema_validation(graph, node_id, attrs, schema=schema)
     except ProcessingError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid node payload for '{node_id}': {exc}",
+        )
 
 
-def _validate_edge_or_http(label: str, attrs: dict[str, Any] | None, schema) -> str:
+def _add_edge_or_http(
+    graph: IGraphAdapter,
+    source_node_id: str,
+    target_node_id: str,
+    label: str,
+    attrs: dict[str, Any] | None,
+    schema,
+    schema_version: str | None = None,
+) -> str:
     try:
-        return validate_edge(label, attrs, schema_version=None, schema=schema)
+        return add_edge_with_schema_validation(
+            graph,
+            source_node_id,
+            target_node_id,
+            label,
+            attrs,
+            schema=schema,
+            schema_version=schema_version,
+        )
     except ProcessingError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid edge '{label}' from '{source_node_id}' to "
+                f"'{target_node_id}': {exc}"
+            ),
+        )
 
 
 class UserCreateRequest(BaseModel):
@@ -82,8 +113,7 @@ def create_user_node(
         "created_at": int(user.created_at.timestamp()),
         "schema_version": schema.node_types["User"].version,
     }
-    _validate_node_or_http(attrs, schema)
-    graph.add_node(user.user_id, attrs)
+    attrs = _add_node_or_http(graph, user.user_id, attrs, schema)
     return UserResponse(
         id=user.user_id,
         name=user.name,
@@ -107,20 +137,18 @@ def create_user_group_node(
         "members": group.members,
         "schema_version": schema.node_types["UserGroup"].version,
     }
-    _validate_node_or_http(attrs, schema)
-    graph.add_node(group.group_id, attrs)
+    attrs = _add_node_or_http(graph, group.group_id, attrs, schema)
     if req.user_id:
         perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
         try:
             with perm_graph.bootstrap_owner(group.group_id):
-                perm_graph.add_edge(
+                _add_edge_or_http(
+                    perm_graph,
                     group.group_id,
                     req.user_id,
                     "OWNED_BY",
                     {"permission_level": "editor"},
-                    schema_version=_validate_edge_or_http(
-                        "OWNED_BY", {"permission_level": "editor"}, schema
-                    ),
+                    schema,
                 )
         except AccessDeniedError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -144,14 +172,13 @@ def create_owned_by_edge(
         perm_graph = PermissionsGraphAdapter(graph, group_id=req.owner_id)
     else:
         perm_graph = PermissionsGraphAdapter(graph, user_id=req.owner_id)
-    perm_graph.add_edge(
+    _add_edge_or_http(
+        perm_graph,
         req.node_id,
         req.owner_id,
         "OWNED_BY",
         {"permission_level": req.permission_level},
-        schema_version=_validate_edge_or_http(
-            "OWNED_BY", {"permission_level": req.permission_level}, schema
-        ),
+        schema,
     )
     return {"status": "ok"}
 

@@ -12,8 +12,8 @@ from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .processing import ProcessingError
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
-from .schema_validation import validate_edge, validate_node_attributes
-from .graph_schema import get_default_edge_version
+from .graph_mutations import add_edge_with_schema_validation, add_node_with_schema_validation
+from .schema_validation import validate_node_attributes
 from .utils import ensure_group_member
 from .models import (
     DecisionAnalysis,
@@ -26,9 +26,23 @@ from .models import (
 
 VALID_GROUP_PERMISSION_LEVELS = {"viewer", "editor"}
 
-EDGE_VERSION = get_default_edge_version("OWNED_BY")
 
 router = APIRouter(prefix="/v1/decisions")
+
+
+def _add_node_or_http(
+    graph: IGraphAdapter,
+    node_id: str,
+    attrs: dict[str, Any],
+    schema,
+) -> dict[str, Any]:
+    try:
+        return add_node_with_schema_validation(graph, node_id, attrs, schema=schema)
+    except ProcessingError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid node payload for '{node_id}': {exc}",
+        )
 
 
 def _validate_node_or_http(attrs: dict[str, Any], schema) -> str:
@@ -38,11 +52,34 @@ def _validate_node_or_http(attrs: dict[str, Any], schema) -> str:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-def _validate_edge_or_http(label: str, attrs: dict[str, Any] | None, schema) -> str:
+def _add_edge_or_http(
+    graph: IGraphAdapter,
+    source_node_id: str,
+    target_node_id: str,
+    label: str,
+    attrs: dict[str, Any] | None,
+    schema,
+    schema_version: str | None = None,
+) -> str:
     try:
-        return validate_edge(label, attrs, schema_version=None, schema=schema)
+        return add_edge_with_schema_validation(
+            graph,
+            source_node_id,
+            target_node_id,
+            label,
+            attrs,
+            schema=schema,
+            schema_version=schema_version,
+        )
     except ProcessingError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid edge '{label}' from '{source_node_id}' to "
+                f"'{target_node_id}': {exc}"
+            ),
+        )
+
 
 
 class DecisionCreateRequest(BaseModel):
@@ -100,8 +137,7 @@ def _ensure_user_node(graph: IGraphAdapter, user_id: str, schema) -> None:
     defaults = _user_node_defaults(user_id, schema)
     attrs = graph.get_node(user_id)
     if attrs is None:
-        _validate_node_or_http(defaults, schema)
-        graph.add_node(user_id, defaults)
+        _add_node_or_http(graph, user_id, defaults, schema)
         return
     update_attrs: dict[str, Any] = {}
     if attrs.get("type") != "User":
@@ -131,8 +167,7 @@ def _ensure_group_node(graph: IGraphAdapter, group_id: str, schema) -> None:
     defaults = _group_node_defaults(group_id, schema)
     attrs = graph.get_node(group_id)
     if attrs is None:
-        _validate_node_or_http(defaults, schema)
-        graph.add_node(group_id, defaults)
+        _add_node_or_http(graph, group_id, defaults, schema)
         return
     update_attrs: dict[str, Any] = {}
     if attrs.get("type") != "UserGroup":
@@ -169,30 +204,27 @@ def create_decision(
     try:
         analysis = create_decision_analysis(req.query)
         attrs = _analysis_to_dict(analysis, schema)
-        _validate_node_or_http(attrs, schema)
-        perm_graph.add_node(analysis.analysis_id, attrs)
+        attrs = _add_node_or_http(perm_graph, analysis.analysis_id, attrs, schema)
         # Ensure subject nodes exist
         _ensure_user_node(graph, req.user_id, schema)
         # Link analysis to the owning user
         with perm_graph.bootstrap_owner(analysis.analysis_id):
-            perm_graph.add_edge(
+            _add_edge_or_http(
+                perm_graph,
                 analysis.analysis_id,
                 req.user_id,
                 "OWNED_BY",
                 {"permission_level": "editor"},
-                schema_version=_validate_edge_or_http(
-                    "OWNED_BY", {"permission_level": "editor"}, schema
-                ),
+                schema,
             )
         if req.group_id:
-            perm_graph.add_edge(
+            _add_edge_or_http(
+                perm_graph,
                 analysis.analysis_id,
                 req.group_id,
                 "SHARED_WITH",
                 {"permission_level": group_permission_level},
-                schema_version=_validate_edge_or_http(
-                    "SHARED_WITH", {"permission_level": group_permission_level}, schema
-                ),
+                schema,
             )
     except AccessDeniedError as exc:
         status = 400 if "bootstrapped" in str(exc) else 403
@@ -230,42 +262,41 @@ def add_action(
             outcome_metrics=req.outcome_metrics or {},
         )
         action_attrs = _action_to_dict(action, schema)
-        _validate_node_or_http(action_attrs, schema)
-        perm_graph.add_node(action.action_id, action_attrs)
+        action_attrs = _add_node_or_http(perm_graph, action.action_id, action_attrs, schema)
         created_action = True
         # Ensure subject nodes exist
         _ensure_user_node(graph, req.user_id, schema)
         # Link action to the owning user
         with perm_graph.bootstrap_owner(action.action_id):
-            perm_graph.add_edge(
+            _add_edge_or_http(
+                perm_graph,
                 action.action_id,
                 req.user_id,
                 "OWNED_BY",
                 {"permission_level": "editor"},
-                schema_version=_validate_edge_or_http(
-                    "OWNED_BY", {"permission_level": "editor"}, schema
-                ),
+                schema,
             )
         perm_graph.rebuild_index()
         if req.group_id:
             try:
-                perm_graph.add_edge(
+                _add_edge_or_http(
+                    perm_graph,
                     action.action_id,
                     req.group_id,
                     "SHARED_WITH",
                     {"permission_level": group_permission_level},
-                    schema_version=_validate_edge_or_http(
-                        "SHARED_WITH", {"permission_level": group_permission_level}, schema
-                    ),
+                    schema,
                 )
             except AccessDeniedError as exc:
                 raise AccessDeniedError("Editor permission required for target group") from exc
         perm_graph.rebuild_index()
-        perm_graph.add_edge(
+        _add_edge_or_http(
+            perm_graph,
             analysis_id,
             action.action_id,
             "CONSIDERS",
-            schema_version=_validate_edge_or_http("CONSIDERS", {}, schema),
+            {},
+            schema,
         )
     except AccessDeniedError as exc:
         if created_action:
