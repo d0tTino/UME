@@ -10,7 +10,7 @@ from .graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
-from .schema_validation import validate_edge, validate_node_attributes
+from .graph_mutations import add_edge_with_schema_validation, add_node_with_schema_validation
 from .models import create_financial_account, create_user
 from .processing import ProcessingError
 from .utils import ensure_group_member
@@ -18,18 +18,48 @@ from .utils import ensure_group_member
 router = APIRouter(prefix="/v1/accounts")
 
 
-def _validate_node_or_http(attrs: dict[str, Any], schema) -> str:
+def _add_node_or_http(
+    graph: IGraphAdapter,
+    node_id: str,
+    attrs: dict[str, Any],
+    schema,
+) -> dict[str, Any]:
     try:
-        return validate_node_attributes(attrs, schema=schema)
+        return add_node_with_schema_validation(graph, node_id, attrs, schema=schema)
     except ProcessingError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid node payload for '{node_id}': {exc}",
+        )
 
 
-def _validate_edge_or_http(label: str, attrs: dict[str, Any] | None, schema) -> str:
+def _add_edge_or_http(
+    graph: IGraphAdapter,
+    source_node_id: str,
+    target_node_id: str,
+    label: str,
+    attrs: dict[str, Any] | None,
+    schema,
+    schema_version: str | None = None,
+) -> str:
     try:
-        return validate_edge(label, attrs, schema_version=None, schema=schema)
+        return add_edge_with_schema_validation(
+            graph,
+            source_node_id,
+            target_node_id,
+            label,
+            attrs,
+            schema=schema,
+            schema_version=schema_version,
+        )
     except ProcessingError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid edge '{label}' from '{source_node_id}' to "
+                f"'{target_node_id}': {exc}"
+            ),
+        )
 
 
 class FinancialAccountCreateRequest(BaseModel):
@@ -67,8 +97,7 @@ def create_account(
             "created_at": int(user.created_at.timestamp()),
             "schema_version": schema.node_types["User"].version,
         }
-        _validate_node_or_http(user_attrs, schema)
-        graph.add_node(user.user_id, user_attrs)
+        _add_node_or_http(graph, user.user_id, user_attrs, schema)
     if req.group_id:
         group_attrs = graph.get_node(req.group_id)
         if group_attrs is None or group_attrs.get("type") != "UserGroup":
@@ -89,29 +118,26 @@ def create_account(
         "currency": account.currency,
         "schema_version": schema.node_types["FinancialAccount"].version,
     }
-    _validate_node_or_http(attrs, schema)
-    graph.add_node(account.account_id, attrs)
+    attrs = _add_node_or_http(graph, account.account_id, attrs, schema)
     perm_graph = PermissionsGraphAdapter(graph, user_id=req.user_id)
     try:
         with perm_graph.bootstrap_owner(account.account_id):
-            perm_graph.add_edge(
+            _add_edge_or_http(
+                perm_graph,
                 account.account_id,
                 req.user_id,
                 "OWNED_BY",
                 {"permission_level": "editor"},
-                schema_version=_validate_edge_or_http(
-                    "OWNED_BY", {"permission_level": "editor"}, schema
-                ),
+                schema,
             )
         if req.group_id:
-            perm_graph.add_edge(
+            _add_edge_or_http(
+                perm_graph,
                 account.account_id,
                 req.group_id,
                 "SHARED_WITH",
                 {"permission_level": "viewer"},
-                schema_version=_validate_edge_or_http(
-                    "SHARED_WITH", {"permission_level": "viewer"}, schema
-                ),
+                schema,
             )
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
