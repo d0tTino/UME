@@ -16,7 +16,7 @@ graph TD
 Events enter the system through the **Ingestion API**, which publishes them to the `ume-raw-events` Kafka topic. The
 Privacy Agent sanitizes sensitive content before forwarding messages to `ume-clean-events`. A dedicated **Projection Engine**
 service consumes these sanitized events, applies them via the configured Graph Adapter, and keeps the graph synchronized with
-the event stream. The adapter persists the knowledge graph to the chosen backend (SQLite, Neo4j, etc.) and stores embeddings in a vector store.
+the event stream. The adapter persists the knowledge graph to the backend selected by `create_graph_adapter()` from `src/ume/factories.py`. Supported `UME_GRAPH_BACKEND` values are `sqlite`, `postgres`, `redis`, `arango`, and `neo4j`. Embeddings are stored in a vector store.
 
 The vector store backend is selected with `UME_VECTOR_BACKEND`. In addition to FAISS and Chroma, UME supports Pinecone by
 setting `UME_VECTOR_BACKEND=pinecone` and providing `UME_PINECONE_API_KEY`, `UME_PINECONE_ENVIRONMENT`, and `UME_PINECONE_INDEX`.
@@ -34,8 +34,7 @@ compared to CPU search (see [Vector Store Benchmark](VECTOR_BENCHMARKS.md)).
 ## Projection Engine Service
 
 The projection engine runs continuously as a consumer of `ume-clean-events`.
-Each event is parsed and applied to the graph through the adapter, keeping the
-persistent graph and vector store in sync with the event log.
+Each event is parsed and applied to the graph through an adapter instance created by `create_graph_adapter()`, keeping the persistent graph and vector store in sync with the event log.
 
 ## Component Interactions
 
@@ -81,7 +80,7 @@ flowchart LR
 
 * **Privacy Agent** – implements **Ethical Safeguards** by redacting sensitive
   data before it is stored.
-* **Graph Adapters** and **Vector Store** – provide persistent **Memory** for
+* **Graph Adapter Factory (`create_graph_adapter`)** and **Vector Store** – provide persistent **Memory** for
   the knowledge graph and its embeddings.
 * **API** – enables **Productive Collaboration** by exposing graph and vector
   search endpoints.
@@ -107,7 +106,7 @@ Incoming events are streamed through Redpanda topics. The Privacy Agent first
 redacts sensitive content and tokenizes any `name`, `text`, or `content`
 fields. These tokens are stored in the payload so downstream processors can
 generate embeddings. After tokenization the Policy DSL is evaluated and the
-resulting sanitized events are forwarded to the graph adapter layer.
+resulting sanitized events are forwarded to the graph adapter layer instantiated by `create_graph_adapter()`.
 
 ## Event Ledger
 
