@@ -68,10 +68,10 @@ def apply_event_to_graph(
     for plugin in get_plugins():
         plugin.validate(event)
     if event.event_type in (EventType.CREATE_NODE, EventType.RESEARCH_JOB_STARTED):
-        node_id = event.payload.get("node_id")
+        node_id = event.node_id
         if not node_id:
             raise ProcessingError(
-                f"Missing 'node_id' in payload for CREATE_NODE event: {event.event_id}"
+                f"Missing 'node_id' in event for CREATE_NODE event: {event.event_id}"
             )
         if not isinstance(node_id, str):
             raise ProcessingError(
@@ -100,10 +100,10 @@ def apply_event_to_graph(
             listener.on_node_created(node_id, attributes)
 
     elif event.event_type in (EventType.UPDATE_NODE_ATTRIBUTES, EventType.DOCUMENT_ARCHIVED):
-        node_id = event.payload.get("node_id")
+        node_id = event.node_id
         if not node_id:
             raise ProcessingError(
-                f"Missing 'node_id' in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
+                f"Missing 'node_id' in event for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
             )
         if not isinstance(node_id, str):
             raise ProcessingError(

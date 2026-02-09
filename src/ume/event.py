@@ -199,7 +199,20 @@ def parse_event(data: Dict[str, Any]) -> Event:
         EventType.RESEARCH_JOB_STARTED,
         EventType.DOCUMENT_ARCHIVED,
     ]:
-        if "node_id" not in data:  # Must be present in data
+        if "payload" not in data:  # Must be present in data for these types
+            msg = f"Missing required field 'payload' for {event_type_str} event."
+            logger.error(msg)
+            raise EventError(msg)
+        if not isinstance(payload_val, dict):
+            msg = f"Invalid type for 'payload' in {event_type_str} event: expected dict, got {type(payload_val).__name__}"
+            logger.error(msg)
+            raise EventError(msg)
+
+        payload_node_id = payload_val.get("node_id")
+        if node_id_val is None and payload_node_id is not None:
+            node_id_val = payload_node_id
+
+        if node_id_val is None:
             msg = f"Missing required field 'node_id' for {event_type_str} event."
             logger.error(msg)
             raise EventError(msg)
@@ -207,17 +220,34 @@ def parse_event(data: Dict[str, Any]) -> Event:
             msg = f"Invalid type for 'node_id' in {event_type_str} event: expected str, got {type(node_id_val).__name__}"
             logger.error(msg)
             raise EventError(msg)
+        if payload_node_id is not None and not isinstance(payload_node_id, str):
+            msg = f"Invalid type for 'payload.node_id' in {event_type_str} event: expected str, got {type(payload_node_id).__name__}"
+            logger.error(msg)
+            raise EventError(msg)
+        if payload_node_id is not None and payload_node_id != node_id_val:
+            msg = (
+                f"Conflicting node_id values for {event_type_str} event: "
+                "'node_id' and 'payload.node_id' must match"
+            )
+            logger.error(msg)
+            raise EventError(msg)
 
-        if "payload" not in data:  # Must be present in data for these types
-            msg = f"Missing required field 'payload' for {event_type_str} event."
-            logger.error(msg)
-            raise EventError(msg)
-        # Ensure payload_val (which could be the default {} if "payload" key was missing,
-        # or the actual value if present) is a dict for these event types.
-        if not isinstance(payload_val, dict):
-            msg = f"Invalid type for 'payload' in {event_type_str} event: expected dict, got {type(payload_val).__name__}"
-            logger.error(msg)
-            raise EventError(msg)
+        if event_type in [EventType.UPDATE_NODE_ATTRIBUTES, EventType.DOCUMENT_ARCHIVED]:
+            if "attributes" not in payload_val:
+                msg = (
+                    "Missing required field 'payload.attributes' "
+                    f"for {event_type_str} event."
+                )
+                logger.error(msg)
+                raise EventError(msg)
+            if not isinstance(payload_val["attributes"], dict):
+                msg = (
+                    "Invalid type for 'payload.attributes' in "
+                    f"{event_type_str} event: expected dict, got "
+                    f"{type(payload_val['attributes']).__name__}"
+                )
+                logger.error(msg)
+                raise EventError(msg)
 
     elif event_type in [
         EventType.CREATE_EDGE,
