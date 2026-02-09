@@ -36,6 +36,11 @@ compared to CPU search (see [Vector Store Benchmark](VECTOR_BENCHMARKS.md)).
 The projection engine runs continuously as a consumer of `ume-clean-events`.
 Each event is parsed and applied to the graph through an adapter instance created by `create_graph_adapter()`, keeping the persistent graph and vector store in sync with the event log.
 
+Before `apply_event_to_graph()` mutates graph state, alignment plugins run policy checks.
+For Rego/OPA integration, the policy input contract is **event-only**: UME sends
+`event.payload` as `input`. No serialized graph snapshot or contextual graph data
+is attached to policy evaluation.
+
 ## Component Interactions
 
 The API interfaces with the graph adapter layer and the vector store to answer
