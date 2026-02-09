@@ -139,3 +139,47 @@ def test_ingest_respects_envelope_schema_versions(legacy_schema_version: str) ->
 
     assert legacy_attrs["schema_version"] == legacy_schema_version
     assert legacy_attrs["permission_level"] == "legacy_viewer"
+
+
+def test_ingest_event_prefers_explicit_schema_version_argument() -> None:
+    payload_version = "2.9.9"
+    explicit_version = "3.0.0"
+    graph = SpyGraph({explicit_version: "viewer", payload_version: "legacy_viewer"})
+    graph.add_node("doc", {"type": "Document"})
+    graph.add_node("target", {"type": "User"})
+
+    ingest_event(
+        _permission_event("target", payload_version),
+        graph,
+        schema_version=f"  {explicit_version}  ",
+    )
+
+    assert graph.recorded_versions == [explicit_version]
+
+
+def test_ingest_event_uses_payload_schema_version_when_argument_missing() -> None:
+    payload_version = "3.0.0"
+    graph = SpyGraph({payload_version: "viewer"})
+    graph.add_node("doc", {"type": "Document"})
+    graph.add_node("target", {"type": "User"})
+
+    ingest_event({"event": _permission_event("target", payload_version)}, graph)
+
+    assert graph.recorded_versions == [payload_version]
+
+
+def test_ingest_event_falls_back_when_schema_versions_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fallback_version = "3.0.0"
+    graph = SpyGraph({fallback_version: "viewer"})
+    graph.add_node("doc", {"type": "Document"})
+    graph.add_node("target", {"type": "User"})
+
+    monkeypatch.setattr("ume.services.ingest._fallback_schema_version", lambda: f" {fallback_version} ")
+
+    payload = _permission_event("target", "unused")
+    payload.pop("schema_version")
+    ingest_event(payload, graph, schema_version="   ")
+
+    assert graph.recorded_versions == [fallback_version]
