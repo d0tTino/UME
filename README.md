@@ -417,6 +417,11 @@ evaluates them using the built-in `RegoPolicyEngine`. Policies should define
 `allow` rules under the `ume` package. Events are rejected when the query
 `data.ume.allow` does not evaluate to `true` for the event input.
 
+`RegoPolicyEngine` passes only the incoming event payload object to OPA/Rego.
+Policies should therefore reference fields under `input` exactly as they appear
+in `event.payload` (for example `input.node_id` or `input.attributes.role`).
+Graph state/snapshots are **not** included in policy input.
+
 ## Quickstart
 
 ![Recall p95](https://img.shields.io/badge/Recall%20p95-0.41ms-brightgreen)

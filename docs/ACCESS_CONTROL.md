@@ -121,7 +121,10 @@ Consent records are stored in a lightweight SQLite ledger located at
 When processing events the privacy agent looks for `user_id` and `scope` fields
 in the event payload. If no matching consent entry is found, the sanitized event
 is published to the quarantine topic instead of the clean events topic. Rego
-policies can reference this status via the `input.consent` value.
+policies can reference this status via the `input.consent` value. UME sends
+only `event.payload` to policy evaluation as Rego/OPA `input`, so policies should
+read fields directly from the payload shape and should not expect graph snapshots
+or graph-context fields unless producers include them in the event payload.
 
 Consent can be granted or revoked programmatically using the
 `ConsentLedger` class from `ume.consent_ledger`.
