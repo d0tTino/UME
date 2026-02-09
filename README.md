@@ -16,10 +16,10 @@ The engine is built from a few key components:
   - HTTP service exposing graph queries and analytics endpoints.
   - Enforces role-based access to graph operations.
   - Provides a GraphQL endpoint at `/graphql` for advanced queries.
-  - **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/neo4j_graph.py`)
+  - **Graph Adapters** (`src/ume/graph_adapter.py`, `src/ume/factories.py`)
     - Define a common interface for manipulating different graph backends.
-    - Includes adapters for in-memory, SQLite, Postgres, Redis, Neo4j, and ArangoDB storage as well as RBAC wrappers.
-    - The active backend is selected via `UME_GRAPH_BACKEND`.
+    - Instances are created through `create_graph_adapter()`.
+    - `UME_GRAPH_BACKEND` selects the backend: `sqlite`, `postgres`, `redis`, `arango`, or `neo4j`.
 - **Vector Store** (`src/ume/vector_store.py`)
   - Maintains a vector index of node embeddings for similarity search.
   - Use `VectorStore()` or `create_default_store()` to instantiate one from
@@ -233,7 +233,7 @@ Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-eve
 1. `producer_demo.py` publishes raw events conforming to the canonical schema to the `ume-raw-events` Kafka topic.
 2. The **Privacy Agent** validates each event, redacts PII and forwards sanitized messages to `ume-clean-events`.
 3. The projection engine consumes these sanitized events and applies them to the graph via the configured **Graph Adapter**.
-4. The adapter persists nodes and edges to the chosen backend (SQLite, Neo4j, ArangoDB, ...). Listeners such as `VectorStoreListener` automatically
+4. The adapter persists nodes and edges to the chosen backend selected by `UME_GRAPH_BACKEND` (`sqlite`, `postgres`, `redis`, `arango`, `neo4j`). Listeners such as `VectorStoreListener` automatically
    index any `embedding` vectors for similarity search.
 
 When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals. The same fields are tokenized and the resulting tokens are saved under a `tokens` attribute for search. If the optional [tiktoken](https://github.com/openai/tiktoken) library is installed, it provides OpenAI-compatible tokenization.
@@ -790,16 +790,12 @@ This section outlines the basic programmatic steps to interact with the UME comp
 
 1.  **Obtain a Graph Adapter Instance:**
     Factory helpers simplify adapter creation. Use `create_graph_adapter()` to
-    build the default adapter from environment settings. You can still
-    instantiate specific adapters directly if needed:
+    build the adapter from environment settings (`UME_GRAPH_BACKEND`,
+    `UME_DB_PATH`, and backend-specific credentials):
     ```python
-    from ume import create_graph_adapter, PersistentGraph, Neo4jGraph, IGraphAdapter
+    from ume import create_graph_adapter, IGraphAdapter
 
-    # Default SQLite-backed adapter
     graph_adapter: IGraphAdapter = create_graph_adapter()
-
-    # Or connect to Neo4j explicitly
-    neo4j_graph = Neo4jGraph("bolt://localhost:7687", "neo4j", "password")
     ```
 
 2.  **Define Event Data Dictionaries:**
@@ -971,22 +967,24 @@ This section outlines the basic programmatic steps to interact with the UME comp
 This provides a basic flow for event handling and graph interaction within UME.
 
 ### Swapping Backends
-UME exposes small factory helpers that make it easy to change the storage
-implementation without modifying other code.  To switch the graph adapter or
+UME exposes factory helpers that make it easy to change storage
+implementation without modifying other code. For graph storage, use
+`create_graph_adapter()` so backend selection is driven by configuration
+instead of a name-based adapter registry. To switch the graph adapter or
 vector store used by the API, call the configuration functions:
 
 ```python
-from ume import PersistentGraph, Neo4jGraph
+from ume import create_graph_adapter
 from ume.api import configure_graph, configure_vector_store
 from ume.vector_store import create_default_store
 
-# SQLite graph
-configure_graph(PersistentGraph("my.db"))
+# Configure from env: UME_GRAPH_BACKEND + UME_DB_PATH
+configure_graph(create_graph_adapter())
 configure_vector_store(create_default_store())
-
-# Later swap to Neo4j
-configure_graph(Neo4jGraph("bolt://localhost:7687", "neo4j", "password"))
 ```
+
+Supported graph backend values are `sqlite`, `postgres`, `redis`, `arango`,
+and `neo4j`.
 
 These helpers allow embedding applications to experiment with different
 backends—such as Neo4j for production and the lightweight SQLite adapter for
@@ -1065,7 +1063,21 @@ You will see the prompt: `ume> `. Type `help` or `?` to list available commands,
 Pass `--show-warnings` to display Python warnings or `--warnings-log <file>` to
 log them for debugging.
 
-You can set `UME_CLI_DB` to override where the CLI stores its SQLite database.
+The CLI currently initializes its graph with
+`create_graph_adapter(settings.UME_CLI_DB, role=None)` in both `ume_cli.py`
+and `src/ume/cli/prompt.py`.
+
+This means:
+
+- `UME_CLI_DB` is passed as the first argument even when
+  `UME_GRAPH_BACKEND` is not `sqlite`.
+- backends that ignore path-style inputs (for example `arango`/`neo4j`) are
+  still selected through `UME_GRAPH_BACKEND`, while credentials/connection
+  settings come from their dedicated env vars.
+- role wrapping is applied by CLI code after adapter creation.
+
+You can set `UME_CLI_DB` to override where the CLI stores its local database
+when using the `sqlite` backend.
 You can set `UME_DOSSIER_PATH` to change where the YAML dossier files are stored. The value defaults to `~/.ume_dossier` when unset.
 If you define `UME_ROLE`, the CLI will run with that role's permissions and
 display an informational message at startup.
