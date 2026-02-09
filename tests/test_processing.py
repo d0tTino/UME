@@ -9,6 +9,7 @@ from ume import (
     PersistentGraph,
     apply_event_to_graph,
     ProcessingError,
+    parse_event,
 )
 
 
@@ -27,6 +28,7 @@ def test_apply_create_node_event_success(graph: PersistentGraph):
         event_id=event_id,
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
+        node_id=node_id,
         payload={"node_id": node_id, "attributes": attributes},
     )
     apply_event_to_graph(event, graph)
@@ -42,6 +44,7 @@ def test_create_node_adds_tokens_from_text(graph: PersistentGraph) -> None:
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
+        node_id=node_id,
         payload={"node_id": node_id, "attributes": {"text": "Alpha Beta"}},
     )
     apply_event_to_graph(event, graph)
@@ -57,6 +60,7 @@ def test_apply_create_node_event_no_attributes(graph: PersistentGraph):
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
+        node_id=node_id,
         payload={"node_id": node_id},  # Attributes are optional in payload for create
     )
     apply_event_to_graph(event, graph)
@@ -71,6 +75,7 @@ def test_apply_create_node_event_already_exists(graph: PersistentGraph):
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
+        node_id=node_id,
         payload={
             "node_id": node_id,
             "attributes": {"name": "New Node", "type": "User"},
@@ -88,7 +93,7 @@ def test_apply_create_node_missing_node_id(graph: PersistentGraph):
         payload={"attributes": {"name": "Test Node"}},
     )
     with pytest.raises(
-        ProcessingError, match="Missing 'node_id' in payload for CREATE_NODE event"
+        ProcessingError, match="Missing 'node_id' in event for CREATE_NODE event"
     ):
         apply_event_to_graph(event, graph)
 
@@ -98,6 +103,7 @@ def test_apply_create_node_invalid_node_id_type(graph: PersistentGraph):
     event = Event(
         event_type=EventType.CREATE_NODE,
         timestamp=int(time.time()),
+        node_id=123,  # type: ignore[arg-type]
         payload={"node_id": 123, "attributes": {"name": "Test Node"}},  # node_id is int
     )
     with pytest.raises(
@@ -117,6 +123,7 @@ def test_apply_update_node_attributes_success(graph: PersistentGraph):
     event = Event(
         event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
+        node_id=node_id,
         payload={"node_id": node_id, "attributes": updated_attrs},
     )
     apply_event_to_graph(event, graph)
@@ -130,6 +137,7 @@ def test_update_node_adds_tokens(graph: PersistentGraph) -> None:
     event = Event(
         event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
+        node_id=node_id,
         payload={"node_id": node_id, "attributes": {"content": "Hello world"}},
     )
     apply_event_to_graph(event, graph)
@@ -142,6 +150,7 @@ def test_apply_update_node_attributes_node_not_exists(graph: PersistentGraph):
     event = Event(
         event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
+        node_id=node_id,
         payload={"node_id": node_id, "attributes": {"name": "Updated Name"}},
     )
     with pytest.raises(
@@ -159,7 +168,7 @@ def test_apply_update_node_attributes_missing_node_id(graph: PersistentGraph):
     )
     with pytest.raises(
         ProcessingError,
-        match="Missing 'node_id' in payload for UPDATE_NODE_ATTRIBUTES event",
+        match="Missing 'node_id' in event for UPDATE_NODE_ATTRIBUTES event",
     ):
         apply_event_to_graph(event, graph)
 
@@ -227,6 +236,7 @@ def test_apply_update_node_attributes_invalid_attributes_payload(
     event = Event(
         event_type=EventType.UPDATE_NODE_ATTRIBUTES,
         timestamp=int(time.time()),
+        node_id=event_payload.get("node_id"),
         payload=event_payload,
     )
 
@@ -489,6 +499,7 @@ def test_apply_research_job_started_creates_node(graph: PersistentGraph) -> None
     event = Event(
         event_type=EventType.RESEARCH_JOB_STARTED,
         timestamp=int(time.time()),
+        node_id="job1",
         payload={"node_id": "job1", "attributes": {"status": "started"}},
     )
     apply_event_to_graph(event, graph)
@@ -548,7 +559,33 @@ def test_apply_document_archived_updates_node(graph: PersistentGraph) -> None:
     event = Event(
         event_type=EventType.DOCUMENT_ARCHIVED,
         timestamp=int(time.time()),
+        node_id="doc1",
         payload={"node_id": "doc1", "attributes": {}},
     )
     apply_event_to_graph(event, graph)
     assert graph.get_node("doc1") == {"title": "D", "archived": True}
+
+
+def test_apply_create_node_parsed_backward_compat_payload_node_id(graph: PersistentGraph) -> None:
+    event = parse_event(
+        {
+            "eventType": EventType.CREATE_NODE.value,
+            "timestamp": int(time.time()),
+            "payload": {"node_id": "legacy-node", "attributes": {"name": "Legacy"}},
+        }
+    )
+    apply_event_to_graph(event, graph)
+    assert graph.node_exists("legacy-node")
+
+
+def test_apply_create_node_prefers_top_level_node_id(graph: PersistentGraph) -> None:
+    event = parse_event(
+        {
+            "eventType": EventType.CREATE_NODE.value,
+            "timestamp": int(time.time()),
+            "node_id": "node-top",
+            "payload": {"node_id": "node-top", "attributes": {"name": "Top"}},
+        }
+    )
+    apply_event_to_graph(event, graph)
+    assert graph.node_exists("node-top")

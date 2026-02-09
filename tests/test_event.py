@@ -181,6 +181,54 @@ def test_parse_event_document_archived() -> None:
     assert event.payload == {"node_id": "doc1", "attributes": {"archived": True}}
 
 
+@pytest.mark.parametrize("event_type", [
+    EventType.CREATE_NODE,
+    EventType.UPDATE_NODE_ATTRIBUTES,
+    EventType.RESEARCH_JOB_STARTED,
+    EventType.DOCUMENT_ARCHIVED,
+])
+def test_parse_event_node_id_top_level_canonical_shape(event_type: EventType) -> None:
+    ts = datetime.now(timezone.utc)
+    payload = {"attributes": {"name": "n"}}
+    data = {
+        "eventType": event_type.value,
+        "timestamp": ts.isoformat(),
+        "node_id": "n1",
+        "payload": payload,
+    }
+    event = parse_event(data)
+    assert event.node_id == "n1"
+
+
+@pytest.mark.parametrize("event_type", [
+    EventType.CREATE_NODE,
+    EventType.UPDATE_NODE_ATTRIBUTES,
+    EventType.RESEARCH_JOB_STARTED,
+    EventType.DOCUMENT_ARCHIVED,
+])
+def test_parse_event_node_id_payload_backward_compat(event_type: EventType) -> None:
+    ts = datetime.now(timezone.utc)
+    data = {
+        "eventType": event_type.value,
+        "timestamp": ts.isoformat(),
+        "payload": {"node_id": "legacy1", "attributes": {"name": "legacy"}},
+    }
+    event = parse_event(data)
+    assert event.node_id == "legacy1"
+
+
+def test_parse_event_node_id_conflict_rejected() -> None:
+    ts = datetime.now(timezone.utc)
+    data = {
+        "eventType": EventType.CREATE_NODE.value,
+        "timestamp": ts.isoformat(),
+        "node_id": "n1",
+        "payload": {"node_id": "n2", "attributes": {}},
+    }
+    with pytest.raises(EventError, match="Conflicting node_id values"):
+        parse_event(data)
+
+
 # The following tests are now covered by test_parse_event_invalid_inputs:
 # - test_parse_event_missing_required_field
 # - test_parse_event_missing_multiple_required_fields
@@ -205,6 +253,15 @@ def test_parse_event_document_archived() -> None:
         (
             {"eventType": "CREATE_NODE", "timestamp": ISO_TS, "node_id": "n1"},
             "Missing required field 'payload' for CREATE_NODE event.",
+        ),
+        # Case 4b: Missing node_id for node event
+        (
+            {
+                "eventType": "RESEARCH_JOB_STARTED",
+                "timestamp": ISO_TS,
+                "payload": {"attributes": {}},
+            },
+            "Missing required field 'node_id' for RESEARCH_JOB_STARTED event.",
         ),
         # Case 5: Invalid type for 'eventType' (int instead of str)
         (
@@ -394,6 +451,24 @@ def test_parse_event_document_archived() -> None:
                 "node_id": "n1",
             },
             "Missing required field 'payload' for UPDATE_NODE_ATTRIBUTES event",
+        ),
+        (
+            {
+                "eventType": "UPDATE_NODE_ATTRIBUTES",
+                "timestamp": ISO_TS,
+                "node_id": "n1",
+                "payload": {},
+            },
+            "Missing required field 'payload.attributes' for UPDATE_NODE_ATTRIBUTES event",
+        ),
+        (
+            {
+                "eventType": "DOCUMENT_ARCHIVED",
+                "timestamp": ISO_TS,
+                "node_id": "doc1",
+                "payload": {},
+            },
+            "Missing required field 'payload.attributes' for DOCUMENT_ARCHIVED event",
         ),
         # event_id present but wrong type
         (

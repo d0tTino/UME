@@ -151,7 +151,7 @@ Used to create a new directed, labeled edge between two existing nodes.
   "eventType": "RESEARCH_JOB_STARTED",
   "timestamp": "2024-03-15T12:10:00Z",
   "node_id": "job_123",
-  "payload": {"status": "running"}
+  "payload": {"attributes": {"status": "running"}}
 }
 ```
 
@@ -182,7 +182,7 @@ Used to create a new directed, labeled edge between two existing nodes.
   "eventType": "DOCUMENT_ARCHIVED",
   "timestamp": "2024-03-15T12:13:00Z",
   "node_id": "doc_1",
-  "payload": {"archived_by": "agent_42"}
+  "payload": {"attributes": {"archived_by": "agent_42", "archived": true}}
 }
 ```
 
@@ -657,7 +657,7 @@ body must follow the schema expected by `ume.parse_event`.
 curl -X POST http://localhost:8000/events \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"event_type": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1", "payload": {"node_id": "n1", "attributes": {"name": "demo"}}}'
+  -d '{"event_type": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1", "payload": {"attributes": {"name": "demo"}}}'
 ```
 
 The event is validated and immediately applied to the configured graph adapter.
