@@ -81,8 +81,19 @@ def ingest_event(
     data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
-    schema_version = _normalize_schema_version(data.get("schema_version"))
-    event = validate_event(data)
+    explicit_version = _normalize_schema_version(schema_version)
+    event_data, envelope_version = _unwrap_envelope(data)
+    detected_version = _normalize_schema_version(envelope_version)
+    if detected_version is None:
+        detected_version = _normalize_schema_version(event_data.get("schema_version"))
+    effective_version = (
+        explicit_version
+        or detected_version
+        or _normalize_schema_version(_fallback_schema_version())
+        or DEFAULT_VERSION
+    )
+
+    event = validate_event(event_data)
 
     tag_results = classify_event(event)
     event.payload["classification"] = [
@@ -107,11 +118,10 @@ def ingest_event(
             if r.sensitivity and "sensitivity" not in attributes:
                 attributes["sensitivity"] = r.sensitivity
 
-    apply_event(event, graph, schema_version=schema_version)
+    apply_event(event, graph, schema_version=effective_version)
 
     anomaly_event = _anomaly_detector.process_event(event)
     if anomaly_event is not None:
-        effective_version = schema_version or _fallback_schema_version()
         ingest_event(
             {
                 "eventType": anomaly_event.event_type,
