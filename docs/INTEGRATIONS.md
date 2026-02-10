@@ -201,3 +201,8 @@ register_adapter("my-adapter", MyAdapter)
 
 The adapter can then be retrieved with
 ``get_adapter("my-adapter")`` and used like any built-in client.
+
+> Note: this integration registry is separate from graph backend selection.
+> Graph backends are instantiated by
+> ``create_graph_adapter()`` in ``src/ume/factories.py`` using environment
+> settings such as ``UME_GRAPH_BACKEND``.

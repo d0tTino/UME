@@ -770,11 +770,13 @@ every environment variable understood by UME along with its default value.
 
 ### Runtime Settings
 
-Configuration defaults live in [`src/ume/config.py`](src/ume/config.py). This
-module exposes a `Settings` dataclass whose attributes correspond to the various
-UME options. When imported it first loads a `.env` file from the project root if
-present and then applies any matching environment variables, allowing you to
-override the defaults without modifying the code.
+Configuration defaults live in [`src/ume/config/__init__.py`](src/ume/config/__init__.py).
+This module exposes a `Settings` class whose fields correspond to the various
+UME options (including `UME_GRAPH_BACKEND`, `UME_DB_PATH`, `UME_CLI_DB`,
+`UME_VECTOR_BACKEND`, and backend-specific connection keys such as
+`ARANGO_*`/`NEO4J_*`). When imported it first loads a `.env` file from the
+project root if present and then applies any matching environment variables,
+allowing you to override the defaults without modifying the code.
 
 
 See [`env.example`](env.example) for a minimal `.env` template.
@@ -1072,21 +1074,24 @@ You will see the prompt: `ume> `. Type `help` or `?` to list available commands,
 Pass `--show-warnings` to display Python warnings or `--warnings-log <file>` to
 log them for debugging.
 
-The CLI currently initializes its graph with
+The CLI initializes graph access by calling
 `create_graph_adapter(settings.UME_CLI_DB, role=None)` in both `ume_cli.py`
-and `src/ume/cli/prompt.py`.
+and `src/ume/cli/prompt.py`, where `create_graph_adapter()` is defined in
+`src/ume/factories.py`.
 
-This means:
+Backend selection is environment-driven:
 
-- `UME_CLI_DB` is passed as the first argument even when
-  `UME_GRAPH_BACKEND` is not `sqlite`.
-- backends that ignore path-style inputs (for example `arango`/`neo4j`) are
-  still selected through `UME_GRAPH_BACKEND`, while credentials/connection
-  settings come from their dedicated env vars.
+- `UME_GRAPH_BACKEND` chooses the graph backend (`sqlite`, `postgres`,
+  `redis`, `arango`, or `neo4j`).
+- `UME_CLI_DB` provides the path argument used by path-based backends such as
+  `sqlite`.
+- backend-specific connection settings come from their dedicated keys
+  (for example `ARANGO_URL` / `ARANGO_USER` / `ARANGO_PASSWORD` /
+  `ARANGO_DB_NAME`, or `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD`).
 - role wrapping is applied by CLI code after adapter creation.
 
-You can set `UME_CLI_DB` to override where the CLI stores its local database
-when using the `sqlite` backend.
+There is no adapter-map registration step for graph backend selection; set the
+environment keys and `create_graph_adapter()` builds the configured backend.
 You can set `UME_DOSSIER_PATH` to change where the YAML dossier files are stored. The value defaults to `~/.ume_dossier` when unset.
 If you define `UME_ROLE`, the CLI will run with that role's permissions and
 display an informational message at startup.
