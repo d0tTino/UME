@@ -70,6 +70,30 @@ pre-commit run detect-secrets --files path/to/file
 - All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, formatting checks, and mypy) before merging.
 - The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.
 
+### Graph Backend Extensibility
+
+Graph store backends are selected through `create_graph_adapter()` in
+`src/ume/factories.py`, not through an adapter map such as
+`ume.adapters._ADAPTERS`.
+
+- `UME_GRAPH_BACKEND` is the switch that selects the graph implementation.
+- New graph backends must be wired directly into `create_graph_adapter()`.
+- `src/ume/integrations/registry.py` is for integration adapters (e.g.,
+  third-party client integrations), and is not used for graph storage
+  backend selection.
+
+#### How to add a graph backend
+
+When contributing a new graph backend, include all of these touch points:
+
+1. Add a new adapter class implementing `IGraphAdapter` in `src/ume/`.
+2. Add a factory branch in `src/ume/factories.py::create_graph_adapter` keyed
+   by a new `UME_GRAPH_BACKEND` value.
+3. Add/extend tests:
+   - `tests/test_factories.py` for backend dispatch from `UME_GRAPH_BACKEND`.
+   - backend-specific adapter tests (following existing graph adapter test
+     patterns) for CRUD/query behavior.
+
 ### Merge Queue
 
 Merging is handled automatically using GitHub's merge queue. After your pull request is approved and the required checks pass, it will enter the queue and merge once it reaches the front. This ensures every PR is tested with the latest `main` branch before being merged.
