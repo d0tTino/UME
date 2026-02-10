@@ -16,7 +16,17 @@ graph TD
 Events enter the system through the **Ingestion API**, which publishes them to the `ume-raw-events` Kafka topic. The
 Privacy Agent sanitizes sensitive content before forwarding messages to `ume-clean-events`. A dedicated **Projection Engine**
 service consumes these sanitized events, applies them via the configured Graph Adapter, and keeps the graph synchronized with
-the event stream. The adapter persists the knowledge graph to the backend selected by `create_graph_adapter()` from `src/ume/factories.py`. Supported `UME_GRAPH_BACKEND` values are `sqlite`, `postgres`, `redis`, `arango`, and `neo4j`.
+the event stream. The adapter persists the knowledge graph to the backend selected by `create_graph_adapter()` in
+`src/ume/factories.py`.
+
+Graph backend selection is environment-driven:
+
+- `UME_GRAPH_BACKEND` determines which implementation branch `create_graph_adapter()` uses.
+- Supported values are `sqlite` (default), `postgres`, `redis`, `arango`, and `neo4j`.
+- Backend-specific settings (for example `UME_DB_PATH`, `ARANGO_*`, `NEO4J_*`) are resolved inside the same factory path.
+
+`src/ume/integrations/registry.py` is a separate registry for integration clients (LangGraph, Letta, MemGPT, etc.).
+It does **not** control graph storage backend selection.
 
 Vector storage is configured separately from graph adapters through `src/ume/vector_store.py` (for example, `create_default_store()` and `VectorStore`). Backend choice is environment-driven via `UME_VECTOR_BACKEND` and resolved through the registered vector backend registry.
 
@@ -47,6 +57,18 @@ compared to CPU search (see [Vector Store Benchmark](VECTOR_BENCHMARKS.md)).
 
 The projection engine runs continuously as a consumer of `ume-clean-events`.
 Each event is parsed and applied to the graph through an adapter instance created by `create_graph_adapter()`, keeping the persistent graph and vector store in sync with the event log.
+
+## How to add a graph backend
+
+To add a new graph backend implementation, wire it in through the graph factory path:
+
+1. Add a new adapter class implementing `IGraphAdapter` in `src/ume/` (for example `src/ume/my_backend_graph.py`).
+2. Import that adapter in `src/ume/factories.py` and add a new `elif backend == "my-backend": ...` branch inside
+   `create_graph_adapter()` keyed from `UME_GRAPH_BACKEND`.
+3. Add tests that validate factory selection and backend behavior. In practice, extend `tests/test_factories.py` for
+   dispatch coverage and add backend-specific behavior tests alongside other graph adapter tests.
+
+Without the `create_graph_adapter()` factory branch, the new implementation will not be selected from configuration.
 
 Before `apply_event_to_graph()` mutates graph state, alignment plugins run policy checks.
 For Rego/OPA integration, the policy input contract is **event-only**: UME sends
