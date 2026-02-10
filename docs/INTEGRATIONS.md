@@ -27,13 +27,13 @@ from ume.integrations import LangGraph, AsyncLangGraph
 
 # Sync
 client = LangGraph()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 
 # Async
 async def main():
     async with AsyncLangGraph() as client:
-        await client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+        await client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
         print(await client.recall({"node_id": "n1"}))
 ```
 
@@ -47,13 +47,13 @@ from ume.integrations import Letta, AsyncLetta
 
 # Sync
 client = Letta()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 
 # Async
 async def main():
     async with AsyncLetta() as client:
-        await client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+        await client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
         print(await client.recall({"node_id": "n1"}))
 ```
 
@@ -65,13 +65,13 @@ from ume.integrations import MemGPT, AsyncMemGPT
 
 # Sync
 client = MemGPT()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 
 # Async
 async def main():
     async with AsyncMemGPT() as client:
-        await client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+        await client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
         print(await client.recall({"node_id": "n1"}))
 ```
 
@@ -83,13 +83,13 @@ from ume.integrations import CrewAI, AsyncCrewAI
 
 # Sync
 client = CrewAI()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 
 # Async
 async def main():
     async with AsyncCrewAI() as client:
-        await client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+        await client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
         print(await client.recall({"node_id": "n1"}))
 ```
 
@@ -101,13 +101,13 @@ from ume.integrations import AutoGen, AsyncAutoGen
 
 # Sync
 client = AutoGen()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 
 # Async
 async def main():
     async with AsyncAutoGen() as client:
-        await client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+        await client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
         print(await client.recall({"node_id": "n1"}))
 ```
 
@@ -119,13 +119,13 @@ from ume.integrations import SuperMemory, AsyncSuperMemory
 
 # Sync
 client = SuperMemory()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 
 # Async
 async def main():
     async with AsyncSuperMemory() as client:
-        await client.send_events([{"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
+        await client.send_events([{"eventType": "CREATE_NODE", "timestamp": 1, "node_id": "n1"}])
         print(await client.recall({"node_id": "n1"}))
 ```
 

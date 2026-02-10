@@ -128,9 +128,12 @@ interval between compaction runs is configurable via
 
 Each ledger entry preserves the original `eventType` string. The event parser
 maps known constants to the :class:`~ume.event.EventType` enum but allows
-arbitrary values to pass through unchanged. This flexibility lets producers
-introduce new event categories without requiring a code update. Custom types are
-stored and replayed like built-in events.
+arbitrary values to pass through unchanged. It accepts `timestamp` values as
+either epoch integers or ISO-8601 strings, and normalizes parsed events to an
+epoch integer timestamp. This flexibility lets producers introduce new event
+categories without requiring a code update. Custom types are stored and replayed
+like built-in events. For backward compatibility, snake_case `event_type` is
+currently tolerated but `eventType` remains the preferred wire-level field name.
 
 ## Policy DSL Flow
 
