@@ -164,7 +164,7 @@ async def apply_event_to_async_graph(
         plugin.validate(event)
 
     if event.event_type == EventType.CREATE_NODE:
-        node_id = event.payload.get("node_id")
+        node_id = event.node_id
         if not node_id or not isinstance(node_id, str):
             raise ProcessingError("Invalid node_id for CREATE_NODE")
         attributes = event.payload.get("attributes", {})
@@ -178,7 +178,7 @@ async def apply_event_to_async_graph(
         for listener in get_registered_listeners():
             listener.on_node_created(node_id, attributes)
     elif event.event_type == EventType.UPDATE_NODE_ATTRIBUTES:
-        node_id = event.payload.get("node_id")
+        node_id = event.node_id
         if not node_id or not isinstance(node_id, str):
             raise ProcessingError("Invalid node_id for UPDATE_NODE_ATTRIBUTES")
         if "attributes" not in event.payload:
@@ -246,4 +246,3 @@ __all__ = [
     "apply_event_to_async_graph",
     "ingest_event_async",
 ]
-

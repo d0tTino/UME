@@ -51,3 +51,35 @@ async def test_ingest_event_async_creates_node() -> None:
     assert await graph.get_node("n2") == {"y": 2}
     await graph.close()
 
+
+@pytest.mark.asyncio
+async def test_ingest_event_async_create_node_uses_top_level_node_id() -> None:
+    graph = AsyncGraphAdapterWrapper(MockGraph())
+    data = {
+        "event_type": "CREATE_NODE",
+        "timestamp": 1,
+        "node_id": "n3",
+        "payload": {"attributes": {"z": 3}},
+    }
+
+    await ingest_event_async(data, graph)
+
+    assert await graph.get_node("n3") == {"z": 3}
+    await graph.close()
+
+
+@pytest.mark.asyncio
+async def test_ingest_event_async_update_node_uses_top_level_node_id() -> None:
+    graph = AsyncGraphAdapterWrapper(MockGraph())
+    await graph.add_node("n4", {"value": 1})
+    data = {
+        "event_type": "UPDATE_NODE_ATTRIBUTES",
+        "timestamp": 2,
+        "node_id": "n4",
+        "payload": {"attributes": {"value": 2}},
+    }
+
+    await ingest_event_async(data, graph)
+
+    assert await graph.get_node("n4") == {"value": 2}
+    await graph.close()
