@@ -219,6 +219,9 @@ map this value to the :class:`~ume.event.EventType` enumeration but preserves th
 original text when the value is unknown. This allows custom event categories to
 flow through the pipeline and be stored in the ledger without schema changes.
 
+For compatibility, the parser accepts both `eventType` (preferred) and
+`event_type` as input keys.
+
 During sanitization the Privacy Agent tokenizes common text fields such as
 `name`, `text` and `content`. The resulting list of tokens is attached to the
 event payload under the `tokens` key so that downstream components can create
@@ -236,6 +239,34 @@ vector embeddings consistently.
 | `sourceService` | Originating service name. |
 | `payload` | Additional attributes specific to the event type. |
 
+`timestamp` accepts either a Unix epoch integer or an ISO&nbsp;8601 string. During
+parsing, values are normalized to an epoch integer in the `Event` object.
+
+### Event Contract Compatibility and Validation
+
+Current runtime behavior in `parse_event()` + `apply_event_to_graph()`:
+
+* Required for all events: `eventType` (or `event_type`) and `timestamp`.
+* Optional common fields: `eventId`, `correlationId`, `subjectEntity`,
+  `sourceService`.
+* Node-create family (`CREATE_NODE`, `RESEARCH_JOB_STARTED`):
+  * parse: requires `node_id` (or `payload.node_id`), plus `payload` as `dict`.
+  * processing: uses `payload.attributes` when present; must be `dict`.
+* Node-update family (`UPDATE_NODE_ATTRIBUTES`, `DOCUMENT_ARCHIVED`):
+  * parse: requires `node_id`, `payload.attributes` as `dict`.
+  * processing: requires non-empty `payload.attributes`;
+    `DOCUMENT_ARCHIVED` defaults `attributes.archived = true` if missing.
+* Edge family (`CREATE_EDGE`, `DELETE_EDGE`, `CREATE_ONTOLOGY_RELATION`,
+  `DATA_SOURCE_QUERIED`, `ENTITY_DISCOVERED`):
+  * parse: requires `node_id`, `target_node_id`, `label` (all strings).
+  * parse: `payload` is optional and defaults to `{}` for these event types.
+  * processing (`CREATE_EDGE`, `DATA_SOURCE_QUERIED`, `ENTITY_DISCOVERED`):
+    `payload.attributes` must be a `dict` if provided.
+  * processing (`ENTITY_DISCOVERED`): creates target node when absent, then adds
+    the edge.
+* Unknown event types: parser accepts them, processor currently rejects with
+  `ProcessingError`.
+
 #### Example: RESEARCH_JOB_STARTED
 
 ```json
@@ -243,7 +274,7 @@ vector embeddings consistently.
   "eventType": "RESEARCH_JOB_STARTED",
   "timestamp": "2024-03-15T12:10:00Z",
   "node_id": "job_123",
-  "payload": {"status": "running"}
+  "payload": {"attributes": {"type": "research_job", "status": "running"}}
 }
 ```
 
@@ -269,7 +300,7 @@ vector embeddings consistently.
   "node_id": "job_123",
   "target_node_id": "entity_789",
   "label": "FOUND",
-  "payload": {"name": "Foo"}
+  "payload": {"attributes": {"name": "Foo", "type": "entity"}}
 }
 ```
 
@@ -280,7 +311,7 @@ vector embeddings consistently.
   "eventType": "DOCUMENT_ARCHIVED",
   "timestamp": "2024-03-15T12:13:00Z",
   "node_id": "doc_1",
-  "payload": {"archived_by": "agent_42"}
+  "payload": {"attributes": {"archived_by": "agent_42", "archived": true}}
 }
 ```
 
@@ -317,7 +348,8 @@ schema, ensuring consistent processing across components.
 
 Compatibility note: `eventType` is the preferred wire field. `parse_event()`
 still accepts snake_case `event_type` for backward compatibility, but new
-producers should emit `eventType`.
+producers should emit `eventType`. For edge-family events, omitted `payload`
+defaults to `{}`.
 
 As events move from the ingestion API through the Privacy Agent
 and into the projection engine, they keep this schema. The engine

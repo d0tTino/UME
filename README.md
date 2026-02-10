@@ -114,14 +114,59 @@ set of common fields and any number of type‑specific attributes.
 | `sourceService` | Name of the service that emitted the event. |
 | `payload` | Event‑specific attributes. |
 
+`parse_event()` accepts both `eventType` (preferred) and legacy `event_type`
+as the event type key. Timestamps are accepted as Unix epoch integers or
+ISO&nbsp;8601 strings (including `Z` suffix) and are normalized internally to an
+epoch integer on the parsed `Event`.
+
 All official event types such as `CREATE_NODE` or `CREATE_EDGE` have
 corresponding JSON Schema definitions under `src/ume/schemas`.  Producers
 should validate events using `ume.validate_event_dict()` before publishing to
 Kafka or any other broker.
 
-`eventType` is the preferred wire-level field name. `parse_event()` currently
-accepts snake_case `event_type` for backward compatibility, but new producers
-should emit `eventType`.
+#### Runtime validation currently enforced
+
+`parse_event()` and `apply_event_to_graph()` currently enforce the following
+event-type-specific checks:
+
+* `CREATE_NODE`, `RESEARCH_JOB_STARTED`
+  * `parse_event`: requires `timestamp`, `node_id` (or matching
+    `payload.node_id`), and `payload` as a `dict`.
+  * `apply_event_to_graph`: requires `event.node_id` as `str`; if
+    `payload.attributes` exists it must be a `dict`.
+* `UPDATE_NODE_ATTRIBUTES`, `DOCUMENT_ARCHIVED`
+  * `parse_event`: requires `node_id`, `payload` as a `dict`, and
+    `payload.attributes` as a `dict`.
+  * `apply_event_to_graph`: requires non-empty `payload.attributes`; for
+    `DOCUMENT_ARCHIVED`, sets `attributes.archived = true` when missing.
+* `CREATE_EDGE`, `DELETE_EDGE`, `CREATE_ONTOLOGY_RELATION`,
+  `DATA_SOURCE_QUERIED`, `ENTITY_DISCOVERED`
+  * `parse_event`: requires `node_id`, `target_node_id`, and `label` as
+    strings; `payload` is optional and defaults to `{}`.
+  * `apply_event_to_graph`: re-checks `node_id`/`target_node_id`/`label` are
+    strings; for `CREATE_EDGE`/`DATA_SOURCE_QUERIED`/`ENTITY_DISCOVERED`,
+    `payload.attributes` must be a `dict` if present.
+  * `apply_event_to_graph`: for `ENTITY_DISCOVERED`, creates `target_node_id`
+    if missing before adding the edge.
+* `ANOMALY_DETECTED`
+  * `parse_event`: no extra required fields beyond base parsing.
+  * `apply_event_to_graph`: informational only (no graph mutation).
+* Unknown event types
+  * `parse_event`: allows unknown `eventType` values (with type checks on known
+    optional fields).
+  * `apply_event_to_graph`: raises `ProcessingError`.
+
+Compatibility note:
+
+* Required for all events: `eventType` (or alias `event_type`) and `timestamp`.
+* Optional for all events: `eventId`, `correlationId`, `subjectEntity`,
+  `sourceService`.
+* Edge-family events (`CREATE_EDGE`, `DELETE_EDGE`, `CREATE_ONTOLOGY_RELATION`,
+  `DATA_SOURCE_QUERIED`, `ENTITY_DISCOVERED`) require `node_id`,
+  `target_node_id`, `label`; `payload` is optional and defaults to `{}`.
+* Node-family update events (`UPDATE_NODE_ATTRIBUTES`, `DOCUMENT_ARCHIVED`)
+  require `payload.attributes`; `DOCUMENT_ARCHIVED` defaults
+  `attributes.archived` to `true` during processing when omitted.
 
 #### CREATE_EDGE Event
 
@@ -156,7 +201,7 @@ Used to create a new directed, labeled edge between two existing nodes.
   "eventType": "RESEARCH_JOB_STARTED",
   "timestamp": "2024-03-15T12:10:00Z",
   "node_id": "job_123",
-  "payload": {"attributes": {"status": "running"}}
+  "payload": {"attributes": {"type": "research_job", "status": "running"}}
 }
 ```
 
@@ -178,7 +223,7 @@ Used to create a new directed, labeled edge between two existing nodes.
   "node_id": "job_123",
   "target_node_id": "entity_789",
   "label": "FOUND",
-  "payload": {"name": "Foo"}
+  "payload": {"attributes": {"name": "Foo", "type": "entity"}}
 }
 ```
 
