@@ -16,12 +16,24 @@ graph TD
 Events enter the system through the **Ingestion API**, which publishes them to the `ume-raw-events` Kafka topic. The
 Privacy Agent sanitizes sensitive content before forwarding messages to `ume-clean-events`. A dedicated **Projection Engine**
 service consumes these sanitized events, applies them via the configured Graph Adapter, and keeps the graph synchronized with
-the event stream. The adapter persists the knowledge graph to the backend selected by `create_graph_adapter()` from `src/ume/factories.py`. Supported `UME_GRAPH_BACKEND` values are `sqlite`, `postgres`, `redis`, `arango`, and `neo4j`. Embeddings are stored in a vector store.
+the event stream. The adapter persists the knowledge graph to the backend selected by `create_graph_adapter()` from `src/ume/factories.py`. Supported `UME_GRAPH_BACKEND` values are `sqlite`, `postgres`, `redis`, `arango`, and `neo4j`.
 
-The vector store backend is selected with `UME_VECTOR_BACKEND`. In addition to FAISS and Chroma, UME supports Pinecone by
-setting `UME_VECTOR_BACKEND=pinecone` and providing `UME_PINECONE_API_KEY`, `UME_PINECONE_ENVIRONMENT`, and `UME_PINECONE_INDEX`.
+Vector storage is configured separately from graph adapters through `src/ume/vector_store.py` (for example, `create_default_store()` and `VectorStore`). Backend choice is environment-driven via `UME_VECTOR_BACKEND` and resolved through the registered vector backend registry.
+
+The vector store backend is selected with `UME_VECTOR_BACKEND`. In addition to FAISS and Chroma, UME supports Pinecone and Milvus via the vector backend abstraction in `src/ume/vector_store.py` and `src/ume/vector_backends/__init__.py`.
+Set `UME_VECTOR_BACKEND=pinecone` and provide `UME_PINECONE_API_KEY`, `UME_PINECONE_ENVIRONMENT`, and `UME_PINECONE_INDEX`.
 Text fields are tokenized before embeddings are generated using whichever tokenizer library is installed (`unitok`,
 `tatitok`, or `tiktoken`).
+
+## Implementation Status (Current vs Planned)
+
+To keep architecture docs aligned with the codebase, the table below distinguishes what is implemented on `main` versus roadmap/experimental work.
+
+| Area | Implemented on `main` | Planned / Experimental |
+| --- | --- | --- |
+| Graph persistence adapters | `sqlite`, `postgres`, `redis`, `arango`, `neo4j` via `create_graph_adapter()` | New graph adapters are roadmap items until implementation files and factory wiring are merged |
+| Vector storage | Environment-selected vector backend via `src/ume/vector_store.py` (`UME_VECTOR_BACKEND`) | Additional vector providers can be added through the backend registry / plugin entry points |
+| LanceDB usage | Not a shipped graph adapter in the current factory path | Any LanceDB integration should be documented as future/experimental until code is present |
 
 When querying, the API can perform a similarity search against the vector store to retrieve relevant nodes and
 then issue graph queries to traverse relationships.
