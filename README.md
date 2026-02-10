@@ -44,7 +44,8 @@ This section outlines the necessary tools for developing and running the Univers
 
 ### Core Tools Required:
 
-*   **Python:** Version **3.10** or newer is required.
+*   **Python (supported):** Version **>=3.10,<3.13** (as defined in `pyproject.toml`).
+*   **Python (recommended local default):** **3.12** for local development examples and parity with the default CI lint/type-check job.
 *   **Poetry:** For Python dependency management. Installation instructions can be found at [https://python-poetry.org/docs/#installation](https://python-poetry.org/docs/#installation).
 *   **Docker:** Docker Desktop (for Windows/macOS) or Docker Engine + Docker Compose (for Linux) is required to run backend services like Redpanda. Download from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/).
 *   **Node.js:** Node 18+ and `npm` are required to build the React dashboard.
@@ -322,7 +323,9 @@ This project uses [pytest](https://docs.pytest.org/) for unit and integration te
 
 ### Prerequisites
 
-You must run the tests with **Python 3.10** or newer.
+Supported test environments use **Python >=3.10,<3.13**.
+For local development, we recommend using **Python 3.12** unless you are
+specifically validating another supported version.
 
 Ensure you have installed the development dependencies:
 ```bash
@@ -360,7 +363,8 @@ result.
     poetry run pytest
     ```
     Alternatively, run pytest directly by setting ``PYTHONPATH`` so the
-    source directory is discoverable (Python 3.10 or newer is required):
+    source directory is discoverable (supported versions: Python >=3.10,<3.13;
+    recommended local default: Python 3.12):
     ```bash
     PYTHONPATH=src pytest
     ```
@@ -392,7 +396,9 @@ coverage reporting. The `coverage` job executes on a self-hosted runner as
 described in [docs/SELF_HOSTED_RUNNER.md](docs/SELF_HOSTED_RUNNER.md). It uses
 `concurrency` with `cancel-in-progress` to terminate earlier runs on the same
 branch. Steps are skipped when only documentation or comments change, so tests
-and linters run only for code modifications.
+and linters run only for code modifications. CI validates multiple Python
+versions via a matrix (`3.10`, `3.11`, and `3.12`) in
+[.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## Access Control
 
