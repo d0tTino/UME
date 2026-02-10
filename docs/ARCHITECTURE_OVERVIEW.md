@@ -142,10 +142,28 @@ Each ledger entry preserves the original `eventType` string. The event parser
 maps known constants to the :class:`~ume.event.EventType` enum but allows
 arbitrary values to pass through unchanged. It accepts `timestamp` values as
 either epoch integers or ISO-8601 strings, and normalizes parsed events to an
-epoch integer timestamp. This flexibility lets producers introduce new event
-categories without requiring a code update. Custom types are stored and replayed
-like built-in events. For backward compatibility, snake_case `event_type` is
-currently tolerated but `eventType` remains the preferred wire-level field name.
+epoch integer timestamp. For backward compatibility, snake_case `event_type` is
+currently tolerated but `eventType` remains the preferred wire-level field
+name.
+
+Current event-contract compatibility rules are enforced at two layers:
+
+* `parse_event()`: validates required keys per event family (`node_id` plus
+  payload constraints for node events, and `node_id`/`target_node_id`/`label`
+  for edge events).
+* `apply_event_to_graph()`: applies stricter runtime checks used by projection,
+  such as requiring non-empty `payload.attributes` for
+  `UPDATE_NODE_ATTRIBUTES`/`DOCUMENT_ARCHIVED`, defaulting
+  `DOCUMENT_ARCHIVED.attributes.archived` to `true` when absent, and treating
+  `ENTITY_DISCOVERED` as edge creation with opportunistic target-node creation.
+* Edge-family events (`CREATE_EDGE`, `DELETE_EDGE`,
+  `CREATE_ONTOLOGY_RELATION`, `DATA_SOURCE_QUERIED`, `ENTITY_DISCOVERED`) may
+  omit `payload`; it defaults to `{}` during parsing.
+
+This flexibility lets producers introduce new event categories without requiring
+an immediate parser change, while still keeping projection semantics explicit.
+Custom types are stored and replayed like built-in events but are currently
+rejected by projection unless explicitly handled.
 
 ## Policy DSL Flow
 
