@@ -81,11 +81,13 @@ def ingest_event(
     data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
-    explicit_version = _normalize_schema_version(schema_version)
     event_data, envelope_version = _unwrap_envelope(data)
-    detected_version = _normalize_schema_version(envelope_version)
-    if detected_version is None:
-        detected_version = _normalize_schema_version(event_data.get("schema_version"))
+    explicit_version = _normalize_schema_version(schema_version)
+    normalized_envelope_version = _normalize_schema_version(envelope_version)
+    normalized_payload_version = _normalize_schema_version(
+        event_data.get("schema_version")
+    )
+    detected_version = normalized_envelope_version or normalized_payload_version
     effective_version = (
         explicit_version
         or detected_version
