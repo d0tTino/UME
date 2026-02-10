@@ -131,12 +131,12 @@ async def main():
 
 ## Custom Vector Backends
 
-Third-party packages can provide additional vector store implementations. A
-backend must implement the `ume.vector_store.VectorBackend` interface and
-register itself using `ume.vector_backends.register_backend` or via the
-`ume.vector_backends` entry point group. The
-`examples/vector_backend_plugin.py` file demonstrates a minimal in-memory
-backend:
+Third-party packages can provide additional vector store implementations.
+These are vector backends (not graph adapters). A backend must implement the
+`ume.vector_store.VectorBackend` interface and register itself using
+`ume.vector_backends.register_backend` or via the `ume.vector_backends` entry
+point group. The `examples/vector_backend_plugin.py` file demonstrates a
+minimal in-memory backend:
 
 ```python
 from ume.vector_store import VectorBackend
@@ -181,7 +181,7 @@ memory = "yourpkg.memory_backend:MemoryBackend"
 ```
 
 Setting `UME_VECTOR_BACKEND=memory` will then use the plugin when creating a
-vector store.
+vector store through `create_vector_store()`.
 
 ## Custom Integration Adapters
 
