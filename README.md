@@ -237,8 +237,8 @@ Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-eve
 1. `producer_demo.py` publishes raw events conforming to the canonical schema to the `ume-raw-events` Kafka topic.
 2. The **Privacy Agent** validates each event, redacts PII and forwards sanitized messages to `ume-clean-events`.
 3. The projection engine consumes these sanitized events and applies them to the graph via the configured **Graph Adapter**.
-4. The adapter persists nodes and edges to the chosen backend selected by `UME_GRAPH_BACKEND` (`sqlite`, `postgres`, `redis`, `arango`, `neo4j`). Listeners such as `VectorStoreListener` automatically
-   index any `embedding` vectors for similarity search.
+4. The adapter persists nodes and edges to the chosen backend selected by `UME_GRAPH_BACKEND` (`sqlite`, `postgres`, `redis`, `arango`, `neo4j`). Vector indexing is configured separately via
+   `UME_VECTOR_BACKEND` through the vector backend abstraction in `src/ume/vector_store.py`; listeners such as `VectorStoreListener` automatically index any `embedding` vectors for similarity search.
 
 When nodes include textual attributes, the consumer generates vector embeddings using the configured model. These embeddings are stored in the vector store and queried via similarity search to locate relevant nodes before running graph traversals. The same fields are tokenized and the resulting tokens are saved under a `tokens` attribute for search. If the optional [tiktoken](https://github.com/openai/tiktoken) library is installed, it provides OpenAI-compatible tokenization.
 
