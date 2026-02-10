@@ -70,10 +70,31 @@ To add a new graph backend implementation, wire it in through the graph factory 
 
 Without the `create_graph_adapter()` factory branch, the new implementation will not be selected from configuration.
 
-Before `apply_event_to_graph()` mutates graph state, alignment plugins run policy checks.
-For Rego/OPA integration, the policy input contract is **event-only**: UME sends
-`event.payload` as `input`. No serialized graph snapshot or contextual graph data
-is attached to policy evaluation.
+Before `apply_event_to_graph()` mutates graph state, UME runs a pre-write
+validation loop over registered alignment plugins from
+`src/ume/plugins/alignment` (`for plugin in get_plugins(): plugin.validate(event)`).
+This is the enforcement point for policy/privacy checks in the graph projection
+path.
+
+Rego/OPA policy enforcement is implemented by the `RegoPolicyEngine` alignment
+plugin. It uses `OPAClient` when `UME_OPA_URL` is configured, querying a remote
+OPA endpoint (default path `ume/allow`). When `UME_OPA_URL` is not configured,
+`RegoPolicyEngine` falls back to local Rego evaluation via `regopy` using
+`REGO_POLICY_PATHS` (or the built-in `src/ume/plugins/alignment/policies`
+directory when paths are not provided). If `regopy` is unavailable, the Rego
+plugin is not auto-registered.
+
+`RegoPolicyEngine` evaluates the full event object (`event.__dict__`) as policy
+input. Policies should therefore read fields from the event envelope
+(`event_type`, `node_id`, `payload`, etc.) rather than expecting graph snapshots
+or other runtime graph context.
+
+### Add a custom policy plugin
+
+To add a custom policy check, implement `AlignmentPlugin` in
+`src/ume/plugins/alignment` and register an instance with `register_plugin()`.
+Your plugin should raise `PolicyViolationError` from `validate()` when an event
+must be blocked.
 
 ## Component Interactions
 
