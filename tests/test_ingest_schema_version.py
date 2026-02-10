@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from typing import Dict
 
@@ -7,6 +8,7 @@ import pytest
 
 from ume.graph import MockGraph
 from ume.graph_schema import EdgeLabel, GraphSchema
+from ume.async_graph_adapter import AsyncGraphAdapterWrapper, ingest_event_async
 from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
 from ume.services.ingest import (
     dict_to_envelope,
@@ -256,3 +258,48 @@ def test_ingest_event_falls_back_when_schema_versions_missing(
     ingest_event(payload, graph, schema_version="   ")
 
     assert graph.recorded_versions == [modern_schema_version]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param(
+            {
+                "schema_version": "3.0.0",
+                "event": _permission_event("target", "2.9.9"),
+            },
+            id="wrapped-event-envelope",
+        ),
+        pytest.param(
+            _permission_event("target", "3.0.0"),
+            id="unwrapped-event",
+        ),
+    ],
+)
+def test_sync_ingest_matches_async_for_wrapped_and_unwrapped_payloads(
+    payload: dict[str, object],
+) -> None:
+    sync_graph = SpyGraph({"3.0.0": "viewer", "2.9.9": "legacy_viewer"})
+    sync_graph.add_node("doc", {"type": "Document"})
+    sync_graph.add_node("target", {"type": "User"})
+
+    ingest_event(payload, sync_graph)
+
+    async_backing_graph = SpyGraph({"3.0.0": "viewer", "2.9.9": "legacy_viewer"})
+    async_backing_graph.add_node("doc", {"type": "Document"})
+    async_backing_graph.add_node("target", {"type": "User"})
+    async_graph = AsyncGraphAdapterWrapper(async_backing_graph)
+
+    async def _ingest() -> None:
+        await ingest_event_async(payload, async_graph)
+        await async_graph.close()
+
+    asyncio.run(_ingest())
+
+    sync_edges = [(src, dst, label) for src, dst, label, _attrs in sync_graph.get_all_edges()]
+    async_edges = [
+        (src, dst, label)
+        for src, dst, label, _attrs in async_backing_graph.get_all_edges()
+    ]
+
+    assert sync_edges == async_edges == [("doc", "target", "SHARED_WITH")]
