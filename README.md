@@ -22,8 +22,11 @@ The engine is built from a few key components:
     - `UME_GRAPH_BACKEND` selects the backend: `sqlite`, `postgres`, `redis`, `arango`, or `neo4j`.
 - **Vector Store** (`src/ume/vector_store.py`)
   - Maintains a vector index of node embeddings for similarity search.
-  - Use `VectorStore()` or `create_default_store()` to instantiate one from
-    environment settings. The backend is selected via `UME_VECTOR_BACKEND`.
+  - Use `create_vector_store()` (exported via `ume`, `src/ume/factories.py`,
+    and `src/ume/resources.py`) to instantiate the configured vector backend.
+    `VectorStore()` remains as a compatibility factory in
+    `src/ume/vector_store.py`. The backend is selected via
+    `UME_VECTOR_BACKEND`.
 - **CLI** (`ume_cli.py`)
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
   - Includes `replay-graph` to rebuild a graph from ledger events.
@@ -1038,11 +1041,11 @@ vector store used by the API, call the configuration functions:
 ```python
 from ume import create_graph_adapter
 from ume.api import configure_graph, configure_vector_store
-from ume.vector_store import create_default_store
+from ume import create_vector_store
 
 # Configure from env: UME_GRAPH_BACKEND + UME_DB_PATH
 configure_graph(create_graph_adapter())
-configure_vector_store(create_default_store())
+configure_vector_store(create_vector_store())
 ```
 
 Supported graph backend values are `sqlite`, `postgres`, `redis`, `arango`,
@@ -1299,11 +1302,13 @@ This installs `sentence-transformers` and `tiktoken` for advanced tokenization.
 
 ## Vector Store
 
-UME can optionally maintain an index of node embeddings. Calling `VectorStore()`
-instantiates the configured backend using environment defaults (equivalent to
-`create_vector_store()`). When a `CREATE_NODE` or `UPDATE_NODE_ATTRIBUTES` event
-contains an `embedding` field in its attributes, the vector is added to the
-index via `VectorStoreListener`.
+UME can optionally maintain an index of node embeddings. The primary factory
+entry point is `create_vector_store()`, which resolves `UME_VECTOR_BACKEND` and
+loads the configured backend through `src/ume/vector_store.py`.
+`VectorStore()` is still available as a compatibility constructor that delegates
+to the same backend registry. When a `CREATE_NODE` or
+`UPDATE_NODE_ATTRIBUTES` event contains an `embedding` field in its attributes,
+the vector is added to the index via `VectorStoreListener`.
 
 Set the following environment variables to configure the store:
 
@@ -1348,12 +1353,13 @@ Install one of these packages to control tokenization behavior.
 
 ### Custom Backends
 
-Third-party packages can provide additional vector store implementations. A
-backend must implement the :class:`ume.vector_store.VectorBackend` interface and
-register itself using :func:`ume.vector_backends.register_backend` or via the
+Third-party packages can provide additional vector store implementations. These
+plugins are vector backends (not graph adapters) and must implement the
+:class:`ume.vector_store.VectorBackend` interface. Register them using
+:func:`ume.vector_backends.register_backend` or via the
 ``ume.vector_backends`` entry point group. The
-``examples/vector_backend_plugin.py`` file demonstrates a minimal in-memory
-backend:
+``examples/vector_backend_plugin.py`` example shows a minimal in-memory
+backend and how it is discovered by `create_vector_store()`:
 
 ```python
 from ume.vector_store import VectorBackend

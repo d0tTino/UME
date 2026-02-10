@@ -28,9 +28,17 @@ Graph backend selection is environment-driven:
 `src/ume/integrations/registry.py` is a separate registry for integration clients (LangGraph, Letta, MemGPT, etc.).
 It does **not** control graph storage backend selection.
 
-Vector storage is configured separately from graph adapters through `src/ume/vector_store.py` (for example, `create_default_store()` and `VectorStore`). Backend choice is environment-driven via `UME_VECTOR_BACKEND` and resolved through the registered vector backend registry.
+Vector storage is configured separately from graph adapters through
+`src/ume/vector_store.py`. Use `create_vector_store()` (re-exported from
+`src/ume/factories.py` and `src/ume/resources.py`) as the main factory entry
+point. `VectorStore` remains available as a compatibility constructor.
+Backend choice is environment-driven via `UME_VECTOR_BACKEND` and resolved
+through the registered vector backend registry.
 
-The vector store backend is selected with `UME_VECTOR_BACKEND`. In addition to FAISS and Chroma, UME supports Pinecone and Milvus via the vector backend abstraction in `src/ume/vector_store.py` and `src/ume/vector_backends/__init__.py`.
+The vector store backend is selected with `UME_VECTOR_BACKEND`. In addition to
+FAISS and Chroma, UME supports Pinecone and Milvus via the vector backend
+abstraction in `src/ume/vector_store.py` and
+`src/ume/vector_backends/__init__.py`.
 Set `UME_VECTOR_BACKEND=pinecone` and provide `UME_PINECONE_API_KEY`, `UME_PINECONE_ENVIRONMENT`, and `UME_PINECONE_INDEX`.
 Text fields are tokenized before embeddings are generated using whichever tokenizer library is installed (`unitok`,
 `tatitok`, or `tiktoken`).
@@ -42,7 +50,7 @@ To keep architecture docs aligned with the codebase, the table below distinguish
 | Area | Implemented on `main` | Planned / Experimental |
 | --- | --- | --- |
 | Graph persistence adapters | `sqlite`, `postgres`, `redis`, `arango`, `neo4j` via `create_graph_adapter()` | New graph adapters are roadmap items until implementation files and factory wiring are merged |
-| Vector storage | Environment-selected vector backend via `src/ume/vector_store.py` (`UME_VECTOR_BACKEND`) | Additional vector providers can be added through the backend registry / plugin entry points |
+| Vector storage backends (distinct from graph adapters) | Environment-selected vector backend via `create_vector_store()` and `src/ume/vector_store.py` (`UME_VECTOR_BACKEND`) | Additional vector providers can be added through the backend plugin registry / entry points (see `examples/vector_backend_plugin.py`) |
 | LanceDB usage | Not a shipped graph adapter in the current factory path | Any LanceDB integration should be documented as future/experimental until code is present |
 
 When querying, the API can perform a similarity search against the vector store to retrieve relevant nodes and
