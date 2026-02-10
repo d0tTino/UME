@@ -198,7 +198,7 @@ Example edge creation event:
 
 ```json
 {
-  "event_type": "CREATE_EDGE",
+  "eventType": "CREATE_EDGE",
   "timestamp": 1678954321,
   "node_id": "intent123",
   "target_node_id": "memory789",
@@ -229,7 +229,7 @@ vector embeddings consistently.
 | Field | Description |
 |-------|-------------|
 | `eventType` | Operation type like `CREATE_NODE` or `ENTITY_DISCOVERED`. |
-| `timestamp` | ISO&nbsp;8601 time when the event occurred. |
+| `timestamp` | Event time as either epoch `int` or ISO&nbsp;8601 string; `parse_event()` normalizes it to an epoch integer in the parsed `Event`. |
 | `eventId` | Unique identifier for the event. |
 | `correlationId` | ID linking related events. |
 | `subjectEntity` | `{id, type}` describing the entity affected. |
@@ -314,6 +314,10 @@ Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-eve
 
 As events pass from ingestion through projection they retain the canonical
 schema, ensuring consistent processing across components.
+
+Compatibility note: `eventType` is the preferred wire field. `parse_event()`
+still accepts snake_case `event_type` for backward compatibility, but new
+producers should emit `eventType`.
 
 As events move from the ingestion API through the Privacy Agent
 and into the projection engine, they keep this schema. The engine

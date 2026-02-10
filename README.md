@@ -106,7 +106,7 @@ set of common fields and any number of type‑specific attributes.
 | Field | Description |
 |-------|-------------|
 | `eventType` | Type of event such as `CREATE_NODE` or `RESEARCH_JOB_STARTED`. |
-| `timestamp` | ISO&nbsp;8601 time when the event occurred. |
+| `timestamp` | Event time as either epoch `int` or ISO&nbsp;8601 string; `parse_event()` normalizes it to an epoch integer in the parsed `Event`. |
 | `eventId` | Unique identifier for this event. |
 | `correlationId` | Identifier linking related events. |
 | `subjectEntity` | Object with `id` and `type` describing the entity the event concerns. |
@@ -117,6 +117,10 @@ All official event types such as `CREATE_NODE` or `CREATE_EDGE` have
 corresponding JSON Schema definitions under `src/ume/schemas`.  Producers
 should validate events using `ume.validate_event_dict()` before publishing to
 Kafka or any other broker.
+
+`eventType` is the preferred wire-level field name. `parse_event()` currently
+accepts snake_case `event_type` for backward compatibility, but new producers
+should emit `eventType`.
 
 #### CREATE_EDGE Event
 
@@ -137,7 +141,7 @@ Used to create a new directed, labeled edge between two existing nodes.
 ```
 **Required Fields in Data for `parse_event`:**
 *   `eventType`: Must be "CREATE_EDGE".
-*   `timestamp`: ISO 8601 timestamp string.
+*   `timestamp`: Epoch integer or ISO 8601 timestamp string.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label for the edge.
@@ -216,7 +220,7 @@ Used to remove a specific directed, labeled edge between two nodes.
 ```
 **Required Fields in Data for `parse_event`:**
 *   `eventType`: Must be "DELETE_EDGE".
-*   `timestamp`: ISO 8601 timestamp string.
+*   `timestamp`: Epoch integer or ISO 8601 timestamp string.
 *   `node_id`: String, ID of the source node.
 *   `target_node_id`: String, ID of the target node.
 *   `label`: String, label of the edge.
@@ -588,7 +592,7 @@ Basic usage:
 from ume.integrations import LangGraph
 
 client = LangGraph()
-client.send_events([{"event_type": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1"}])
+client.send_events([{"eventType": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1"}])
 print(client.recall({"node_id": "n1"}))
 ```
 
@@ -662,7 +666,7 @@ body must follow the schema expected by `ume.parse_event`.
 curl -X POST http://localhost:8000/events \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"event_type": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1", "payload": {"attributes": {"name": "demo"}}}'
+  -d '{"eventType": "CREATE_NODE", "timestamp": "2024-01-01T00:00:00Z", "node_id": "n1", "payload": {"attributes": {"name": "demo"}}}'
 ```
 
 The event is validated and immediately applied to the configured graph adapter.
@@ -810,7 +814,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 
     # Event to create node_A
     event_data_create_A = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": "2024-01-01T00:00:00Z",
         "node_id": "node_A",  # Field used by CREATE_NODE for the node to create
         "payload": {"name": "Alpha Node", "type": "concept"},
@@ -822,7 +826,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 
     # Event to create node_B
     event_data_create_B = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": "2024-01-01T00:00:01Z",
         "node_id": "node_B",  # Field used by CREATE_NODE for the node to create
         "payload": {"name": "Beta Node", "value": 42},
@@ -834,7 +838,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 
     # Event to create an edge from node_A to node_B
     event_data_create_edge_A_B = {
-        "event_type": "CREATE_EDGE",
+        "eventType": "CREATE_EDGE",
         "timestamp": "2024-01-01T00:00:02Z",
         "node_id": "node_A",        # Source node for the edge
         "target_node_id": "node_B",  # Target node for the edge
@@ -857,7 +861,7 @@ This section outlines the basic programmatic steps to interact with the UME comp
 
     for raw_event_data in events_to_process:
         try:
-            print(f"Processing raw event: {raw_event_data.get('event_type')} for node {raw_event_data.get('node_id')}")
+            print(f"Processing raw event: {raw_event_data.get('eventType')} for node {raw_event_data.get('node_id')}")
             parsed_event = parse_event(raw_event_data)
             print(f"  Parsed event: {parsed_event}")
             apply_event_to_graph(parsed_event, graph_adapter)
@@ -1015,7 +1019,7 @@ settings = load_settings()
 with UMEClient(settings) as client:
     # Example event dictionary (CREATE_NODE)
     event = {
-        "event_type": "CREATE_NODE",
+        "eventType": "CREATE_NODE",
         "timestamp": "2024-01-01T00:00:00Z",
         "node_id": "demo_node",
         "payload": {"name": "Demo"},
