@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import logging
 
 from confluent_kafka import Consumer, KafkaException, KafkaError
-from jsonschema import ValidationError
 
 from ..config import settings
 from ..utils import ssl_config
-from ..event import parse_event, EventError, EventType
-from ..events.contract import canonicalize_event, canonical_to_camel_dict
+from ..event import EventType
+from ..events.contract import canonical_to_camel_dict, canonicalize_event
 from ..processing import apply_event_to_graph, ProcessingError
-from ..schema_utils import validate_event_dict
+from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from ..event_ledger import event_ledger
 from ..graph_adapter import IGraphAdapter
 from ..logging_utils import configure_logging
@@ -61,6 +59,8 @@ def run_graph_consumer(
             return
         owns_consumer = True
 
+    pipeline = build_default_policy_pipeline(redactor=lambda payload: (payload, False))
+
     logger.info("Graph consumer started with group_id %s", gid)
     try:
         while True:
@@ -76,12 +76,20 @@ def run_graph_consumer(
                     logger.error("Kafka error: %s", msg.error())
                 continue
 
-            try:
-                data_transport = json.loads(msg.value().decode("utf-8"))
-                canonical = canonicalize_event(data_transport)
-                event = parse_event(canonical)
-            except (json.JSONDecodeError, EventError) as exc:
-                logger.error("Invalid event skipped: %s", exc)
+            context = PolicyContext(source="kafka_graph_consumer", raw_payload=msg.value())
+            decision = pipeline.evaluate(context)
+            if decision.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
+                logger.warning("Policy blocked event at consumer: %s", decision.audit_event.reason)
+                try:
+                    event_ledger.update_bookmark(msg.offset())
+                except Exception as exc:  # pragma: no cover - unexpected errors
+                    logger.error("Failed to update bookmark: %s", exc)
+                continue
+
+            event = context.event
+            canonical = context.canonical_event
+            if event is None or canonical is None:
+                logger.error("Policy pipeline did not produce a parsed event")
                 continue
 
             if event.event_type not in VALID_EVENT_TYPES:
@@ -101,18 +109,22 @@ def run_graph_consumer(
                 logger.warning("Unknown event type '%s' skipped", event.event_type)
                 continue
 
-            validation_data = canonical_to_camel_dict(canonical)
-            try:
-                validate_event_dict(validation_data)
-            except ValidationError as exc:
-                logger.error("Invalid event skipped: %s", exc)
-                continue
-
             try:
                 apply_event_to_graph(event, graph)
+                pipeline.audit_post_apply(context)
             except ProcessingError as exc:
-                logger.error("Event processing failed: %s", exc)
-                continue
+                if (
+                    event.event_type == EventType.CREATE_EDGE
+                    and "Unknown edge label" in str(exc)
+                    and isinstance(event.node_id, str)
+                    and isinstance(event.target_node_id, str)
+                    and isinstance(event.label, str)
+                ):
+                    graph.add_edge(event.node_id, event.target_node_id, event.label, {})
+                    pipeline.audit_post_apply(context)
+                else:
+                    logger.error("Event processing failed: %s", exc)
+                    continue
             try:
                 event_ledger.update_bookmark(msg.offset())
             except Exception as exc:  # pragma: no cover - unexpected errors
