@@ -15,6 +15,7 @@ from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..classification import classify_event
 from ..anomaly_detection import AnomalyDetector
 from ..schema_manager import DEFAULT_SCHEMA_MANAGER
+from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 
 if TYPE_CHECKING:  # pragma: no cover - typing import for mypy
     from ume_client import events_pb2 as events_pb2_type
@@ -24,6 +25,7 @@ else:
 events_pb2 = cast(Any, _events_pb2)
 
 _anomaly_detector = AnomalyDetector()
+_policy_pipeline = build_default_policy_pipeline(redactor=lambda payload: (payload, False))
 
 __all__ = [
     "validate_event",
@@ -39,7 +41,11 @@ __all__ = [
 
 def validate_event(data: Dict[str, Any]) -> Event:
     """Canonicalize and parse incoming transport data into :class:`~ume.event.Event`."""
-    return parse_event(canonicalize_event(data))
+    context = PolicyContext(source="service_validate", transport_data=data)
+    result = _policy_pipeline.evaluate(context)
+    if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.event is None:
+        raise EventError(result.audit_event.reason)
+    return context.event
 
 
 def apply_event(
@@ -87,7 +93,11 @@ def ingest_event(
         or DEFAULT_VERSION
     )
 
-    event = parse_event(canonical)
+    context = PolicyContext(source="service_ingest", transport_data=data)
+    policy_result = _policy_pipeline.evaluate(context)
+    if policy_result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.event is None:
+        raise EventError(policy_result.audit_event.reason)
+    event = context.event
 
     tag_results = classify_event(event)
     event.payload["classification"] = [
@@ -113,6 +123,7 @@ def ingest_event(
                 attributes["sensitivity"] = r.sensitivity
 
     apply_event(event, graph, schema_version=effective_version)
+    _policy_pipeline.audit_post_apply(context)
 
     anomaly_event = _anomaly_detector.process_event(event)
     if anomaly_event is not None:

@@ -12,7 +12,6 @@ from .processing import ProcessingError, DEFAULT_VERSION
 from .event import Event, EventType, parse_event
 from .events.contract import canonicalize_event
 from ._internal.listeners import get_registered_listeners
-from .plugins.alignment import get_plugins
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .graph_adapter import IGraphAdapter, AsyncAdapterMixin
 
@@ -161,9 +160,6 @@ async def apply_event_to_async_graph(
     schema_version: str = DEFAULT_VERSION,
 ) -> None:
     """Asynchronous equivalent of :func:`ume.processing.apply_event_to_graph`."""
-    for plugin in get_plugins():
-        plugin.validate(event)
-
     if event.event_type == EventType.CREATE_NODE:
         node_id = event.node_id
         if not node_id or not isinstance(node_id, str):

@@ -4,25 +4,23 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, Tuple, List, cast
-from ..utils import ssl_config, event_to_snake, event_to_camel
-from ..tokenization import tokenize
-from ..logging_utils import configure_logging
+import os
+from typing import Any, Dict, List, Tuple, cast
 
-from confluent_kafka import Consumer, Producer, KafkaException, KafkaError
+from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
 from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
-from jsonschema import ValidationError
 
-from ..config import settings
-from ..schema_utils import validate_event_dict
 from ..audit import log_audit_entry
-from ..event import parse_event, EventError
-from ..events.contract import canonicalize_event
-from ..consent_ledger import consent_ledger
+from ..config import settings
 from ..event_ledger import event_ledger
-from ..plugins.alignment import load_plugins, get_plugins, PolicyViolationError
+from ..logging_utils import configure_logging
+from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
+from ..plugins.alignment import PolicyViolationError, get_plugins, load_plugins
+from ..tokenization import tokenize
+from ..utils import event_to_camel, event_to_snake, ssl_config
 
+__all__ = ["run_privacy_agent", "redact_event_payload", "PolicyViolationError"]
 
 def _add_tokens(attrs: Dict[str, object]) -> None:
     """Tokenize textual fields and store the tokens list if any."""
@@ -77,7 +75,11 @@ def redact_event_payload(
 
 def run_privacy_agent() -> None:
     """Consume raw events, redact payloads, and produce sanitized versions."""
-    load_plugins()
+    pipeline = build_default_policy_pipeline(
+        redactor=redact_event_payload,
+        plugin_loader=load_plugins,
+        plugin_provider=get_plugins,
+    )
     consumer_conf = {
         "bootstrap.servers": BOOTSTRAP_SERVERS,
         "group.id": GROUP_ID,
@@ -105,70 +107,41 @@ def run_privacy_agent() -> None:
                 continue
 
             raw_bytes = msg.value()
-            try:
-                data_camel = json.loads(raw_bytes.decode("utf-8"))
-                data = event_to_snake(data_camel)
-                validation_data = dict(data)
-                if "event_type" in validation_data:
-                    validation_data["eventType"] = validation_data.pop("event_type")
-                validate_event_dict(validation_data)
-            except (json.JSONDecodeError, ValidationError) as exc:
-                logger.error("Invalid event received: %s", exc)
+            context = PolicyContext(source="kafka_privacy_agent", raw_payload=raw_bytes)
+            result = pipeline.evaluate(context)
+
+            if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
+                logger.warning("Event quarantined by policy: %s", result.audit_event.reason)
                 try:
-                    producer.produce(QUARANTINE_TOPIC, value=raw_bytes)
+                    if result.decision == PolicyDecision.DENY and context.transport_data is not None:
+                        payload = {
+                            "error": result.audit_event.reason,
+                            "event": context.transport_data,
+                        }
+                        producer.produce(QUARANTINE_TOPIC, value=json.dumps(payload).encode("utf-8"))
+                    else:
+                        producer.produce(QUARANTINE_TOPIC, value=raw_bytes)
                     pending += 1
                 except KafkaException as exc2:
                     logger.error("Failed to produce quarantine event: %s", exc2)
                 continue
 
-            try:
-                event = parse_event(canonicalize_event(data))
-            except EventError as exc:
-                logger.error("Failed to parse event: %s", exc)
-                try:
-                    producer.produce(QUARANTINE_TOPIC, value=raw_bytes)
-                    pending += 1
-                except KafkaException as exc2:
-                    logger.error("Failed to produce quarantine event: %s", exc2)
+            if context.canonical_event is None:
+                logger.error("Policy pipeline returned no canonical event")
                 continue
 
-            payload = event.payload if isinstance(event.payload, dict) else {}
-            user_id = payload.get("user_id")
-            scope = payload.get("scope")
-            if user_id and scope:
-                has_consent = consent_ledger.has_consent(str(user_id), str(scope))
-            else:
-                # Treat events without explicit consent info as allowed
-                has_consent = True
-            object.__setattr__(event, "consent", has_consent)
-
-
-            try:
-                for plugin in get_plugins():
-                    plugin.validate(event)
-            except PolicyViolationError as exc:
-                logger.warning("Event rejected by policy: %s", exc)
-                try:
-                    producer.produce(
-                        QUARANTINE_TOPIC,
-                        value=json.dumps({"error": str(exc), "event": event_to_camel(data)}).encode(
-                            "utf-8"
-                        ),
-                    )
-                    pending += 1
-                except KafkaException as exc2:
-                    logger.error("Failed to produce quarantine event: %s", exc2)
-                continue
-
-            original_payload = data.get("payload", {})
-            redacted_payload, was_redacted = redact_event_payload(original_payload)
+            data = event_to_snake(event_to_camel(context.canonical_event))
+            original_payload = context.transport_data.get("payload", {}) if context.transport_data else {}
+            redacted_payload = context.event_payload
+            was_redacted = context.redacted
             _add_tokens(redacted_payload)
             data["payload"] = redacted_payload
 
-            dest_topic = CLEAN_TOPIC if (has_consent or not (user_id and scope)) else QUARANTINE_TOPIC
-
             try:
-                producer.produce(dest_topic, value=json.dumps(event_to_camel(data)).encode("utf-8"))
+                producer.produce(
+                    CLEAN_TOPIC,
+                    value=json.dumps(event_to_camel(data)).encode("utf-8"),
+                )
                 pending += 1
                 try:
                     event_ledger.append(msg.offset(), data)
@@ -181,15 +154,13 @@ def run_privacy_agent() -> None:
                 try:
                     producer.produce(
                         QUARANTINE_TOPIC,
-                        value=json.dumps({"original": original_payload}).encode(
-                            "utf-8"
-                        ),
+                        value=json.dumps({"original": original_payload}).encode("utf-8"),
                     )
                     pending += 1
                 except KafkaException as exc:
                     logger.error("Failed to produce quarantine event: %s", exc)
-                user_id = settings.UME_AGENT_ID
-                log_audit_entry(user_id, f"payload_redacted {data.get('event_id')}")
+                log_audit_entry(os.getenv("UME_AGENT_ID", settings.UME_AGENT_ID), f"payload_redacted {data.get('event_id')}")
+
             if pending >= BATCH_SIZE:
                 producer.flush()
                 pending = 0
