@@ -1,268 +1,35 @@
 # src/ume/processing.py
 from .event import Event, EventType
-from .graph_adapter import IGraphAdapter  # Use IGraphAdapter
-from ._internal.listeners import get_registered_listeners
+from .events.handlers import EVENT_HANDLER_REGISTRY
+from .events.handlers.base import HandlerContext
+from .graph_adapter import IGraphAdapter
 from .plugins.alignment import get_plugins
-from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .graph_schema import load_default_schema
-from .tokenization import tokenize
-
-
-def _add_tokens(attrs: dict[str, object]) -> None:
-    """Tokenize textual fields and store the tokens list if any."""
-    tokens: list[str] = []
-    for key in ("name", "text", "content"):
-        val = attrs.get(key)
-        if isinstance(val, str):
-            tokens.extend(tokenize(val))
-    if tokens:
-        attrs["tokens"] = tokens
+from .processing_errors import ProcessingError
 
 DEFAULT_VERSION = load_default_schema().version
-
-
-class ProcessingError(ValueError):
-    """Custom exception for event processing errors."""
-
-    pass
 
 
 def apply_event_to_graph(
     event: Event, graph: IGraphAdapter, *, schema_version: str = DEFAULT_VERSION
 ) -> None:
-    """
-    Applies an event to a graph, modifying the graph based on event type and payload.
-
-    This function uses the IGraphAdapter interface to interact with the graph,
-    allowing for different graph backend implementations.
-    Supported event_types:
-    - "CREATE_NODE": Creates a new node. Requires `event.payload` to contain
-      `node_id` (str) and `attributes` (dict).
-    - "UPDATE_NODE_ATTRIBUTES": Updates an existing node's attributes. Requires
-      `event.payload` to contain `node_id` (str) and `attributes` (non-empty dict).
-    - "RESEARCH_JOB_STARTED": Alias of CREATE_NODE for job nodes.
-    - "DOCUMENT_ARCHIVED": Alias of UPDATE_NODE_ATTRIBUTES, marking a document archived.
-    - "CREATE_EDGE": Creates a directed, labeled edge between two existing nodes.
-      Requires `event.node_id` (source), `event.target_node_id` (target), and
-      `event.label` (all strings).
-    - "DATA_SOURCE_QUERIED": Alias of CREATE_EDGE for connecting jobs to data sources.
-    - "ENTITY_DISCOVERED": Creates a node for the discovered entity (if needed)
-      and an edge from the job to that entity.
-    - "DELETE_EDGE": Removes a specific edge. Requires `event.node_id` (source),
-      `event.target_node_id` (target), and `event.label` (all strings).
-
-    Args:
-        event (Event): The Event object to apply, with fields validated by `parse_event`.
-        graph (IGraphAdapter): An instance implementing the IGraphAdapter interface.
-        schema_version (str, optional): Version of the graph schema to validate against.
-
-    Raises:
-        PolicyViolationError: If an alignment plugin rejects the event.
-        ProcessingError: If fields validated by `parse_event` are unexpectedly invalid
-                         (e.g. None when str expected for a given event type),
-                         if event payload is missing required fields for the event_type,
-                         or if the event_type is unknown and not handled.
-                         Also raised by graph adapter methods for graph consistency issues
-                         (e.g., node already exists for CREATE_NODE, node not found for UPDATE_NODE_ATTRIBUTES/CREATE_EDGE).
-    """
+    """Apply a validated event to the graph via the event handler registry."""
     for plugin in get_plugins():
         plugin.validate(event)
-    if event.event_type in (EventType.CREATE_NODE, EventType.RESEARCH_JOB_STARTED):
-        node_id = event.node_id
-        if not node_id:
-            raise ProcessingError(
-                f"Missing 'node_id' in event for CREATE_NODE event: {event.event_id}"
-            )
-        if not isinstance(node_id, str):
-            raise ProcessingError(
-                f"'node_id' must be a string for CREATE_NODE event: {event.event_id}"
-            )
 
-        attributes = event.payload.get(
-            "attributes", {}
-        )  # Default to empty dict if 'attributes' key is missing
-        if not isinstance(
-            attributes, dict
-        ):  # Ensure attributes, if provided, is a dict
-            raise ProcessingError(
-                f"'attributes' must be a dictionary for CREATE_NODE event, if provided. Got: {type(attributes).__name__} for event: {event.event_id}"
-            )
+    handler = EVENT_HANDLER_REGISTRY.get(event.event_type)
+    if handler is None and isinstance(event.event_type, str):
+        try:
+            handler = EVENT_HANDLER_REGISTRY.get(EventType(event.event_type))
+        except ValueError:
+            handler = None
 
-        node_type = attributes.get("type")
-        if node_type is not None:
-            schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
-            schema.validate_node_type(str(node_type))
-
-        _add_tokens(attributes)
-
-        graph.add_node(node_id, attributes)  # Call adapter's add_node
-        for listener in get_registered_listeners():
-            listener.on_node_created(node_id, attributes)
-
-    elif event.event_type in (EventType.UPDATE_NODE_ATTRIBUTES, EventType.DOCUMENT_ARCHIVED):
-        node_id = event.node_id
-        if not node_id:
-            raise ProcessingError(
-                f"Missing 'node_id' in event for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
-            )
-        if not isinstance(node_id, str):
-            raise ProcessingError(
-                f"'node_id' must be a string for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
-            )
-
-        if "attributes" not in event.payload:
-            raise ProcessingError(
-                f"Missing 'attributes' key in payload for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
-            )
-
-        attributes = event.payload["attributes"]
-        if not isinstance(attributes, dict):
-            raise ProcessingError(
-                f"'attributes' must be a dictionary for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
-            )
-        if event.event_type == EventType.DOCUMENT_ARCHIVED and "archived" not in attributes:
-            attributes["archived"] = True
-        if not attributes:
-            raise ProcessingError(
-                f"'attributes' dictionary cannot be empty for UPDATE_NODE_ATTRIBUTES event: {event.event_id}"
-            )
-
-        _add_tokens(attributes)
-
-        graph.update_node(node_id, attributes)  # Call adapter's update_node
-        for listener in get_registered_listeners():
-            listener.on_node_updated(node_id, attributes)
-
-    elif event.event_type in (EventType.CREATE_EDGE, EventType.DATA_SOURCE_QUERIED, EventType.ENTITY_DISCOVERED):
-        # parse_event should have validated presence and type of node_id, target_node_id, label
-        source_node_id = event.node_id
-        target_node_id = event.target_node_id
-        label = event.label
-
-        # Defensive checks in case an improperly constructed Event is passed
-        if not (
-            isinstance(source_node_id, str)
-            and isinstance(target_node_id, str)
-            and isinstance(label, str)
-        ):
-            raise ProcessingError(
-                f"Invalid event structure for CREATE_EDGE: source_node_id (event.node_id), target_node_id, "
-                f"and label must be strings and present. Event ID: {event.event_id}"
-            )
-
-        # After the defensive check above, mypy still treats these variables as
-        # Optional[str]. Use assertions to convince the type checker they are
-        # indeed strings before passing them to the adapter methods.
-
-        assert isinstance(source_node_id, str)
-        assert isinstance(target_node_id, str)
-        assert isinstance(label, str)
-        schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
-        schema.validate_edge_label(label)
-        raw_edge_attrs = event.payload.get("attributes")
-        if raw_edge_attrs is not None and not isinstance(raw_edge_attrs, dict):
-            raise ProcessingError(
-                f"'attributes' must be a dictionary for {event.event_type.value} event: {event.event_id}"
-            )
-        edge_attrs = dict(raw_edge_attrs) if isinstance(raw_edge_attrs, dict) else None
-
-        edge_def = schema.edge_labels.get(label)
-        edge_schema_version = edge_def.version if edge_def else schema.version
-
-        if edge_def and edge_attrs is not None:
-            permission_level = edge_attrs.get("permission_level")
-            if permission_level is not None:
-                if not isinstance(permission_level, str) or not permission_level:
-                    raise ProcessingError(
-                        "permission_level must be a non-empty string when provided for permissioned edges"
-                    )
-                accepted_levels = set(edge_def.permission_level_values)
-                if not accepted_levels and edge_def.permission_level is not None:
-                    accepted_levels.add(edge_def.permission_level)
-                if accepted_levels and permission_level not in accepted_levels:
-                    raise ProcessingError(
-                        f"Invalid permission_level '{permission_level}' for edge label '{label}'"
-                    )
-
-        if (
-            event.event_type == EventType.ENTITY_DISCOVERED
-            and not graph.node_exists(target_node_id)
-        ):
-            node_attrs = dict(edge_attrs) if edge_attrs is not None else {}
-            _add_tokens(node_attrs)
-            graph.add_node(target_node_id, node_attrs)
-            for listener in get_registered_listeners():
-                listener.on_node_created(target_node_id, node_attrs)
-        graph.add_edge(
-            source_node_id,
-            target_node_id,
-            label,
-            edge_attrs,
-            schema_version=edge_schema_version,
-        )
-        for listener in get_registered_listeners():
-            listener.on_edge_created(source_node_id, target_node_id, label)
-
-    elif event.event_type == EventType.CREATE_ONTOLOGY_RELATION:
-        source_node_id = event.node_id
-        target_node_id = event.target_node_id
-        label = event.label
-
-        if not (
-            isinstance(source_node_id, str)
-            and isinstance(target_node_id, str)
-            and isinstance(label, str)
-        ):
-            raise ProcessingError(
-                f"Invalid event structure for CREATE_ONTOLOGY_RELATION: source_node_id, target_node_id, "
-                f"and label must be strings. Event ID: {event.event_id}"
-            )
-
-        assert isinstance(source_node_id, str)
-        assert isinstance(target_node_id, str)
-        assert isinstance(label, str)
-        schema = DEFAULT_SCHEMA_MANAGER.get_schema(schema_version)
-        schema.validate_edge_label(label)
-        graph.add_edge(source_node_id, target_node_id, label)
-        for listener in get_registered_listeners():
-            listener.on_edge_created(source_node_id, target_node_id, label)
-
-    elif event.event_type == EventType.DELETE_EDGE:
-        # parse_event should have validated presence and type of node_id, target_node_id, label
-        source_node_id = event.node_id
-        target_node_id = event.target_node_id
-        label = event.label
-
-        # Defensive checks
-        if not (
-            isinstance(source_node_id, str)
-            and isinstance(target_node_id, str)
-            and isinstance(label, str)
-        ):
-            raise ProcessingError(
-                f"Invalid event structure for DELETE_EDGE: source_node_id (event.node_id), target_node_id, "
-                f"and label must be strings and present. Event ID: {event.event_id}"
-            )
-
-        # As above, assert non-None string values so mypy treats them correctly
-        # in the adapter call.
-
-        assert isinstance(source_node_id, str)
-        assert isinstance(target_node_id, str)
-        assert isinstance(label, str)
-        graph.delete_edge(source_node_id, target_node_id, label)
-        for listener in get_registered_listeners():
-            listener.on_edge_deleted(source_node_id, target_node_id, label)
-
-    elif event.event_type == EventType.ANOMALY_DETECTED:
-        # No graph mutations for anomaly events; they are informational only.
-        return
-
-    else:
-        # For now, we can choose to ignore unknown event types or raise an error.
-        # Raising an error is often better for catching unexpected event types.
-        # However, for a very basic demo, one might choose to log and ignore.
-        # Let's raise an error for stricter processing.
+    if handler is None:
         raise ProcessingError(
             f"Unknown event_type '{event.event_type}' for event: {event.event_id}"
         )
+
+    context = HandlerContext(event=event, graph=graph, schema_version=schema_version)
+    handler.validate(context)
+    handler.apply(context)
+    handler.emit_listeners(context)
