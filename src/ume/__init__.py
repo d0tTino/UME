@@ -1,203 +1,123 @@
-"""Universal Memory Engine (UME) core package."""
+"""Universal Memory Engine (UME) public package surface."""
 
-# ruff: noqa: E402
+from __future__ import annotations
 
-from .bootstrap import (
-    load_config,
-    load_neo4j,
-    load_vector_modules,
-    load_embedding,
-)
+import warnings
+from importlib import import_module
+from typing import Any
 
-# Expose config for tests as early as possible
-config, Settings = load_config(__name__)
-
-
-from .event import Event, EventType, parse_event, EventError
-from .graph import MockGraph
-from .persistent_graph import PersistentGraph
-from .postgres_graph import PostgresGraph
-from .redis_graph_adapter import RedisGraphAdapter
-from .arango_graph import ArangoGraph
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:  # pragma: no cover - used for type hints only
-    from .neo4j_graph import Neo4jGraph
-else:  # pragma: no cover - optional dependency
-    Neo4jGraph = load_neo4j(__name__)
-from .auto_snapshot import (
-    enable_periodic_snapshot,
-    disable_periodic_snapshot,
-    enable_snapshot_autosave_and_restore,
-)
-from .retention import (
-    start_retention_scheduler,
-    stop_retention_scheduler,
-    start_ledger_compaction_scheduler,
-    stop_ledger_compaction_scheduler,
-)
-from .memory_aging import (
-    start_memory_aging_scheduler,
-    stop_memory_aging_scheduler,
-    start_vector_age_scheduler,
-    stop_vector_age_scheduler,
-)
+from .bootstrap.config import load_config
+from .event import Event, EventError, EventType, parse_event
 from .graph_adapter import IGraphAdapter
-from .rbac_adapter import RoleBasedGraphAdapter, AccessDeniedError
-from .permissions_adapter import PermissionsGraphAdapter
-from .plugins.alignment import PolicyViolationError
-from .processing import apply_event_to_graph, ProcessingError
-from .audit import log_audit_entry, get_audit_entries
-from .snapshot import (
-    snapshot_graph_to_file,
-    load_graph_from_file,
-    load_graph_into_existing,
-    SnapshotError,
-)
-from .schema_utils import validate_event_dict
-from .graph_schema import GraphSchema, load_default_schema
-from .schema_manager import GraphSchemaManager, DEFAULT_SCHEMA_MANAGER
-from .utils import ssl_config
-from .memory import EpisodicMemory, SemanticMemory, ColdMemory
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:  # pragma: no cover - used for type hints only
-    from .vector_store import (
-        VectorBackend,
-        VectorStore,
-        VectorStoreListener,
-        create_default_store,
-    )
-    from .vector_backends import FaissBackend, ChromaBackend
-else:  # pragma: no cover - optional dependency
-    (
-        VectorBackend,
-        VectorStore,
-        VectorStoreListener,
-        create_default_store,
-        FaissBackend,
-        ChromaBackend,
-    ) = load_vector_modules(__name__)
-
-
-from .llm_ferry import LLMFerry
-from .dag_executor import DAGExecutor, Task
-from .agent_orchestrator import (
-    AgentOrchestrator,
-    Supervisor,
-    Critic,
-    AgentTask,
-    ReflectionAgent,
-)
-from .message_bus import MessageEnvelope
-from .factories import create_graph_adapter, create_vector_store
-from .resources import (
-    create_graph,
-    graph_factory,
-    vector_store_factory,
-)
-
-from .dag_service import DAGService
-from .resource_scheduler import ResourceScheduler, ScheduledTask
-from .dossier import Dossier
-from .dossier.scheduler import (
-    start_dossier_snapshot_scheduler,
-    stop_dossier_snapshot_scheduler,
-)
-from .tokenization import tokenize
-
-# Import the API lazily via __getattr__ to avoid circular imports during
-# initialization. The ``api`` module will be loaded on first attribute access.
-from .reliability import score_text, filter_low_confidence  # noqa: E402
-from ._internal.listeners import register_listener  # noqa: E402
-
-generate_embedding, OntologyListener, configure_ontology_graph = load_embedding(
-    __name__, register_listener
-)
-
+# Load only configuration by default. Optional runtimes are initialized via
+# ``ume.bootstrap.runtime.bootstrap_runtime`` in application entry points.
+config, Settings = load_config(__name__)
 
 __all__ = [
     "Event",
-    "EventType",
-    "parse_event",
     "EventError",
-    "MockGraph",
-    "PersistentGraph",
-    "PostgresGraph",
-    "RedisGraphAdapter",
-    "ArangoGraph",
-    "Neo4jGraph",
+    "EventType",
     "IGraphAdapter",
-    "RoleBasedGraphAdapter",
-    "PermissionsGraphAdapter",
-    "AccessDeniedError",
-    "apply_event_to_graph",
-    "ProcessingError",
-    "snapshot_graph_to_file",
-    "load_graph_from_file",
-    "load_graph_into_existing",
-    "SnapshotError",
-    "enable_snapshot_autosave_and_restore",
-    "enable_periodic_snapshot",
-    "disable_periodic_snapshot",
-    "start_retention_scheduler",
-    "stop_retention_scheduler",
-    "start_memory_aging_scheduler",
-    "stop_memory_aging_scheduler",
-    "start_vector_age_scheduler",
-    "stop_vector_age_scheduler",
-    "start_ledger_compaction_scheduler",
-    "stop_ledger_compaction_scheduler",
-    "start_dossier_snapshot_scheduler",
-    "stop_dossier_snapshot_scheduler",
-    "validate_event_dict",
-    "GraphSchema",
-    "load_default_schema",
-    "GraphSchemaManager",
-    "DEFAULT_SCHEMA_MANAGER",
-    "PolicyViolationError",
     "Settings",
     "config",
-    "log_audit_entry",
-    "get_audit_entries",
-    "ssl_config",
-    "create_graph_adapter",
-    "create_graph",
-    "create_vector_store",
-    "graph_factory",
-    "vector_store_factory",
-
-    "EpisodicMemory",
-    "SemanticMemory",
-    "ColdMemory",
-
-    "LLMFerry",
-
-    "score_text",
-    "filter_low_confidence",
-
-    "generate_embedding",
-    "configure_ontology_graph",
-    "OntologyListener",
-    "AgentTask",
-    "AgentOrchestrator",
-    "Supervisor",
-    "Critic",
-    "MessageEnvelope",
-    "ReflectionAgent",
-    "Task",
-    "DAGExecutor",
-    "DAGService",
-    "ResourceScheduler",
-    "ScheduledTask",
-    "Dossier",
-    "tokenize",
-
-
+    "parse_event",
 ]
 
-# Lazily import selected submodules on first access to avoid import-time side
-# effects when environment variables are not yet configured.
+_RUNTIME_EXPORTS = {
+    "Neo4jGraph",
+    "VectorBackend",
+    "VectorStore",
+    "VectorStoreListener",
+    "create_default_store",
+    "FaissBackend",
+    "ChromaBackend",
+    "generate_embedding",
+    "OntologyListener",
+    "configure_ontology_graph",
+}
+
+_COMPAT_EXPORTS: dict[str, tuple[str, str]] = {
+    "MockGraph": ("ume.graph", "MockGraph"),
+    "PersistentGraph": ("ume.persistent_graph", "PersistentGraph"),
+    "PostgresGraph": ("ume.postgres_graph", "PostgresGraph"),
+    "RedisGraphAdapter": ("ume.redis_graph_adapter", "RedisGraphAdapter"),
+    "ArangoGraph": ("ume.arango_graph", "ArangoGraph"),
+    "enable_periodic_snapshot": ("ume.auto_snapshot", "enable_periodic_snapshot"),
+    "disable_periodic_snapshot": ("ume.auto_snapshot", "disable_periodic_snapshot"),
+    "enable_snapshot_autosave_and_restore": (
+        "ume.auto_snapshot",
+        "enable_snapshot_autosave_and_restore",
+    ),
+    "start_retention_scheduler": ("ume.retention", "start_retention_scheduler"),
+    "stop_retention_scheduler": ("ume.retention", "stop_retention_scheduler"),
+    "start_ledger_compaction_scheduler": (
+        "ume.retention",
+        "start_ledger_compaction_scheduler",
+    ),
+    "stop_ledger_compaction_scheduler": (
+        "ume.retention",
+        "stop_ledger_compaction_scheduler",
+    ),
+    "start_memory_aging_scheduler": (
+        "ume.memory_aging",
+        "start_memory_aging_scheduler",
+    ),
+    "stop_memory_aging_scheduler": ("ume.memory_aging", "stop_memory_aging_scheduler"),
+    "start_vector_age_scheduler": ("ume.memory_aging", "start_vector_age_scheduler"),
+    "stop_vector_age_scheduler": ("ume.memory_aging", "stop_vector_age_scheduler"),
+    "RoleBasedGraphAdapter": ("ume.rbac_adapter", "RoleBasedGraphAdapter"),
+    "AccessDeniedError": ("ume.rbac_adapter", "AccessDeniedError"),
+    "PermissionsGraphAdapter": ("ume.permissions_adapter", "PermissionsGraphAdapter"),
+    "PolicyViolationError": ("ume.plugins.alignment", "PolicyViolationError"),
+    "apply_event_to_graph": ("ume.processing", "apply_event_to_graph"),
+    "ProcessingError": ("ume.processing", "ProcessingError"),
+    "log_audit_entry": ("ume.audit", "log_audit_entry"),
+    "get_audit_entries": ("ume.audit", "get_audit_entries"),
+    "snapshot_graph_to_file": ("ume.snapshot", "snapshot_graph_to_file"),
+    "load_graph_from_file": ("ume.snapshot", "load_graph_from_file"),
+    "load_graph_into_existing": ("ume.snapshot", "load_graph_into_existing"),
+    "SnapshotError": ("ume.snapshot", "SnapshotError"),
+    "validate_event_dict": ("ume.schema_utils", "validate_event_dict"),
+    "GraphSchema": ("ume.graph_schema", "GraphSchema"),
+    "load_default_schema": ("ume.graph_schema", "load_default_schema"),
+    "GraphSchemaManager": ("ume.schema_manager", "GraphSchemaManager"),
+    "DEFAULT_SCHEMA_MANAGER": ("ume.schema_manager", "DEFAULT_SCHEMA_MANAGER"),
+    "ssl_config": ("ume.utils", "ssl_config"),
+    "EpisodicMemory": ("ume.memory", "EpisodicMemory"),
+    "SemanticMemory": ("ume.memory", "SemanticMemory"),
+    "ColdMemory": ("ume.memory", "ColdMemory"),
+    "LLMFerry": ("ume.llm_ferry", "LLMFerry"),
+    "score_text": ("ume.reliability", "score_text"),
+    "filter_low_confidence": ("ume.reliability", "filter_low_confidence"),
+    "AgentTask": ("ume.agent_orchestrator", "AgentTask"),
+    "AgentOrchestrator": ("ume.agent_orchestrator", "AgentOrchestrator"),
+    "Supervisor": ("ume.agent_orchestrator", "Supervisor"),
+    "Critic": ("ume.agent_orchestrator", "Critic"),
+    "MessageEnvelope": ("ume.message_bus", "MessageEnvelope"),
+    "ReflectionAgent": ("ume.agent_orchestrator", "ReflectionAgent"),
+    "Task": ("ume.dag_executor", "Task"),
+    "DAGExecutor": ("ume.dag_executor", "DAGExecutor"),
+    "DAGService": ("ume.dag_service", "DAGService"),
+    "ResourceScheduler": ("ume.resource_scheduler", "ResourceScheduler"),
+    "ScheduledTask": ("ume.resource_scheduler", "ScheduledTask"),
+    "Dossier": ("ume.dossier", "Dossier"),
+    "tokenize": ("ume.tokenization", "tokenize"),
+    "create_graph_adapter": ("ume.factories", "create_graph_adapter"),
+    "create_vector_store": ("ume.factories", "create_vector_store"),
+    "create_graph": ("ume.resources", "create_graph"),
+    "graph_factory": ("ume.resources", "graph_factory"),
+    "vector_store_factory": ("ume.resources", "vector_store_factory"),
+    "start_dossier_snapshot_scheduler": (
+        "ume.dossier.scheduler",
+        "start_dossier_snapshot_scheduler",
+    ),
+    "stop_dossier_snapshot_scheduler": (
+        "ume.dossier.scheduler",
+        "stop_dossier_snapshot_scheduler",
+    ),
+}
+
 _KNOWN_SUBMODULES = {
     "audit",
     "config",
@@ -214,11 +134,36 @@ _KNOWN_SUBMODULES = {
     "dossier",
 }
 
-def __getattr__(name: str) -> object:  # pragma: no cover - thin wrapper
-    if name in _KNOWN_SUBMODULES:
-        from importlib import import_module
 
+def __getattr__(name: str) -> object:
+    if name in _KNOWN_SUBMODULES:
         module = import_module(f"{__name__}.{name}")
         globals()[name] = module
         return module
+
+    if name in _RUNTIME_EXPORTS:
+        from .bootstrap.runtime import bootstrap_runtime
+
+        warnings.warn(
+            f"ume.{name} now requires explicit runtime bootstrap; falling back to "
+            "compatibility shim. Call ume.bootstrap.runtime.bootstrap_runtime() "
+            "from service entry points.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        runtime_exports = bootstrap_runtime(__name__)
+        return runtime_exports[name]
+
+    if name in _COMPAT_EXPORTS:
+        mod_name, attr = _COMPAT_EXPORTS[name]
+        warnings.warn(
+            f"ume.{name} is a compatibility export and will move to its module "
+            f"('{mod_name}.{attr}').",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        value: Any = getattr(import_module(mod_name), attr)
+        globals()[name] = value
+        return value
+
     raise AttributeError(name)

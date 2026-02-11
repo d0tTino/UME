@@ -35,6 +35,24 @@ The engine is built from a few key components:
   - Maintains the knowledge graph and forwards embeddings to the vector store.
   - The graph can be rebuilt from the ledger using `ume replay-graph`.
 
+## Runtime Initialization (Explicit Bootstrap)
+
+UME now keeps `import ume` lightweight and side-effect-safe. Optional integrations
+(vector backends, embedding listeners, plugin/runtime loaders, optional graph
+backends) are initialized explicitly in service entry points.
+
+```python
+from ume.bootstrap.runtime import bootstrap_runtime
+
+bootstrap_runtime("ume")
+```
+
+Use this in long-running entry points such as `ume_cli.py` and API services
+before creating graph/vector resources. Legacy top-level exports are still
+available through temporary deprecation shims, but new code should import
+concrete modules directly (for example, `ume.vector_store` or
+`ume.factories`).
+
 ### Event Flow
 ```
 Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-events

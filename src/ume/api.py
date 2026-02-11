@@ -21,6 +21,7 @@ except Exception:  # pragma: no cover - tests may run without limiter
 
             return None
 
+from .bootstrap.runtime import bootstrap_runtime
 from .config import settings
 from .logging_utils import configure_logging
 from .tracing import configure_tracing, is_tracing_enabled
@@ -49,8 +50,8 @@ from .retention import (
 
 from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter  # noqa: F401
-from . import VectorStore, create_vector_store  # noqa: F401
 from .vector_store import VectorStoreListener
+from .factories import create_vector_store
 from ._internal.listeners import register_listener, unregister_listener
 
 
@@ -97,6 +98,7 @@ _vector_listener: VectorStoreListener | None = None
 
 logger = logging.getLogger(__name__)
 
+bootstrap_runtime(__package__ or "ume")
 configure_logging()
 configure_tracing()
 

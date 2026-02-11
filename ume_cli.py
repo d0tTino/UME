@@ -17,6 +17,7 @@ if _src_path.exists() and str(_src_path) not in sys.path:
 from ume.logging_utils import configure_logging
 from ume.config import settings
 import ume
+from ume.bootstrap.runtime import bootstrap_runtime
 from ume.cli.compose import (
     _compose_down,
     _compose_ps,
@@ -51,6 +52,9 @@ def _replay_graph(db_path: str | None, end_offset: int | None) -> None:
 
 # Detect if a lightweight stub was injected for testing.
 _UME_STUB = not hasattr(ume, "__file__")
+
+if not _UME_STUB:
+    bootstrap_runtime("ume")
 
 
 def _cleanup_stub() -> None:
