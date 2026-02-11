@@ -15,6 +15,7 @@ import time
 from confluent_kafka import Producer, KafkaException, Message
 from ume import Event
 from ume.schema_utils import validate_event_dict
+from ume.events.contract import canonicalize_event, canonical_to_camel_dict
 from jsonschema import ValidationError
 
 configure_logging()
@@ -59,13 +60,17 @@ def main() -> None:
     )
 
     # Convert Event object to dict for JSON serialization
-    data_dict = {
-        "eventId": event_to_send.event_id,
-        "eventType": event_to_send.event_type,
-        "timestamp": event_to_send.timestamp,
-        "payload": event_to_send.payload,
-        "sourceService": event_to_send.source,
-    }
+    data_dict = canonical_to_camel_dict(
+        canonicalize_event(
+            {
+                "event_id": event_to_send.event_id,
+                "event_type": event_to_send.event_type,
+                "timestamp": event_to_send.timestamp,
+                "payload": event_to_send.payload,
+                "source": event_to_send.source,
+            }
+        )
+    )
 
     try:
         validate_event_dict(data_dict)

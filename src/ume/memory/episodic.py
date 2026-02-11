@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional, Any, List
 
 from ..event import Event, parse_event
+from ..events.contract import canonicalize_event
 from ..processing import apply_event_to_graph
 from ..persistent_graph import PersistentGraph
 from ..snapshot import snapshot_graph_to_file, load_graph_from_file
@@ -66,7 +67,7 @@ class EpisodicMemory:
                 if not line:
                     continue
                 data = json.loads(line)
-                evt = parse_event(data)
+                evt = parse_event(canonicalize_event(data))
                 apply_event_to_graph(evt, self.graph)
 
     def _replay_logs(self) -> None:

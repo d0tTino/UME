@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 from .persistent_graph import PersistentGraph
 from .processing import ProcessingError, DEFAULT_VERSION
 from .event import Event, EventType, parse_event
+from .events.contract import canonicalize_event
 from ._internal.listeners import get_registered_listeners
 from .plugins.alignment import get_plugins
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
@@ -234,7 +235,7 @@ async def ingest_event_async(
     else:
         event_dict = data
         detected_version = cast(str | None, data.get("schema_version"))
-    event = parse_event(event_dict)
+    event = parse_event(canonicalize_event(event_dict))
     effective_version = schema_version or detected_version or DEFAULT_VERSION
     await apply_event_to_async_graph(event, graph, schema_version=effective_version)
 

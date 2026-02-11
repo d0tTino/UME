@@ -8,6 +8,7 @@ from google.protobuf.json_format import MessageToDict
 from ume_client import events_pb2 as _events_pb2
 from google.protobuf import struct_pb2
 from ..event import Event, EventError, EventType, parse_event
+from ..events.contract import canonicalize_event, canonical_to_legacy_dict
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
@@ -36,19 +37,9 @@ __all__ = [
 ]
 
 
-def _unwrap_envelope(data: Dict[str, Any]) -> tuple[Dict[str, Any], str | None]:
-    """Return the canonical event dictionary and optional schema version."""
-
-    if "event" in data and isinstance(data["event"], dict):
-        return cast(Dict[str, Any], data["event"]), cast(
-            str | None, data.get("schema_version")
-        )
-    return data, cast(str | None, data.get("schema_version"))
-
-
 def validate_event(data: Dict[str, Any]) -> Event:
-    """Parse ``data`` into an :class:`~ume.event.Event`."""
-    return parse_event(data)
+    """Canonicalize and parse incoming transport data into :class:`~ume.event.Event`."""
+    return parse_event(canonicalize_event(data))
 
 
 def apply_event(
@@ -81,12 +72,13 @@ def ingest_event(
     data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
-    unwrapped_event_data, envelope_version = _unwrap_envelope(data)
+    canonical = canonicalize_event(data)
+    metadata = canonical["metadata"]
+    unwrapped_event_data = canonical_to_legacy_dict(canonical)
+    envelope_version = metadata.get("schema_version")
     explicit_version = _normalize_schema_version(schema_version)
     normalized_envelope_version = _normalize_schema_version(envelope_version)
-    normalized_payload_version = _normalize_schema_version(
-        unwrapped_event_data.get("schema_version")
-    )
+    normalized_payload_version = _normalize_schema_version(unwrapped_event_data.get("schema_version"))
     detected_version = normalized_envelope_version or normalized_payload_version
     effective_version = (
         explicit_version
@@ -95,7 +87,7 @@ def ingest_event(
         or DEFAULT_VERSION
     )
 
-    event = validate_event(unwrapped_event_data)
+    event = parse_event(canonical)
 
     tag_results = classify_event(event)
     event.payload["classification"] = [
@@ -149,8 +141,9 @@ def ingest_events_batch(
 
 def dict_to_envelope(data: Dict[str, Any]) -> Any:
     """Convert a raw event dictionary to :class:`~ume_client.events_pb2.EventEnvelope`."""
-    evt = validate_event(data)
-    schema_version = _normalize_schema_version(data.get("schema_version"))
+    canonical = canonicalize_event(data)
+    evt = parse_event(canonical)
+    schema_version = _normalize_schema_version(canonical["metadata"].get("schema_version"))
     if not schema_version:
         schema_version = _fallback_schema_version()
     struct_payload = struct_pb2.Struct()

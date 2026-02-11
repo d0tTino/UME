@@ -2,8 +2,13 @@
 import pytest
 from datetime import datetime, timezone
 from ume import Event, EventType, parse_event, EventError  # EventType constants
+from ume.events.contract import canonicalize_event
 
 ISO_TS = datetime.now(timezone.utc).isoformat()
+
+
+def _parse_event_contract(data):
+    return parse_event(canonicalize_event(data))
 
 
 def test_parse_event_valid():
@@ -18,7 +23,7 @@ def test_parse_event_valid():
         "correlationId": "c123",
         "subjectEntity": {"id": "u1", "type": "user"},
     }
-    event = parse_event(event_data)
+    event = _parse_event_contract(event_data)
     assert isinstance(event, Event)
     assert event.event_id == "test-id-123"
     assert event.event_type == "test_event"
@@ -37,7 +42,7 @@ def test_parse_event_minimal_valid():
         "timestamp": ts.isoformat(),
         "payload": {"data": "minimal_data"},
     }
-    event = parse_event(event_data)
+    event = _parse_event_contract(event_data)
     assert isinstance(event, Event)
     assert event.event_type == "minimal_event"
     assert event.timestamp == int(ts.timestamp())
@@ -58,7 +63,7 @@ def test_parse_event_custom_type():
         "timestamp": ts.isoformat(),
         "payload": {"archive": True},
     }
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.event_type == "document.artifact.archived"
     assert event.payload == {"archive": True}
 
@@ -67,7 +72,7 @@ def test_parse_event_custom_type_minimal():
     """Unknown event types should parse with minimal required fields."""
     ts = datetime.now(timezone.utc)
     data = {"eventType": "document.artifact.archived", "timestamp": ts.isoformat()}
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.event_type == "document.artifact.archived"
     assert event.timestamp == int(ts.timestamp())
     assert event.payload == {}
@@ -77,7 +82,7 @@ def test_parse_event_timestamp_iso8601():
     """Parsing accepts ISO 8601 timestamp strings."""
     ts = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     data = {"eventType": "test", "timestamp": ts.isoformat(), "payload": {}}
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.timestamp == int(ts.timestamp())
 
 
@@ -86,7 +91,7 @@ def test_parse_event_timestamp_iso8601_z():
     ts = datetime(2024, 5, 6, 7, 8, 9, tzinfo=timezone.utc)
     iso_z = ts.isoformat().replace("+00:00", "Z")
     data = {"eventType": "test", "timestamp": iso_z, "payload": {}}
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.timestamp == int(ts.timestamp())
 
 
@@ -108,7 +113,7 @@ def test_parse_event_valid_edge_events(event_type: EventType, extra_data: dict):
         **extra_data,  # Adds target_node_id and label
         # payload is optional for these, parse_event defaults to {}
     }
-    event = parse_event(event_data)
+    event = _parse_event_contract(event_data)
     assert isinstance(event, Event)
     assert event.event_type == event_type
     assert event.timestamp == int(ts.timestamp())
@@ -126,7 +131,7 @@ def test_parse_event_research_job_started() -> None:
         "node_id": "job1",
         "payload": {"node_id": "job1", "attributes": {"status": "started"}},
     }
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.event_type == EventType.RESEARCH_JOB_STARTED
     assert event.node_id == "job1"
     assert event.payload == {"node_id": "job1", "attributes": {"status": "started"}}
@@ -141,7 +146,7 @@ def test_parse_event_data_source_queried() -> None:
         "target_node_id": "ds1",
         "label": "QUERIED",
     }
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.event_type == EventType.DATA_SOURCE_QUERIED
     assert event.node_id == "job1"
     assert event.target_node_id == "ds1"
@@ -159,7 +164,7 @@ def test_parse_event_entity_discovered() -> None:
         "label": "DISCOVERED",
         "payload": {"attributes": {"name": "E1"}},
     }
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.event_type == EventType.ENTITY_DISCOVERED
     assert event.node_id == "job1"
     assert event.target_node_id == "ent1"
@@ -175,7 +180,7 @@ def test_parse_event_document_archived() -> None:
         "node_id": "doc1",
         "payload": {"node_id": "doc1", "attributes": {"archived": True}},
     }
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.event_type == EventType.DOCUMENT_ARCHIVED
     assert event.node_id == "doc1"
     assert event.payload == {"node_id": "doc1", "attributes": {"archived": True}}
@@ -196,7 +201,7 @@ def test_parse_event_node_id_top_level_canonical_shape(event_type: EventType) ->
         "node_id": "n1",
         "payload": payload,
     }
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.node_id == "n1"
 
 
@@ -213,7 +218,7 @@ def test_parse_event_node_id_payload_backward_compat(event_type: EventType) -> N
         "timestamp": ts.isoformat(),
         "payload": {"node_id": "legacy1", "attributes": {"name": "legacy"}},
     }
-    event = parse_event(data)
+    event = _parse_event_contract(data)
     assert event.node_id == "legacy1"
 
 
@@ -226,7 +231,7 @@ def test_parse_event_node_id_conflict_rejected() -> None:
         "payload": {"node_id": "n2", "attributes": {}},
     }
     with pytest.raises(EventError, match="Conflicting node_id values"):
-        parse_event(data)
+        _parse_event_contract(data)
 
 
 # The following tests are now covered by test_parse_event_invalid_inputs:
@@ -515,7 +520,7 @@ def test_parse_event_invalid_inputs(bad_input: dict, expected_message_part: str)
     expecting an EventError.
     """
     with pytest.raises(EventError) as excinfo:
-        parse_event(bad_input)
+        _parse_event_contract(bad_input)
     assert expected_message_part in str(excinfo.value)
 
 
@@ -533,7 +538,7 @@ def test_parse_event_logs_error(caplog):
     """Ensure parse_event logs an error when required fields are missing."""
     with caplog.at_level("ERROR"):
         with pytest.raises(EventError):
-            parse_event({})
+            _parse_event_contract({})
         assert any(
             "Missing required event field: eventType" in rec.message
             for rec in caplog.records

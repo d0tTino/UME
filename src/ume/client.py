@@ -12,6 +12,7 @@ from jsonschema import ValidationError
 from .config import Settings
 
 from .event import Event, EventError, parse_event, EventType
+from .events.contract import canonicalize_event
 from .schema_utils import validate_event_dict
 from .processing import DEFAULT_VERSION
 from .proto import events_pb2
@@ -143,7 +144,7 @@ class UMEClient:
                     else:
                         payload["embedding"] = generate_embedding(" ".join(text_values))
             try:
-                event = parse_event(event_dict)
+                event = parse_event(canonicalize_event(event_dict))
             except EventError as exc:
                 logger.warning("Invalid event received: %s", exc)
                 continue

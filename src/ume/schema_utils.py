@@ -7,6 +7,8 @@ from importlib import resources
 from typing import Any, Dict
 from packaging.version import Version, InvalidVersion
 
+from .events.contract import canonicalize_event, canonical_to_camel_dict
+
 from jsonschema import validate, ValidationError
 
 
@@ -60,28 +62,21 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
 
 
 def validate_event_dict(event_data: Dict[str, Any]) -> None:
-    """Validate a raw event dictionary or envelope against its JSON schema.
+    """Validate transport event data after normalizing to canonical contract."""
+    canonical = canonicalize_event(event_data)
+    normalized = canonical_to_camel_dict(canonical)
 
-    The function first validates the event against the canonical event schema,
-    ensuring common fields like ``eventId`` and ``sourceService`` conform before
-    applying the event-type specific schema. Updated schemas include optional
-    ``correlationId``, ``subjectEntity`` and ``sourceService`` fields which will
-    also be validated when present.
-    """
-    if "event" in event_data and "schema_version" in event_data:
-        validate(instance=event_data, schema=_load_envelope_schema())
-        version = event_data["schema_version"]
+    schema_version = canonical["metadata"].get("schema_version")
+    if schema_version is not None:
         try:
-            Version(version)
+            Version(str(schema_version))
         except InvalidVersion as exc:
             raise ValidationError("invalid schema_version") from exc
-        event_data = event_data["event"]
 
-    # Validate canonical event fields before type-specific validation
-    validate(instance=event_data, schema=_load_canonical_schema())
+    validate(instance=normalized, schema=_load_canonical_schema())
 
-    event_type = event_data.get("eventType")
+    event_type = normalized.get("eventType")
     if not isinstance(event_type, str):
         raise ValidationError("eventType missing or not a string")
     schema = _load_schema(event_type)
-    validate(instance=event_data, schema=schema)
+    validate(instance=normalized, schema=schema)
