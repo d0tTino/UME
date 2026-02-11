@@ -33,6 +33,16 @@ If you find a bug or have an idea for a new feature, please check our issue trac
     ```
 6.  **Submit a Pull Request (PR):** Open a pull request from your branch to the main UME repository. Provide a clear description of your changes in the PR.
 
+### Runtime bootstrap expectations
+
+- Keep `import ume` side-effect minimal (core API/types only).
+- Entry points (CLI, API servers, workers) must call
+  `ume.bootstrap.runtime.bootstrap_runtime("ume")` before using optional
+  integrations such as vector backends, embedding listeners, plugin loaders, or
+  optional graph adapters.
+- Compatibility re-exports in `ume.__init__` are temporary deprecation shims;
+  prefer direct module imports in new contributions.
+
 ### Coding Style
 
 - **Black** is used for code formatting. Run `black` on your changes before committing.
