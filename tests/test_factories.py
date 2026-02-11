@@ -82,11 +82,21 @@ class DummyTracing:
 def test_create_graph_adapter_with_role_and_tracing(monkeypatch: pytest.MonkeyPatch) -> None:
     created: dict[str, object] = {}
 
-    def dummy_persistent(path: str) -> DummyGraph:
+    def dummy_constructor(path: str | None) -> DummyGraph:
         created["path"] = path
         return DummyGraph()
 
-    monkeypatch.setattr(factories, "PersistentGraph", dummy_persistent)
+    monkeypatch.setattr(factories, "register_builtin_graph_backends", lambda: None)
+    monkeypatch.setattr(
+        factories,
+        "ensure_external_graph_backends_discovered",
+        lambda module_paths=(): None,
+    )
+    monkeypatch.setattr(
+        factories,
+        "create_registered_graph_adapter",
+        lambda backend, db_path, default=None: dummy_constructor(db_path),
+    )
     monkeypatch.setattr(factories, "TracingGraphAdapter", DummyTracing)
     monkeypatch.setattr(factories, "is_tracing_enabled", lambda: True)
 

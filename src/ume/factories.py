@@ -1,27 +1,21 @@
 from __future__ import annotations
 
+from .adapters.bootstrap import register_builtin_graph_backends
+from .adapters.registry import create_registered_graph_adapter, ensure_external_graph_backends_discovered
 from .config import settings
-from .persistent_graph import PersistentGraph
-from .postgres_graph import PostgresGraph
-from .redis_graph_adapter import RedisGraphAdapter
-from .arango_graph import ArangoGraph
 from .rbac_adapter import RoleBasedGraphAdapter
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:  # pragma: no cover - for optional dependency hints
-    from .neo4j_graph import Neo4jGraph
-else:  # pragma: no cover - optional dependency
-    try:
-        from .neo4j_graph import Neo4jGraph
-    except Exception:
-        class Neo4jGraph:
-            def __init__(self, *_: object, **__: object) -> None:
-                raise ImportError("neo4j is required for Neo4jGraph")
 from .vector_store import VectorBackend, create_vector_store as _create_vector_store
 from .memory import EpisodicMemory, SemanticMemory
 
 from .graph_adapter import IGraphAdapter
 from .tracing import TracingGraphAdapter, is_tracing_enabled
+
+
+def _configured_adapter_modules() -> list[str]:
+    raw = settings.UME_GRAPH_ADAPTER_MODULES
+    if not raw:
+        return []
+    return [item.strip() for item in raw.split(",") if item.strip()]
 
 
 def create_graph_adapter(
@@ -30,27 +24,10 @@ def create_graph_adapter(
     role: str | None = None,
 ) -> IGraphAdapter:
     """Create the default :class:`IGraphAdapter` using configuration settings."""
+    register_builtin_graph_backends()
+    ensure_external_graph_backends_discovered(module_paths=_configured_adapter_modules())
     backend = settings.UME_GRAPH_BACKEND.lower()
-    base: IGraphAdapter
-    if backend == "postgres":
-        base = PostgresGraph(db_path or settings.UME_DB_PATH)
-    elif backend == "redis":
-        base = RedisGraphAdapter(db_path or settings.UME_DB_PATH)
-    elif backend == "arango":
-        base = ArangoGraph(
-            settings.ARANGO_URL,
-            settings.ARANGO_USER,
-            settings.ARANGO_PASSWORD,
-            db_name=settings.ARANGO_DB_NAME,
-        )
-    elif backend == "neo4j":
-        base = Neo4jGraph(
-            settings.NEO4J_URI,
-            settings.NEO4J_USER,
-            settings.NEO4J_PASSWORD,
-        )
-    else:
-        base = PersistentGraph(db_path or settings.UME_DB_PATH)
+    base = create_registered_graph_adapter(backend, db_path, default="persistent")
     if is_tracing_enabled():
         base = TracingGraphAdapter(base)
     role = role if role is not None else settings.UME_ROLE
