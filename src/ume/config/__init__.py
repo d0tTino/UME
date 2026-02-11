@@ -77,6 +77,8 @@ class Settings(BaseSettings):  # type: ignore[misc]
     KAFKA_QUARANTINE_TOPIC: str = "ume-quarantine-events"
     KAFKA_EDGE_TOPIC: str = "ume_edges"
     KAFKA_NODE_TOPIC: str = "ume_nodes"
+    KAFKA_ROUTING_FALLBACK_TOPIC: str = "ume-misc-events"
+    KAFKA_ROUTING_DEAD_LETTER_TOPIC: str = "ume-dead-letter-events"
     KAFKA_GROUP_ID: str = "ume_client_group"
     KAFKA_PRIVACY_AGENT_GROUP_ID: str = "ume-privacy-agent-group"
     # Number of messages to batch before calling `Producer.flush()` in the privacy agent
