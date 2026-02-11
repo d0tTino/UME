@@ -64,6 +64,8 @@ faust:
   input_topic: "ume-clean-events"
   edge_topic: "ume_edges"
   node_topic: "ume_nodes"
+  fallback_topic: "ume-misc-events"
+  dead_letter_topic: "ume-dead-letter-events"
 ```
 
 ## Environment Variables
@@ -118,6 +120,8 @@ is enabled.
 | `KAFKA_QUARANTINE_TOPIC` | `ume-quarantine-events` | Topic for rejected events. |
 | `KAFKA_EDGE_TOPIC` | `ume_edges` | Topic for processed edges. |
 | `KAFKA_NODE_TOPIC` | `ume_nodes` | Topic for processed nodes. |
+| `KAFKA_ROUTING_FALLBACK_TOPIC` | `ume-misc-events` | Fallback topic for unknown/custom events without an explicit schema topic. |
+| `KAFKA_ROUTING_DEAD_LETTER_TOPIC` | `ume-dead-letter-events` | Dead-letter topic for policy-denied events. |
 | `KAFKA_GROUP_ID` | `ume_client_group` | Consumer group for demos and stream processors. |
 | `KAFKA_PRIVACY_AGENT_GROUP_ID` | `ume-privacy-agent-group` | Consumer group for the privacy agent. |
 | `KAFKA_PRODUCER_BATCH_SIZE` | `10` | Number of messages before producer flush. |
