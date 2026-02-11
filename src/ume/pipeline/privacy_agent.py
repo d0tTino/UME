@@ -18,6 +18,7 @@ from ..config import settings
 from ..schema_utils import validate_event_dict
 from ..audit import log_audit_entry
 from ..event import parse_event, EventError
+from ..events.contract import canonicalize_event
 from ..consent_ledger import consent_ledger
 from ..event_ledger import event_ledger
 from ..plugins.alignment import load_plugins, get_plugins, PolicyViolationError
@@ -121,7 +122,7 @@ def run_privacy_agent() -> None:
                 continue
 
             try:
-                event = parse_event(data)
+                event = parse_event(canonicalize_event(data))
             except EventError as exc:
                 logger.error("Failed to parse event: %s", exc)
                 try:

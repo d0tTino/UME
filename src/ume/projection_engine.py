@@ -9,7 +9,8 @@ from confluent_kafka import Consumer, KafkaError, KafkaException
 
 from .config import settings
 from .utils import ssl_config, event_to_snake
-from .event import parse_event, EventError, EventType
+from .event import parse_event, EventError
+from .events.contract import canonicalize_event, EventType
 from .processing import apply_event_to_graph, ProcessingError
 from .graph_adapter import IGraphAdapter
 from .logging_utils import configure_logging
@@ -66,7 +67,7 @@ def run_projection_engine(
             try:
                 data_camel = json.loads(msg.value().decode("utf-8"))
                 data = event_to_snake(data_camel)
-                event = parse_event(data)
+                event = parse_event(canonicalize_event(data))
             except (json.JSONDecodeError, EventError) as exc:
                 logger.error("Invalid event skipped: %s", exc)
                 continue

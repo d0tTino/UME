@@ -4,6 +4,7 @@ import os
 from fastapi import HTTPException
 
 from .graph_adapter import IGraphAdapter
+from .events.contract import canonicalize_event, canonical_to_camel_dict, canonical_to_legacy_dict
 
 
 def ssl_config() -> Dict[str, str]:
@@ -57,37 +58,13 @@ def ensure_group_member(
 # ----------------------------------------------------------------------------
 # Event field conversion helpers
 
-_CAMEL_TO_SNAKE = {
-    "eventId": "event_id",
-    "eventType": "event_type",
-    "nodeId": "node_id",
-    "targetNodeId": "target_node_id",
-    "schemaVersion": "schema_version",
-}
-
-_SNAKE_TO_CAMEL = {v: k for k, v in _CAMEL_TO_SNAKE.items()}
 
 
 def event_to_snake(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Return a copy of ``data`` with camelCase fields converted to snake_case."""
-    out: Dict[str, Any] = {}
-    for key, value in data.items():
-        if key == "event" and isinstance(value, dict):
-            out[key] = event_to_snake(value)
-            continue
-        out[_CAMEL_TO_SNAKE.get(key, key)] = value
-    return out
+    """Return a flat snake_case event dictionary."""
+    return canonical_to_legacy_dict(canonicalize_event(data))
 
 
 def event_to_camel(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Return a copy of ``data`` with snake_case fields converted to camelCase."""
-    out: Dict[str, Any] = {}
-    for key, value in data.items():
-        if key == "event" and isinstance(value, dict):
-            out[key] = event_to_camel(value)
-            continue
-        out[_SNAKE_TO_CAMEL.get(key, key)] = value
-    return out
-
-
-
+    """Return a flat camelCase event dictionary."""
+    return canonical_to_camel_dict(canonicalize_event(data))

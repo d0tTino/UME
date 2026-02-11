@@ -9,8 +9,9 @@ from confluent_kafka import Consumer, KafkaException, KafkaError
 from jsonschema import ValidationError
 
 from ..config import settings
-from ..utils import ssl_config, event_to_snake, event_to_camel
+from ..utils import ssl_config
 from ..event import parse_event, EventError, EventType
+from ..events.contract import canonicalize_event, canonical_to_camel_dict
 from ..processing import apply_event_to_graph, ProcessingError
 from ..schema_utils import validate_event_dict
 from ..event_ledger import event_ledger
@@ -76,10 +77,9 @@ def run_graph_consumer(
                 continue
 
             try:
-                data_camel = json.loads(msg.value().decode("utf-8"))
-                data = event_to_snake(data_camel)
-                payload = data["event"] if "event" in data else data
-                event = parse_event(payload)
+                data_transport = json.loads(msg.value().decode("utf-8"))
+                canonical = canonicalize_event(data_transport)
+                event = parse_event(canonical)
             except (json.JSONDecodeError, EventError) as exc:
                 logger.error("Invalid event skipped: %s", exc)
                 continue
@@ -91,7 +91,7 @@ def run_graph_consumer(
                         "timestamp": event.timestamp,
                         "payload": event.payload,
                     }
-                    event_ledger.append(msg.offset(), event_to_camel(event_dict))
+                    event_ledger.append(msg.offset(), canonical_to_camel_dict(canonicalize_event(event_dict)))
                 except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
                     logger.error("Ledger append failed: %s", exc)
                 try:
@@ -101,9 +101,7 @@ def run_graph_consumer(
                 logger.warning("Unknown event type '%s' skipped", event.event_type)
                 continue
 
-            validation_data = dict(data)
-            if "event_type" in validation_data:
-                validation_data["eventType"] = validation_data.pop("event_type")
+            validation_data = canonical_to_camel_dict(canonical)
             try:
                 validate_event_dict(validation_data)
             except ValidationError as exc:

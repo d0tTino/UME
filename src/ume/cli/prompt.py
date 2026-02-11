@@ -18,6 +18,7 @@ if _src_path.exists() and str(_src_path) not in sys.path:
 
 from ume.config import settings
 import ume
+from ume.events.contract import canonicalize_event
 
 # Support tests that provide a lightweight ``ume`` stub without all attributes.
 parse_event = getattr(ume, "parse_event", lambda *_args, **_kw: None)
@@ -97,7 +98,7 @@ class UMEPrompt(Cmd):
                 "payload": {"node_id": node_id, "attributes": attributes},
                 "timestamp": self._get_timestamp(),
             }
-            evt = parse_event(event_data)
+            evt = parse_event(canonicalize_event(event_data))
             apply_event_to_graph(evt, self.graph)
             print(f"Node '{node_id}' created.")
         except (json.JSONDecodeError, EventError, ProcessingError) as e:
@@ -122,7 +123,7 @@ class UMEPrompt(Cmd):
                 "label": label,
                 "timestamp": self._get_timestamp(),
             }
-            evt = parse_event(event_data)
+            evt = parse_event(canonicalize_event(event_data))
             apply_event_to_graph(evt, self.graph)
             print(f"Edge ({source_id})->({target_id}) [{label}] created.")
         except (EventError, ProcessingError) as e:
@@ -147,7 +148,7 @@ class UMEPrompt(Cmd):
                 "label": label,
                 "timestamp": self._get_timestamp(),
             }
-            evt = parse_event(event_data)
+            evt = parse_event(canonicalize_event(event_data))
             apply_event_to_graph(evt, self.graph)
             print(f"Edge ({source_id})->({target_id}) [{label}] deleted.")
         except (EventError, ProcessingError) as e:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .graph_adapter import IGraphAdapter
+from .events.contract import canonicalize_event
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .event_ledger import EventLedger
@@ -24,7 +25,7 @@ def replay_from_ledger(
     for off, data in ledger.range(start=start_offset, end=end_offset):
         if end_timestamp is not None and data.get("timestamp", 0) > end_timestamp:
             break
-        event = parse_event(data)
+        event = parse_event(canonicalize_event(data))
         apply_event_to_graph(event, graph)
         last = off
     return last

@@ -2,9 +2,10 @@
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Any, Optional
-from datetime import datetime
+from typing import Dict, Any, Optional, Mapping
 import logging
+
+from .events.contract import canonical_timestamp_to_int
 
 logger = logging.getLogger(__name__)
 
@@ -74,124 +75,70 @@ class EventError(ValueError):
 
 
 def parse_event(data: Dict[str, Any]) -> Event:
-    """
-    Parses a dictionary into an Event object, with validation based on event_type.
+    """Parse a canonicalized event dictionary into :class:`Event`."""
+    logger.debug("Parsing canonical event data: %s", data)
 
-    Args:
-        data (Dict[str, Any]): A dictionary potentially representing an event.
-              Common expected keys: "eventType", "timestamp" (ISO 8601
-              formatted string).
-              Type-specific keys:
-                - For "CREATE_NODE", "UPDATE_NODE_ATTRIBUTES": "node_id" (str), "payload" (dict).
-                - For "CREATE_EDGE", "DELETE_EDGE": "node_id" (source, str),
-                  "target_node_id" (str), "label" (str).
-              Optional common keys: "eventId" (str), "sourceService" (str),
-                "correlationId" (str), "subjectEntity" (object with ``id`` and ``type``).
-              "payload" (dict) is optional for edge events, defaulting to {}.
-
-    Returns:
-        Event: An Event instance.
-
-    Raises:
-        EventError: If required fields are missing or have incorrect types for the given event_type.
-    """
-    logger.debug("Parsing event data: %s", data)
-
-    # Basic presence and type checks for common fields
-    if "eventType" in data:
-        event_type = data["eventType"]
-    elif "event_type" in data:
-        event_type = data["event_type"]
-    else:
-        logger.error("Missing required event field: eventType")
-        raise EventError("Missing required event field: eventType")
-    if not isinstance(event_type, str):
-        msg = f"Invalid type for 'eventType': expected str, got {type(event_type).__name__}"
-
-        logger.error(msg)
-        raise EventError(msg)
-    # Map to the known EventType enum when possible but allow arbitrary strings
-    event_type_enum: EventType | str
-    try:
-        event_type_enum = EventType(event_type)
-        event_type_str = event_type_enum.value
-    except ValueError:
-        event_type_enum = event_type
-        event_type_str = event_type
-
-    if "timestamp" not in data:
-        logger.error("Missing required event field: timestamp")
-        raise EventError("Missing required event field: timestamp")
-    timestamp_raw = data["timestamp"]
-    if isinstance(timestamp_raw, int):
-        timestamp_int = timestamp_raw
-    elif isinstance(timestamp_raw, str):
-        try:
-            dt = datetime.fromisoformat(timestamp_raw.replace("Z", "+00:00"))
-        except ValueError:
-            msg = "Invalid timestamp format"
-            logger.error(msg)
-            raise EventError(msg)
-        timestamp_int = int(dt.timestamp())
-    else:
-        msg = (
-            "Invalid type for 'timestamp': expected int or ISO 8601 string, "
-            f"got {type(timestamp_raw).__name__}"
+    if not {"metadata", "graph", "payload"} <= data.keys():
+        raise EventError(
+            "parse_event expects canonicalized data with 'metadata', 'graph', and 'payload'"
         )
-        logger.error(msg)
-        raise EventError(msg)
 
-    # Validate optional event_id type
-    event_id_val = data.get("eventId")
-
-    # Get potential values, to be validated by type-specific logic or used if optional
-    node_id_val = data.get("node_id")
-    target_node_id_val = data.get("target_node_id")
-    label_val = data.get("label")
-    correlation_id_val = data.get("correlationId")
-    subject_entity_val = data.get("subjectEntity")
-    source_service_val = data.get("sourceService")
-    # Default payload to {} if not present; specific event types might require it later
+    metadata = data.get("metadata")
+    graph = data.get("graph")
     payload_val = data.get("payload", {})
+    if not isinstance(metadata, Mapping):
+        raise EventError("Invalid canonical metadata")
+    if not isinstance(graph, Mapping):
+        raise EventError("Invalid canonical graph")
+    if not isinstance(payload_val, dict):
+        raise EventError(
+            f"Invalid type for 'payload': expected dict, got {type(payload_val).__name__}"
+        )
+
+    event_type = metadata.get("event_type")
+    if not isinstance(event_type, str):
+        raise EventError("Missing required event field: event_type")
+
+    timestamp_raw = metadata.get("timestamp")
+    if timestamp_raw is None:
+        raise EventError("Missing required event field: timestamp")
+    try:
+        timestamp_int = canonical_timestamp_to_int(timestamp_raw)
+    except ValueError as exc:
+        raise EventError("Invalid timestamp format") from exc
+
+    event_id_val = metadata.get("event_id")
+    correlation_ids = metadata.get("correlation_ids")
+    correlation_id_val = None
+    if isinstance(correlation_ids, Mapping):
+        correlation_id_val = correlation_ids.get("correlation_id")
+
+    subject_entity_val = metadata.get("subject_entity")
+    source_service_val = metadata.get("source")
+
+    node_id_val = graph.get("node_id")
+    target_node_id_val = graph.get("target_node_id")
+    label_val = graph.get("label")
 
     if event_id_val is not None and not isinstance(event_id_val, str):
-        msg = (
-            f"Invalid type for 'eventId': expected str, got {type(event_id_val).__name__}"
+        raise EventError(
+            f"Invalid type for 'event_id': expected str, got {type(event_id_val).__name__}"
         )
-        logger.error(msg)
-        raise EventError(msg)
-
     if correlation_id_val is not None and not isinstance(correlation_id_val, str):
-        msg = (
-            f"Invalid type for 'correlationId': expected str, got {type(correlation_id_val).__name__}"
+        raise EventError(
+            f"Invalid type for 'correlation_id': expected str, got {type(correlation_id_val).__name__}"
         )
-        logger.error(msg)
-        raise EventError(msg)
-
+    if source_service_val is not None and not isinstance(source_service_val, str):
+        raise EventError(
+            f"Invalid type for 'source': expected str, got {type(source_service_val).__name__}"
+        )
     if subject_entity_val is not None:
         if not isinstance(subject_entity_val, dict):
-            msg = (
-                f"Invalid type for 'subjectEntity': expected object, got {type(subject_entity_val).__name__}"
+            raise EventError(
+                f"Invalid type for 'subject_entity': expected object, got {type(subject_entity_val).__name__}"
             )
-            logger.error(msg)
-            raise EventError(msg)
         if not {"id", "type"} <= subject_entity_val.keys():
-            msg = "subjectEntity must contain 'id' and 'type'"
-            logger.error(msg)
-            raise EventError(msg)
-        if not isinstance(subject_entity_val.get("id"), str) or not isinstance(
-            subject_entity_val.get("type"), str
-        ):
-            msg = "subjectEntity 'id' and 'type' must be strings"
-            logger.error(msg)
-            raise EventError(msg)
-
-    if source_service_val is not None and not isinstance(source_service_val, str):
-        msg = (
-            f"Invalid type for 'sourceService': expected str, got {type(source_service_val).__name__}"
-        )
-        logger.error(msg)
-        raise EventError(msg)
+            raise EventError("subject_entity must contain 'id' and 'type'")
 
     if event_type in [
         EventType.CREATE_NODE,
@@ -199,55 +146,20 @@ def parse_event(data: Dict[str, Any]) -> Event:
         EventType.RESEARCH_JOB_STARTED,
         EventType.DOCUMENT_ARCHIVED,
     ]:
-        if "payload" not in data:  # Must be present in data for these types
-            msg = f"Missing required field 'payload' for {event_type_str} event."
-            logger.error(msg)
-            raise EventError(msg)
-        if not isinstance(payload_val, dict):
-            msg = f"Invalid type for 'payload' in {event_type_str} event: expected dict, got {type(payload_val).__name__}"
-            logger.error(msg)
-            raise EventError(msg)
-
         payload_node_id = payload_val.get("node_id")
         if node_id_val is None and payload_node_id is not None:
             node_id_val = payload_node_id
-
         if node_id_val is None:
-            msg = f"Missing required field 'node_id' for {event_type_str} event."
-            logger.error(msg)
-            raise EventError(msg)
-        if not isinstance(node_id_val, str):
-            msg = f"Invalid type for 'node_id' in {event_type_str} event: expected str, got {type(node_id_val).__name__}"
-            logger.error(msg)
-            raise EventError(msg)
-        if payload_node_id is not None and not isinstance(payload_node_id, str):
-            msg = f"Invalid type for 'payload.node_id' in {event_type_str} event: expected str, got {type(payload_node_id).__name__}"
-            logger.error(msg)
-            raise EventError(msg)
+            raise EventError(f"Missing required field 'node_id' for {event_type} event.")
         if payload_node_id is not None and payload_node_id != node_id_val:
-            msg = (
-                f"Conflicting node_id values for {event_type_str} event: "
-                "'node_id' and 'payload.node_id' must match"
+            raise EventError(
+                f"Conflicting node_id values for {event_type} event: 'node_id' and 'payload.node_id' must match"
             )
-            logger.error(msg)
-            raise EventError(msg)
-
         if event_type in [EventType.UPDATE_NODE_ATTRIBUTES, EventType.DOCUMENT_ARCHIVED]:
-            if "attributes" not in payload_val:
-                msg = (
-                    "Missing required field 'payload.attributes' "
-                    f"for {event_type_str} event."
+            if "attributes" not in payload_val or not isinstance(payload_val["attributes"], dict):
+                raise EventError(
+                    f"Missing required field 'payload.attributes' for {event_type} event."
                 )
-                logger.error(msg)
-                raise EventError(msg)
-            if not isinstance(payload_val["attributes"], dict):
-                msg = (
-                    "Invalid type for 'payload.attributes' in "
-                    f"{event_type_str} event: expected dict, got "
-                    f"{type(payload_val['attributes']).__name__}"
-                )
-                logger.error(msg)
-                raise EventError(msg)
 
     elif event_type in [
         EventType.CREATE_EDGE,
@@ -256,59 +168,22 @@ def parse_event(data: Dict[str, Any]) -> Event:
         EventType.DATA_SOURCE_QUERIED,
         EventType.ENTITY_DISCOVERED,
     ]:
-        required_fields_for_edge = {"node_id", "target_node_id", "label"}
-        missing_fields = required_fields_for_edge - data.keys()
-        if missing_fields:
-            msg = f"Missing required fields for {event_type_str} event: {', '.join(sorted(list(missing_fields)))}"
-            logger.error(msg)
-            raise EventError(msg)
-
-        # Validate types for these required fields
         for field_name, field_val_check in [
             ("node_id", node_id_val),
             ("target_node_id", target_node_id_val),
             ("label", label_val),
         ]:
-            if not isinstance(
-                field_val_check, str
-            ):  # Already checked for presence by missing_fields logic
-                msg = f"Invalid type for '{field_name}' in {event_type_str} event: expected str, got {type(field_val_check).__name__}"
-                logger.error(msg)
-                raise EventError(msg)
-
-        # For edge events, payload_val will use its default {} if "payload" was not in data.
-        # If "payload" was in data, we still need to ensure it's a dict.
-        if "payload" in data and not isinstance(payload_val, dict):
-            msg = f"Invalid type for 'payload' in {event_type_str} event (if provided): expected dict, got {type(payload_val).__name__}"
-            logger.error(msg)
-            raise EventError(msg)
-
-    else:
-        # Unknown event types: validate optional fields if provided
-        if "payload" in data and not isinstance(payload_val, dict):
-            msg = (
-                f"Invalid type for 'payload': expected dict, got {type(payload_val).__name__}"
-            )
-            logger.error(msg)
-            raise EventError(msg)
-        for optional_name, optional_value in [
-            ("node_id", node_id_val),
-            ("target_node_id", target_node_id_val),
-            ("label", label_val),
-        ]:
-            if optional_value is not None and not isinstance(optional_value, str):
-                msg = (
-                    f"Invalid type for '{optional_name}': expected str, got {type(optional_value).__name__}"
+            if not isinstance(field_val_check, str):
+                raise EventError(
+                    f"Invalid type for '{field_name}' in {event_type} event: expected str, got {type(field_val_check).__name__}"
                 )
-                logger.error(msg)
-                raise EventError(msg)
 
     return Event(
         event_id=event_id_val if event_id_val is not None else str(uuid.uuid4()),
         event_type=event_type,
         timestamp=timestamp_int,
-        payload=payload_val,  # Use payload_val which is defaulted to {} or the actual value
-        source=data.get("sourceService"),
+        payload=payload_val,
+        source=source_service_val,
         node_id=node_id_val,
         target_node_id=target_node_id_val,
         label=label_val,
@@ -316,3 +191,4 @@ def parse_event(data: Dict[str, Any]) -> Event:
         subject_entity=subject_entity_val,
         source_service=source_service_val,
     )
+

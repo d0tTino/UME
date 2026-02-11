@@ -12,6 +12,7 @@ import json
 from typing import Dict
 
 from ume import EventType, parse_event, EventError
+from ..events.contract import canonicalize_event
 from ..config import settings
 
 IN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
@@ -41,7 +42,7 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS):
         async for raw in stream:
             try:
                 data = json.loads(raw.decode("utf-8"))
-                event = parse_event(data)
+                event = parse_event(canonicalize_event(data))
             except (ValueError, EventError, json.JSONDecodeError):
                 continue
 
