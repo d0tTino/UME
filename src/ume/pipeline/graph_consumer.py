@@ -5,23 +5,17 @@ from __future__ import annotations
 import json
 import logging
 
-from jsonschema import ValidationError
 from confluent_kafka import Consumer, KafkaException, KafkaError
 
 from ..config import settings
-from ..utils import ssl_config
-from ..event import EventError, EventType
-from ..events.ingress import ingest_transport_payload
-from ..processing import ProcessingError, apply_event_to_graph
-from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
+from ..event import EventType
 from ..event_ledger import event_ledger
-from .invalid_events import (
-    build_rejected_event_ledger_entry,
-    outcome_for_policy_decision,
-    InvalidEventOutcome,
-)
 from ..graph_adapter import IGraphAdapter
 from ..logging_utils import configure_logging
+from ..processing import apply_event_to_graph
+from ..utils import ssl_config
+from .core import EventPipelineOrchestrator, PipelineEnvelope, PipelineOutcome
+from .invalid_events import build_rejected_event_ledger_entry, outcome_for_pipeline_outcome
 
 
 configure_logging()
@@ -31,8 +25,6 @@ BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
 NODE_TOPIC = settings.KAFKA_NODE_TOPIC
 EDGE_TOPIC = settings.KAFKA_EDGE_TOPIC
 DEFAULT_GROUP_ID = settings.KAFKA_GROUP_ID
-# Include newly introduced event types such as RESEARCH_JOB_STARTED and
-# ENTITY_DISCOVERED so the consumer treats them as first-class events.
 VALID_EVENT_TYPES = {e.value for e in EventType}
 
 
@@ -66,24 +58,18 @@ def run_graph_consumer(
             return
         owns_consumer = True
 
-    pipeline = build_default_policy_pipeline(redactor=lambda payload: (payload, False))
+    orchestrator = EventPipelineOrchestrator()
 
-    def _record_invalid_event(
-        *,
-        offset: int,
-        outcome: InvalidEventOutcome,
-        reason: str,
-        context: PolicyContext,
-    ) -> None:
+    def _record_invalid_event(*, offset: int, envelope: PipelineEnvelope) -> None:
         try:
             event_ledger.append(
                 offset,
                 build_rejected_event_ledger_entry(
-                    outcome=outcome,
-                    reason=reason,
-                    source=context.source,
-                    canonical=context.canonical_event,
-                    event=context.original_event,
+                    outcome=outcome_for_pipeline_outcome(envelope.outcome),
+                    reason=envelope.reason,
+                    source=envelope.source,
+                    canonical=envelope.canonical_event,
+                    event=envelope.event,
                 ),
             )
         except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
@@ -110,84 +96,32 @@ def run_graph_consumer(
                 logger.error("Failed to parse Kafka payload: %s", exc)
                 continue
 
-            try:
-                canonical, event = ingest_transport_payload(payload, adapter="kafka")
-            except (EventError, ValidationError, ValueError) as exc:
-                logger.error("Failed to parse Kafka payload: %s", exc)
-                _record_invalid_event(
-                    offset=msg.offset(),
-                    outcome=InvalidEventOutcome.REJECT,
-                    reason=f"transport_parse_error:{exc}",
-                    context=PolicyContext(
-                        source="kafka_graph_consumer",
-                        raw_payload=msg.value(),
-                        transport_data=payload,
-                    ),
-                )
-                try:
-                    event_ledger.update_bookmark(msg.offset())
-                except Exception as bookmark_exc:  # pragma: no cover - unexpected errors
-                    logger.error("Failed to update bookmark: %s", bookmark_exc)
-                continue
-
-            context = PolicyContext(
-                source="kafka_graph_consumer",
-                raw_payload=msg.value(),
-                transport_data=payload,
-                canonical_event=canonical,
-                original_event=event,
-                effective_event=event,
-            )
-            decision = pipeline.evaluate(context)
-            if decision.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
-                logger.warning("Policy blocked event at consumer: %s", decision.audit_event.reason)
-                _record_invalid_event(
-                    offset=msg.offset(),
-                    outcome=outcome_for_policy_decision(decision.decision),
-                    reason=decision.audit_event.reason,
-                    context=context,
-                )
-                try:
-                    event_ledger.update_bookmark(msg.offset())
-                except Exception as exc:  # pragma: no cover - unexpected errors
-                    logger.error("Failed to update bookmark: %s", exc)
-                continue
-
-            event = context.effective_event
-            if event is None or context.canonical_event is None:
-                logger.error("Policy pipeline did not produce a parsed event")
-                continue
-
-            if event.event_type not in VALID_EVENT_TYPES:
-                _record_invalid_event(
-                    offset=msg.offset(),
-                    outcome=InvalidEventOutcome.REJECT,
-                    reason=f"unknown_event_type:{event.event_type}",
-                    context=context,
-                )
-                try:
-                    event_ledger.update_bookmark(msg.offset())
-                except Exception as exc:  # pragma: no cover - unexpected errors
-                    logger.error("Failed to update bookmark: %s", exc)
-                logger.warning("Unknown event type '%s' skipped", event.event_type)
-                continue
-
-            try:
+            def _project(context):
+                event = context.effective_event
+                if event is None:
+                    raise ValueError("effective_event_missing")
+                if event.event_type not in VALID_EVENT_TYPES:
+                    raise ValueError(f"unknown_event_type:{event.event_type}")
                 apply_event_to_graph(event, graph)
-                pipeline.audit_post_apply(context)
-            except ProcessingError as exc:
-                _record_invalid_event(
-                    offset=msg.offset(),
-                    outcome=InvalidEventOutcome.REJECT,
-                    reason=f"processing_error:{exc}",
-                    context=context,
-                )
-                logger.error("Event processing failed: %s", exc)
+                return {}
+
+            envelope = orchestrator.run(
+                payload,
+                source="kafka_graph_consumer",
+                adapter="kafka",
+                raw_payload=msg.value(),
+                projector=_project,
+            )
+
+            if envelope.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
+                _record_invalid_event(offset=msg.offset(), envelope=envelope)
                 try:
                     event_ledger.update_bookmark(msg.offset())
-                except Exception as bookmark_exc:  # pragma: no cover - unexpected errors
-                    logger.error("Failed to update bookmark: %s", bookmark_exc)
+                except Exception as exc:  # pragma: no cover - unexpected errors
+                    logger.error("Failed to update bookmark: %s", exc)
+                logger.warning("Event rejected at %s stage: %s", envelope.stage, envelope.reason)
                 continue
+
             try:
                 event_ledger.update_bookmark(msg.offset())
             except Exception as exc:  # pragma: no cover - unexpected errors

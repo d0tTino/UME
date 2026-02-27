@@ -8,6 +8,7 @@ from typing import Any, Mapping
 from ..event import Event
 from ..events.contract import canonical_to_camel_dict
 from ..policy.pipeline import PolicyDecision
+from .core import PipelineOutcome
 
 
 class InvalidEventOutcome(str, Enum):
@@ -58,3 +59,13 @@ def build_rejected_event_ledger_entry(
         },
     }
 
+
+
+def outcome_for_pipeline_outcome(outcome: PipelineOutcome) -> InvalidEventOutcome:
+    if outcome == PipelineOutcome.QUARANTINED:
+        return InvalidEventOutcome.QUARANTINE
+    if outcome == PipelineOutcome.REJECTED:
+        return InvalidEventOutcome.REJECT
+    if outcome == PipelineOutcome.REDACTED:
+        return InvalidEventOutcome.REJECT
+    return InvalidEventOutcome.REJECT

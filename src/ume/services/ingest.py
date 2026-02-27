@@ -13,10 +13,13 @@ from ..events.ingress import ingest_transport_payload
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
-from ..classification import classify_event
 from ..anomaly_detection import AnomalyDetector
 from ..schema_manager import DEFAULT_SCHEMA_MANAGER
-from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
+from ..pipeline.core import (
+    EventPipelineOrchestrator,
+    PipelineOutcome,
+    apply_classification,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - typing import for mypy
     from ume_client import events_pb2 as events_pb2_type
@@ -26,7 +29,7 @@ else:
 events_pb2 = cast(Any, _events_pb2)
 
 _anomaly_detector = AnomalyDetector()
-_policy_pipeline = build_default_policy_pipeline(redactor=lambda payload: (payload, False))
+_orchestrator = EventPipelineOrchestrator()
 
 __all__ = [
     "validate_event",
@@ -43,11 +46,10 @@ __all__ = [
 def validate_event(data: Dict[str, Any]) -> Event:
     """Canonicalize and parse incoming transport data into :class:`~ume.event.Event`."""
     canonical, event = ingest_transport_payload(data)
-    context = PolicyContext(source="service_validate", canonical_event=canonical, original_event=event, effective_event=event)
-    result = _policy_pipeline.evaluate(context)
-    if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
-        raise EventError(result.audit_event.reason)
-    return result.context.effective_event or event
+    result = _orchestrator.run(data, source="service_validate")
+    if result.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
+        raise EventError(result.reason)
+    return result.event or event
 
 
 def apply_event(
@@ -76,82 +78,59 @@ def _normalize_schema_version(value: Any) -> str | None:
     return None
 
 
-def _ingest_canonical_event(
-    canonical: Dict[str, Any],
-    event: Event,
+def _build_graph_projector(
     graph: IGraphAdapter,
     *,
     schema_version: str | None = None,
-) -> None:
-    metadata = canonical["metadata"]
-    unwrapped_event_data = canonical_to_legacy_dict(canonical)
-    envelope_version = metadata.get("schema_version")
-    explicit_version = _normalize_schema_version(schema_version)
-    normalized_envelope_version = _normalize_schema_version(envelope_version)
-    normalized_payload_version = _normalize_schema_version(unwrapped_event_data.get("schema_version"))
-    detected_version = normalized_envelope_version or normalized_payload_version
-    effective_version = (
-        explicit_version
-        or detected_version
-        or _normalize_schema_version(_fallback_schema_version())
-        or DEFAULT_VERSION
-    )
-
-    context = PolicyContext(source="service_ingest", canonical_event=canonical, original_event=event, effective_event=event)
-    policy_result = _policy_pipeline.evaluate(context)
-    if policy_result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
-        raise EventError(policy_result.audit_event.reason)
-
-    effective_event = policy_result.context.effective_event
-    if effective_event is None:
-        raise EventError("policy_pipeline_missing_effective_event")
-
-    tag_results = classify_event(effective_event)
-    effective_event.payload["classification"] = [
-        {
-            "tag": r.tag,
-            "confidence": r.confidence,
-            "domain": r.domain,
-            "subdomain": r.subdomain,
-            "sensitivity": r.sensitivity,
-        }
-        for r in tag_results
-    ]
-    if tag_results:
-        attributes = effective_event.payload.setdefault("attributes", {})
-        attributes["tags"] = [r.tag for r in tag_results]
-        attributes["tag_confidence"] = [r.confidence for r in tag_results]
-        for r in tag_results:
-            if r.domain and "domain" not in attributes:
-                attributes["domain"] = r.domain
-            if r.subdomain and "subdomain" not in attributes:
-                attributes["subdomain"] = r.subdomain
-            if r.sensitivity and "sensitivity" not in attributes:
-                attributes["sensitivity"] = r.sensitivity
-
-    apply_event(effective_event, graph, schema_version=effective_version)
-    _policy_pipeline.audit_post_apply(context)
-
-    anomaly_event = _anomaly_detector.process_event(effective_event)
-    if anomaly_event is not None:
-        ingest_event(
-            {
-                "eventType": anomaly_event.event_type,
-                "timestamp": anomaly_event.timestamp,
-                "payload": anomaly_event.payload,
-                "sourceService": anomaly_event.source,
-            },
-            graph,
-            schema_version=effective_version,
+) -> Any:
+    def _project(context: Any) -> dict[str, Any]:
+        canonical = context.canonical_event
+        event = context.effective_event
+        if canonical is None or event is None:
+            raise EventError("missing_canonical_or_event")
+        metadata = canonical["metadata"]
+        unwrapped_event_data = canonical_to_legacy_dict(canonical)
+        envelope_version = metadata.get("schema_version")
+        explicit_version = _normalize_schema_version(schema_version)
+        normalized_envelope_version = _normalize_schema_version(envelope_version)
+        normalized_payload_version = _normalize_schema_version(unwrapped_event_data.get("schema_version"))
+        detected_version = normalized_envelope_version or normalized_payload_version
+        effective_version = (
+            explicit_version
+            or detected_version
+            or _normalize_schema_version(_fallback_schema_version())
+            or DEFAULT_VERSION
         )
+        details = apply_classification(context)
+        apply_event(event, graph, schema_version=effective_version)
+        anomaly_event = _anomaly_detector.process_event(event)
+        if anomaly_event is not None:
+            ingest_event(
+                {
+                    "eventType": anomaly_event.event_type,
+                    "timestamp": anomaly_event.timestamp,
+                    "payload": anomaly_event.payload,
+                    "sourceService": anomaly_event.source,
+                },
+                graph,
+                schema_version=effective_version,
+            )
+        return {**details, "schema_version": effective_version}
+
+    return _project
 
 
 def ingest_event(
     data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
-    canonical, event = ingest_transport_payload(data)
-    _ingest_canonical_event(canonical, event, graph, schema_version=schema_version)
+    result = _orchestrator.run(
+        data,
+        source="service_ingest",
+        projector=_build_graph_projector(graph, schema_version=schema_version),
+    )
+    if result.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
+        raise EventError(result.reason)
 
 
 def ingest_events_batch(
@@ -243,8 +222,14 @@ def ingest_envelope(
 ) -> None:
     """Ingest an :class:`EventEnvelope` into ``graph``."""
     event_dict = envelope_to_event_dict(envelope)
-    canonical, event = ingest_transport_payload(event_dict, adapter="grpc")
-    _ingest_canonical_event(canonical, event, graph, schema_version=schema_version)
+    result = _orchestrator.run(
+        event_dict,
+        source="service_ingest",
+        adapter="grpc",
+        projector=_build_graph_projector(graph, schema_version=schema_version),
+    )
+    if result.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
+        raise EventError(result.reason)
 
 
 async def ingest_envelope_async(
