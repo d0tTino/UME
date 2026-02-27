@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from hashlib import sha256
 from dataclasses import dataclass, field
 from enum import Enum
 from time import time
@@ -55,7 +56,8 @@ class PolicyContext:
     raw_payload: bytes | None = None
     transport_data: Dict[str, Any] | None = None
     canonical_event: Dict[str, Any] | None = None
-    event: Event | None = None
+    original_event: Event | None = None
+    effective_event: Event | None = None
     redacted: bool = False
     details: Dict[str, Any] = field(default_factory=dict)
 
@@ -67,6 +69,11 @@ class PolicyContext:
         if isinstance(payload, dict):
             return payload
         return {}
+
+    @property
+    def event(self) -> Event | None:
+        """Backward-compatible alias for the effective event."""
+        return self.effective_event
 
 
 @dataclass
@@ -88,7 +95,7 @@ class TransportValidationStage:
 
     def run(self, context: PolicyContext) -> Optional[PolicyResult]:
         try:
-            if context.canonical_event is not None and context.event is not None:
+            if context.canonical_event is not None and context.effective_event is not None:
                 return None
             if context.transport_data is None:
                 if context.raw_payload is None:
@@ -97,7 +104,9 @@ class TransportValidationStage:
 
             context.canonical_event = canonicalize_event(context.transport_data)
             validate_event_dict(canonical_to_camel_dict(context.canonical_event))
-            context.event = parse_event(context.canonical_event)
+            parsed = parse_event(context.canonical_event)
+            context.original_event = parsed
+            context.effective_event = parsed
         except (ValueError, TypeError, json.JSONDecodeError, ValidationError, EventError) as exc:
             return _result(
                 PolicyDecision.QUARANTINE,
@@ -133,7 +142,7 @@ class AlignmentStage:
         self._plugin_provider = plugin_provider
 
     def run(self, context: PolicyContext) -> Optional[PolicyResult]:
-        if context.event is None:
+        if context.effective_event is None:
             return _result(
                 PolicyDecision.QUARANTINE,
                 context,
@@ -142,7 +151,7 @@ class AlignmentStage:
             )
         try:
             for plugin in self._plugin_provider():
-                plugin.validate(context.event)
+                plugin.validate(context.effective_event)
         except PolicyViolationError as exc:
             return _result(
                 PolicyDecision.DENY,
@@ -169,9 +178,9 @@ class PiiRedactionStage:
             )
         payload = context.event_payload
         redacted, was_redacted = self._redactor(dict(payload))
-        context.canonical_event["payload"] = redacted
-        if context.event is not None:
-            object.__setattr__(context.event, "payload", redacted)
+        canonical = {**context.canonical_event, "payload": redacted}
+        context.canonical_event = canonical
+        context.effective_event = parse_event(canonical)
         context.redacted = was_redacted
         if was_redacted:
             return _result(
@@ -187,7 +196,7 @@ class AuditStage:
     name = "post_apply_auditing"
 
     def run(self, context: PolicyContext) -> Optional[PolicyResult]:
-        event = context.event
+        event = context.effective_event
         audit_event = PolicyAuditEvent(
             decision=PolicyDecision.ALLOW,
             stage=self.name,
@@ -195,7 +204,7 @@ class AuditStage:
             reason="mutation_applied",
             event_id=event.event_id if event else None,
             event_type=event.event_type if event else None,
-            details=context.details,
+            details={**_context_audit_details(context), **context.details},
         )
         logger.info("policy_audit_event=%s", json.dumps(audit_event.to_dict(), sort_keys=True))
         return PolicyResult(PolicyDecision.ALLOW, context, audit_event)
@@ -259,7 +268,12 @@ def _result(
     reason: str,
     details: Dict[str, Any] | None = None,
 ) -> PolicyResult:
-    event = context.event
+    event = context.effective_event
+    merged_details = {
+        **_context_audit_details(context),
+        **context.details,
+        **(details or {}),
+    }
     return PolicyResult(
         decision=decision,
         context=context,
@@ -270,9 +284,35 @@ def _result(
             reason=reason,
             event_id=event.event_id if event else None,
             event_type=event.event_type if event else None,
-            details=details or {},
+            details=merged_details,
         ),
     )
+
+
+def _payload_hash(payload: Dict[str, Any] | None) -> str | None:
+    if payload is None:
+        return None
+    stable = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return sha256(stable.encode("utf-8")).hexdigest()
+
+
+def _context_audit_details(context: PolicyContext) -> Dict[str, Any]:
+    original_payload = None
+    effective_payload = None
+    if context.original_event is not None:
+        original_payload = context.original_event.payload
+    if context.canonical_event is not None and isinstance(context.canonical_event.get("payload"), dict):
+        effective_payload = context.canonical_event["payload"]
+
+    return {
+        "original_event_id": context.original_event.event_id if context.original_event else None,
+        "original_event_type": context.original_event.event_type if context.original_event else None,
+        "effective_event_id": context.effective_event.event_id if context.effective_event else None,
+        "effective_event_type": context.effective_event.event_type if context.effective_event else None,
+        "original_payload_hash": _payload_hash(original_payload),
+        "effective_payload_hash": _payload_hash(effective_payload),
+        "redacted": context.redacted,
+    }
 
 
 def build_default_policy_pipeline(

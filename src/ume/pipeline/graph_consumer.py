@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import logging
 
+from jsonschema import ValidationError
 from confluent_kafka import Consumer, KafkaException, KafkaError
 
 from ..config import settings
 from ..utils import ssl_config
-from ..event import EventType
-from ..processing import apply_event_to_graph, ProcessingError
+from ..event import EventError, EventType
+from ..events.ingress import ingest_transport_payload
+from ..processing import ProcessingError, apply_event_to_graph
 from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from ..event_ledger import event_ledger
 from .invalid_events import (
@@ -81,7 +83,7 @@ def run_graph_consumer(
                     reason=reason,
                     source=context.source,
                     canonical=context.canonical_event,
-                    event=context.event,
+                    event=context.original_event,
                 ),
             )
         except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
@@ -104,9 +106,28 @@ def run_graph_consumer(
 
             try:
                 payload = json.loads(msg.value().decode("utf-8"))
-                canonical, event = ingest_transport_payload(payload, adapter="kafka")
-            except (ValueError, EventError, json.JSONDecodeError) as exc:
+            except (ValueError, json.JSONDecodeError) as exc:
                 logger.error("Failed to parse Kafka payload: %s", exc)
+                continue
+
+            try:
+                canonical, event = ingest_transport_payload(payload, adapter="kafka")
+            except (EventError, ValidationError, ValueError) as exc:
+                logger.error("Failed to parse Kafka payload: %s", exc)
+                _record_invalid_event(
+                    offset=msg.offset(),
+                    outcome=InvalidEventOutcome.REJECT,
+                    reason=f"transport_parse_error:{exc}",
+                    context=PolicyContext(
+                        source="kafka_graph_consumer",
+                        raw_payload=msg.value(),
+                        transport_data=payload,
+                    ),
+                )
+                try:
+                    event_ledger.update_bookmark(msg.offset())
+                except Exception as bookmark_exc:  # pragma: no cover - unexpected errors
+                    logger.error("Failed to update bookmark: %s", bookmark_exc)
                 continue
 
             context = PolicyContext(
@@ -114,7 +135,8 @@ def run_graph_consumer(
                 raw_payload=msg.value(),
                 transport_data=payload,
                 canonical_event=canonical,
-                event=event,
+                original_event=event,
+                effective_event=event,
             )
             decision = pipeline.evaluate(context)
             if decision.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
@@ -131,7 +153,7 @@ def run_graph_consumer(
                     logger.error("Failed to update bookmark: %s", exc)
                 continue
 
-            event = context.event
+            event = context.effective_event
             if event is None or context.canonical_event is None:
                 logger.error("Policy pipeline did not produce a parsed event")
                 continue
