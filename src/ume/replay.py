@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from .graph_adapter import IGraphAdapter
 from .policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
+from .processing_errors import ProcessingError
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .event_ledger import EventLedger
@@ -30,7 +31,10 @@ def replay_from_ledger(
         result = pipeline.evaluate(context)
         if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.event is None:
             continue
-        apply_event_to_graph(context.event, graph)
+        try:
+            apply_event_to_graph(context.event, graph)
+        except ProcessingError:
+            continue
         pipeline.audit_post_apply(context)
         last = off
     return last

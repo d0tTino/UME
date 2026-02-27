@@ -9,12 +9,15 @@ from confluent_kafka import Consumer, KafkaException, KafkaError
 
 from ..config import settings
 from ..utils import ssl_config
-from ..event import EventError, EventType
-from ..events.contract import canonical_to_camel_dict
-from ..events.ingress import ingest_transport_payload
+from ..event import EventType
 from ..processing import apply_event_to_graph, ProcessingError
 from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from ..event_ledger import event_ledger
+from .invalid_events import (
+    build_rejected_event_ledger_entry,
+    outcome_for_policy_decision,
+    InvalidEventOutcome,
+)
 from ..graph_adapter import IGraphAdapter
 from ..logging_utils import configure_logging
 
@@ -63,6 +66,27 @@ def run_graph_consumer(
 
     pipeline = build_default_policy_pipeline(redactor=lambda payload: (payload, False))
 
+    def _record_invalid_event(
+        *,
+        offset: int,
+        outcome: InvalidEventOutcome,
+        reason: str,
+        context: PolicyContext,
+    ) -> None:
+        try:
+            event_ledger.append(
+                offset,
+                build_rejected_event_ledger_entry(
+                    outcome=outcome,
+                    reason=reason,
+                    source=context.source,
+                    canonical=context.canonical_event,
+                    event=context.event,
+                ),
+            )
+        except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
+            logger.error("Ledger append failed: %s", exc)
+
     logger.info("Graph consumer started with group_id %s", gid)
     try:
         while True:
@@ -95,22 +119,30 @@ def run_graph_consumer(
             decision = pipeline.evaluate(context)
             if decision.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
                 logger.warning("Policy blocked event at consumer: %s", decision.audit_event.reason)
+                _record_invalid_event(
+                    offset=msg.offset(),
+                    outcome=outcome_for_policy_decision(decision.decision),
+                    reason=decision.audit_event.reason,
+                    context=context,
+                )
                 try:
                     event_ledger.update_bookmark(msg.offset())
                 except Exception as exc:  # pragma: no cover - unexpected errors
                     logger.error("Failed to update bookmark: %s", exc)
                 continue
 
+            event = context.event
+            if event is None or context.canonical_event is None:
+                logger.error("Policy pipeline did not produce a parsed event")
+                continue
+
             if event.event_type not in VALID_EVENT_TYPES:
-                try:
-                    event_dict = {
-                        "event_type": event.event_type,
-                        "timestamp": event.timestamp,
-                        "payload": event.payload,
-                    }
-                    event_ledger.append(msg.offset(), canonical_to_camel_dict(ingest_transport_payload(event_dict)[0]))
-                except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
-                    logger.error("Ledger append failed: %s", exc)
+                _record_invalid_event(
+                    offset=msg.offset(),
+                    outcome=InvalidEventOutcome.REJECT,
+                    reason=f"unknown_event_type:{event.event_type}",
+                    context=context,
+                )
                 try:
                     event_ledger.update_bookmark(msg.offset())
                 except Exception as exc:  # pragma: no cover - unexpected errors
@@ -122,18 +154,18 @@ def run_graph_consumer(
                 apply_event_to_graph(event, graph)
                 pipeline.audit_post_apply(context)
             except ProcessingError as exc:
-                if (
-                    event.event_type == EventType.CREATE_EDGE
-                    and "Unknown edge label" in str(exc)
-                    and isinstance(event.node_id, str)
-                    and isinstance(event.target_node_id, str)
-                    and isinstance(event.label, str)
-                ):
-                    graph.add_edge(event.node_id, event.target_node_id, event.label, {})
-                    pipeline.audit_post_apply(context)
-                else:
-                    logger.error("Event processing failed: %s", exc)
-                    continue
+                _record_invalid_event(
+                    offset=msg.offset(),
+                    outcome=InvalidEventOutcome.REJECT,
+                    reason=f"processing_error:{exc}",
+                    context=context,
+                )
+                logger.error("Event processing failed: %s", exc)
+                try:
+                    event_ledger.update_bookmark(msg.offset())
+                except Exception as bookmark_exc:  # pragma: no cover - unexpected errors
+                    logger.error("Failed to update bookmark: %s", bookmark_exc)
+                continue
             try:
                 event_ledger.update_bookmark(msg.offset())
             except Exception as exc:  # pragma: no cover - unexpected errors

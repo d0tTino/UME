@@ -132,11 +132,11 @@ def test_build_graph_from_ledger_roundtrip(tmp_path):
             "timestamp": 3,
             "node_id": "a",
             "target_node_id": "b",
-            "label": "LINKS_TO",
+            "label": "TAGGED_AS",
             "payload": {},
         },
     )
 
     graph = build_graph_from_ledger(ledger)
     assert set(graph.get_all_node_ids()) == {"a", "b"}
-    assert ("a", "b", "LINKS_TO", {}) in graph.get_all_edges()
+    assert ("a", "b", "TAGGED_AS", {"schema_version": "3.0.0"}) in graph.get_all_edges()

@@ -53,22 +53,25 @@ def test_graph_consumer_applies_events(tmp_path, monkeypatch: pytest.MonkeyPatch
     events = [
         {
             "eventType": "CREATE_NODE",
+            "eventId": "evt-1",
             "timestamp": 1,
             "nodeId": "n1",
             "payload": {"node_id": "n1"},
         },
         {
             "eventType": "CREATE_NODE",
+            "eventId": "evt-2",
             "timestamp": 1,
             "nodeId": "n2",
             "payload": {"node_id": "n2"},
         },
         {
             "eventType": "CREATE_EDGE",
+            "eventId": "evt-3",
             "timestamp": 1,
             "nodeId": "n1",
             "targetNodeId": "n2",
-            "label": "RELATES_TO",
+            "label": "TAGGED_AS",
             "payload": {},
         },
     ]
@@ -81,5 +84,52 @@ def test_graph_consumer_applies_events(tmp_path, monkeypatch: pytest.MonkeyPatch
 
     assert graph.node_exists("n1")
     assert graph.node_exists("n2")
-    assert ("n1", "n2", "RELATES_TO", {}) in graph.get_all_edges()
+    assert ("n1", "n2", "TAGGED_AS", {"schema_version": "3.0.0"}) in graph.get_all_edges()
     assert ledger.last_processed_offset == 2
+
+
+def test_graph_consumer_replay_is_deterministic_for_rejections(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    events = [
+        {
+            "eventType": "CREATE_NODE",
+            "eventId": "det-1",
+            "timestamp": 1,
+            "nodeId": "n1",
+            "payload": {"node_id": "n1"},
+        },
+        {
+            "eventType": "CREATE_EDGE",
+            "eventId": "det-2",
+            "timestamp": 1,
+            "nodeId": "n1",
+            "targetNodeId": "n2",
+            "label": "UNKNOWN_LABEL",
+            "payload": {},
+        },
+        {
+            "eventType": "NOT_A_REAL_EVENT",
+            "eventId": "det-3",
+            "timestamp": 1,
+            "payload": {},
+        },
+    ]
+
+    def _run(db_name: str) -> tuple[dict, list[tuple[int, dict]]]:
+        ledger = EventLedger(str(tmp_path / db_name))
+        msgs = [DummyMessage(json.dumps(e).encode("utf-8"), i) for i, e in enumerate(events)]
+        consumer = DummyConsumer(msgs)
+        _patch_modules(monkeypatch, consumer, ledger)
+
+        graph = MockGraph()
+        graph_consumer.run_graph_consumer(graph)
+        rejected = [item for item in ledger.range() if item[1].get("eventType") == "REJECTED_EVENT"]
+        return graph.dump(), rejected
+
+    state_a, rejected_a = _run("ledger_a.db")
+    state_b, rejected_b = _run("ledger_b.db")
+
+    assert state_a == state_b
+    assert rejected_a == rejected_b
+    assert len(rejected_a) == 2
