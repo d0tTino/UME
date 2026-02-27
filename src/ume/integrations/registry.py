@@ -1,26 +1,26 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable
+from typing import Iterable
 
-_ADAPTERS: Dict[str, type] = {}
+from ume.plugins.registry import get_plugin_constructor, list_plugins, register_plugin
+
+
+INTEGRATION_CAPABILITY = "integration_adapter"
 
 
 def register_adapter(name: str, cls: type) -> None:
     """Register an integration adapter class under ``name``."""
-    _ADAPTERS[name.lower()] = cls
+    register_plugin(INTEGRATION_CAPABILITY, name, cls)
 
 
 def get_adapter(name: str) -> type:
     """Return the adapter class registered under ``name``."""
-    key = name.lower()
-    if key not in _ADAPTERS:
-        raise ValueError(f"Unknown integration adapter: {name}")
-    return _ADAPTERS[key]
+    return get_plugin_constructor(INTEGRATION_CAPABILITY, name)
 
 
 def available_adapters() -> Iterable[str]:
     """Return names of all registered adapters."""
-    return list(_ADAPTERS.keys())
+    return [item["name"] for item in list_plugins(capability=INTEGRATION_CAPABILITY)]
 
 
 def register_builtin_adapters() -> None:

@@ -1374,7 +1374,8 @@ Install one of these packages to control tokenization behavior.
 Third-party packages can provide additional vector store implementations. These
 plugins are vector backends (not graph adapters) and must implement the
 :class:`ume.vector_store.VectorBackend` interface. Register them using
-:func:`ume.vector_backends.register_backend` or via the
+:func:`ume.vector_backends.register_backend` (which now uses the shared plugin
+registry contract) or via the
 ``ume.vector_backends`` entry point group. The
 ``examples/vector_backend_plugin.py`` example shows a minimal in-memory
 backend and how it is discovered by `create_vector_store()`:
@@ -1423,6 +1424,9 @@ memory = "yourpkg.memory_backend:MemoryBackend"
 
 Setting ``UME_VECTOR_BACKEND=memory`` will then use the plugin when creating a
 vector store.
+
+Use `ume-cli plugins` to inspect registered plugins across capabilities, or
+`ume-cli plugins --capability vector_backend` to filter by one capability.
 ## Running Tests
 
 Install development dependencies before running tests:

@@ -8,7 +8,6 @@ import os
 import numbers
 import time
 import threading
-from importlib import metadata
 
 import numpy as np
 from numpy.typing import NDArray
@@ -19,6 +18,13 @@ from typing import Any
 
 from ..vector_store import VectorBackend
 from typing import TYPE_CHECKING
+from ..plugins.registry import (
+    ConstructorMetadata,
+    discover_plugins_from_entry_points,
+    get_plugin_constructor,
+    list_plugins,
+    register_plugin,
+)
 
 faiss: Any
 try:  # optional dependency
@@ -52,40 +58,42 @@ else:  # pragma: no cover - optional dependency
 
 logger = logging.getLogger(__name__)
 
-_BACKENDS: Dict[str, type[VectorBackend]] = {}
+VECTOR_BACKEND_CAPABILITY = "vector_backend"
+ENTRYPOINT_GROUP = "ume.vector_backends"
 
 def register_backend(name: str, cls: type[VectorBackend]) -> None:
     """Register a vector backend class under ``name``."""
-    _BACKENDS[name.lower()] = cls
+    register_plugin(VECTOR_BACKEND_CAPABILITY, name, cls)
 
 def get_backend(name: str) -> type[VectorBackend]:
     """Return the backend class registered under ``name``."""
-    key = name.lower()
-    if key not in _BACKENDS:
-        raise ValueError(f"Unknown vector backend: {name}")
-    return _BACKENDS[key]
+    return get_plugin_constructor(VECTOR_BACKEND_CAPABILITY, name)
 
 def available_backends() -> Iterable[str]:
     """Return names of all registered backends."""
-    return list(_BACKENDS.keys())
-
-
-ENTRYPOINT_GROUP = "ume.vector_backends"
+    return [item["name"] for item in list_plugins(capability=VECTOR_BACKEND_CAPABILITY)]
 
 
 def load_entrypoints() -> None:
     """Load and register backends from ``ENTRYPOINT_GROUP`` entry points."""
-    try:
-        eps = metadata.entry_points(group=ENTRYPOINT_GROUP)
-    except Exception:
-        return
-    for ep in eps:
-        try:
-            cls = ep.load()
-        except Exception:  # pragma: no cover - import failures
-            logger.exception("Failed to load vector backend %s", ep.value)
-            continue
-        register_backend(ep.name, cls)
+    def _load(name: str, loaded: object) -> None:
+        if not callable(loaded):
+            raise TypeError(f"Vector backend entry point '{name}' is not callable")
+        register_plugin(
+            VECTOR_BACKEND_CAPABILITY,
+            name,
+            loaded,
+            metadata=ConstructorMetadata(
+                source="entry_point",
+                entry_point_group=ENTRYPOINT_GROUP,
+            ),
+        )
+
+    discover_plugins_from_entry_points(
+        capability=VECTOR_BACKEND_CAPABILITY,
+        group=ENTRYPOINT_GROUP,
+        loader=_load,
+    )
 
 
 class FaissBackend(VectorBackend):

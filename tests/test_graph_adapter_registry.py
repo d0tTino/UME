@@ -13,14 +13,15 @@ from ume.adapters.registry import (
     discover_graph_backends_from_modules,
     register_graph_backend,
 )
+from ume.plugins.registry import clear_plugins
 from ume import factories
 
 
 @pytest.fixture(autouse=True)
 def _reset_registry_state(monkeypatch: pytest.MonkeyPatch) -> None:
     clear_graph_backend_registry()
+    clear_plugins()
     monkeypatch.setattr(bootstrap, "_BUILTINS_REGISTERED", False)
-    monkeypatch.setattr("ume.adapters.registry._EXTERNAL_DISCOVERED", False)
 
 
 class _Adapter:
@@ -83,7 +84,7 @@ def test_discover_graph_backends_from_entry_points(monkeypatch: pytest.MonkeyPat
             return _Adapter
 
     monkeypatch.setattr(
-        "ume.adapters.registry.entry_points",
+        "ume.plugins.registry.entry_points",
         lambda group: [_FakeEntryPoint()] if group == "ume.graph_adapters" else [],
     )
 
