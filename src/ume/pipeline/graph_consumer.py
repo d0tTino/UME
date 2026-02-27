@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
 from confluent_kafka import Consumer, KafkaException, KafkaError
@@ -101,7 +102,20 @@ def run_graph_consumer(
                     logger.error("Kafka error: %s", msg.error())
                 continue
 
-            context = PolicyContext(source="kafka_graph_consumer", raw_payload=msg.value())
+            try:
+                payload = json.loads(msg.value().decode("utf-8"))
+                canonical, event = ingest_transport_payload(payload, adapter="kafka")
+            except (ValueError, EventError, json.JSONDecodeError) as exc:
+                logger.error("Failed to parse Kafka payload: %s", exc)
+                continue
+
+            context = PolicyContext(
+                source="kafka_graph_consumer",
+                raw_payload=msg.value(),
+                transport_data=payload,
+                canonical_event=canonical,
+                event=event,
+            )
             decision = pipeline.evaluate(context)
             if decision.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
                 logger.warning("Policy blocked event at consumer: %s", decision.audit_event.reason)

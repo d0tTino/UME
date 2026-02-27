@@ -88,6 +88,8 @@ class TransportValidationStage:
 
     def run(self, context: PolicyContext) -> Optional[PolicyResult]:
         try:
+            if context.canonical_event is not None and context.event is not None:
+                return None
             if context.transport_data is None:
                 if context.raw_payload is None:
                     raise ValueError("missing transport payload")

@@ -7,8 +7,9 @@ from typing import Iterable, Dict, Any, cast, TYPE_CHECKING
 from google.protobuf.json_format import MessageToDict
 from ume_client import events_pb2 as _events_pb2
 from google.protobuf import struct_pb2
-from ..event import Event, EventError, EventType, parse_event
-from ..events.contract import canonicalize_event, canonical_to_legacy_dict
+from ..event import Event, EventError, EventType
+from ..events.contract import canonical_to_legacy_dict
+from ..events.ingress import ingest_transport_payload
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
@@ -41,11 +42,12 @@ __all__ = [
 
 def validate_event(data: Dict[str, Any]) -> Event:
     """Canonicalize and parse incoming transport data into :class:`~ume.event.Event`."""
-    context = PolicyContext(source="service_validate", transport_data=data)
+    canonical, event = ingest_transport_payload(data)
+    context = PolicyContext(source="service_validate", canonical_event=canonical, event=event)
     result = _policy_pipeline.evaluate(context)
-    if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.event is None:
+    if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
         raise EventError(result.audit_event.reason)
-    return context.event
+    return event
 
 
 def apply_event(
@@ -74,11 +76,13 @@ def _normalize_schema_version(value: Any) -> str | None:
     return None
 
 
-def ingest_event(
-    data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
+def _ingest_canonical_event(
+    canonical: Dict[str, Any],
+    event: Event,
+    graph: IGraphAdapter,
+    *,
+    schema_version: str | None = None,
 ) -> None:
-    """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
-    canonical = canonicalize_event(data)
     metadata = canonical["metadata"]
     unwrapped_event_data = canonical_to_legacy_dict(canonical)
     envelope_version = metadata.get("schema_version")
@@ -93,11 +97,10 @@ def ingest_event(
         or DEFAULT_VERSION
     )
 
-    context = PolicyContext(source="service_ingest", transport_data=data)
+    context = PolicyContext(source="service_ingest", canonical_event=canonical, event=event)
     policy_result = _policy_pipeline.evaluate(context)
-    if policy_result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.event is None:
+    if policy_result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
         raise EventError(policy_result.audit_event.reason)
-    event = context.event
 
     tag_results = classify_event(event)
     event.payload["classification"] = [
@@ -139,6 +142,14 @@ def ingest_event(
         )
 
 
+def ingest_event(
+    data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
+) -> None:
+    """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
+    canonical, event = ingest_transport_payload(data)
+    _ingest_canonical_event(canonical, event, graph, schema_version=schema_version)
+
+
 def ingest_events_batch(
     events: Iterable[Dict[str, Any]],
     graph: IGraphAdapter,
@@ -152,8 +163,7 @@ def ingest_events_batch(
 
 def dict_to_envelope(data: Dict[str, Any]) -> Any:
     """Convert a raw event dictionary to :class:`~ume_client.events_pb2.EventEnvelope`."""
-    canonical = canonicalize_event(data)
-    evt = parse_event(canonical)
+    canonical, evt = ingest_transport_payload(data, adapter="grpc")
     schema_version = _normalize_schema_version(canonical["metadata"].get("schema_version"))
     if not schema_version:
         schema_version = _fallback_schema_version()
@@ -228,11 +238,9 @@ def ingest_envelope(
     envelope: Any, graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Ingest an :class:`EventEnvelope` into ``graph``."""
-    ingest_event(
-        envelope_to_event_dict(envelope),
-        graph,
-        schema_version=schema_version,
-    )
+    event_dict = envelope_to_event_dict(envelope)
+    canonical, event = ingest_transport_payload(event_dict, adapter="grpc")
+    _ingest_canonical_event(canonical, event, graph, schema_version=schema_version)
 
 
 async def ingest_envelope_async(
@@ -242,8 +250,11 @@ async def ingest_envelope_async(
     schema_version: str | None = None,
 ) -> None:
     """Asynchronously ingest an :class:`EventEnvelope` into ``graph``."""
+    event_dict = envelope_to_event_dict(envelope)
+    canonical, event = ingest_transport_payload(event_dict, adapter="grpc")
     await ingest_event_async(
-        envelope_to_event_dict(envelope),
+        canonical,
         graph,
         schema_version=schema_version,
+        event=event,
     )

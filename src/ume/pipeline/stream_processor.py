@@ -10,10 +10,10 @@ except Exception:  # pragma: no cover - optional dependency missing
     StreamT = object  # type: ignore[assignment]
 import json
 
-from ume import EventError, parse_event
+from ume import EventError
 
 from ..config import settings
-from ..events.contract import canonicalize_event
+from ..events.ingress import ingest_transport_payload
 from .router import route_event, router_config_from_settings
 
 IN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
@@ -44,8 +44,7 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS):
         async for raw in stream:
             try:
                 data = json.loads(raw.decode("utf-8"))
-                canonical = canonicalize_event(data)
-                parse_event(canonical)
+                canonical, _ = ingest_transport_payload(data, adapter="kafka")
             except (ValueError, EventError, json.JSONDecodeError):
                 continue
 

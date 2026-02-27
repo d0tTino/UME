@@ -9,8 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 from .persistent_graph import PersistentGraph
 from .processing import ProcessingError, DEFAULT_VERSION
-from .event import Event, EventType, parse_event
-from .events.contract import canonicalize_event
+from .event import Event, EventType
+from .events.ingress import ingest_transport_payload
 from ._internal.listeners import get_registered_listeners
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .graph_adapter import IGraphAdapter, AsyncAdapterMixin
@@ -223,17 +223,17 @@ async def ingest_event_async(
     graph: IAsyncGraphAdapter,
     *,
     schema_version: str | None = None,
+    event: Event | None = None,
 ) -> None:
-    """Validate ``data`` and apply the resulting event to ``graph`` asynchronously."""
-    if "event" in data and isinstance(data["event"], dict):
-        event_dict = cast(Dict[str, Any], data["event"])
-        detected_version = cast(str | None, data.get("schema_version"))
-    else:
-        event_dict = data
-        detected_version = cast(str | None, data.get("schema_version"))
-    event = parse_event(canonicalize_event(event_dict))
+    """Apply a canonical envelope/event pair to ``graph`` asynchronously."""
+    canonical = data
+    parsed_event = event
+    if parsed_event is None:
+        canonical, parsed_event = ingest_transport_payload(data)
+    metadata = canonical.get("metadata", {})
+    detected_version = cast(str | None, metadata.get("schema_version")) if isinstance(metadata, dict) else None
     effective_version = schema_version or detected_version or DEFAULT_VERSION
-    await apply_event_to_async_graph(event, graph, schema_version=effective_version)
+    await apply_event_to_async_graph(parsed_event, graph, schema_version=effective_version)
 
 
 __all__ = [

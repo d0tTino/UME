@@ -55,7 +55,11 @@ def test_consumer_demo_processes_messages(monkeypatch):
         consumer_demo, "KafkaError", SimpleNamespace(_PARTITION_EOF=None)
     )
     parsed = []
-    monkeypatch.setattr(consumer_demo, "parse_event", lambda d: parsed.append(d) or d)
+    def _fake_ingress(payload, adapter="default"):
+        parsed.append(payload)
+        return payload, payload
+
+    monkeypatch.setattr(consumer_demo, "ingest_transport_payload", _fake_ingress)
     monkeypatch.setattr(consumer_demo, "generate_embedding", lambda text: [0.0])
 
     consumer_demo.main()
