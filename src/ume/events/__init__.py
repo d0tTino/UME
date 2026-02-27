@@ -11,3 +11,4 @@ __all__ = [
     "canonical_to_legacy_dict",
     "canonical_to_camel_dict",
 ]
+

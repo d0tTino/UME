@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from importlib import resources
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 from packaging.version import Version, InvalidVersion
 
 from .events.contract import canonicalize_event, canonical_to_camel_dict
@@ -64,6 +64,11 @@ def _load_schema(event_type: str) -> Dict[str, Any]:
 def validate_event_dict(event_data: Dict[str, Any]) -> None:
     """Validate transport event data after normalizing to canonical contract."""
     canonical = canonicalize_event(event_data)
+    validate_canonical_event(canonical)
+
+
+def validate_canonical_event(canonical: Mapping[str, Any]) -> None:
+    """Validate a canonical event envelope against contract and event-type schemas."""
     normalized = canonical_to_camel_dict(canonical)
 
     schema_version = canonical["metadata"].get("schema_version")

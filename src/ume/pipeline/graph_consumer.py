@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
 from confluent_kafka import Consumer, KafkaException, KafkaError
 
 from ..config import settings
 from ..utils import ssl_config
-from ..event import EventType
-from ..events.contract import canonical_to_camel_dict, canonicalize_event
+from ..event import EventError, EventType
+from ..events.contract import canonical_to_camel_dict
+from ..events.ingress import ingest_transport_payload
 from ..processing import apply_event_to_graph, ProcessingError
 from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from ..event_ledger import event_ledger
@@ -76,7 +78,20 @@ def run_graph_consumer(
                     logger.error("Kafka error: %s", msg.error())
                 continue
 
-            context = PolicyContext(source="kafka_graph_consumer", raw_payload=msg.value())
+            try:
+                payload = json.loads(msg.value().decode("utf-8"))
+                canonical, event = ingest_transport_payload(payload, adapter="kafka")
+            except (ValueError, EventError, json.JSONDecodeError) as exc:
+                logger.error("Failed to parse Kafka payload: %s", exc)
+                continue
+
+            context = PolicyContext(
+                source="kafka_graph_consumer",
+                raw_payload=msg.value(),
+                transport_data=payload,
+                canonical_event=canonical,
+                event=event,
+            )
             decision = pipeline.evaluate(context)
             if decision.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
                 logger.warning("Policy blocked event at consumer: %s", decision.audit_event.reason)
@@ -86,12 +101,6 @@ def run_graph_consumer(
                     logger.error("Failed to update bookmark: %s", exc)
                 continue
 
-            event = context.event
-            canonical = context.canonical_event
-            if event is None or canonical is None:
-                logger.error("Policy pipeline did not produce a parsed event")
-                continue
-
             if event.event_type not in VALID_EVENT_TYPES:
                 try:
                     event_dict = {
@@ -99,7 +108,7 @@ def run_graph_consumer(
                         "timestamp": event.timestamp,
                         "payload": event.payload,
                     }
-                    event_ledger.append(msg.offset(), canonical_to_camel_dict(canonicalize_event(event_dict)))
+                    event_ledger.append(msg.offset(), canonical_to_camel_dict(ingest_transport_payload(event_dict)[0]))
                 except ValueError as exc:  # pragma: no cover - unlikely duplicate offset
                     logger.error("Ledger append failed: %s", exc)
                 try:
