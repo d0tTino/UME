@@ -43,11 +43,11 @@ __all__ = [
 def validate_event(data: Dict[str, Any]) -> Event:
     """Canonicalize and parse incoming transport data into :class:`~ume.event.Event`."""
     canonical, event = ingest_transport_payload(data)
-    context = PolicyContext(source="service_validate", canonical_event=canonical, event=event)
+    context = PolicyContext(source="service_validate", canonical_event=canonical, original_event=event, effective_event=event)
     result = _policy_pipeline.evaluate(context)
     if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
         raise EventError(result.audit_event.reason)
-    return event
+    return result.context.effective_event or event
 
 
 def apply_event(
@@ -97,13 +97,17 @@ def _ingest_canonical_event(
         or DEFAULT_VERSION
     )
 
-    context = PolicyContext(source="service_ingest", canonical_event=canonical, event=event)
+    context = PolicyContext(source="service_ingest", canonical_event=canonical, original_event=event, effective_event=event)
     policy_result = _policy_pipeline.evaluate(context)
     if policy_result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
         raise EventError(policy_result.audit_event.reason)
 
-    tag_results = classify_event(event)
-    event.payload["classification"] = [
+    effective_event = policy_result.context.effective_event
+    if effective_event is None:
+        raise EventError("policy_pipeline_missing_effective_event")
+
+    tag_results = classify_event(effective_event)
+    effective_event.payload["classification"] = [
         {
             "tag": r.tag,
             "confidence": r.confidence,
@@ -114,7 +118,7 @@ def _ingest_canonical_event(
         for r in tag_results
     ]
     if tag_results:
-        attributes = event.payload.setdefault("attributes", {})
+        attributes = effective_event.payload.setdefault("attributes", {})
         attributes["tags"] = [r.tag for r in tag_results]
         attributes["tag_confidence"] = [r.confidence for r in tag_results]
         for r in tag_results:
@@ -125,10 +129,10 @@ def _ingest_canonical_event(
             if r.sensitivity and "sensitivity" not in attributes:
                 attributes["sensitivity"] = r.sensitivity
 
-    apply_event(event, graph, schema_version=effective_version)
+    apply_event(effective_event, graph, schema_version=effective_version)
     _policy_pipeline.audit_post_apply(context)
 
-    anomaly_event = _anomaly_detector.process_event(event)
+    anomaly_event = _anomaly_detector.process_event(effective_event)
     if anomaly_event is not None:
         ingest_event(
             {

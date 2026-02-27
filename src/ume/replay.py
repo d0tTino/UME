@@ -29,10 +29,10 @@ def replay_from_ledger(
             break
         context = PolicyContext(source="cli_replay", transport_data=data)
         result = pipeline.evaluate(context)
-        if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.event is None:
+        if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.effective_event is None:
             continue
         try:
-            apply_event_to_graph(context.event, graph)
+            apply_event_to_graph(context.effective_event, graph)
         except ProcessingError:
             continue
         pipeline.audit_post_apply(context)
