@@ -50,6 +50,30 @@ def _replay_graph(db_path: str | None, end_offset: int | None) -> None:
     location = f" at {db_path}" if db_path and db_path != ":memory:" else ""
     print(f"Rebuilt graph{location} with {node_count} nodes and {edge_count} edges")
 
+
+def _list_plugins(capability: str | None = None) -> None:
+    """Print plugin registrations with constructor metadata."""
+    from ume.plugins.registry import list_plugins
+
+    plugins = list_plugins(capability=capability)
+    payload = []
+    for item in plugins:
+        metadata = item["metadata"]
+        payload.append(
+            {
+                "capability": item["capability"],
+                "name": item["name"],
+                "metadata": {
+                    "source": metadata.source,
+                    "entry_point_group": metadata.entry_point_group,
+                    "module_path": metadata.module_path,
+                    "lazy": metadata.lazy,
+                    "details": metadata.details,
+                },
+            }
+        )
+    print(json.dumps(payload, indent=2))
+
 # Detect if a lightweight stub was injected for testing.
 _UME_STUB = not hasattr(ume, "__file__")
 
@@ -472,6 +496,12 @@ def main() -> None:
     replay_graph_parser.add_argument("--db-path", default=":memory:")
     replay_graph_parser.add_argument("--end-offset", type=int)
 
+    plugins_parser = sub.add_parser("plugins", help="List registered plugins")
+    plugins_parser.add_argument(
+        "--capability",
+        help="Filter by capability (graph_backend, integration_adapter, vector_backend)",
+    )
+
     dossier_parser = sub.add_parser("dossier", help="Manage dossiers")
     dossier_sub = dossier_parser.add_subparsers(dest="dossier_cmd")
     view_p = dossier_sub.add_parser("view", help="View a dossier")
@@ -577,6 +607,9 @@ def main() -> None:
             return
         if args.command == "replay-graph":
             _replay_graph(args.db_path, args.end_offset)
+            return
+        if args.command == "plugins":
+            _list_plugins(args.capability)
             return
         if args.command == "dossier":
             if args.dossier_cmd == "view":

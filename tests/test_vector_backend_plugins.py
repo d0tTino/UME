@@ -1,9 +1,10 @@
 import types
-import importlib.metadata as metadata
 import importlib
+from types import SimpleNamespace
 
 from ume.vector_backends import get_backend, available_backends, load_entrypoints
 from ume.vector_store import VectorBackend
+from ume.plugins.registry import clear_plugins
 
 
 class DummyBackend(VectorBackend):
@@ -37,8 +38,13 @@ def test_entrypoint_registration(monkeypatch):
     module.DummyBackend = DummyBackend
     monkeypatch.setitem(importlib.sys.modules, "dummy_mod", module)
 
-    ep = metadata.EntryPoint(name="dummy", value="dummy_mod:DummyBackend", group="ume.vector_backends")
-    monkeypatch.setattr(metadata, "entry_points", lambda group=None: (ep,) if group == "ume.vector_backends" else ())
+    ep = SimpleNamespace(name="dummy", load=lambda: DummyBackend)
+    monkeypatch.setattr(
+        "ume.plugins.registry.entry_points",
+        lambda group=None: (ep,) if group == "ume.vector_backends" else (),
+    )
+
+    clear_plugins(capability="vector_backend")
 
     load_entrypoints()
 
@@ -51,14 +57,9 @@ def test_backend_loaded_on_import(monkeypatch):
     module.DummyBackend = DummyBackend
     monkeypatch.setitem(importlib.sys.modules, "dummy_mod", module)
 
-    ep = metadata.EntryPoint(
-        name="dummy_imp",
-        value="dummy_mod:DummyBackend",
-        group="ume.vector_backends",
-    )
+    ep = SimpleNamespace(name="dummy_imp", load=lambda: DummyBackend)
     monkeypatch.setattr(
-        metadata,
-        "entry_points",
+        "ume.plugins.registry.entry_points",
         lambda group=None: (ep,) if group == "ume.vector_backends" else (),
     )
 
