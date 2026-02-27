@@ -81,6 +81,9 @@ response on success.
 
 The standalone ingestion service listens on port `8001` and publishes raw events to Kafka.
 
+Deterministic projection behavior and invalid-event handling rules are documented in
+[`docs/PROJECTION_ENGINE.md`](PROJECTION_ENGINE.md).
+
 ### POST `/events` (ingestion)
 Validate the request body and forward the event to the `ume-raw-events` topic.
 
