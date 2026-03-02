@@ -240,10 +240,8 @@ async def ingest_envelope_async(
 ) -> None:
     """Asynchronously ingest an :class:`EventEnvelope` into ``graph``."""
     event_dict = envelope_to_event_dict(envelope)
-    canonical, event = ingest_transport_payload(event_dict, adapter="grpc")
     await ingest_event_async(
-        canonical,
+        event_dict,
         graph,
         schema_version=schema_version,
-        event=event,
     )
