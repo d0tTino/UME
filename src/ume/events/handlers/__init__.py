@@ -6,9 +6,10 @@ from .edge_handlers import (
     CreateEdgeHandler,
     CreateOntologyRelationHandler,
     DeleteEdgeHandler,
+    RedactEdgeHandler,
 )
 from .misc_handlers import NoOpEventHandler
-from .node_handlers import CreateNodeHandler, UpdateNodeAttributesHandler
+from .node_handlers import CreateNodeHandler, RedactNodeHandler, UpdateNodeAttributesHandler
 
 EVENT_HANDLER_REGISTRY: dict[EventType, EventHandler] = {
     EventType.CREATE_NODE: CreateNodeHandler(),
@@ -20,6 +21,8 @@ EVENT_HANDLER_REGISTRY: dict[EventType, EventHandler] = {
     EventType.ENTITY_DISCOVERED: CreateEdgeHandler(create_target_node_if_missing=True),
     EventType.CREATE_ONTOLOGY_RELATION: CreateOntologyRelationHandler(),
     EventType.DELETE_EDGE: DeleteEdgeHandler(),
+    EventType.REDACT_NODE: RedactNodeHandler(),
+    EventType.REDACT_EDGE: RedactEdgeHandler(),
     EventType.ANOMALY_DETECTED: NoOpEventHandler(),
 }
 

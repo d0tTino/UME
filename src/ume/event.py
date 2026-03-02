@@ -17,6 +17,8 @@ class EventType(str, Enum):
     UPDATE_NODE_ATTRIBUTES = "UPDATE_NODE_ATTRIBUTES"
     CREATE_EDGE = "CREATE_EDGE"
     DELETE_EDGE = "DELETE_EDGE"
+    REDACT_NODE = "REDACT_NODE"
+    REDACT_EDGE = "REDACT_EDGE"
     CREATE_ONTOLOGY_RELATION = "CREATE_ONTOLOGY_RELATION"
     RESEARCH_JOB_STARTED = "RESEARCH_JOB_STARTED"
     DATA_SOURCE_QUERIED = "DATA_SOURCE_QUERIED"
@@ -145,6 +147,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
         EventType.UPDATE_NODE_ATTRIBUTES,
         EventType.RESEARCH_JOB_STARTED,
         EventType.DOCUMENT_ARCHIVED,
+        EventType.REDACT_NODE,
     ]:
         payload_node_id = payload_val.get("node_id")
         if node_id_val is None and payload_node_id is not None:
@@ -164,6 +167,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
     elif event_type in [
         EventType.CREATE_EDGE,
         EventType.DELETE_EDGE,
+        EventType.REDACT_EDGE,
         EventType.CREATE_ONTOLOGY_RELATION,
         EventType.DATA_SOURCE_QUERIED,
         EventType.ENTITY_DISCOVERED,

@@ -113,3 +113,17 @@ class DeleteEdgeHandler(BaseEventHandler):
         )
         for listener in get_registered_listeners():
             listener.on_edge_deleted(source_node_id, target_node_id, label)
+
+
+class RedactEdgeHandler(BaseEventHandler):
+    def validate(self, context: HandlerContext) -> None:
+        require_edge_fields(context.event, event_label="REDACT_EDGE")
+
+    def apply(self, context: HandlerContext) -> None:
+        source_node_id, target_node_id, label = require_edge_fields(
+            context.event, event_label="REDACT_EDGE"
+        )
+        context.graph.redact_edge(source_node_id, target_node_id, label)
+
+    def emit_listeners(self, context: HandlerContext) -> None:
+        return None
