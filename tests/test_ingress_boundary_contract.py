@@ -42,3 +42,23 @@ def test_ingress_paths_produce_identical_canonical_output() -> None:
 
     assert kafka_canonical == grpc_canonical == cli_canonical
     assert kafka_event == grpc_event == cli_event
+
+
+def test_ingress_accepts_legacy_nested_event_shape() -> None:
+    legacy_payload = {
+        "schemaVersion": "2.0.0",
+        "event": {
+            "eventId": "evt-2",
+            "eventType": "CREATE_NODE",
+            "timestamp": 1700000000,
+            "sourceService": "legacy-producer",
+            "nodeId": "n1",
+            "payload": {"node_id": "n1", "attributes": {"name": "Alice"}},
+        },
+    }
+
+    canonical, event = ingest_transport_payload(legacy_payload, adapter="kafka")
+
+    assert canonical["metadata"]["schema_version"] == "2.0.0"
+    assert canonical["graph"]["node_id"] == "n1"
+    assert event.event_type == "CREATE_NODE"

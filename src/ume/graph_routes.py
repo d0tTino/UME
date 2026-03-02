@@ -14,7 +14,7 @@ except Exception:  # pragma: no cover - provide stub for tests without limiter
             return None
 
         return _noop
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, AliasChoices, ConfigDict, model_validator
 from pydantic_core import PydanticCustomError
 from sse_starlette.sse import EventSourceResponse
 
@@ -203,14 +203,30 @@ class SnapshotPathRequest(BaseModel):
 class EventRequest(BaseModel):
     """Schema for a single event."""
 
-    eventType: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    event_type: str = Field(validation_alias=AliasChoices("event_type", "eventType"))
     timestamp: int
-    eventId: str | None = None
-    sourceService: str | None = None
+    event_id: str | None = Field(default=None, validation_alias=AliasChoices("event_id", "eventId"))
+    source: str | None = Field(default=None, validation_alias=AliasChoices("source", "sourceService"))
     node_id: str | None = None
-    target_node_id: str | None = None
+    target_node_id: str | None = Field(default=None, validation_alias=AliasChoices("target_node_id", "targetNodeId"))
     label: str | None = None
+    schema_version: str | None = Field(default=None, validation_alias=AliasChoices("schema_version", "schemaVersion"))
     payload: Dict[str, Any] | None = None
+
+    def to_ingress_dict(self) -> Dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "event_id": self.event_id,
+            "timestamp": self.timestamp,
+            "source": self.source,
+            "node_id": self.node_id,
+            "target_node_id": self.target_node_id,
+            "label": self.label,
+            "schema_version": self.schema_version,
+            "payload": self.payload,
+        }
     
 
 @router.get("/query")
@@ -353,7 +369,7 @@ async def api_post_events_batch(
 ) -> Dict[str, Any]:
     """Apply multiple events sequentially to the graph."""
     try:
-        payload = [e.model_dump(exclude_none=True) for e in events]
+        payload = [e.to_ingress_dict() for e in events]
         if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
             getattr(graph, "add_node", None)
         ):
@@ -375,7 +391,7 @@ async def api_store_events_batch(
 ) -> Dict[str, Any]:
     """Alias for :func:`api_post_events_batch`."""
     try:
-        payload = [e.model_dump(exclude_none=True) for e in events]
+        payload = [e.to_ingress_dict() for e in events]
         if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
             getattr(graph, "add_node", None)
         ):
@@ -593,7 +609,7 @@ async def api_post_event(
 ) -> Dict[str, Any]:
     """Validate and apply an event to the graph."""
     try:
-        data = req.model_dump(exclude_none=True)
+        data = req.to_ingress_dict()
         if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
             getattr(graph, "add_node", None)
         ):
@@ -614,7 +630,7 @@ async def api_store_event(
 ) -> Dict[str, Any]:
     """Alias for :func:`api_post_event`."""
     try:
-        data = req.model_dump(exclude_none=True)
+        data = req.to_ingress_dict()
         if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
             getattr(graph, "add_node", None)
         ):

@@ -10,6 +10,7 @@ from google.protobuf import struct_pb2
 from ..event import Event, EventError, EventType
 from ..events.contract import canonical_to_legacy_dict
 from ..events.ingress import ingest_transport_payload
+from ..events.versioning import resolve_schema_version
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
@@ -70,14 +71,6 @@ def _fallback_schema_version() -> str:
         return ""
 
 
-def _normalize_schema_version(value: Any) -> str | None:
-    if isinstance(value, str):
-        stripped = value.strip()
-        if stripped:
-            return stripped
-    return None
-
-
 def _build_graph_projector(
     graph: IGraphAdapter,
     *,
@@ -90,16 +83,11 @@ def _build_graph_projector(
             raise EventError("missing_canonical_or_event")
         metadata = canonical["metadata"]
         unwrapped_event_data = canonical_to_legacy_dict(canonical)
-        envelope_version = metadata.get("schema_version")
-        explicit_version = _normalize_schema_version(schema_version)
-        normalized_envelope_version = _normalize_schema_version(envelope_version)
-        normalized_payload_version = _normalize_schema_version(unwrapped_event_data.get("schema_version"))
-        detected_version = normalized_envelope_version or normalized_payload_version
-        effective_version = (
-            explicit_version
-            or detected_version
-            or _normalize_schema_version(_fallback_schema_version())
-            or DEFAULT_VERSION
+        effective_version = resolve_schema_version(
+            canonical,
+            explicit_version=schema_version,
+            fallback_version=_fallback_schema_version(),
+            default_version=DEFAULT_VERSION,
         )
         details = apply_classification(context)
         apply_event(event, graph, schema_version=effective_version)
@@ -147,9 +135,11 @@ def ingest_events_batch(
 def dict_to_envelope(data: Dict[str, Any]) -> Any:
     """Convert a raw event dictionary to :class:`~ume_client.events_pb2.EventEnvelope`."""
     canonical, evt = ingest_transport_payload(data, adapter="grpc")
-    schema_version = _normalize_schema_version(canonical["metadata"].get("schema_version"))
-    if not schema_version:
-        schema_version = _fallback_schema_version()
+    schema_version = resolve_schema_version(
+        canonical,
+        fallback_version=_fallback_schema_version(),
+        default_version=DEFAULT_VERSION,
+    )
     struct_payload = struct_pb2.Struct()
     struct_payload.update(evt.payload)
     meta = events_pb2.BaseEvent(
@@ -162,7 +152,7 @@ def dict_to_envelope(data: Dict[str, Any]) -> Any:
         label=evt.label or "",
         payload=struct_payload,
     )
-    envelope_kwargs = {"schema_version": schema_version or DEFAULT_VERSION}
+    envelope_kwargs = {"schema_version": schema_version}
     envelope = events_pb2.EventEnvelope(**envelope_kwargs)
     if evt.event_type == EventType.CREATE_NODE.value:
         return events_pb2.EventEnvelope(
