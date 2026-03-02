@@ -23,7 +23,7 @@ logger = logging.getLogger("consumer_demo")
 # Kafka broker and topic
 # Set KAFKA_CA_CERT, KAFKA_CLIENT_CERT and KAFKA_CLIENT_KEY to enable TLS.
 BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
-TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
+TOPIC = settings.KAFKA_RAW_EVENTS_TOPIC
 GROUP_ID = settings.KAFKA_GROUP_ID
 
 
@@ -80,7 +80,9 @@ def main() -> None:
                     text_values = [v for v in payload.values() if isinstance(v, str)]
                     if text_values:
                         payload["embedding"] = generate_embedding(" ".join(text_values))
-                _, received_event = ingest_transport_payload(event_data_dict, adapter="cli")
+                _, received_event = ingest_transport_payload(
+                    event_data_dict, adapter="kafka"
+                )
                 logger.info(f"Received event object: {received_event}")
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON: {data}, error: {e}")

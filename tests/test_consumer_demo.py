@@ -57,6 +57,7 @@ def test_consumer_demo_processes_messages(monkeypatch):
     parsed = []
     def _fake_ingress(payload, adapter="default"):
         parsed.append(payload)
+        assert adapter == "kafka"
         return payload, payload
 
     monkeypatch.setattr(consumer_demo, "ingest_transport_payload", _fake_ingress)
@@ -67,4 +68,3 @@ def test_consumer_demo_processes_messages(monkeypatch):
     assert consumer.closed
     assert parsed
     assert parsed[0]["payload"]["embedding"] == [0.0]
-

@@ -13,7 +13,7 @@ from ume.config import settings
 from ume.logging_utils import configure_logging
 import time
 from confluent_kafka import Producer, KafkaException, Message
-from ume import Event
+from ume import Event, EventType
 from ume.schema_utils import validate_event_dict
 from ume.events.contract import canonicalize_event, canonical_to_camel_dict
 from jsonschema import ValidationError
@@ -51,12 +51,20 @@ def main() -> None:
     producer = Producer(conf)
 
     # Construct an Event instance
-    event_payload_data = {"message": "Hello from producer_demo with Event class!"}
+    demo_node_id = "demo_node_1"
+    event_payload_data = {
+        "node_id": demo_node_id,
+        "attributes": {
+            "message": "Hello from producer_demo with Event class!",
+            "source": "producer_demo",
+        },
+    }
     event_to_send = Event(
-        event_type="demo_event",
+        event_type=EventType.CREATE_NODE.value,
         timestamp=int(time.time()),
         payload=event_payload_data,
         source="producer_demo",  # Add source
+        node_id=demo_node_id,
     )
 
     # Convert Event object to dict for JSON serialization
@@ -68,6 +76,7 @@ def main() -> None:
                 "timestamp": event_to_send.timestamp,
                 "payload": event_to_send.payload,
                 "source": event_to_send.source,
+                "node_id": event_to_send.node_id,
             }
         )
     )
