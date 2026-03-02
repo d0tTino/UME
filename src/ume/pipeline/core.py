@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Mapping
+from typing import Any, Awaitable, Callable, Mapping
 
 from ..classification import classify_event
 from ..event import Event
@@ -50,6 +50,8 @@ class PipelineEnvelope:
 
 Projector = Callable[[PolicyContext], dict[str, Any] | None]
 Auditor = Callable[[PipelineEnvelope], None]
+AsyncProjector = Callable[[PolicyContext], Awaitable[dict[str, Any] | None]]
+AsyncAuditor = Callable[[PipelineEnvelope], Awaitable[None]]
 
 
 class EventPipelineOrchestrator:
@@ -64,41 +66,16 @@ class EventPipelineOrchestrator:
             redactor=lambda payload: (payload, False)
         )
 
-    def run(
+    def _base_context(
         self,
-        payload: Mapping[str, Any],
         *,
         source: str,
-        adapter: IngressAdapter = "default",
-        raw_payload: bytes | None = None,
-        projector: Projector | None = None,
-        auditor: Auditor | None = None,
-    ) -> PipelineEnvelope:
-        # decode
-        try:
-            decoded = dict(payload)
-        except Exception as exc:
-            return PipelineEnvelope(
-                outcome=PipelineOutcome.REJECTED,
-                source=source,
-                stage="decode",
-                reason=f"decode_failed:{exc}",
-            )
-
-        # normalize + validate
-        try:
-            canonical, event = ingest_transport_payload(decoded, adapter=adapter)
-        except Exception as exc:
-            return PipelineEnvelope(
-                outcome=PipelineOutcome.QUARANTINED,
-                source=source,
-                stage="validate",
-                reason=f"transport_validation_failed:{exc}",
-                details={"raw_payload_present": raw_payload is not None},
-            )
-
-        # policy
-        context = PolicyContext(
+        raw_payload: bytes | None,
+        decoded: dict[str, Any],
+        canonical: dict[str, Any],
+        event: Event,
+    ) -> PolicyContext:
+        return PolicyContext(
             source=source,
             raw_payload=raw_payload,
             transport_data=decoded,
@@ -106,6 +83,44 @@ class EventPipelineOrchestrator:
             original_event=event,
             effective_event=event,
         )
+
+    def _decode(self, payload: Mapping[str, Any], *, source: str) -> tuple[dict[str, Any] | None, PipelineEnvelope | None]:
+        try:
+            return dict(payload), None
+        except Exception as exc:
+            return None, PipelineEnvelope(
+                outcome=PipelineOutcome.REJECTED,
+                source=source,
+                stage="decode",
+                reason=f"decode_failed:{exc}",
+            )
+
+    def _normalize(
+        self,
+        decoded: dict[str, Any],
+        *,
+        source: str,
+        adapter: IngressAdapter,
+        raw_payload: bytes | None,
+    ) -> tuple[dict[str, Any] | None, Event | None, PipelineEnvelope | None]:
+        try:
+            canonical, event = ingest_transport_payload(decoded, adapter=adapter)
+            return canonical, event, None
+        except Exception as exc:
+            return None, None, PipelineEnvelope(
+                outcome=PipelineOutcome.QUARANTINED,
+                source=source,
+                stage="validate",
+                reason=f"transport_validation_failed:{exc}",
+                details={"raw_payload_present": raw_payload is not None},
+            )
+
+    def _policy(
+        self,
+        context: PolicyContext,
+        *,
+        source: str,
+    ) -> tuple[PipelineEnvelope | None, PipelineOutcome, PolicyDecision]:
         policy_result = self._policy_pipeline.evaluate(context)
         if policy_result.decision == PolicyDecision.DENY:
             return PipelineEnvelope(
@@ -116,7 +131,7 @@ class EventPipelineOrchestrator:
                 canonical_event=context.canonical_event,
                 event=context.effective_event,
                 policy_decision=policy_result.decision,
-            )
+            ), PipelineOutcome.REJECTED, PolicyDecision.DENY
         if policy_result.decision == PolicyDecision.QUARANTINE:
             return PipelineEnvelope(
                 outcome=PipelineOutcome.QUARANTINED,
@@ -126,11 +141,46 @@ class EventPipelineOrchestrator:
                 canonical_event=context.canonical_event,
                 event=context.effective_event,
                 policy_decision=policy_result.decision,
-            )
+            ), PipelineOutcome.QUARANTINED, PolicyDecision.QUARANTINE
+        return None, (
+            PipelineOutcome.REDACTED
+            if policy_result.decision == PolicyDecision.REDACTED
+            else PipelineOutcome.APPLIED
+        ), policy_result.decision
 
-        provisional_outcome = PipelineOutcome.REDACTED if policy_result.decision == PolicyDecision.REDACTED else PipelineOutcome.APPLIED
+    def run(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        source: str,
+        adapter: IngressAdapter = "default",
+        raw_payload: bytes | None = None,
+        projector: Projector | None = None,
+        auditor: Auditor | None = None,
+    ) -> PipelineEnvelope:
+        decoded, decode_error = self._decode(payload, source=source)
+        if decode_error is not None:
+            return decode_error
+        assert decoded is not None
 
-        # project
+        canonical, event, normalize_error = self._normalize(
+            decoded, source=source, adapter=adapter, raw_payload=raw_payload
+        )
+        if normalize_error is not None:
+            return normalize_error
+        assert canonical is not None and event is not None
+
+        context = self._base_context(
+            source=source,
+            raw_payload=raw_payload,
+            decoded=decoded,
+            canonical=canonical,
+            event=event,
+        )
+        policy_error, provisional_outcome, policy_decision = self._policy(context, source=source)
+        if policy_error is not None:
+            return policy_error
+
         if context.effective_event is None:
             return PipelineEnvelope(
                 outcome=PipelineOutcome.QUARANTINED,
@@ -138,7 +188,7 @@ class EventPipelineOrchestrator:
                 stage="project",
                 reason="effective_event_missing",
                 canonical_event=context.canonical_event,
-                policy_decision=policy_result.decision,
+                policy_decision=policy_decision,
             )
 
         details: dict[str, Any] = {}
@@ -155,7 +205,7 @@ class EventPipelineOrchestrator:
                     reason=f"processing_error:{exc}",
                     canonical_event=context.canonical_event,
                     event=context.effective_event,
-                    policy_decision=policy_result.decision,
+                    policy_decision=policy_decision,
                 )
             except Exception as exc:
                 return PipelineEnvelope(
@@ -165,10 +215,9 @@ class EventPipelineOrchestrator:
                     reason=f"projection_failed:{exc}",
                     canonical_event=context.canonical_event,
                     event=context.effective_event,
-                    policy_decision=policy_result.decision,
+                    policy_decision=policy_decision,
                 )
 
-        # audit
         self._policy_pipeline.audit_post_apply(context)
         envelope = PipelineEnvelope(
             outcome=provisional_outcome,
@@ -177,12 +226,98 @@ class EventPipelineOrchestrator:
             reason="mutation_applied",
             canonical_event=context.canonical_event,
             event=context.effective_event,
-            policy_decision=policy_result.decision,
+            policy_decision=policy_decision,
             redacted=provisional_outcome == PipelineOutcome.REDACTED,
             details=details,
         )
         if auditor is not None:
             auditor(envelope)
+        return envelope
+
+    async def run_async(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        source: str,
+        adapter: IngressAdapter = "default",
+        raw_payload: bytes | None = None,
+        projector: AsyncProjector | None = None,
+        auditor: AsyncAuditor | None = None,
+    ) -> PipelineEnvelope:
+        decoded, decode_error = self._decode(payload, source=source)
+        if decode_error is not None:
+            return decode_error
+        assert decoded is not None
+
+        canonical, event, normalize_error = self._normalize(
+            decoded, source=source, adapter=adapter, raw_payload=raw_payload
+        )
+        if normalize_error is not None:
+            return normalize_error
+        assert canonical is not None and event is not None
+
+        context = self._base_context(
+            source=source,
+            raw_payload=raw_payload,
+            decoded=decoded,
+            canonical=canonical,
+            event=event,
+        )
+        policy_error, provisional_outcome, policy_decision = self._policy(context, source=source)
+        if policy_error is not None:
+            return policy_error
+
+        if context.effective_event is None:
+            return PipelineEnvelope(
+                outcome=PipelineOutcome.QUARANTINED,
+                source=source,
+                stage="project",
+                reason="effective_event_missing",
+                canonical_event=context.canonical_event,
+                policy_decision=policy_decision,
+            )
+
+        details: dict[str, Any] = {}
+        if projector is not None:
+            try:
+                projected = await projector(context)
+                if projected:
+                    details.update(projected)
+            except ProcessingError as exc:
+                return PipelineEnvelope(
+                    outcome=PipelineOutcome.REJECTED,
+                    source=source,
+                    stage="project",
+                    reason=f"processing_error:{exc}",
+                    canonical_event=context.canonical_event,
+                    event=context.effective_event,
+                    policy_decision=policy_decision,
+                )
+            except Exception as exc:
+                return PipelineEnvelope(
+                    outcome=PipelineOutcome.REJECTED,
+                    source=source,
+                    stage="project",
+                    reason=f"projection_failed:{exc}",
+                    canonical_event=context.canonical_event,
+                    event=context.effective_event,
+                    policy_decision=policy_decision,
+                )
+
+        self._policy_pipeline.audit_post_apply(context)
+        envelope = PipelineEnvelope(
+            outcome=provisional_outcome,
+            source=source,
+            stage="audit",
+            reason="mutation_applied",
+            canonical_event=context.canonical_event,
+            event=context.effective_event,
+            policy_decision=policy_decision,
+            redacted=provisional_outcome == PipelineOutcome.REDACTED,
+            details=details,
+        )
+        if auditor is not None:
+            await auditor(envelope)
         return envelope
 
 
