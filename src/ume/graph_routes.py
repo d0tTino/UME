@@ -30,12 +30,79 @@ from .query import Neo4jQueryEngine, build_events_query
 from .event import EventError
 from .processing import ProcessingError
 from .graph_schema import DEFAULT_SCHEMA
+from .rbac_adapter import AccessDeniedError
 from ume.services.ingest import ingest_event, ingest_events_batch
 
 # import shared API dependencies
 from . import api_deps as deps
 
 router = APIRouter()
+
+_ROUTE_SOURCE_SERVICE = "graph_routes"
+
+
+def _command_metadata(perm_graph: PermissionsGraphAdapter) -> Dict[str, Any]:
+    return {
+        "requested_by": {
+            "user_id": perm_graph.user_id,
+            "group_id": perm_graph.group_id,
+        },
+        "route": "graph_routes",
+    }
+
+
+def _canonical_command_event(
+    *,
+    event_type: str,
+    node_id: str | None = None,
+    target_node_id: str | None = None,
+    label: str | None = None,
+    payload: Dict[str, Any] | None = None,
+    metadata: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    command_payload = dict(payload or {})
+    if metadata:
+        command_payload["metadata"] = metadata
+    return {
+        "eventType": event_type,
+        "eventId": str(uuid4()),
+        "timestamp": int(time.time()),
+        "sourceService": _ROUTE_SOURCE_SERVICE,
+        "node_id": node_id,
+        "target_node_id": target_node_id,
+        "label": label,
+        "payload": command_payload,
+    }
+
+
+def _require_edge_permissions(
+    perm_graph: PermissionsGraphAdapter,
+    source: str,
+    target: str,
+    label: str,
+) -> None:
+    perm_graph._require_editor(source)
+    if label not in {"OWNED_BY", "SHARED_WITH", "INVITES"}:
+        perm_graph._require_editor(target)
+
+
+async def _ingest_event_dispatch(event: Dict[str, Any], graph: IGraphAdapter) -> None:
+    if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+        getattr(graph, "add_node", None)
+    ):
+        await ingest_event_async(event, graph)  # type: ignore[arg-type]
+    else:
+        ingest_event(event, graph)
+
+
+async def _ingest_events_batch_dispatch(events: List[Dict[str, Any]], graph: IGraphAdapter) -> None:
+    if isinstance(graph, IAsyncGraphAdapter) or inspect.iscoroutinefunction(
+        getattr(graph, "add_node", None)
+    ):
+        for event in events:
+            await ingest_event_async(event, graph)  # type: ignore[arg-type]
+    else:
+        ingest_events_batch(events, graph)
 
 
 async def _maybe_call(graph: IGraphAdapter, name: str, *args: Any) -> Any:
@@ -264,9 +331,17 @@ async def api_subgraph(
 async def api_redact_node(
     node_id: str,
     perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
+    graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Redact (delete) a node by its ID."""
-    await _maybe_call(perm_graph, "redact_node", node_id)
+    perm_graph._require_editor(node_id)
+    event = _canonical_command_event(
+        event_type="REDACT_NODE",
+        node_id=node_id,
+        payload={"node_id": node_id},
+        metadata=_command_metadata(perm_graph),
+    )
+    await _ingest_event_dispatch(event, graph)
     return {"status": "ok"}
 
 
@@ -318,11 +393,19 @@ async def api_store_events_batch(
 async def api_redact_edge(
     req: RedactEdgeRequest,
     perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
+    graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Redact an edge between two nodes."""
-    await _maybe_call(
-        perm_graph, "redact_edge", req.source, req.target, req.label
+    _require_edge_permissions(perm_graph, req.source, req.target, req.label)
+    event = _canonical_command_event(
+        event_type="REDACT_EDGE",
+        node_id=req.source,
+        target_node_id=req.target,
+        label=req.label,
+        payload={"source_node_id": req.source, "target_node_id": req.target, "label": req.label},
+        metadata=_command_metadata(perm_graph),
     )
+    await _ingest_event_dispatch(event, graph)
     return {"status": "ok"}
 
 
@@ -330,9 +413,16 @@ async def api_redact_edge(
 async def api_create_node(
     req: NodeCreateRequest,
     perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
+    graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Create a node with optional attributes."""
-    await _maybe_call(perm_graph, "add_node", req.id, req.attributes or {})
+    event = _canonical_command_event(
+        event_type="CREATE_NODE",
+        node_id=req.id,
+        payload={"node_id": req.id, "attributes": req.attributes or {}},
+        metadata=_command_metadata(perm_graph),
+    )
+    await _ingest_event_dispatch(event, graph)
     return {"status": "ok"}
 
 
@@ -341,9 +431,17 @@ async def api_update_node(
     node_id: str,
     req: NodeUpdateRequest,
     perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
+    graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Update attributes of an existing node."""
-    await _maybe_call(perm_graph, "update_node", node_id, req.attributes)
+    perm_graph._require_editor(node_id)
+    event = _canonical_command_event(
+        event_type="UPDATE_NODE_ATTRIBUTES",
+        node_id=node_id,
+        payload={"node_id": node_id, "attributes": req.attributes},
+        metadata=_command_metadata(perm_graph),
+    )
+    await _ingest_event_dispatch(event, graph)
     return {"status": "ok"}
 
 
@@ -351,9 +449,17 @@ async def api_update_node(
 async def api_delete_node(
     node_id: str,
     perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
+    graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Remove a node from the graph."""
-    await _maybe_call(perm_graph, "redact_node", node_id)
+    perm_graph._require_editor(node_id)
+    event = _canonical_command_event(
+        event_type="REDACT_NODE",
+        node_id=node_id,
+        payload={},
+        metadata=_command_metadata(perm_graph),
+    )
+    await _ingest_event_dispatch(event, graph)
     return {"status": "ok"}
 
 
@@ -361,20 +467,30 @@ async def api_delete_node(
 async def api_create_edge(
     req: EdgeCreateRequest,
     perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
+    graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Create an edge between two nodes."""
     edge_def = DEFAULT_SCHEMA.edge_labels.get(req.label)
     version = edge_def.version if edge_def else None
     attrs = dict(req.attrs or {})
-    await _maybe_call(
-        perm_graph,
-        "add_edge",
-        req.source,
-        req.target,
-        req.label,
-        attrs,
-        version,
+    is_bootstrap_owner = (
+        req.label == "OWNED_BY" and req.source in perm_graph._bootstrap_owner_nodes
     )
+    if not is_bootstrap_owner and req.label == "OWNED_BY" and not perm_graph._has_permission(
+        req.source, "editor"
+    ):
+        raise AccessDeniedError("OWNED_BY edges must be bootstrapped before an editor exists")
+    if not is_bootstrap_owner:
+        _require_edge_permissions(perm_graph, req.source, req.target, req.label)
+    event = _canonical_command_event(
+        event_type="CREATE_EDGE",
+        node_id=req.source,
+        target_node_id=req.target,
+        label=req.label,
+        payload={"source_node_id": req.source, "target_node_id": req.target, "label": req.label, "attributes": attrs, "schema_version": version},
+        metadata=_command_metadata(perm_graph),
+    )
+    await _ingest_event_dispatch(event, graph)
     return {"status": "ok"}
 
 
@@ -384,9 +500,19 @@ async def api_delete_edge(
     target: str,
     label: str,
     perm_graph: PermissionsGraphAdapter = Depends(deps.get_permissions_graph),
+    graph: IGraphAdapter = Depends(deps.get_graph),
 ) -> Dict[str, Any]:
     """Delete an edge identified by source, target and label."""
-    await _maybe_call(perm_graph, "delete_edge", source, target, label)
+    _require_edge_permissions(perm_graph, source, target, label)
+    event = _canonical_command_event(
+        event_type="DELETE_EDGE",
+        node_id=source,
+        target_node_id=target,
+        label=label,
+        payload={"source_node_id": source, "target_node_id": target, "label": label},
+        metadata=_command_metadata(perm_graph),
+    )
+    await _ingest_event_dispatch(event, graph)
     return {"status": "ok"}
 
 
@@ -499,4 +625,3 @@ async def api_store_event(
         raise HTTPException(status_code=400, detail=str(exc))
 
     return {"status": "ok"}
-

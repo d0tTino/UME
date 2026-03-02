@@ -178,3 +178,156 @@ def test_subgraph_filters_view_only_subjects(
     payload = response.json()
     assert set(payload["nodes"].keys()) == {"visible"}
     assert payload["edges"] == []
+
+
+def _issue_token(client: TestClient) -> dict[str, str]:
+    token_res = client.post(
+        "/auth/token",
+        data={
+            "username": settings.UME_OAUTH_USERNAME,
+            "password": settings.UME_OAUTH_PASSWORD,
+        },
+    )
+    token_res.raise_for_status()
+    token = token_res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_mutation_endpoints_match_events_graph_results() -> None:
+    conv_graph = MockGraph()
+    evt_graph = MockGraph()
+    conv_client: TestClient | None = None
+    evt_client: TestClient | None = None
+    try:
+        configure_graph(conv_graph)
+        conv_client = TestClient(app)
+        conv_headers = _issue_token(conv_client)
+
+        conv_graph.add_node("doc", {"type": "Document"})
+        conv_graph.add_node("owner", {"type": "User"})
+        conv_graph.add_node("team", {"type": "UserGroup"})
+        conv_graph.add_edge("doc", "owner", "OWNED_BY", {"permission_level": "editor"})
+        params = {"user_id": "owner"}
+
+        assert conv_client.post(
+            "/nodes", json={"id": "draft", "attributes": {"title": "t1"}}, headers=conv_headers, params=params
+        ).status_code == 200
+        assert conv_client.patch(
+            "/nodes/draft", json={"attributes": {"title": "t2"}}, headers=conv_headers, params=params
+        ).status_code == 200
+        assert conv_client.post(
+            "/edges",
+            json={
+                "source": "doc",
+                "target": "team",
+                "label": "SHARED_WITH",
+                "attrs": {"permission_level": "viewer"},
+            },
+            headers=conv_headers,
+            params=params,
+        ).status_code == 200
+        assert conv_client.post(
+            "/redact/edge",
+            json={"source": "doc", "target": "team", "label": "SHARED_WITH"},
+            headers=conv_headers,
+            params=params,
+        ).status_code == 200
+        assert conv_client.post(
+            "/redact/node/draft", headers=conv_headers, params=params
+        ).status_code == 200
+
+        conv_dump = conv_graph.dump()
+
+        configure_graph(evt_graph)
+        evt_client = TestClient(app)
+        evt_headers = _issue_token(evt_client)
+
+        evt_graph.add_node("doc", {"type": "Document"})
+        evt_graph.add_node("owner", {"type": "User"})
+        evt_graph.add_node("team", {"type": "UserGroup"})
+        evt_graph.add_edge("doc", "owner", "OWNED_BY", {"permission_level": "editor"})
+
+        events = [
+            {
+                "eventType": "CREATE_NODE",
+                "timestamp": 1700000000,
+                "node_id": "draft",
+                "payload": {"node_id": "draft", "attributes": {"title": "t1"}},
+            },
+            {
+                "eventType": "UPDATE_NODE_ATTRIBUTES",
+                "timestamp": 1700000001,
+                "node_id": "draft",
+                "payload": {"node_id": "draft", "attributes": {"title": "t2"}},
+            },
+            {
+                "eventType": "CREATE_EDGE",
+                "timestamp": 1700000002,
+                "node_id": "doc",
+                "target_node_id": "team",
+                "label": "SHARED_WITH",
+                "payload": {
+                    "source_node_id": "doc",
+                    "target_node_id": "team",
+                    "label": "SHARED_WITH",
+                    "attributes": {"permission_level": "viewer"},
+                },
+            },
+            {
+                "eventType": "REDACT_EDGE",
+                "timestamp": 1700000003,
+                "node_id": "doc",
+                "target_node_id": "team",
+                "label": "SHARED_WITH",
+                "payload": {
+                    "source_node_id": "doc",
+                    "target_node_id": "team",
+                    "label": "SHARED_WITH",
+                },
+            },
+            {
+                "eventType": "REDACT_NODE",
+                "timestamp": 1700000004,
+                "node_id": "draft",
+                "payload": {"node_id": "draft"},
+            },
+        ]
+        for event in events:
+            assert evt_client.post("/events", json=event, headers=evt_headers).status_code == 200
+
+        evt_dump = evt_graph.dump()
+        assert conv_dump == evt_dump
+    finally:
+        with TOKENS_LOCK:
+            TOKENS.clear()
+        if conv_client is not None:
+            conv_client.close()
+        if evt_client is not None:
+            evt_client.close()
+
+
+def test_mutation_endpoints_match_events_policy_behavior(
+    client_with_graph: tuple[TestClient, MockGraph, dict[str, str]],
+) -> None:
+    client, _, headers = client_with_graph
+
+    convenience = client.post(
+        "/nodes",
+        json={"id": "forbidden", "attributes": {"type": "Document"}},
+        headers=headers,
+        params={"user_id": "owner"},
+    )
+    assert convenience.status_code == 400
+
+    event = client.post(
+        "/events",
+        json={
+            "eventType": "CREATE_NODE",
+            "timestamp": 1700000000,
+            "node_id": "forbidden",
+            "payload": {"node_id": "forbidden", "attributes": {"type": "Document"}},
+        },
+        headers=headers,
+    )
+    assert event.status_code == 400
+    assert convenience.json()["detail"] == event.json()["detail"]

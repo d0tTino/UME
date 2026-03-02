@@ -94,3 +94,27 @@ class UpdateNodeAttributesHandler(BaseEventHandler):
         if isinstance(node_id, str) and isinstance(attributes, dict):
             for listener in get_registered_listeners():
                 listener.on_node_updated(node_id, attributes)
+
+
+class RedactNodeHandler(BaseEventHandler):
+    def validate(self, context: HandlerContext) -> None:
+        event = context.event
+        require_str_field(
+            event.node_id,
+            field_name="node_id",
+            event=event,
+            event_label="REDACT_NODE",
+        )
+
+    def apply(self, context: HandlerContext) -> None:
+        event = context.event
+        node_id = require_str_field(
+            event.node_id,
+            field_name="node_id",
+            event=event,
+            event_label="REDACT_NODE",
+        )
+        context.graph.redact_node(node_id)
+
+    def emit_listeners(self, context: HandlerContext) -> None:
+        return None
