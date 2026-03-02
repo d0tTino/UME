@@ -27,14 +27,30 @@ This quickstart shows how to run a simple producer and consumer locally.
    docker run -d -p 9092:9092 -p 9644:9644 --name redpanda docker.redpanda.com/vectorized/redpanda:latest redpanda start
    ```
 
-4. Start a sample producer:
+4. In one terminal, start the demo consumer:
    ```
-   python examples/producer.py --topic test --message "hello world"
-   ```
-
-5. In another terminal, start a sample consumer:
-   ```
-   python examples/consumer.py --topic test
+   python -m ume.consumer_demo
    ```
 
-You should see the message appear in the consumer's output, which verifies the basic data flow.
+5. In another terminal, publish a typed demo event:
+   ```
+   python -m ume.producer_demo
+   ```
+
+### Demo integration path (producer -> consumer)
+
+The demo scripts are wired for direct end-to-end flow with no intermediate
+processor required:
+
+```
+producer_demo.py
+  -> topic: KAFKA_RAW_EVENTS_TOPIC
+  -> consumer_demo.py
+```
+
+Expected behavior:
+
+- `producer_demo.py` publishes a schema-valid `CREATE_NODE` event.
+- `consumer_demo.py` subscribes to the same raw topic and parses each message
+  through `ingest_transport_payload(..., adapter="kafka")` before logging the
+  parsed `Event`.
