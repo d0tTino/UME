@@ -21,19 +21,76 @@ _SNAKE_TO_CAMEL["source"] = "sourceService"
 
 
 @dataclass(frozen=True)
+class CanonicalMetadata:
+    event_id: str | None
+    event_type: str | None
+    timestamp: int | str | None
+    schema_version: str | None
+    source: str | None
+    correlation_id: str | None
+    subject_entity: Dict[str, str] | None
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "event_id": self.event_id,
+            "event_type": self.event_type,
+            "timestamp": self.timestamp,
+            "schema_version": self.schema_version,
+            "source": self.source,
+            "correlation_ids": {"correlation_id": self.correlation_id},
+            "subject_entity": self.subject_entity,
+        }
+
+
+@dataclass(frozen=True)
+class CanonicalGraph:
+    node_id: str | None
+    target_node_id: str | None
+    label: str | None
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "node_id": self.node_id,
+            "target_node_id": self.target_node_id,
+            "label": self.label,
+        }
+
+
+@dataclass(frozen=True)
 class CanonicalEnvelope:
     """Canonical in-memory shape used by parsers and transport adapters."""
 
-    metadata: Dict[str, Any]
-    graph: Dict[str, Any]
+    metadata: CanonicalMetadata
+    graph: CanonicalGraph
     payload: Dict[str, Any]
 
     def as_dict(self) -> Dict[str, Any]:
         return {
-            "metadata": dict(self.metadata),
-            "graph": dict(self.graph),
+            "metadata": self.metadata.as_dict(),
+            "graph": self.graph.as_dict(),
             "payload": self.payload if isinstance(self.payload, dict) else self.payload,
         }
+
+
+def _envelope_from_data(data: Mapping[str, Any]) -> CanonicalEnvelope:
+    metadata = CanonicalMetadata(
+        event_id=data.get("event_id"),
+        event_type=data.get("event_type"),
+        timestamp=data.get("timestamp"),
+        schema_version=data.get("schema_version"),
+        source=data.get("source"),
+        correlation_id=data.get("correlation_id"),
+        subject_entity=data.get("subject_entity"),
+    )
+    graph = CanonicalGraph(
+        node_id=data.get("node_id"),
+        target_node_id=data.get("target_node_id"),
+        label=data.get("label"),
+    )
+    payload = data.get("payload", {})
+    if not isinstance(payload, dict):
+        payload = payload
+    return CanonicalEnvelope(metadata=metadata, graph=graph, payload=payload)
 
 
 def _to_snake_keys(data: Mapping[str, Any]) -> Dict[str, Any]:
@@ -53,27 +110,11 @@ def canonicalize_event(data: Mapping[str, Any]) -> Dict[str, Any]:
     snake_data = _to_snake_keys(data)
     event_data = snake_data.get("event") if isinstance(snake_data.get("event"), Mapping) else snake_data
 
-    metadata = {
-        "event_id": event_data.get("event_id"),
-        "event_type": event_data.get("event_type"),
-        "timestamp": event_data.get("timestamp"),
+    resolved = {
+        **event_data,
         "schema_version": snake_data.get("schema_version") or event_data.get("schema_version"),
-        "source": event_data.get("source"),
-        "correlation_ids": {
-            "correlation_id": event_data.get("correlation_id"),
-        },
-        "subject_entity": event_data.get("subject_entity"),
     }
-    graph = {
-        "node_id": event_data.get("node_id"),
-        "target_node_id": event_data.get("target_node_id"),
-        "label": event_data.get("label"),
-    }
-    payload = event_data.get("payload", {})
-    if not isinstance(payload, dict):
-        payload = payload
-
-    return CanonicalEnvelope(metadata=metadata, graph=graph, payload=payload).as_dict()
+    return _envelope_from_data(resolved).as_dict()
 
 
 def canonical_to_legacy_dict(canonical: Mapping[str, Any]) -> Dict[str, Any]:
