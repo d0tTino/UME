@@ -12,9 +12,9 @@ from ..event import EventType
 from ..event_ledger import event_ledger
 from ..graph_adapter import IGraphAdapter
 from ..logging_utils import configure_logging
-from ..processing import apply_event_to_graph
 from ..utils import ssl_config
 from .core import EventPipelineOrchestrator, PipelineEnvelope, PipelineOutcome
+from ..services.mutate import build_graph_projector, run_mutation
 from .invalid_events import build_rejected_event_ledger_entry, outcome_for_pipeline_outcome
 
 
@@ -66,7 +66,7 @@ def run_graph_consumer(
                 offset,
                 build_rejected_event_ledger_entry(
                     outcome=outcome_for_pipeline_outcome(envelope.outcome),
-                    reason=envelope.reason,
+                    reason=f"{envelope.details.get('error_category', 'processing_failure')}:{envelope.reason}",
                     source=envelope.source,
                     canonical=envelope.canonical_event,
                     event=envelope.event,
@@ -96,21 +96,23 @@ def run_graph_consumer(
                 logger.error("Failed to parse Kafka payload: %s", exc)
                 continue
 
+            base_projector = build_graph_projector(graph, classify=False)
+
             def _project(context):
                 event = context.effective_event
                 if event is None:
                     raise ValueError("effective_event_missing")
                 if event.event_type not in VALID_EVENT_TYPES:
                     raise ValueError(f"unknown_event_type:{event.event_type}")
-                apply_event_to_graph(event, graph, schema_version=event.schema_version)
-                return {}
+                return base_projector(context)
 
-            envelope = orchestrator.run(
+            envelope = run_mutation(
                 payload,
                 source="kafka_graph_consumer",
                 adapter="kafka",
                 raw_payload=msg.value(),
                 projector=_project,
+                orchestrator=orchestrator,
             )
 
             if envelope.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
@@ -119,7 +121,12 @@ def run_graph_consumer(
                     event_ledger.update_bookmark(msg.offset())
                 except Exception as exc:  # pragma: no cover - unexpected errors
                     logger.error("Failed to update bookmark: %s", exc)
-                logger.warning("Event rejected at %s stage: %s", envelope.stage, envelope.reason)
+                logger.warning(
+                    "Event rejected at %s stage [%s]: %s",
+                    envelope.stage,
+                    envelope.details.get("error_category", "processing_failure"),
+                    envelope.reason,
+                )
                 continue
 
             try:

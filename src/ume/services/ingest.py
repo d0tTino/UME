@@ -15,10 +15,12 @@ from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..anomaly_detection import AnomalyDetector
 from ..schema_manager import DEFAULT_SCHEMA_MANAGER
-from ..pipeline.core import (
-    EventPipelineOrchestrator,
-    PipelineOutcome,
-    apply_classification,
+from ..pipeline.core import EventPipelineOrchestrator
+from .mutate import (
+    MutationError,
+    build_graph_projector,
+    raise_for_rejected_outcome,
+    run_mutation,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing import for mypy
@@ -46,9 +48,11 @@ __all__ = [
 def validate_event(data: Dict[str, Any]) -> Event:
     """Canonicalize and parse incoming transport data into :class:`~ume.event.Event`."""
     canonical, event = ingest_transport_payload(data)
-    result = _orchestrator.run(data, source="service_validate")
-    if result.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
-        raise EventError(result.reason)
+    result = run_mutation(data, source="service_validate", orchestrator=_orchestrator)
+    try:
+        raise_for_rejected_outcome(result)
+    except MutationError as exc:
+        raise EventError(str(exc)) from exc
     return result.event or event
 
 
@@ -75,19 +79,14 @@ def _build_graph_projector(
     *,
     schema_version: str | None = None,
 ) -> Any:
+    base_projector = build_graph_projector(graph, schema_version=schema_version)
+
     def _project(context: Any) -> dict[str, Any]:
-        canonical = context.canonical_event
+        details = base_projector(context)
         event = context.effective_event
-        if canonical is None or event is None:
+        if event is None:
             raise EventError("missing_canonical_or_event")
-        effective_version = resolve_schema_version(
-            canonical,
-            explicit_version=schema_version,
-            fallback_version=_fallback_schema_version(),
-            default_version=DEFAULT_VERSION,
-        )
-        details = apply_classification(context)
-        apply_event(event, graph, schema_version=effective_version)
+        effective_version = str(details.get("schema_version") or schema_version or DEFAULT_VERSION)
         anomaly_event = _anomaly_detector.process_event(event)
         if anomaly_event is not None:
             ingest_event(
@@ -109,13 +108,16 @@ def ingest_event(
     data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
-    result = _orchestrator.run(
+    result = run_mutation(
         data,
         source="service_ingest",
         projector=_build_graph_projector(graph, schema_version=schema_version),
+        orchestrator=_orchestrator,
     )
-    if result.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
-        raise EventError(result.reason)
+    try:
+        raise_for_rejected_outcome(result)
+    except MutationError as exc:
+        raise EventError(str(exc)) from exc
 
 
 def ingest_events_batch(
@@ -209,14 +211,17 @@ def ingest_envelope(
 ) -> None:
     """Ingest an :class:`EventEnvelope` into ``graph``."""
     event_dict = envelope_to_event_dict(envelope)
-    result = _orchestrator.run(
+    result = run_mutation(
         event_dict,
         source="service_ingest",
         adapter="grpc",
         projector=_build_graph_projector(graph, schema_version=schema_version),
+        orchestrator=_orchestrator,
     )
-    if result.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
-        raise EventError(result.reason)
+    try:
+        raise_for_rejected_outcome(result)
+    except MutationError as exc:
+        raise EventError(str(exc)) from exc
 
 
 async def ingest_envelope_async(

@@ -12,7 +12,8 @@ from .persistent_graph import PersistentGraph
 from .processing import DEFAULT_VERSION, apply_event_to_graph
 from .event import Event, EventError
 from .graph_adapter import IGraphAdapter, AsyncAdapterMixin
-from .pipeline.core import EventPipelineOrchestrator, PipelineOutcome
+from .pipeline.core import EventPipelineOrchestrator
+from .services.mutate import MutationError, raise_for_rejected_outcome, run_mutation_async
 
 
 class IAsyncGraphAdapter(ABC):
@@ -330,13 +331,16 @@ async def ingest_event_async(
         await _apply_event_via_registry(effective_event, graph, schema_version=effective_version)
         return {"schema_version": effective_version}
 
-    result = await _orchestrator.run_async(
+    result = await run_mutation_async(
         canonical,
         source="async_ingest",
         projector=_project,
+        orchestrator=_orchestrator,
     )
-    if result.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
-        raise EventError(result.reason)
+    try:
+        raise_for_rejected_outcome(result)
+    except MutationError as exc:
+        raise EventError(str(exc)) from exc
 
 
 __all__ = [
