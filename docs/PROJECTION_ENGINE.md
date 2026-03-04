@@ -1,56 +1,62 @@
-# Projection Engine
+# Projection Engine Contract
 
-`ume.projection_engine` consumes sanitized events from Kafka and applies them to the configured graph adapter. It keeps the local graph in sync with the latest events published by the Privacy Agent.
+This document defines the **canonical projection pipeline contract** for UME.
 
-## Deterministic projection rules
+## Canonical implementation
 
-Projection is deterministic when the same ordered event stream is replayed:
+The authoritative implementation is:
 
-1. Events are parsed through the policy pipeline before projection.
-2. Any invalid event is mapped to one explicit outcome: `reject`, `quarantine`, or `dead_letter`.
-3. Invalid events are serialized into the event ledger as `REJECTED_EVENT` records for audit/replay parity.
-4. Graph state changes are performed only by `apply_event_to_graph` handler execution.
-5. Projection/replay skips unknown or otherwise non-applicable events and continues in offset order.
+- `ume.pipeline.core.EventPipelineOrchestrator` for stage orchestration.
+- Transport adapters in `ume.events.adapters` + `ume.events.ingress` for ingress normalization.
+- `ume.services.event_processor.EventProcessorService` as the single service entrypoint used by CLI/API/consumer integrations.
+
+Legacy entrypoints in `ume.projection_engine`, `ume.pipeline.graph_consumer`, and direct `ume.services.mutate.run_mutation*` calls are compatibility wrappers and are deprecated.
+
+## Authoritative stage sequence
+
+All ingress paths (Kafka, CLI, gRPC, API) MUST execute the same stages in the same order:
+
+1. **Ingress normalization**
+   - Decode transport payload.
+   - Convert transport-specific fields to canonical event shape.
+2. **Schema validation**
+   - Validate canonical structure + required graph mutation fields.
+3. **Policy evaluation**
+   - Evaluate allow/deny/quarantine/redaction policy pipeline.
+4. **Mutation apply**
+   - Apply accepted effective event to the graph projector.
+5. **Post-apply listeners/audit**
+   - Run post-apply listeners and emit audit metadata.
+
+Outcomes are normalized as `applied`, `redacted`, `rejected`, or `quarantined`.
+
+## Deprecation timeline
+
+Deprecated compatibility entrypoints:
+
+- `ume.projection_engine.run_projection_engine`
+- `ume.pipeline.graph_consumer.run_graph_consumer`
+- `ume.services.mutate.run_mutation`
+- `ume.services.mutate.run_mutation_async`
+
+Timeline:
+
+- Deprecated now (warnings emitted at runtime).
+- Removal target: **2026-01-31**.
+- Migration target: `ume.services.event_processor.DEFAULT_EVENT_PROCESSOR`.
 
 ## Configuration
 
-The engine reads the following settings from `Settings`:
+Canonical consumer deployments still use:
 
-- `KAFKA_BOOTSTRAP_SERVERS` &ndash; comma separated list of brokers.
-- `KAFKA_CLEAN_EVENTS_TOPIC` &ndash; topic containing sanitized events.
-- `KAFKA_GROUP_ID` &ndash; consumer group used for the projection engine.
+- `KAFKA_BOOTSTRAP_SERVERS`
+- `KAFKA_CLEAN_EVENTS_TOPIC`
+- `KAFKA_GROUP_ID`
 
-These may be provided in your environment or a `.env` file:
+Example:
 
 ```bash
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 KAFKA_CLEAN_EVENTS_TOPIC=ume-clean-events
 KAFKA_GROUP_ID=ume_client_group
-```
-
-## Running under systemd
-
-```ini
-[Unit]
-Description=UME Projection Engine
-After=network.target
-
-[Service]
-EnvironmentFile=/opt/ume/.env
-ExecStart=/opt/ume/.venv/bin/ume-projection
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-## Docker Compose
-
-```yaml
-  ume-projection:
-    image: ume:latest
-    command: ume-projection
-    env_file: ./ume.env
-    depends_on:
-      - redpanda
 ```

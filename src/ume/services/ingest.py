@@ -15,13 +15,12 @@ from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..anomaly_detection import AnomalyDetector
 from ..schema_manager import DEFAULT_SCHEMA_MANAGER
-from ..pipeline.core import EventPipelineOrchestrator
 from .mutate import (
     MutationError,
     build_graph_projector,
     raise_for_rejected_outcome,
-    run_mutation,
 )
+from .event_processor import DEFAULT_EVENT_PROCESSOR
 
 if TYPE_CHECKING:  # pragma: no cover - typing import for mypy
     from ume_client import events_pb2 as events_pb2_type
@@ -31,7 +30,6 @@ else:
 events_pb2 = cast(Any, _events_pb2)
 
 _anomaly_detector = AnomalyDetector()
-_orchestrator = EventPipelineOrchestrator()
 
 __all__ = [
     "validate_event",
@@ -47,13 +45,12 @@ __all__ = [
 
 def validate_event(data: Dict[str, Any]) -> Event:
     """Canonicalize and parse incoming transport data into :class:`~ume.event.Event`."""
-    canonical, event = ingest_transport_payload(data)
-    result = run_mutation(data, source="service_validate", orchestrator=_orchestrator)
-    try:
-        raise_for_rejected_outcome(result)
-    except MutationError as exc:
-        raise EventError(str(exc)) from exc
-    return result.event or event
+    _, event = ingest_transport_payload(data)
+    validated = DEFAULT_EVENT_PROCESSOR.validate_or_raise(
+        data,
+        source="service_validate",
+    )
+    return validated or event
 
 
 def apply_event(
@@ -108,11 +105,10 @@ def ingest_event(
     data: Dict[str, Any], graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Validate ``data``, classify it, and apply the resulting event to ``graph``."""
-    result = run_mutation(
+    result = DEFAULT_EVENT_PROCESSOR.process_payload(
         data,
         source="service_ingest",
         projector=_build_graph_projector(graph, schema_version=schema_version),
-        orchestrator=_orchestrator,
     )
     try:
         raise_for_rejected_outcome(result)
@@ -211,12 +207,11 @@ def ingest_envelope(
 ) -> None:
     """Ingest an :class:`EventEnvelope` into ``graph``."""
     event_dict = envelope_to_event_dict(envelope)
-    result = run_mutation(
+    result = DEFAULT_EVENT_PROCESSOR.process_payload(
         event_dict,
         source="service_ingest",
         adapter="grpc",
         projector=_build_graph_projector(graph, schema_version=schema_version),
-        orchestrator=_orchestrator,
     )
     try:
         raise_for_rejected_outcome(result)
