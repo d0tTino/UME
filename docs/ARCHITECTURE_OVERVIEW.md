@@ -189,13 +189,20 @@ On startup the API launches a scheduler that periodically calls
 interval between compaction runs is configurable via
 `UME_LEDGER_COMPACTION_INTERVAL`.
 
-Each ledger entry preserves the original `eventType` string. The event parser
-maps known constants to the :class:`~ume.event.EventType` enum but allows
-arbitrary values to pass through unchanged. It accepts `timestamp` values as
+Each ledger entry preserves the original `eventType` string. It accepts `timestamp` values as
 either epoch integers or ISO-8601 strings, and normalizes parsed events to an
 epoch integer timestamp. For backward compatibility, snake_case `event_type` is
 currently tolerated but `eventType` remains the preferred wire-level field
 name.
+
+### Event taxonomy contract invariant
+
+UME maintains a single source of truth for built-in event taxonomy in
+`src/ume/events/types.py` via :class:`~ume.events.types.EventType`. Projection,
+event parsing validation, and other runtime consumers must import event type
+constants from this module rather than defining duplicate enums in other files.
+This invariant ensures import stability and prevents drift between components
+that validate event types versus components that apply them.
 
 Current event-contract compatibility rules are enforced at two layers:
 

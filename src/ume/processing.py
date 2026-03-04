@@ -1,5 +1,5 @@
 # src/ume/processing.py
-from .event import Event, EventType
+from .event import Event
 from .events.handlers import EVENT_HANDLER_REGISTRY
 from .events.handlers.base import HandlerContext
 from .graph_adapter import IGraphAdapter
@@ -14,11 +14,6 @@ def apply_event_to_graph(
 ) -> None:
     """Apply a validated event to the graph via the event handler registry."""
     handler = EVENT_HANDLER_REGISTRY.get(event.event_type)
-    if handler is None and isinstance(event.event_type, str):
-        try:
-            handler = EVENT_HANDLER_REGISTRY.get(EventType(event.event_type))
-        except ValueError:
-            handler = None
 
     if handler is None:
         raise ProcessingError(

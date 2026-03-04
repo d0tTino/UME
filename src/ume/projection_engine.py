@@ -10,7 +10,8 @@ from confluent_kafka import Consumer, KafkaError, KafkaException
 from .config import settings
 from .utils import ssl_config, event_to_snake
 from .event import parse_event, EventError
-from .events.contract import canonicalize_event, EventType
+from .events.contract import canonicalize_event
+from .events.types import EventType
 from .processing import apply_event_to_graph, ProcessingError
 from .graph_adapter import IGraphAdapter
 from .logging_utils import configure_logging
