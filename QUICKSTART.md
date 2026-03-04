@@ -54,3 +54,20 @@ Expected behavior:
 - `consumer_demo.py` subscribes to the same raw topic and parses each message
   through `ingest_transport_payload(..., adapter="kafka")` before logging the
   parsed `Event`.
+
+## Backend configuration terms (current)
+
+When you move from demo scripts to API/projection deployments:
+
+- Set `UME_GRAPH_BACKEND` and create graph adapters via `create_graph_adapter()`.
+- Set `UME_VECTOR_BACKEND` and create vector stores via `create_vector_store()`.
+- Custom backends are loaded through plugin entry points:
+  - `ume.graph_adapters`
+  - `ume.vector_backends`
+
+## Concept Mapping (legacy -> current)
+
+| Legacy term | Current term/API |
+| --- | --- |
+| `UME_GRAPH_ADAPTER` | `UME_GRAPH_BACKEND` |
+| `get_adapter(...)` | `create_graph_adapter(...)` |
