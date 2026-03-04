@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import warnings
 
 from confluent_kafka import Consumer, KafkaError, KafkaException
 
@@ -11,7 +12,8 @@ from .config import settings
 from .utils import ssl_config, event_to_snake
 from .event import EventError
 from .events.types import EventType
-from .services.mutate import MutationError, build_graph_projector, raise_for_rejected_outcome, run_mutation
+from .services.mutate import MutationError, raise_for_rejected_outcome
+from .services.event_processor import EventProcessorService
 from .graph_adapter import IGraphAdapter
 from .logging_utils import configure_logging
 
@@ -32,6 +34,11 @@ def run_projection_engine(
     consumer: Consumer | None = None,
 ) -> None:
     """Consume sanitized events and update ``graph`` accordingly."""
+    warnings.warn(
+        "ume.projection_engine.run_projection_engine is deprecated; use ume.services.event_processor.EventProcessorService-based consumers by 2026-01-31",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     gid = group_id or GROUP_ID
     owns_consumer = False
     if consumer is None:
@@ -49,6 +56,7 @@ def run_projection_engine(
             return
         owns_consumer = True
 
+    processor = EventProcessorService()
     logger.info("Projection engine started with group_id %s", gid)
     try:
         while True:
@@ -67,23 +75,15 @@ def run_projection_engine(
             try:
                 data_camel = json.loads(msg.value().decode("utf-8"))
                 data = event_to_snake(data_camel)
-                base_projector = build_graph_projector(graph, classify=False)
-
-                def _project(context):
-                    event = context.effective_event
-                    if event is None:
-                        raise EventError("effective_event_missing")
-                    if event.event_type not in VALID_EVENT_TYPES:
-                        raise EventError(f"unknown_event_type:{event.event_type}")
-                    return base_projector(context)
-
-                envelope = run_mutation(
+                envelope = processor.mutate_graph(
                     data,
+                    graph=graph,
                     source="projection_engine",
                     adapter="kafka",
                     raw_payload=msg.value(),
-                    projector=_project,
                 )
+                if envelope.event and envelope.event.event_type not in VALID_EVENT_TYPES:
+                    raise EventError(f"unknown_event_type:{envelope.event.event_type}")
                 raise_for_rejected_outcome(envelope)
             except (json.JSONDecodeError, EventError, MutationError) as exc:
                 logger.error("Invalid event skipped: %s", exc)

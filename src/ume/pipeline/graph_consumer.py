@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import warnings
 
 from confluent_kafka import Consumer, KafkaException, KafkaError
 
@@ -13,8 +14,8 @@ from ..event_ledger import event_ledger
 from ..graph_adapter import IGraphAdapter
 from ..logging_utils import configure_logging
 from ..utils import ssl_config
-from .core import EventPipelineOrchestrator, PipelineEnvelope, PipelineOutcome
-from ..services.mutate import build_graph_projector, run_mutation
+from .core import PipelineEnvelope, PipelineOutcome
+from ..services.event_processor import EventProcessorService
 from .invalid_events import build_rejected_event_ledger_entry, outcome_for_pipeline_outcome
 
 
@@ -58,7 +59,12 @@ def run_graph_consumer(
             return
         owns_consumer = True
 
-    orchestrator = EventPipelineOrchestrator()
+    warnings.warn(
+        "ume.pipeline.graph_consumer.run_graph_consumer is deprecated; use ume.services.event_processor.EventProcessorService in integrations by 2026-01-31",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    processor = EventProcessorService()
 
     def _record_invalid_event(*, offset: int, envelope: PipelineEnvelope) -> None:
         try:
@@ -96,24 +102,17 @@ def run_graph_consumer(
                 logger.error("Failed to parse Kafka payload: %s", exc)
                 continue
 
-            base_projector = build_graph_projector(graph, classify=False)
-
-            def _project(context):
-                event = context.effective_event
-                if event is None:
-                    raise ValueError("effective_event_missing")
-                if event.event_type not in VALID_EVENT_TYPES:
-                    raise ValueError(f"unknown_event_type:{event.event_type}")
-                return base_projector(context)
-
-            envelope = run_mutation(
+            envelope = processor.mutate_graph(
                 payload,
+                graph=graph,
                 source="kafka_graph_consumer",
                 adapter="kafka",
                 raw_payload=msg.value(),
-                projector=_project,
-                orchestrator=orchestrator,
             )
+            if envelope.event and envelope.event.event_type not in VALID_EVENT_TYPES:
+                envelope.outcome = PipelineOutcome.REJECTED
+                envelope.stage = "project"
+                envelope.reason = f"unknown_event_type:{envelope.event.event_type}"
 
             if envelope.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
                 _record_invalid_event(offset=msg.offset(), envelope=envelope)

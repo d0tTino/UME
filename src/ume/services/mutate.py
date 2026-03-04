@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import warnings
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
@@ -89,6 +90,12 @@ def run_mutation(
     projector: Callable[[Any], dict[str, Any] | None] | None = None,
     orchestrator: EventPipelineOrchestrator | None = None,
 ) -> PipelineEnvelope:
+    if orchestrator is None:
+        warnings.warn(
+            "ume.services.mutate.run_mutation is deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload by 2026-01-31",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     active_orchestrator = orchestrator or _orchestrator
     envelope = active_orchestrator.run(
         payload,
@@ -109,6 +116,12 @@ async def run_mutation_async(
     projector: Callable[[Any], Any] | None = None,
     orchestrator: EventPipelineOrchestrator | None = None,
 ) -> PipelineEnvelope:
+    if orchestrator is None:
+        warnings.warn(
+            "ume.services.mutate.run_mutation_async is deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload_async by 2026-01-31",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     active_orchestrator = orchestrator or _orchestrator
     envelope = await active_orchestrator.run_async(
         payload,

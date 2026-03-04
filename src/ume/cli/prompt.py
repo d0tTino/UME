@@ -19,7 +19,8 @@ if _src_path.exists() and str(_src_path) not in sys.path:
 from ume.config import settings
 import ume
 from ume.events.contract import canonicalize_event
-from ume.services.mutate import MutationError, build_graph_projector, raise_for_rejected_outcome, run_mutation
+from ume.services.mutate import MutationError
+from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR
 
 # Support tests that provide a lightweight ``ume`` stub without all attributes.
 load_graph_into_existing = getattr(ume, "load_graph_into_existing", lambda *_args, **_kw: None)
@@ -97,13 +98,12 @@ class UMEPrompt(Cmd):
                 "payload": {"node_id": node_id, "attributes": attributes},
                 "timestamp": self._get_timestamp(),
             }
-            envelope = run_mutation(
+            DEFAULT_EVENT_PROCESSOR.mutate_graph_or_raise(
                 canonicalize_event(event_data),
+                graph=self.graph,
                 source="cli_prompt",
                 adapter="cli",
-                projector=build_graph_projector(self.graph, classify=False),
             )
-            raise_for_rejected_outcome(envelope)
             print(f"Node '{node_id}' created.")
         except (json.JSONDecodeError, EventError, ProcessingError, MutationError) as e:
             print(f"Error: {e}")
@@ -127,13 +127,12 @@ class UMEPrompt(Cmd):
                 "label": label,
                 "timestamp": self._get_timestamp(),
             }
-            envelope = run_mutation(
+            DEFAULT_EVENT_PROCESSOR.mutate_graph_or_raise(
                 canonicalize_event(event_data),
+                graph=self.graph,
                 source="cli_prompt",
                 adapter="cli",
-                projector=build_graph_projector(self.graph, classify=False),
             )
-            raise_for_rejected_outcome(envelope)
             print(f"Edge ({source_id})->({target_id}) [{label}] created.")
         except (EventError, ProcessingError, MutationError) as e:
             print(f"Error: {e}")
@@ -157,13 +156,12 @@ class UMEPrompt(Cmd):
                 "label": label,
                 "timestamp": self._get_timestamp(),
             }
-            envelope = run_mutation(
+            DEFAULT_EVENT_PROCESSOR.mutate_graph_or_raise(
                 canonicalize_event(event_data),
+                graph=self.graph,
                 source="cli_prompt",
                 adapter="cli",
-                projector=build_graph_projector(self.graph, classify=False),
             )
-            raise_for_rejected_outcome(envelope)
             print(f"Edge ({source_id})->({target_id}) [{label}] deleted.")
         except (EventError, ProcessingError, MutationError) as e:
             print(f"Error: {e}")

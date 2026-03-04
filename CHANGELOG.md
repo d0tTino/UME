@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (though currently in pre-release/development phase).
 
+## [Unreleased]
+### Added
+- Added `ume.services.event_processor.EventProcessorService` as the canonical service entrypoint for event processing across CLI/API/Kafka/gRPC paths.
+- Added parity tests asserting equivalent mutation outcomes across CLI/Kafka/gRPC ingress adapters for canonical events.
+
+### Changed
+- Documented the canonical projection pipeline contract in `docs/PROJECTION_ENGINE.md` with authoritative stages: ingress normalization, schema validation, policy evaluation, mutation apply, and post-apply listeners/audit.
+- Routed service ingestion helpers and CLI/consumer integrations through `EventProcessorService` to centralize orchestration.
+
+### Deprecated
+- Deprecated compatibility pipeline entrypoints: `ume.projection_engine.run_projection_engine`, `ume.pipeline.graph_consumer.run_graph_consumer`, `ume.services.mutate.run_mutation`, and `ume.services.mutate.run_mutation_async`.
+- Removal timeline for deprecated entrypoints: 2026-01-31.
+
 ## [0.1.1] - 2025-06-19
 ### Changed
 - CI now runs `pre-commit` across all files, removing separate Ruff and mypy steps.
