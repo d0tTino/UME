@@ -1,31 +1,13 @@
 # src/ume/event.py
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Dict, Any, Optional, Mapping
 import logging
 
 from .events.contract import canonical_timestamp_to_int
+from .events.types import EventType
 
 logger = logging.getLogger(__name__)
-
-
-class EventType(str, Enum):
-    """Enumeration of built-in event types."""
-
-    CREATE_NODE = "CREATE_NODE"
-    UPDATE_NODE_ATTRIBUTES = "UPDATE_NODE_ATTRIBUTES"
-    CREATE_EDGE = "CREATE_EDGE"
-    DELETE_EDGE = "DELETE_EDGE"
-    REDACT_NODE = "REDACT_NODE"
-    REDACT_EDGE = "REDACT_EDGE"
-    CREATE_ONTOLOGY_RELATION = "CREATE_ONTOLOGY_RELATION"
-    RESEARCH_JOB_STARTED = "RESEARCH_JOB_STARTED"
-    DATA_SOURCE_QUERIED = "DATA_SOURCE_QUERIED"
-    ENTITY_DISCOVERED = "ENTITY_DISCOVERED"
-    DOCUMENT_ARCHIVED = "DOCUMENT_ARCHIVED"
-    ANOMALY_DETECTED = "ANOMALY_DETECTED"
-
 
 @dataclass(frozen=True)
 class Event:
@@ -195,4 +177,3 @@ def parse_event(data: Dict[str, Any]) -> Event:
         subject_entity=subject_entity_val,
         source_service=source_service_val,
     )
-
