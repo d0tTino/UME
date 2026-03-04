@@ -9,12 +9,60 @@ except Exception:  # pragma: no cover - optional dependency missing
     faust = None  # type: ignore[assignment]
     StreamT = object  # type: ignore[assignment]
 import json
+from typing import Any, Mapping
 
 from ..config import settings
 from .core import EventPipelineOrchestrator, PipelineOutcome
 from .router import route_event, router_config_from_settings
 
 IN_TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
+
+
+def _outbound_payload(
+    envelope,
+    *,
+    family: str,
+    schema_version: str | None,
+    policy_result: str | None,
+    topic: str,
+    reason: str,
+) -> dict[str, Any]:
+    canonical = envelope.canonical_event
+    if isinstance(canonical, Mapping):
+        payload: dict[str, Any] = dict(canonical)
+    else:
+        payload = {
+            "metadata": {
+                "event_type": envelope.event_type or "UNKNOWN_EVENT",
+                "timestamp": None,
+            },
+            "graph": {},
+            "dlq": {
+                "stage": envelope.stage,
+                "reason": envelope.reason,
+                "details": envelope.details,
+            },
+        }
+
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        metadata = {}
+        payload["metadata"] = metadata
+
+    metadata["policy_result"] = policy_result or envelope.outcome.value
+    metadata["schema_version"] = (
+        schema_version or metadata.get("schema_version") or "unknown"
+    )
+    metadata["type_family"] = family or metadata.get("type_family") or "unknown"
+    metadata["routing"] = {
+        "topic": topic,
+        "reason": reason,
+        "family": family,
+        "schema_version": schema_version,
+        "policy_result": policy_result or envelope.outcome.value,
+    }
+
+    return payload
 
 
 def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS):
@@ -44,6 +92,40 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS):
             try:
                 data = json.loads(raw.decode("utf-8"))
             except (ValueError, json.JSONDecodeError):
+                decision = route_event(
+                    {
+                        "metadata": {"policy_result": PipelineOutcome.REJECTED.value},
+                        "graph": {},
+                    },
+                    router_config,
+                )
+                envelope_payload = {
+                    "metadata": {
+                        "event_type": "UNKNOWN_EVENT",
+                        "timestamp": None,
+                        "policy_result": PipelineOutcome.REJECTED.value,
+                        "schema_version": "unknown",
+                        "type_family": decision.family,
+                        "routing": {
+                            "topic": decision.topic,
+                            "reason": decision.reason,
+                            "family": decision.family,
+                            "schema_version": decision.schema_version,
+                            "policy_result": decision.policy_result,
+                        },
+                    },
+                    "graph": {},
+                    "dlq": {
+                        "stage": "decode",
+                        "reason": "malformed_json",
+                        "details": {"raw_payload_present": True},
+                    },
+                }
+                topic = topic_by_name.get(decision.topic)
+                if topic is None:
+                    topic = app.topic(decision.topic, value_type=bytes)
+                    topic_by_name[decision.topic] = topic
+                await topic.send(value=json.dumps(envelope_payload).encode("utf-8"))
                 continue
 
             envelope = orchestrator.run(
@@ -52,26 +134,36 @@ def build_app(broker: str = settings.KAFKA_BOOTSTRAP_SERVERS):
                 adapter="kafka",
                 raw_payload=raw,
             )
-            if envelope.canonical_event is None:
-                decision = route_event({}, router_config)
-            elif envelope.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
-                decision = route_event(
-                    {
-                        "metadata": {
-                            "policy_result": envelope.outcome.value,
-                            "event_type": envelope.event_type,
-                        },
-                        "graph": {},
-                    },
-                    router_config,
-                )
+            canonical = envelope.canonical_event
+            if isinstance(canonical, Mapping):
+                routing_input = dict(canonical)
+                metadata = routing_input.get("metadata")
+                if not isinstance(metadata, dict):
+                    metadata = {}
+                    routing_input["metadata"] = metadata
+                metadata["policy_result"] = envelope.outcome.value
             else:
-                decision = route_event(envelope.canonical_event, router_config)
+                routing_input = {
+                    "metadata": {
+                        "policy_result": envelope.outcome.value,
+                        "event_type": envelope.event_type,
+                    },
+                    "graph": {},
+                }
+            decision = route_event(routing_input, router_config)
+            outbound_payload = _outbound_payload(
+                envelope,
+                family=decision.family,
+                schema_version=decision.schema_version,
+                policy_result=decision.policy_result,
+                topic=decision.topic,
+                reason=decision.reason,
+            )
             topic = topic_by_name.get(decision.topic)
             if topic is None:
                 topic = app.topic(decision.topic, value_type=bytes)
                 topic_by_name[decision.topic] = topic
-            await topic.send(value=raw)
+            await topic.send(value=json.dumps(outbound_payload).encode("utf-8"))
 
     return app
 
