@@ -34,10 +34,16 @@ class DummyConsumer:
 def test_projection_engine_event_type_contract_import_path(monkeypatch) -> None:
     captured_event_types: list[str] = []
 
-    def _capture_apply(event, graph) -> None:
-        captured_event_types.append(event.event_type)
+    def _capture_projector(_graph, *, classify=False):
+        def _project(context):
+            event = context.effective_event
+            if event is not None:
+                captured_event_types.append(event.event_type)
+            return {}
 
-    monkeypatch.setattr(projection_engine, "apply_event_to_graph", _capture_apply)
+        return _project
+
+    monkeypatch.setattr(projection_engine, "build_graph_projector", _capture_projector)
 
     consumer = DummyConsumer(
         [

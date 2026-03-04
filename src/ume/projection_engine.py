@@ -9,10 +9,9 @@ from confluent_kafka import Consumer, KafkaError, KafkaException
 
 from .config import settings
 from .utils import ssl_config, event_to_snake
-from .event import parse_event, EventError
-from .events.contract import canonicalize_event
+from .event import EventError
 from .events.types import EventType
-from .processing import apply_event_to_graph, ProcessingError
+from .services.mutate import MutationError, build_graph_projector, raise_for_rejected_outcome, run_mutation
 from .graph_adapter import IGraphAdapter
 from .logging_utils import configure_logging
 
@@ -68,19 +67,26 @@ def run_projection_engine(
             try:
                 data_camel = json.loads(msg.value().decode("utf-8"))
                 data = event_to_snake(data_camel)
-                event = parse_event(canonicalize_event(data))
-            except (json.JSONDecodeError, EventError) as exc:
+                base_projector = build_graph_projector(graph, classify=False)
+
+                def _project(context):
+                    event = context.effective_event
+                    if event is None:
+                        raise EventError("effective_event_missing")
+                    if event.event_type not in VALID_EVENT_TYPES:
+                        raise EventError(f"unknown_event_type:{event.event_type}")
+                    return base_projector(context)
+
+                envelope = run_mutation(
+                    data,
+                    source="projection_engine",
+                    adapter="kafka",
+                    raw_payload=msg.value(),
+                    projector=_project,
+                )
+                raise_for_rejected_outcome(envelope)
+            except (json.JSONDecodeError, EventError, MutationError) as exc:
                 logger.error("Invalid event skipped: %s", exc)
-                continue
-
-            if event.event_type not in VALID_EVENT_TYPES:
-                logger.warning("Unknown event type '%s' skipped", event.event_type)
-                continue
-
-            try:
-                apply_event_to_graph(event, graph, schema_version=event.schema_version)
-            except ProcessingError as exc:
-                logger.error("Event processing failed: %s", exc)
     except KeyboardInterrupt:  # pragma: no cover - manual interrupt
         logger.info("Projection engine shutting down")
     finally:
