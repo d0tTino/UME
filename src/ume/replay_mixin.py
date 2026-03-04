@@ -31,6 +31,6 @@ class ReplayMixin:
             if end_timestamp is not None and data.get("timestamp", 0) > end_timestamp:
                 break
             event = parse_event(canonicalize_event(data))
-            apply_event_to_graph(event, adapter)
+            apply_event_to_graph(event, adapter, schema_version=event.schema_version)
             last = off
         return last

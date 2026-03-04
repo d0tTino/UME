@@ -32,7 +32,7 @@ def replay_from_ledger(
         if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE} or context.effective_event is None:
             continue
         try:
-            apply_event_to_graph(context.effective_event, graph)
+            apply_event_to_graph(context.effective_event, graph, schema_version=context.effective_event.schema_version)
         except ProcessingError:
             continue
         pipeline.audit_post_apply(context)

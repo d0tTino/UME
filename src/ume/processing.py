@@ -10,7 +10,7 @@ DEFAULT_VERSION = load_default_schema().version
 
 
 def apply_event_to_graph(
-    event: Event, graph: IGraphAdapter, *, schema_version: str = DEFAULT_VERSION
+    event: Event, graph: IGraphAdapter, *, schema_version: str | None = None
 ) -> None:
     """Apply a validated event to the graph via the event handler registry."""
     handler = EVENT_HANDLER_REGISTRY.get(event.event_type)
@@ -20,7 +20,8 @@ def apply_event_to_graph(
             f"Unknown event_type '{event.event_type}' for event: {event.event_id}"
         )
 
-    context = HandlerContext(event=event, graph=graph, schema_version=schema_version)
+    resolved_schema_version = event.schema_version or schema_version or DEFAULT_VERSION
+    context = HandlerContext(event=event, graph=graph, schema_version=resolved_schema_version)
     handler.validate(context)
     handler.apply(context)
     handler.emit_listeners(context)

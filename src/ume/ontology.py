@@ -63,7 +63,7 @@ def build_concept_graph(
                     label="RELATES_TO",
                     payload={"similarity": sim},
                 )
-                apply_event_to_graph(event, graph)
+                apply_event_to_graph(event, graph, schema_version=event.schema_version)
                 events.append(event)
     logger.info("Created %s ontology relations", len(events))
     return events
@@ -103,7 +103,7 @@ def update_concept_graph_for_node(
                 label="RELATES_TO",
                 payload={"similarity": sim},
             )
-            apply_event_to_graph(event, graph)
+            apply_event_to_graph(event, graph, schema_version=event.schema_version)
             events.append(event)
     logger.info(
         "Updated ontology for %s with %s relations", node_id, len(events)

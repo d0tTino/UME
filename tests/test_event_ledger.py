@@ -1,6 +1,8 @@
 from ume.event_ledger import EventLedger
 from ume.persistent_graph import PersistentGraph
 from ume.replay import replay_from_ledger, build_graph_from_ledger
+from ume.graph_schema import EdgeLabel, GraphSchema
+from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
 import pytest
 
 
@@ -140,3 +142,45 @@ def test_build_graph_from_ledger_roundtrip(tmp_path):
     graph = build_graph_from_ledger(ledger)
     assert set(graph.get_all_node_ids()) == {"a", "b"}
     assert ("a", "b", "TAGGED_AS", {"schema_version": "3.0.0"}) in graph.get_all_edges()
+
+
+def test_replay_mixed_schema_versions_use_event_schema(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+
+    schema_v1 = GraphSchema(version="1.0.0", edge_labels={"TAGGED_AS": EdgeLabel("TAGGED_AS", "1.0.0")})
+    schema_v2 = GraphSchema(version="2.0.0", edge_labels={"TAGGED_AS": EdgeLabel("TAGGED_AS", "2.0.0")})
+
+    monkeypatch.setattr(
+        DEFAULT_SCHEMA_MANAGER,
+        "get_schema",
+        lambda version=None: schema_v2 if version == "2.0.0" else schema_v1,
+    )
+
+    ledger.append(0, {"event_type": "CREATE_NODE", "timestamp": 1, "node_id": "a", "payload": {"node_id": "a"}})
+    ledger.append(1, {"event_type": "CREATE_NODE", "timestamp": 2, "node_id": "b", "payload": {"node_id": "b"}})
+    ledger.append(2, {"event_type": "CREATE_NODE", "timestamp": 3, "node_id": "c", "payload": {"node_id": "c"}})
+    ledger.append(3, {
+        "event_type": "CREATE_EDGE",
+        "timestamp": 4,
+        "node_id": "a",
+        "target_node_id": "b",
+        "label": "TAGGED_AS",
+        "schema_version": "1.0.0",
+        "payload": {},
+    })
+    ledger.append(4, {
+        "event_type": "CREATE_EDGE",
+        "timestamp": 5,
+        "node_id": "a",
+        "target_node_id": "c",
+        "label": "TAGGED_AS",
+        "schema_version": "2.0.0",
+        "payload": {},
+    })
+
+    graph = PersistentGraph(":memory:")
+    replay_from_ledger(graph, ledger, 0)
+
+    attrs_by_target = {target: attrs for _src, target, _label, attrs in graph.get_all_edges()}
+    assert attrs_by_target["b"]["schema_version"] == "1.0.0"
+    assert attrs_by_target["c"]["schema_version"] == "2.0.0"

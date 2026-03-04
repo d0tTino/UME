@@ -78,7 +78,7 @@ def run_projection_engine(
                 continue
 
             try:
-                apply_event_to_graph(event, graph)
+                apply_event_to_graph(event, graph, schema_version=event.schema_version)
             except ProcessingError as exc:
                 logger.error("Event processing failed: %s", exc)
     except KeyboardInterrupt:  # pragma: no cover - manual interrupt

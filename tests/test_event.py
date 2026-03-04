@@ -94,6 +94,27 @@ def test_parse_event_timestamp_iso8601_z():
     event = _parse_event_contract(data)
     assert event.timestamp == int(ts.timestamp())
 
+def test_parse_event_schema_version_is_parsed() -> None:
+    data = {
+        "eventType": "test_event",
+        "timestamp": ISO_TS,
+        "schema_version": " 2.9.9 ",
+    }
+    event = _parse_event_contract(data)
+    assert event.schema_version == "2.9.9"
+
+
+@pytest.mark.parametrize("schema_version", ["", "   ", 123])
+def test_parse_event_invalid_schema_version_rejected(schema_version: object) -> None:
+    data = {
+        "eventType": "test_event",
+        "timestamp": ISO_TS,
+        "schema_version": schema_version,
+    }
+    with pytest.raises(EventError, match="schema_version"):
+        _parse_event_contract(data)
+
+
 
 
 @pytest.mark.parametrize(
