@@ -7,7 +7,15 @@ from typing import Any, Mapping
 
 from ..config import settings
 
-_POLICY_DENY_RESULTS = {"deny", "denied", "reject", "rejected", "blocked"}
+_POLICY_DENY_RESULTS = {
+    "deny",
+    "denied",
+    "reject",
+    "rejected",
+    "blocked",
+    "quarantine",
+    "quarantined",
+}
 
 
 @dataclass(frozen=True)
@@ -105,7 +113,9 @@ def route_event(
 
 
 def _schema_topic(metadata: Mapping[str, Any]) -> str | None:
-    direct_topic = _string_value(metadata.get("destination_topic") or metadata.get("topic"))
+    direct_topic = _string_value(
+        metadata.get("destination_topic") or metadata.get("topic")
+    )
     if direct_topic:
         return direct_topic
 
@@ -153,7 +163,10 @@ def _type_family(metadata: Mapping[str, Any], graph: Mapping[str, Any]) -> str:
 
     if any(keyword in event_type_upper for keyword in ("EDGE", "RELATION", "LINK")):
         return "edge"
-    if any(keyword in event_type_upper for keyword in ("NODE", "DOCUMENT", "ENTITY", "RESEARCH")):
+    if any(
+        keyword in event_type_upper
+        for keyword in ("NODE", "DOCUMENT", "ENTITY", "RESEARCH")
+    ):
         return "node"
 
     return "unknown"
