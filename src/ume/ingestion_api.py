@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -43,15 +44,13 @@ async def post_event(request: Request) -> JSONResponse:
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
     try:
-        snake_data = event_to_snake(data)
-        try:
-            validate_event_dict(data)
-        except ValidationError:
-            # In test environments schemas may be unavailable; accept the event
-            # to exercise metrics but log the validation failure.
-            logger.debug("event validation failed", exc_info=True)
+        validate_event_dict(data)
     except ValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        if not settings.UME_INGEST_LENIENT_VALIDATION:
+            raise HTTPException(status_code=400, detail=_validation_error_detail(exc))
+        return _publish_quarantined_event(data, exc)
+
+    snake_data = event_to_snake(data)
 
     if producer is None:
         raise HTTPException(status_code=503, detail="Producer not initialized")
@@ -67,6 +66,47 @@ async def post_event(request: Request) -> JSONResponse:
         raise HTTPException(status_code=500, detail="Failed to publish event")
 
     return JSONResponse(status_code=202, content={"status": "accepted"})
+
+
+def _event_type_for_metric(data: dict[str, Any]) -> str:
+    event_type = data.get("eventType") or data.get("event_type")
+    if isinstance(event_type, str) and event_type:
+        return event_type.lower()
+    return "invalid"
+
+
+def _validation_error_detail(exc: ValidationError) -> dict[str, Any]:
+    return {
+        "error": "event validation failed",
+        "message": exc.message,
+        "path": [str(item) for item in exc.path],
+        "schema_path": [str(item) for item in exc.schema_path],
+        "validator": exc.validator,
+        "validator_value": exc.validator_value,
+    }
+
+
+def _publish_quarantined_event(data: dict[str, Any], exc: ValidationError) -> JSONResponse:
+    if producer is None:
+        raise HTTPException(status_code=503, detail="Producer not initialized")
+
+    quarantine_message = {
+        "error": _validation_error_detail(exc),
+        "event": data,
+        "ingestion": {"mode": "lenient", "reason": "validation_failed"},
+    }
+    try:
+        producer.produce(
+            settings.KAFKA_QUARANTINE_TOPIC,
+            json.dumps(quarantine_message).encode("utf-8"),
+        )
+        producer.poll(0)
+        INGEST_EVENTS_TOTAL.labels(event_type=_event_type_for_metric(data)).inc()
+    except KafkaException as kafka_exc:
+        logger.error("Failed to publish quarantined event: %s", kafka_exc)
+        raise HTTPException(status_code=500, detail="Failed to publish event")
+
+    return JSONResponse(status_code=202, content={"status": "quarantined"})
 
 
 @app.on_event("shutdown")  # type: ignore[misc]

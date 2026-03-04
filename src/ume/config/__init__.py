@@ -92,6 +92,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     # API token used for test clients and simple auth
     UME_API_TOKEN: str | None = None
+    UME_INGEST_LENIENT_VALIDATION: bool = False
 
     # gRPC authentication token
     UME_GRPC_TOKEN: str | None = None
