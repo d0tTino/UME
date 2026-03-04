@@ -1,0 +1,62 @@
+"""Fail CI on unplanned schema breakages across contract bundles."""
+
+from __future__ import annotations
+
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+
+def _required_fields(major: int, schema_name: str) -> set[str]:
+    from ume.schemas.contracts import load_bundle_schema
+
+    schema = load_bundle_schema(major, schema_name)
+    return set(schema.get("required", []))
+
+
+def _seed_event(version: str) -> dict[str, object]:
+    return {
+        "metadata": {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "schema_version": version,
+            "event_id": "seed",
+            "source": "ci",
+        },
+        "graph": {"node_id": "n1", "target_node_id": None, "label": None},
+        "payload": {"node_id": "n1", "attributes": {}},
+    }
+
+
+def main() -> int:
+    from ume.events.versioning import downgrade_event, upgrade_event
+    from ume.schemas.contracts import supported_contract_majors
+
+    majors = list(supported_contract_majors())
+
+    for prev, curr in zip(majors, majors[1:]):
+        removed_required = _required_fields(prev, "canonical_event.schema.json") - _required_fields(
+            curr, "canonical_event.schema.json"
+        )
+        if removed_required:
+            probe = _seed_event(f"{prev}.0.0")
+            upgraded = upgrade_event(probe, f"{curr}.0.0")
+            restored = downgrade_event(upgraded, f"{prev}.0.0")
+            for field in removed_required:
+                if field in {"eventId", "sourceService"}:
+                    key = "event_id" if field == "eventId" else "source"
+                    if key not in restored.get("metadata", {}):
+                        raise SystemExit(
+                            f"Breaking field removal '{field}' requires explicit migration transformer ({prev}->{curr})."
+                        )
+
+    print("Schema compatibility checks passed.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

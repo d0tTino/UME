@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DELETE_EDGE",
+  "type": "object",
+  "required": [
+    "eventType",
+    "timestamp",
+    "node_id",
+    "target_node_id",
+    "label"
+  ],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "eventId": {
+      "type": "string"
+    },
+    "correlationId": {
+      "type": "string"
+    },
+    "subjectEntity": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "sourceService": {
+      "type": "string"
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "target_node_id": {
+      "type": "string"
+    },
+    "label": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

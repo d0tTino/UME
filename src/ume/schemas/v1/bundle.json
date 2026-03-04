@@ -1,0 +1,15 @@
+{
+  "contract_version": "1.0.0",
+  "compatibility": {
+    "backward": "guaranteed_with_transformers",
+    "forward": "best_effort"
+  },
+  "schemas": [
+    "canonical_event.schema.json",
+    "event_envelope.schema.json",
+    "create_node.schema.json",
+    "update_node_attributes.schema.json",
+    "create_edge.schema.json",
+    "delete_edge.schema.json"
+  ]
+}

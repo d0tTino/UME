@@ -104,3 +104,15 @@ projection workers) before constructing graph/vector resources.
   or `ume.vector_backends` (vector).
 - For service startup, call `bootstrap_runtime("ume")` in the process entry
   point before first use of optional integrations.
+
+
+## 6) Canonical event contract lifecycle
+
+UME keeps machine-validated contract bundles under `src/ume/schemas/v1`, `v2`, and `v3`. Runtime validation resolves the bundle by `metadata.schema_version` major.
+
+- **Required vs optional fields:** core required fields are stable; v3 introduces required identity metadata (`eventId`, `sourceService`) while v1/v2 remain permissive for legacy replay.
+- **Additive changes:** new optional keys may ship in-place within a major line.
+- **Breaking changes:** required-field removals or type/semantic changes require a major bump plus explicit upgrade/downgrade transformers (`upgrade_event`, `downgrade_event`).
+- **Deprecation window:** minimum two minor releases or 90 days before removing deprecated fields in the next major.
+
+CI enforces compatibility with `scripts/check_schema_compatibility.py`, and replay compatibility is covered by `tests/test_event_contract.py`.
