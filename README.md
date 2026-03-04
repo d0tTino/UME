@@ -53,6 +53,23 @@ available through temporary deprecation shims, but new code should import
 concrete modules directly (for example, `ume.vector_store` or
 `ume.factories`).
 
+### Backend Selection APIs (Current)
+
+- Graph backend: set `UME_GRAPH_BACKEND`, then call `create_graph_adapter()`.
+- Vector backend: set `UME_VECTOR_BACKEND`, then call `create_vector_store()`.
+- Plugin discovery uses Python entry points:
+  - Graph backends: `ume.graph_adapters`
+  - Vector backends: `ume.vector_backends`
+
+### Concept Mapping (legacy -> current)
+
+| Legacy term | Current term/API |
+| --- | --- |
+| `UME_GRAPH_ADAPTER` | `UME_GRAPH_BACKEND` |
+| `get_adapter(...)` | `create_graph_adapter(...)` |
+| “adapter map” | Plugin-backed graph backend registry (`ume.graph_adapters`) |
+
+
 ### Event Flow
 ```
 Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-events

@@ -9,6 +9,21 @@ For gRPC clients, send the configured `UME_GRPC_TOKEN` as a bearer token in the
 `authorization` metadata. The helper class `AsyncUMEClient` accepts this token
 via its `token` argument and attaches it automatically.
 
+## Backend Factory and Plugin Terms
+
+- Graph backend selection uses `UME_GRAPH_BACKEND` with `create_graph_adapter()`.
+- Vector backend selection uses `UME_VECTOR_BACKEND` with `create_vector_store()`.
+- Plugin entry-point groups:
+  - `ume.graph_adapters` for graph backends
+  - `ume.vector_backends` for vector backends
+
+## Concept Mapping (legacy -> current)
+
+| Legacy term | Current term/API |
+| --- | --- |
+| `UME_GRAPH_ADAPTER` | `UME_GRAPH_BACKEND` |
+| `get_adapter(...)` | `create_graph_adapter(...)` |
+
 ## Graph Request Context Requirements
 
 Graph endpoints now require a `user_id` query parameter that identifies the
