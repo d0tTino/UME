@@ -37,7 +37,7 @@ class EpisodicMemory:
 
     def record_event(self, event: Event) -> None:
         """Apply ``event`` to the graph and queue it for flushing."""
-        apply_event_to_graph(event, self.graph)
+        apply_event_to_graph(event, self.graph, schema_version=event.schema_version)
         if self.log_path is not None:
             self._buffer.append(event)
             if not self._thread:
@@ -68,7 +68,7 @@ class EpisodicMemory:
                     continue
                 data = json.loads(line)
                 evt = parse_event(canonicalize_event(data))
-                apply_event_to_graph(evt, self.graph)
+                apply_event_to_graph(evt, self.graph, schema_version=evt.schema_version)
 
     def _replay_logs(self) -> None:
         if not self.log_path:

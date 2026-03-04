@@ -99,7 +99,7 @@ class UMEPrompt(Cmd):
                 "timestamp": self._get_timestamp(),
             }
             evt = parse_event(canonicalize_event(event_data))
-            apply_event_to_graph(evt, self.graph)
+            apply_event_to_graph(evt, self.graph, schema_version=evt.schema_version)
             print(f"Node '{node_id}' created.")
         except (json.JSONDecodeError, EventError, ProcessingError) as e:
             print(f"Error: {e}")
@@ -124,7 +124,7 @@ class UMEPrompt(Cmd):
                 "timestamp": self._get_timestamp(),
             }
             evt = parse_event(canonicalize_event(event_data))
-            apply_event_to_graph(evt, self.graph)
+            apply_event_to_graph(evt, self.graph, schema_version=evt.schema_version)
             print(f"Edge ({source_id})->({target_id}) [{label}] created.")
         except (EventError, ProcessingError) as e:
             print(f"Error: {e}")
@@ -149,7 +149,7 @@ class UMEPrompt(Cmd):
                 "timestamp": self._get_timestamp(),
             }
             evt = parse_event(canonicalize_event(event_data))
-            apply_event_to_graph(evt, self.graph)
+            apply_event_to_graph(evt, self.graph, schema_version=evt.schema_version)
             print(f"Edge ({source_id})->({target_id}) [{label}] deleted.")
         except (EventError, ProcessingError) as e:
             print(f"Error: {e}")

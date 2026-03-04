@@ -6,6 +6,7 @@ import logging
 
 from .events.contract import canonical_timestamp_to_int
 from .events.types import EventType
+from .events.versioning import normalize_schema_version
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class Event:
         subject_entity (Optional[Dict[str, str]]): Entity this event refers to as an object
             with ``id`` and ``type`` keys.
         source_service (Optional[str]): Name of the service emitting the event.
+        schema_version (Optional[str]): Event schema version used to resolve handler/schema behavior.
     """
 
     event_type: str
@@ -50,6 +52,7 @@ class Event:
     correlation_id: Optional[str] = None
     subject_entity: Optional[Dict[str, str]] = None
     source_service: Optional[str] = None
+    schema_version: Optional[str] = None
 
 
 class EventError(ValueError):
@@ -92,6 +95,8 @@ def parse_event(data: Dict[str, Any]) -> Event:
         raise EventError("Invalid timestamp format") from exc
 
     event_id_val = metadata.get("event_id")
+    schema_version_raw = metadata.get("schema_version")
+    schema_version_val = normalize_schema_version(schema_version_raw)
     correlation_ids = metadata.get("correlation_ids")
     correlation_id_val = None
     if isinstance(correlation_ids, Mapping):
@@ -107,6 +112,10 @@ def parse_event(data: Dict[str, Any]) -> Event:
     if event_id_val is not None and not isinstance(event_id_val, str):
         raise EventError(
             f"Invalid type for 'event_id': expected str, got {type(event_id_val).__name__}"
+        )
+    if schema_version_raw is not None and schema_version_val is None:
+        raise EventError(
+            f"Invalid type for 'schema_version': expected non-empty str, got {type(schema_version_raw).__name__}"
         )
     if correlation_id_val is not None and not isinstance(correlation_id_val, str):
         raise EventError(
@@ -176,4 +185,5 @@ def parse_event(data: Dict[str, Any]) -> Event:
         correlation_id=correlation_id_val,
         subject_entity=subject_entity_val,
         source_service=source_service_val,
+        schema_version=schema_version_val,
     )

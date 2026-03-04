@@ -589,3 +589,37 @@ def test_apply_create_node_prefers_top_level_node_id(graph: PersistentGraph) -> 
     )
     apply_event_to_graph(event, graph)
     assert graph.node_exists("node-top")
+
+
+def test_apply_event_uses_event_schema_version_before_default(graph: PersistentGraph, monkeypatch: pytest.MonkeyPatch) -> None:
+    from ume.graph_schema import GraphSchema, EdgeLabel
+    from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
+
+    legacy = GraphSchema(version="1.0.0", edge_labels={"RELATES_TO": EdgeLabel("RELATES_TO", "1.0.0")})
+    modern = GraphSchema(version="2.0.0", edge_labels={"RELATES_TO": EdgeLabel("RELATES_TO", "2.0.0")})
+
+    monkeypatch.setattr(
+        DEFAULT_SCHEMA_MANAGER,
+        "get_schema",
+        lambda version=None: modern if version == "2.0.0" else legacy,
+    )
+
+    graph.add_node("s", {})
+    graph.add_node("t", {})
+
+    event = Event(
+        event_type=EventType.CREATE_EDGE,
+        timestamp=int(time.time()),
+        node_id="s",
+        target_node_id="t",
+        label="RELATES_TO",
+        payload={},
+        schema_version="2.0.0",
+    )
+
+    apply_event_to_graph(event, graph, schema_version="1.0.0")
+
+    edges = graph.get_all_edges()
+    assert len(edges) == 1
+    _src, _tgt, _label, attrs = edges[0]
+    assert attrs["schema_version"] == "2.0.0"

@@ -8,7 +8,6 @@ from google.protobuf.json_format import MessageToDict
 from ume_client import events_pb2 as _events_pb2
 from google.protobuf import struct_pb2
 from ..event import Event, EventError, EventType
-from ..events.contract import canonical_to_legacy_dict
 from ..events.ingress import ingest_transport_payload
 from ..events.versioning import resolve_schema_version
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
@@ -59,7 +58,7 @@ def apply_event(
     """Apply ``event`` to ``graph`` using :func:`~ume.processing.apply_event_to_graph`."""
 
     if schema_version is None:
-        apply_event_to_graph(event, graph)
+        apply_event_to_graph(event, graph, schema_version=event.schema_version)
     else:
         apply_event_to_graph(event, graph, schema_version=schema_version)
 
@@ -81,8 +80,6 @@ def _build_graph_projector(
         event = context.effective_event
         if canonical is None or event is None:
             raise EventError("missing_canonical_or_event")
-        metadata = canonical["metadata"]
-        unwrapped_event_data = canonical_to_legacy_dict(canonical)
         effective_version = resolve_schema_version(
             canonical,
             explicit_version=schema_version,

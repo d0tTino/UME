@@ -102,7 +102,7 @@ def run_graph_consumer(
                     raise ValueError("effective_event_missing")
                 if event.event_type not in VALID_EVENT_TYPES:
                     raise ValueError(f"unknown_event_type:{event.event_type}")
-                apply_event_to_graph(event, graph)
+                apply_event_to_graph(event, graph, schema_version=event.schema_version)
                 return {}
 
             envelope = orchestrator.run(
