@@ -44,9 +44,21 @@ jobs:
           npm ci
           npm run build
 
-  unit-tests:
+  schema-compatibility:
     runs-on: ubuntu-latest
     needs: lint-and-install
+    if: needs.lint-and-install.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: '3.12'
+      - name: Run schema compatibility checks
+        run: poetry run python scripts/check_schema_compatibility.py
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: [lint-and-install, schema-compatibility]
     if: needs.lint-and-install.outputs.run == 'true'
     env:
       UME_AUDIT_SIGNING_KEY: test-key

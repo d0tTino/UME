@@ -92,6 +92,30 @@ mirror the `/snapshot/save` and `/snapshot/load` HTTP endpoints. Both accept a
 `SnapshotPath` message containing the target file path and return an empty
 response on success.
 
+
+## Event Contract Version Policy
+
+UME event contracts are versioned with semantic versions and validated against JSON Schema bundles under `src/ume/schemas/v{major}`.
+
+### Required vs optional fields
+
+- **Always required (all majors):** `eventType`, `timestamp`.
+- **Version 1.x / 2.x:** identity fields (`eventId`, `sourceService`) are optional for compatibility with historical emitters.
+- **Version 3.x:** `eventId` and `sourceService` are required on all events; replay transformers can synthesize these when upgrading old ledgers.
+- Event-type schemas define additional required fields (`node_id`, `target_node_id`, `label`, `payload`) based on operation type.
+
+### Additive vs breaking changes
+
+- **Additive change (minor/patch):** adding optional fields, widening enum choices, adding optional payload keys.
+- **Breaking change (major):** removing required fields, changing field meaning/type incompatibly, or making previously optional fields required.
+- Breaking changes must include explicit migration transformers in `src/ume/events/versioning.py` and pass compatibility checks.
+
+### Deprecation window
+
+- Contract fields targeted for removal are first marked deprecated for **two minor releases** (or **90 days**, whichever is longer).
+- During deprecation, producers should emit both old/new representations when possible.
+- Removal only occurs in the next major bundle after migration guidance and replay transforms are available.
+
 ## Ingestion API
 
 The standalone ingestion service listens on port `8001` and publishes raw events to Kafka.
