@@ -8,6 +8,12 @@ codebase today.
 
 **Primary API:** `ume.factories.create_graph_adapter()` (`src/ume/factories.py`).
 
+**Source files (authoritative):**
+
+- `src/ume/factories.py`
+- `src/ume/adapters/bootstrap.py`
+- `src/ume/adapters/registry.py`
+
 ```text
 create_graph_adapter()
   -> register_builtin_graph_backends()          # src/ume/adapters/bootstrap.py
@@ -45,6 +51,11 @@ Python package entry points, in addition to built-ins.
 **Primary API:** `ume.vector_store.create_vector_store()` (alias of
 `create_default_store`) in `src/ume/vector_store.py`.
 
+**Source files (authoritative):**
+
+- `src/ume/vector_store.py`
+- `src/ume/vector_backends/` (registry, built-ins, plugin loading)
+
 ```text
 create_vector_store() / create_default_store()
   -> read UME_VECTOR_BACKEND (env or settings)
@@ -71,6 +82,10 @@ should use `create_vector_store()`.
 
 **Primary API:** `ume.bootstrap.runtime.bootstrap_runtime()` in
 `src/ume/bootstrap/runtime.py`.
+
+**Source file (authoritative):**
+
+- `src/ume/bootstrap/runtime.py`
 
 `bootstrap_runtime()` performs explicit runtime wiring so importing `ume`
 remains lightweight:
