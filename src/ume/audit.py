@@ -160,7 +160,15 @@ def _write_lines(path: str, lines: List[str]) -> None:
             raise
 
 
-def log_audit_entry(user_id: str, reason: str, timestamp: int | None = None) -> None:
+def log_audit_entry(
+    user_id: str,
+    reason: str,
+    timestamp: int | None = None,
+    *,
+    actor_id: str | None = None,
+    correlation_id: str | None = None,
+    metadata: Dict[str, str | int | bool | None] | None = None,
+) -> None:
     ts = timestamp or int(time.time())
     lines = _read_lines(AUDIT_LOG_PATH)
     prev_sig = ""
@@ -177,6 +185,12 @@ def log_audit_entry(user_id: str, reason: str, timestamp: int | None = None) -> 
         "reason": reason,
         "prev": prev_sig,
     }
+    if actor_id is not None:
+        entry["actor_id"] = actor_id
+    if correlation_id is not None:
+        entry["correlation_id"] = correlation_id
+    if metadata:
+        entry["metadata"] = json.dumps(metadata, sort_keys=True)
     msg = json.dumps(entry, sort_keys=True).encode()
     signature = hmac.new(SIGNING_KEY, msg, hashlib.sha256).hexdigest()
     entry["signature"] = signature
