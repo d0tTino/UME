@@ -43,6 +43,17 @@ If you find a bug or have an idea for a new feature, please check our issue trac
 - Compatibility re-exports in `ume.__init__` are temporary deprecation shims;
   prefer direct module imports in new contributions.
 
+
+### Architecture boundaries (kernel vs domains)
+
+- Kernel packages live under `src/ume/kernel/` and define core contracts (`events`, `policy`, `graph_adapter`, `processing`, `ledger`).
+- Feature/domain logic lives under `src/ume/domains/<domain_name>/`.
+- **Dependency rule:** kernel modules must not import from `ume.domains`.
+- Add new enrichment/business modules as domain extensions and wire them through extension points in service orchestration (see `ume.domains.extensions`).
+- Boundary checks are enforced by:
+  - `python scripts/lint_dependencies.py`
+  - `pytest tests/architecture`
+
 ### Coding Style
 
 - **Black** is used for code formatting. Run `black` on your changes before committing.

@@ -9,7 +9,6 @@ import logging
 from time import perf_counter
 from typing import Any, Awaitable, Callable, Mapping
 
-from ..classification import classify_event
 from ..event import Event
 from ..events.ingress import ingest_transport_payload, IngressAdapter
 from ..metrics import (
@@ -489,34 +488,3 @@ class EventPipelineOrchestrator:
         if auditor is not None:
             await auditor(envelope)
         return envelope
-
-
-def apply_classification(context: PolicyContext) -> dict[str, Any]:
-    """Annotate event payload with classification metadata."""
-
-    event = context.effective_event
-    if event is None:
-        return {}
-    tag_results = classify_event(event)
-    event.payload["classification"] = [
-        {
-            "tag": r.tag,
-            "confidence": r.confidence,
-            "domain": r.domain,
-            "subdomain": r.subdomain,
-            "sensitivity": r.sensitivity,
-        }
-        for r in tag_results
-    ]
-    if tag_results:
-        attributes = event.payload.setdefault("attributes", {})
-        attributes["tags"] = [r.tag for r in tag_results]
-        attributes["tag_confidence"] = [r.confidence for r in tag_results]
-        for r in tag_results:
-            if r.domain and "domain" not in attributes:
-                attributes["domain"] = r.domain
-            if r.subdomain and "subdomain" not in attributes:
-                attributes["subdomain"] = r.subdomain
-            if r.sensitivity and "sensitivity" not in attributes:
-                attributes["sensitivity"] = r.sensitivity
-    return {"classification_count": len(tag_results)}

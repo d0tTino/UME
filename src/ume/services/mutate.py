@@ -9,6 +9,8 @@ from enum import Enum
 from typing import Any, Callable
 
 from ..event import EventError
+from ..domains.classification import apply_classification
+from ..domains.extensions import DomainExtension, run_domain_extensions
 from ..events.ingress import IngressAdapter
 from ..events.versioning import resolve_schema_version
 from ..graph_adapter import IGraphAdapter
@@ -16,7 +18,6 @@ from ..pipeline.core import (
     EventPipelineOrchestrator,
     PipelineEnvelope,
     PipelineOutcome,
-    apply_classification,
 )
 from ..policy.pipeline import PolicyDecision
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
@@ -138,7 +139,12 @@ def build_graph_projector(
     *,
     schema_version: str | None = None,
     classify: bool = True,
+    domain_extensions: list[DomainExtension] | None = None,
 ) -> Callable[[Any], dict[str, Any]]:
+    active_extensions: list[DomainExtension] = list(domain_extensions or [])
+    if classify:
+        active_extensions.append(apply_classification)
+
     def _project(context: Any) -> dict[str, Any]:
         canonical = context.canonical_event
         event = context.effective_event
@@ -150,7 +156,7 @@ def build_graph_projector(
             fallback_version=_fallback_schema_version(),
             default_version=DEFAULT_VERSION,
         )
-        details = apply_classification(context) if classify else {}
+        details = run_domain_extensions(context, active_extensions)
         apply_event_to_graph(event, graph, schema_version=effective_version)
         return {**details, "schema_version": effective_version}
 
