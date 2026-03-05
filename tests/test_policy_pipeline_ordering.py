@@ -92,3 +92,33 @@ def test_stage_registry_from_config_and_env(tmp_path, monkeypatch) -> None:
         PolicyContext(source="service", transport_data=_event({"email": "user@example.com"}))
     )
     assert env_result.decision == PolicyDecision.ALLOW
+
+
+def test_alignment_plugin_receives_structured_policy_input(monkeypatch) -> None:
+    monkeypatch.setattr("ume.policy.pipeline.load_plugins", lambda: None)
+
+    class CapturingPlugin:
+        def __init__(self) -> None:
+            self.last_input = None
+
+        def validate(self, _event, *, policy_input=None) -> None:
+            self.last_input = policy_input
+
+    plugin = CapturingPlugin()
+    pipeline = build_default_policy_pipeline(
+        redactor=lambda payload: (payload, False),
+        plugin_provider=lambda: [plugin],
+    )
+
+    context = PolicyContext(source="service", transport_data=_event({"user_id": "u1"}))
+    context.graph_read_view = {
+        "mode": "snapshot",
+        "nodes": {"n1": {"type": "person"}},
+        "edges": [],
+    }
+    result = pipeline.evaluate(context)
+
+    assert result.decision == PolicyDecision.ALLOW
+    assert plugin.last_input["event"]["event_type"] == "CREATE_NODE"
+    assert plugin.last_input["graph"]["nodes"]["n1"]["type"] == "person"
+    assert plugin.last_input["actor"]["id"] == "u1"
