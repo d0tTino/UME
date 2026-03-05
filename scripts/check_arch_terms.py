@@ -18,23 +18,34 @@ DOC_FILES = [
 DEPRECATED_PATTERNS: dict[str, str] = {
     r"\bUME_GRAPH_ADAPTER\b": "Use UME_GRAPH_BACKEND",
     r"\bget_adapter\b": "Use create_graph_adapter",
+    r"\badapter map\b": "Use graph backend plugin registry terminology",
+    r"\bvector adapter\b": "Use vector backend terminology",
 }
-
-ALLOWED_CONTEXT_SNIPPETS = (
-    "Concept Mapping (legacy -> current)",
-    "| `UME_GRAPH_ADAPTER` | `UME_GRAPH_BACKEND` |",
-    "| `get_adapter(...)` | `create_graph_adapter(...)` |",
-)
 
 
 def find_matches(path: Path) -> list[str]:
     matches: list[str] = []
     text = path.read_text(encoding="utf-8")
+    in_concept_mapping = False
     for lineno, line in enumerate(text.splitlines(), start=1):
-        if any(snippet in line for snippet in ALLOWED_CONTEXT_SNIPPETS):
+        stripped = line.strip()
+        if (
+            stripped.lower().startswith("#")
+            and "concept mapping (legacy -> current)" in stripped.lower()
+        ):
+            in_concept_mapping = True
             continue
+        if (
+            in_concept_mapping
+            and stripped.startswith("#")
+            and "concept mapping (legacy -> current)" not in stripped.lower()
+        ):
+            in_concept_mapping = False
+
         for pattern, guidance in DEPRECATED_PATTERNS.items():
             if re.search(pattern, line):
+                if in_concept_mapping and line.lstrip().startswith("|"):
+                    continue
                 matches.append(
                     f"{path}:{lineno}: found deprecated term matching /{pattern}/. {guidance}."
                 )
