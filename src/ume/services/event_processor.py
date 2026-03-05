@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from ..audit import log_audit_entry
 from ..event import Event, EventError
 from ..events.ingress import IngressAdapter
 from ..graph_adapter import IGraphAdapter
@@ -66,7 +67,7 @@ class EventProcessorService:
         schema_version: str | None = None,
         classify: bool = False,
     ) -> PipelineEnvelope:
-        return self.process_payload(
+        envelope = self.process_payload(
             payload,
             source=source,
             adapter=adapter,
@@ -76,6 +77,30 @@ class EventProcessorService:
                 schema_version=schema_version,
                 classify=classify,
             ),
+        )
+        self._audit_privileged_mutation(envelope)
+        return envelope
+
+    @staticmethod
+    def _audit_privileged_mutation(envelope: PipelineEnvelope) -> None:
+        event = envelope.event
+        actor_id = "unknown"
+        correlation_id: str | None = None
+        if event is not None:
+            subject = event.subject_entity or {}
+            actor_id = str(subject.get("id") or event.payload.get("actor_id") or actor_id)
+            correlation_id = event.correlation_id
+        log_audit_entry(
+            user_id=actor_id,
+            reason=f"privileged_mutation {envelope.outcome.value} {envelope.stage}:{envelope.reason}",
+            actor_id=actor_id,
+            correlation_id=correlation_id,
+            metadata={
+                "source": envelope.source,
+                "stage": envelope.stage,
+                "outcome": envelope.outcome.value,
+                "event_type": envelope.event_type,
+            },
         )
 
     def mutate_graph_or_raise(self, *args: Any, **kwargs: Any) -> PipelineEnvelope:

@@ -80,6 +80,18 @@ pre-commit run detect-secrets --files path/to/file
 - All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, formatting checks, and mypy) before merging.
 - The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.
 
+### Security checklist for new routes/events/adapters
+
+For any contribution that introduces a new API route, event type, or transport adapter,
+complete this checklist before opening a PR:
+
+- [ ] AuthN is implemented and fails closed (`401`) for missing/invalid credentials.
+- [ ] AuthZ is implemented and denies unauthorized actor/role/group access (`403`).
+- [ ] Mutations flow through the canonical event processor/policy pipeline (no direct bypass ingress).
+- [ ] Deny outcomes are consistent with CLI/API/Kafka/gRPC decision semantics.
+- [ ] Privileged operations emit signed audit records containing actor identity and correlation IDs.
+- [ ] Tests include threat-model bypass cases (for example, direct mutation path skipping policy).
+
 ### Graph Backend Extensibility
 
 Graph store backends are selected through `create_graph_adapter()` in
