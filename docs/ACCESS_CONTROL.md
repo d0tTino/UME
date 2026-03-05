@@ -137,6 +137,9 @@ should not expect a serialized graph snapshot.
 Consent can be granted or revoked programmatically using the
 `ConsentLedger` class from `ume.consent_ledger`.
 
+For policy pipeline extension, ordering, and stage registry configuration, see
+[`docs/POLICY_PIPELINE.md`](./POLICY_PIPELINE.md).
+
 ### Ledger Encryption Migration
 
 UME can optionally encrypt the audit log and SQLite ledgers. Enable this by

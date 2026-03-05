@@ -1,7 +1,21 @@
+"""Policy pipeline contracts and default stage implementations.
+
+Public stage contract:
+- Inputs: each stage receives ``PolicyContext`` and may rely on fields produced by
+  earlier stages (for example ``canonical_event`` and ``effective_event``).
+- Side effects: stages should mutate only ``PolicyContext`` and not emit audit logs
+  directly; audit emission is centralized in :class:`PolicyPipeline`.
+- Decision precedence: terminal decisions are resolved in this order:
+  ``DENY``/``QUARANTINE`` then ``REDACTED`` then ``ALLOW``.
+- Idempotency: stage implementations are expected to be deterministic and safe to
+  run repeatedly for equivalent inputs.
+"""
+
 from __future__ import annotations
 
 import json
 import logging
+import os
 from hashlib import sha256
 from dataclasses import dataclass, field
 from enum import Enum
@@ -90,6 +104,78 @@ class PolicyStage(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class PolicyStageRegistration:
+    """Declarative registration record for configurable policy pipelines.
+
+    Contract
+    --------
+    Stage input:
+      * Stages receive a shared :class:`PolicyContext` instance and may mutate it.
+      * Input event data is progressively normalized from ``raw_payload`` or
+        ``transport_data`` into ``canonical_event`` and ``effective_event``.
+
+    Side effects:
+      * Stages should only perform deterministic, idempotent mutations against
+        ``PolicyContext`` and avoid externally-visible side effects.
+      * Audit/log emission is handled centrally by :class:`PolicyPipeline`.
+
+    Decision precedence:
+      * Decision stages are always evaluated before transform stages.
+      * Terminal precedence is ``DENY`` / ``QUARANTINE`` > ``REDACTED`` > ``ALLOW``.
+
+    Idempotency:
+      * Running the same stage sequence multiple times with equivalent context
+        should yield equivalent decisions and equivalent canonical payload hashes.
+    """
+
+    name: str
+    phase: str
+    stage_type: str
+    factory: Callable[[], PolicyStage]
+    order: int = 100
+
+
+class StageRegistry:
+    """Registry that builds policy stage instances from declarative configuration."""
+
+    def __init__(self) -> None:
+        self._registrations: Dict[str, PolicyStageRegistration] = {}
+        self._insert_order: Dict[str, int] = {}
+
+    def register(self, registration: PolicyStageRegistration) -> None:
+        self._insert_order.setdefault(registration.name, len(self._insert_order))
+        self._registrations[registration.name] = registration
+
+    def _ordered(self, registrations: List[PolicyStageRegistration]) -> List[PolicyStageRegistration]:
+        return sorted(
+            registrations,
+            key=lambda item: (item.order, self._insert_order[item.name], item.name),
+        )
+
+    def registrations_from_names(self, names: List[str]) -> List[PolicyStageRegistration]:
+        stages: List[PolicyStageRegistration] = []
+        for name in names:
+            registration = self._registrations.get(name)
+            if registration is None:
+                raise ValueError(f"unknown policy stage: {name}")
+            stages.append(registration)
+        return self._ordered(stages)
+
+    def resolve_names(self, *, config_path: str | None = None) -> List[str]:
+        default = [registration.name for registration in self._ordered(list(self._registrations.values()))]
+        configured: List[str] = []
+        if config_path:
+            with open(config_path, "r", encoding="utf-8") as handle:
+                doc = json.load(handle)
+            configured = [str(name) for name in doc.get("policy_pipeline", {}).get("stages", [])]
+
+        env_config = os.getenv("UME_POLICY_PIPELINE_STAGES")
+        if env_config:
+            configured = [name.strip() for name in env_config.split(",") if name.strip()]
+        return configured or default
+
+
 class TransportValidationStage:
     name = "pre_parse_transport"
 
@@ -159,6 +245,13 @@ class AlignmentStage:
                 stage=self.name,
                 reason=str(exc),
             )
+        except Exception as exc:  # pragma: no cover - defensive mapping
+            return _result(
+                PolicyDecision.QUARANTINE,
+                context,
+                stage=self.name,
+                reason=f"alignment_plugin_error: {exc.__class__.__name__}",
+            )
         return None
 
 
@@ -214,19 +307,25 @@ class PolicyPipeline:
     def __init__(
         self,
         *,
-        pre_parse: List[PolicyStage],
-        pre_apply: List[PolicyStage],
-        pre_persist: List[PolicyStage],
+        decision_stages: List[PolicyStage],
+        transform_stages: List[PolicyStage],
         post_apply: List[PolicyStage],
     ) -> None:
-        self._pre_parse = pre_parse
-        self._pre_apply = pre_apply
-        self._pre_persist = pre_persist
+        self._decision_stages = decision_stages
+        self._transform_stages = transform_stages
         self._post_apply = post_apply
 
     def evaluate(self, context: PolicyContext) -> PolicyResult:
         redaction_result: Optional[PolicyResult] = None
-        for stage in [*self._pre_parse, *self._pre_apply, *self._pre_persist]:
+        for stage in self._decision_stages:
+            result = stage.run(context)
+            if result is None:
+                continue
+            if result.decision in {PolicyDecision.DENY, PolicyDecision.QUARANTINE}:
+                self._emit(result.audit_event)
+                return result
+
+        for stage in self._transform_stages:
             result = stage.run(context)
             if result is None:
                 continue
@@ -320,11 +419,75 @@ def build_default_policy_pipeline(
     redactor: Callable[[Dict[str, object]], tuple[Dict[str, object], bool]],
     plugin_loader: Callable[[], None] = load_plugins,
     plugin_provider: Callable[[], List[Any]] = get_plugins,
+    registry: StageRegistry | None = None,
+    config_path: str | None = None,
 ) -> PolicyPipeline:
     plugin_loader()
-    return PolicyPipeline(
-        pre_parse=[TransportValidationStage()],
-        pre_apply=[ConsentStage(), AlignmentStage(plugin_provider)],
-        pre_persist=[PiiRedactionStage(redactor)],
-        post_apply=[AuditStage()],
+    active_registry = registry or _default_stage_registry(
+        redactor=redactor,
+        plugin_provider=plugin_provider,
     )
+    stage_names = active_registry.resolve_names(config_path=config_path)
+    registrations = active_registry.registrations_from_names(stage_names)
+    decision_stages = [r.factory() for r in registrations if r.stage_type == "decision"]
+    transform_stages = [r.factory() for r in registrations if r.stage_type == "transform"]
+    post_apply = [r.factory() for r in registrations if r.stage_type == "post_apply"]
+    return PolicyPipeline(
+        decision_stages=decision_stages,
+        transform_stages=transform_stages,
+        post_apply=post_apply,
+    )
+
+
+def _default_stage_registry(
+    *,
+    redactor: Callable[[Dict[str, object]], tuple[Dict[str, object], bool]],
+    plugin_provider: Callable[[], List[Any]],
+) -> StageRegistry:
+    registry = StageRegistry()
+    registry.register(
+        PolicyStageRegistration(
+            name=TransportValidationStage.name,
+            phase="pre_parse",
+            stage_type="decision",
+            order=10,
+            factory=lambda: TransportValidationStage(),
+        )
+    )
+    registry.register(
+        PolicyStageRegistration(
+            name=ConsentStage.name,
+            phase="pre_apply",
+            stage_type="decision",
+            order=20,
+            factory=lambda: ConsentStage(),
+        )
+    )
+    registry.register(
+        PolicyStageRegistration(
+            name=AlignmentStage.name,
+            phase="pre_apply",
+            stage_type="decision",
+            order=30,
+            factory=lambda: AlignmentStage(plugin_provider),
+        )
+    )
+    registry.register(
+        PolicyStageRegistration(
+            name=PiiRedactionStage.name,
+            phase="pre_persist",
+            stage_type="transform",
+            order=40,
+            factory=lambda: PiiRedactionStage(redactor),
+        )
+    )
+    registry.register(
+        PolicyStageRegistration(
+            name=AuditStage.name,
+            phase="post_apply",
+            stage_type="post_apply",
+            order=50,
+            factory=lambda: AuditStage(),
+        )
+    )
+    return registry
