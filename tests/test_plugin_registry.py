@@ -31,3 +31,16 @@ def test_list_plugins_includes_lazy_metadata() -> None:
     plugins = list_plugins(capability="graph_backend")
     assert plugins[0]["name"] == "neo4j"
     assert plugins[0]["metadata"].lazy is True
+
+
+def test_plugin_metadata_exposes_capabilities() -> None:
+    clear_plugins()
+    register_plugin(
+        "graph_backend",
+        "postgres",
+        lambda: 1,
+        metadata=ConstructorMetadata(capabilities=frozenset({"transactional"})),
+    )
+
+    plugins = list_plugins(capability="graph_backend")
+    assert plugins[0]["metadata"].capabilities == frozenset({"transactional"})

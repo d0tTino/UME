@@ -12,6 +12,7 @@ from ume.adapters.registry import (
     discover_graph_backends_from_entry_points,
     discover_graph_backends_from_modules,
     register_graph_backend,
+    get_graph_backend_capabilities,
 )
 from ume.plugins.registry import clear_plugins
 from ume import factories
@@ -93,3 +94,9 @@ def test_discover_graph_backends_from_entry_points(monkeypatch: pytest.MonkeyPat
 
     assert isinstance(adapter, _Adapter)
     assert adapter.db_path == "from-ep.db"
+
+
+def test_registry_exposes_backend_capabilities() -> None:
+    register_graph_backend("postgres", _Adapter, capabilities={"transactional"})
+
+    assert get_graph_backend_capabilities("postgres") == frozenset({"transactional"})

@@ -147,3 +147,54 @@ def test_create_vector_store_delegates(monkeypatch: pytest.MonkeyPatch) -> None:
     assert isinstance(store, DummyStore)
     assert called.get("made") is True
 
+
+
+def test_graph_capability_negotiation_adds_acl_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(factories, "get_graph_backend_capabilities", lambda backend: frozenset({"transactional"}))
+
+    negotiation = factories.graph_capability_negotiation("postgres")
+
+    assert negotiation.supports("transactional")
+    assert negotiation.fallbacks["native_acl"] == "application_side_acl_filtering"
+
+
+def test_create_graph_adapter_attaches_capability_negotiation(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Adapter:
+        pass
+
+    monkeypatch.setattr(factories, "register_builtin_graph_backends", lambda: None)
+    monkeypatch.setattr(
+        factories,
+        "ensure_external_graph_backends_discovered",
+        lambda module_paths=(): None,
+    )
+    monkeypatch.setattr(
+        factories,
+        "create_registered_graph_adapter",
+        lambda backend, db_path, default=None: _Adapter(),
+    )
+    monkeypatch.setattr(factories.settings, "UME_GRAPH_BACKEND", "postgres", raising=False)
+    monkeypatch.setattr(factories.settings, "UME_ROLE", None, raising=False)
+    monkeypatch.setattr(factories, "is_tracing_enabled", lambda: False)
+    monkeypatch.setattr(
+        factories,
+        "graph_capability_negotiation",
+        lambda backend=None: factories.CapabilityNegotiation(supported=frozenset({"transactional"})),
+    )
+
+    adapter = factories.create_graph_adapter("graph.db")
+
+    assert adapter.capability_negotiation.supported == frozenset({"transactional"})
+
+
+def test_vector_capability_negotiation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        factories,
+        "get_plugin_metadata",
+        lambda capability, name: types.SimpleNamespace(capabilities=frozenset({"vector_similarity"})),
+    )
+
+    negotiation = factories.vector_capability_negotiation("faiss")
+
+    assert negotiation.supports("vector_similarity")
+    assert negotiation.fallbacks == {}
