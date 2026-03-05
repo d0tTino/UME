@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
 
 from .event_ledger import event_ledger
-from .replay import build_graph_from_ledger
+from .replay import ReplayMode, build_graph_from_ledger
 from . import api_deps as deps
 
 router = APIRouter()
@@ -42,12 +42,16 @@ def list_events(
 def replay_ledger(
     end_offset: int | None = Query(None, ge=0),
     end_timestamp: int | None = Query(None, ge=0),
+    replay_mode: ReplayMode = Query(ReplayMode.CURRENT_POLICY),
     _: str = Depends(deps.get_current_role),
 ) -> Dict[str, Any]:
     """Return a snapshot of the graph up to ``end_offset`` or ``end_timestamp``."""
 
     graph = build_graph_from_ledger(
-        event_ledger, end_offset=end_offset, end_timestamp=end_timestamp
+        event_ledger,
+        end_offset=end_offset,
+        end_timestamp=end_timestamp,
+        replay_mode=replay_mode,
     )
     return graph.dump()
 
@@ -56,12 +60,16 @@ def replay_ledger(
 def graph_history(
     offset: int | None = Query(None, ge=0),
     timestamp: int | None = Query(None, ge=0),
+    replay_mode: ReplayMode = Query(ReplayMode.CURRENT_POLICY),
     _: str = Depends(deps.get_current_role),
 ) -> Dict[str, Any]:
     """Return a snapshot of the graph at ``offset`` or ``timestamp``."""
 
     graph = build_graph_from_ledger(
-        event_ledger, end_offset=offset, end_timestamp=timestamp
+        event_ledger,
+        end_offset=offset,
+        end_timestamp=timestamp,
+        replay_mode=replay_mode,
     )
     return graph.dump()
 

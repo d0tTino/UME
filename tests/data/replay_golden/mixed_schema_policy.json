@@ -1,0 +1,127 @@
+{
+  "events": [
+    {
+      "offset": 0,
+      "event": {
+        "event_type": "CREATE_NODE",
+        "timestamp": 1,
+        "schema_version": "1.0.0",
+        "node_id": "alpha",
+        "payload": {
+          "node_id": "alpha"
+        },
+        "metadata": {
+          "policy_result": "applied"
+        }
+      }
+    },
+    {
+      "offset": 1,
+      "event": {
+        "event_type": "CREATE_NODE",
+        "timestamp": 2,
+        "schema_version": "2.0.0",
+        "node_id": "beta",
+        "payload": {
+          "node_id": "beta"
+        },
+        "metadata": {
+          "policy_result": "applied"
+        }
+      }
+    },
+    {
+      "offset": 2,
+      "event": {
+        "event_type": "CREATE_EDGE",
+        "timestamp": 3,
+        "schema_version": "1.0.0",
+        "node_id": "alpha",
+        "target_node_id": "beta",
+        "label": "RELATES_TO",
+        "payload": {},
+        "metadata": {
+          "policy_result": "applied"
+        }
+      }
+    },
+    {
+      "offset": 3,
+      "event": {
+        "event_type": "CREATE_NODE",
+        "timestamp": 4,
+        "node_id": "denied",
+        "payload": {
+          "node_id": "denied"
+        },
+        "metadata": {
+          "policy_result": "rejected"
+        }
+      }
+    },
+    {
+      "offset": 4,
+      "event": {
+        "event_type": "CREATE_NODE",
+        "timestamp": 5,
+        "node_id": "quarantined",
+        "payload": {
+          "node_id": "quarantined"
+        },
+        "metadata": {
+          "policy_result": "quarantined"
+        }
+      }
+    },
+    {
+      "offset": 5,
+      "event": {
+        "event_type": "CREATE_NODE",
+        "timestamp": 6,
+        "schema_version": "3.0.0",
+        "node_id": "historical_only",
+        "payload": {
+          "node_id": "historical_only",
+          "user_id": "user-without-consent",
+          "scope": "graph.write"
+        },
+        "metadata": {
+          "policy_result": "applied"
+        }
+      }
+    }
+  ],
+  "expected": {
+    "strict_historical": {
+      "nodes": [
+        "alpha",
+        "beta",
+        "historical_only"
+      ],
+      "edges": [
+        {
+          "source": "alpha",
+          "target": "beta",
+          "label": "RELATES_TO",
+          "schema_version": "1.0.0"
+        }
+      ]
+    },
+    "current_policy": {
+      "nodes": [
+        "alpha",
+        "beta",
+        "denied",
+        "quarantined"
+      ],
+      "edges": [
+        {
+          "source": "alpha",
+          "target": "beta",
+          "label": "RELATES_TO",
+          "schema_version": "1.0.0"
+        }
+      ]
+    }
+  }
+}

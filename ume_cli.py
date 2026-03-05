@@ -28,23 +28,29 @@ quickstart = _quickstart
 from ume.cli.prompt import UMEPrompt, create_graph_adapter
 
 
-def _ledger_replay(end_offset: int | None, end_timestamp: int | None) -> None:
+def _ledger_replay(end_offset: int | None, end_timestamp: int | None, replay_mode: str) -> None:
     """Print a graph snapshot reconstructed from the event ledger."""
 
-    from ume.replay import snapshot_from_event_ledger
+    from ume.replay import ReplayMode, snapshot_from_event_ledger
 
     snapshot = snapshot_from_event_ledger(
-        end_offset=end_offset, end_timestamp=end_timestamp
+        end_offset=end_offset,
+        end_timestamp=end_timestamp,
+        replay_mode=ReplayMode(replay_mode),
     )
     print(json.dumps(snapshot, indent=2))
 
 
-def _replay_graph(db_path: str | None, end_offset: int | None) -> None:
+def _replay_graph(db_path: str | None, end_offset: int | None, replay_mode: str) -> None:
     """Rebuild a graph from the event ledger and print a summary."""
 
-    from ume.replay import graph_from_event_ledger
+    from ume.replay import ReplayMode, graph_from_event_ledger
 
-    graph = graph_from_event_ledger(db_path=db_path, end_offset=end_offset)
+    graph = graph_from_event_ledger(
+        db_path=db_path,
+        end_offset=end_offset,
+        replay_mode=ReplayMode(replay_mode),
+    )
     node_count = len(graph.get_all_node_ids())
     edge_count = len(graph.get_all_edges())
     location = f" at {db_path}" if db_path and db_path != ":memory:" else ""
@@ -488,6 +494,12 @@ def main() -> None:
     )
     replay_parser.add_argument("--end-offset", type=int)
     replay_parser.add_argument("--end-timestamp", type=int)
+    replay_parser.add_argument(
+        "--replay-mode",
+        choices=["strict_historical", "current_policy"],
+        default="current_policy",
+        help="Use strict historical outcomes from ledger metadata or re-evaluate with current policy.",
+    )
 
     replay_graph_parser = sub.add_parser(
         "replay-graph",
@@ -495,6 +507,12 @@ def main() -> None:
     )
     replay_graph_parser.add_argument("--db-path", default=":memory:")
     replay_graph_parser.add_argument("--end-offset", type=int)
+    replay_graph_parser.add_argument(
+        "--replay-mode",
+        choices=["strict_historical", "current_policy"],
+        default="current_policy",
+        help="Use strict historical outcomes from ledger metadata or re-evaluate with current policy.",
+    )
 
     plugins_parser = sub.add_parser("plugins", help="List registered plugins")
     plugins_parser.add_argument(
@@ -603,10 +621,10 @@ def main() -> None:
             _snapshot_schedule(args.interval)
             return
         if args.command == "ledger-replay":
-            _ledger_replay(args.end_offset, args.end_timestamp)
+            _ledger_replay(args.end_offset, args.end_timestamp, args.replay_mode)
             return
         if args.command == "replay-graph":
-            _replay_graph(args.db_path, args.end_offset)
+            _replay_graph(args.db_path, args.end_offset, args.replay_mode)
             return
         if args.command == "plugins":
             _list_plugins(args.capability)
