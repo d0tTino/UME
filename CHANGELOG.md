@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Documented the canonical projection pipeline contract in `docs/PROJECTION_ENGINE.md` with authoritative stages: ingress normalization, schema validation, policy evaluation, mutation apply, and post-apply listeners/audit.
 - Routed service ingestion helpers and CLI/consumer integrations through `EventProcessorService` to centralize orchestration.
+- Updated `EventProcessorService` to invoke `EventPipelineOrchestrator` directly, keeping `ume.services.mutate.run_mutation*` as compatibility wrappers only.
 
 ### Deprecated
 - Deprecated compatibility pipeline entrypoints: `ume.projection_engine.run_projection_engine`, `ume.pipeline.graph_consumer.run_graph_consumer`, `ume.services.mutate.run_mutation`, and `ume.services.mutate.run_mutation_async`.

@@ -14,7 +14,8 @@ from ume.config import settings
 from ume.utils import ssl_config
 from confluent_kafka import Consumer, KafkaException, KafkaError
 from ume import EventError
-from ume.events.ingress import ingest_transport_payload
+from ume.pipeline.core import PipelineOutcome
+from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR
 from ume.embedding import generate_embedding
 
 configure_logging()
@@ -80,9 +81,15 @@ def main() -> None:
                     text_values = [v for v in payload.values() if isinstance(v, str)]
                     if text_values:
                         payload["embedding"] = generate_embedding(" ".join(text_values))
-                _, received_event = ingest_transport_payload(
-                    event_data_dict, adapter="kafka"
+                envelope = DEFAULT_EVENT_PROCESSOR.process_payload(
+                    event_data_dict,
+                    source="consumer_demo",
+                    adapter="kafka",
                 )
+                if envelope.outcome in {PipelineOutcome.REJECTED, PipelineOutcome.QUARANTINED}:
+                    logger.warning("Event rejected at %s: %s", envelope.stage, envelope.reason)
+                    continue
+                received_event = envelope.event
                 logger.info(f"Received event object: {received_event}")
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON: {data}, error: {e}")

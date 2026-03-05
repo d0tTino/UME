@@ -12,7 +12,7 @@ from .config import settings
 from .utils import ssl_config, event_to_snake
 from .event import EventError
 from .events.types import EventType
-from .services.mutate import MutationError, raise_for_rejected_outcome
+from .services.mutate import MutationError, build_graph_projector as _build_graph_projector, raise_for_rejected_outcome
 from .services.event_processor import EventProcessorService
 from .graph_adapter import IGraphAdapter
 from .logging_utils import configure_logging
@@ -26,6 +26,10 @@ TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
 GROUP_ID = settings.KAFKA_GROUP_ID
 
 VALID_EVENT_TYPES = {e.value for e in EventType}
+
+# compatibility export retained for legacy tests/integrations
+build_graph_projector = _build_graph_projector
+
 
 def run_projection_engine(
     graph: IGraphAdapter,
@@ -57,6 +61,7 @@ def run_projection_engine(
         owns_consumer = True
 
     processor = EventProcessorService()
+    projector = build_graph_projector(graph, classify=False)
     logger.info("Projection engine started with group_id %s", gid)
     try:
         while True:
@@ -75,12 +80,12 @@ def run_projection_engine(
             try:
                 data_camel = json.loads(msg.value().decode("utf-8"))
                 data = event_to_snake(data_camel)
-                envelope = processor.mutate_graph(
+                envelope = processor.process_payload(
                     data,
-                    graph=graph,
                     source="projection_engine",
                     adapter="kafka",
                     raw_payload=msg.value(),
+                    projector=projector,
                 )
                 if envelope.event and envelope.event.event_type not in VALID_EVENT_TYPES:
                     raise EventError(f"unknown_event_type:{envelope.event.event_type}")
