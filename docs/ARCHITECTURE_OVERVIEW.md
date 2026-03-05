@@ -187,3 +187,31 @@ can negotiate support before executing capability-dependent operations.
 API capability metadata is exposed at `GET /health/capabilities`. Vector query
 routes also verify `vector_similarity` support and return `501` when the selected
 backend does not provide it.
+
+## 8) Policy input contract (OPA/Rego)
+
+Policy plugins now receive a stable structured input document with the following shape:
+
+```json
+{
+  "event": {
+    "event_id": "...",
+    "event_type": "...",
+    "timestamp": 0,
+    "node_id": "...",
+    "target_node_id": "...",
+    "label": "...",
+    "payload": {}
+  },
+  "graph": {
+    "mode": "snapshot|neighborhood",
+    "nodes": {},
+    "edges": []
+  },
+  "actor": {"id": "...", "type": "..."},
+  "source": {"transport": "api|kafka|...", "service": "..."},
+  "metadata": {"redacted": false, "canonical_metadata": {}}
+}
+```
+
+`graph.mode=snapshot` is used for small graphs; large graphs receive a bounded neighborhood view centered on event nodes. This keeps policy decisions backend-agnostic while letting Rego evaluate existing node/edge state.

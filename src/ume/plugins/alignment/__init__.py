@@ -42,9 +42,9 @@ def register_plugin(plugin: AlignmentPlugin) -> None:
 
     original_validate = plugin.validate
 
-    def wrapped_validate(event: Event) -> None:
+    def wrapped_validate(event: Event, *args: object, **kwargs: object) -> None:
         try:
-            original_validate(event)
+            original_validate(event, *args, **kwargs)
         except PolicyViolationError as exc:
             user_id = settings.UME_AGENT_ID
             log_audit_entry(user_id, str(exc))

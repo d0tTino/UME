@@ -3,6 +3,7 @@ import os
 
 os.environ.setdefault("UME_AUDIT_SIGNING_KEY", "test-key")
 import pytest
+from ume.policy.pipeline import PolicyContext, build_default_policy_pipeline
 
 # Skip heavy optional dependencies if they aren't installed
 for _mod in (
@@ -262,6 +263,27 @@ def test_parse_s3_valid() -> None:
     assert key == "path/to/key"
 
 
+def test_policy_audit_contains_graph_view_details(monkeypatch) -> None:
+    monkeypatch.setattr("ume.policy.pipeline.load_plugins", lambda: None)
+    monkeypatch.setattr("ume.policy.pipeline.get_plugins", lambda: [])
+
+    pipeline = build_default_policy_pipeline(redactor=lambda payload: (payload, False))
+    context = PolicyContext(
+        source="service",
+        transport_data={
+            "eventType": "CREATE_NODE",
+            "timestamp": 1,
+            "nodeId": "n1",
+            "payload": {"attributes": {"name": "Alice"}},
+        },
+        graph_read_view={"mode": "snapshot", "nodes": {"n1": {}}, "edges": []},
+    )
+    result = pipeline.evaluate(context)
+
+    assert result.audit_event.details["graph_view_mode"] == "snapshot"
+    assert result.audit_event.details["graph_view_nodes"] == 1
+
+
 @pytest.mark.parametrize(
     "path",
     [
@@ -285,4 +307,3 @@ def test_write_lines_creates_directory(tmp_path):
 
     assert path.exists()
     assert _read_lines(str(path)) == ["entry1"]
-

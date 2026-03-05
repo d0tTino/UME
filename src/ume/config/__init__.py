@@ -102,6 +102,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     OPA_TOKEN: str | None = None
 
     REGO_POLICY_PATHS: str | None = None
+    UME_POLICY_GRAPH_MAX_SNAPSHOT_NODES: int = 500
+    UME_POLICY_GRAPH_NEIGHBORHOOD_DEPTH: int = 1
+    UME_POLICY_GRAPH_MAX_NEIGHBORHOOD_NODES: int = 200
 
     # OpenTelemetry
     UME_OTLP_ENDPOINT: str | None = None

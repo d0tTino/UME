@@ -144,6 +144,16 @@ is enabled.
 | `LLM_FERRY_API_KEY` | *(unset)* | API key used by `LLMFerry` for authentication. |
 | `UME_OPA_URL` | *(unset)* | Base URL of a remote OPA server used by `RegoPolicyEngine`. |
 | `UME_OPA_TOKEN` | *(unset)* | Bearer token sent with OPA requests. |
+| `UME_POLICY_GRAPH_MAX_SNAPSHOT_NODES` | `500` | If graph node count is <= this limit, policy input includes a full graph snapshot. |
+| `UME_POLICY_GRAPH_NEIGHBORHOOD_DEPTH` | `1` | Neighborhood hop depth used when a full snapshot is skipped. |
+| `UME_POLICY_GRAPH_MAX_NEIGHBORHOOD_NODES` | `200` | Maximum nodes included in neighborhood mode before truncation. |
+
+### OPA/Rego input shape
+
+Requests to OPA use an input document shaped as `{event, graph, actor, source, metadata}`.
+`event` contains normalized event fields; `graph` contains either `mode: snapshot`
+with full `nodes`/`edges` or `mode: neighborhood` with bounded context;
+`actor` and `source` provide principal and ingress metadata.
 
 `UME_RATE_LIMIT_REDIS` may be set to a Redis URL to enable shared rate limiting.
 If unset, the API uses an in-memory limiter.
@@ -170,4 +180,3 @@ stack:
 4. Inspect logs with `docker compose logs -f ume-api`.
 5. Confirm all services report `healthy` with `docker compose ps`.
 6. Stop all containers with `docker compose down` when finished.
-

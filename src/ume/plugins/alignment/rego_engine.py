@@ -60,8 +60,24 @@ class RegoPolicyEngine(AlignmentPlugin):
         else:
             raise FileNotFoundError(f"Policy path {path} not found")
 
-    def validate(self, event: Event) -> None:
-        data: dict[str, Any] = event.__dict__
+    def validate(self, event: Event, *, policy_input: dict[str, Any] | None = None) -> None:
+        data: dict[str, Any] = policy_input or {
+            "event": {
+                "event_id": event.event_id,
+                "event_type": event.event_type,
+                "timestamp": event.timestamp,
+                "node_id": event.node_id,
+                "target_node_id": event.target_node_id,
+                "label": event.label,
+                "payload": event.payload,
+                "correlation_id": event.correlation_id,
+                "schema_version": event.schema_version,
+            },
+            "graph": {},
+            "actor": event.subject_entity or {},
+            "source": {"service": event.source_service} if event.source_service else {},
+            "metadata": {},
+        }
         if self._opa_client is not None:
             result = self._opa_client.query(self._opa_path, data)
             allowed = bool(result)

@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import inspect
 from hashlib import sha256
 from dataclasses import dataclass, field
 from enum import Enum
@@ -72,6 +73,7 @@ class PolicyContext:
     canonical_event: Dict[str, Any] | None = None
     original_event: Event | None = None
     effective_event: Event | None = None
+    graph_read_view: Dict[str, Any] | None = None
     redacted: bool = False
     details: Dict[str, Any] = field(default_factory=dict)
 
@@ -88,6 +90,46 @@ class PolicyContext:
     def event(self) -> Event | None:
         """Backward-compatible alias for the effective event."""
         return self.effective_event
+
+    @property
+    def policy_input(self) -> Dict[str, Any]:
+        event = self.effective_event
+        actor: Dict[str, Any] = {}
+        if event is not None and isinstance(event.subject_entity, dict):
+            actor = dict(event.subject_entity)
+        if not actor:
+            user_id = self.event_payload.get("user_id")
+            if user_id is not None:
+                actor = {"id": str(user_id), "type": "user"}
+
+        event_doc: Dict[str, Any] = {}
+        if event is not None:
+            event_doc = {
+                "event_id": event.event_id,
+                "event_type": event.event_type,
+                "timestamp": event.timestamp,
+                "node_id": event.node_id,
+                "target_node_id": event.target_node_id,
+                "label": event.label,
+                "payload": event.payload,
+                "correlation_id": event.correlation_id,
+                "schema_version": event.schema_version,
+            }
+
+        source_doc: Dict[str, Any] = {"transport": self.source}
+        if event is not None and event.source_service:
+            source_doc["service"] = event.source_service
+
+        return {
+            "event": event_doc,
+            "graph": self.graph_read_view or {},
+            "actor": actor,
+            "source": source_doc,
+            "metadata": {
+                "redacted": self.redacted,
+                "canonical_metadata": (self.canonical_event or {}).get("metadata", {}),
+            },
+        }
 
 
 @dataclass
@@ -237,7 +279,7 @@ class AlignmentStage:
             )
         try:
             for plugin in self._plugin_provider():
-                plugin.validate(context.effective_event)
+                _validate_with_context(plugin, context)
         except PolicyViolationError as exc:
             return _result(
                 PolicyDecision.DENY,
@@ -403,6 +445,7 @@ def _context_audit_details(context: PolicyContext) -> Dict[str, Any]:
     if context.canonical_event is not None and isinstance(context.canonical_event.get("payload"), dict):
         effective_payload = context.canonical_event["payload"]
 
+    graph_read_view = context.graph_read_view or {}
     return {
         "original_event_id": context.original_event.event_id if context.original_event else None,
         "original_event_type": context.original_event.event_type if context.original_event else None,
@@ -411,7 +454,20 @@ def _context_audit_details(context: PolicyContext) -> Dict[str, Any]:
         "original_payload_hash": _payload_hash(original_payload),
         "effective_payload_hash": _payload_hash(effective_payload),
         "redacted": context.redacted,
+        "graph_view_mode": graph_read_view.get("mode"),
+        "graph_view_nodes": len(graph_read_view.get("nodes", {}))
+        if isinstance(graph_read_view.get("nodes"), dict)
+        else None,
     }
+
+
+def _validate_with_context(plugin: Any, context: PolicyContext) -> None:
+    validate = getattr(plugin, "validate")
+    params = inspect.signature(validate).parameters
+    if "policy_input" in params:
+        validate(context.effective_event, policy_input=context.policy_input)
+        return
+    validate(context.effective_event)
 
 
 def build_default_policy_pipeline(
