@@ -4,11 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from hashlib import sha256
+import logging
+from time import perf_counter
 from typing import Any, Awaitable, Callable, Mapping
 
 from ..classification import classify_event
 from ..event import Event
 from ..events.ingress import ingest_transport_payload, IngressAdapter
+from ..metrics import (
+    PIPELINE_APPLY_FAILURES_TOTAL,
+    PIPELINE_INGRESS_TOTAL,
+    PIPELINE_POLICY_OUTCOMES_TOTAL,
+    PIPELINE_STAGE_LATENCY_SECONDS,
+)
 from ..policy.pipeline import (
     PolicyContext,
     PolicyDecision,
@@ -16,6 +25,9 @@ from ..policy.pipeline import (
     build_default_policy_pipeline,
 )
 from ..processing import ProcessingError
+from ..tracing import tracer
+
+logger = logging.getLogger(__name__)
 
 
 class PipelineOutcome(str, Enum):
@@ -54,6 +66,26 @@ AsyncProjector = Callable[[PolicyContext], Awaitable[dict[str, Any] | None]]
 AsyncAuditor = Callable[[PipelineEnvelope], Awaitable[None]]
 
 
+def _safe_id_label(value: str | None) -> str:
+    if not value:
+        return "none"
+    digest = sha256(value.encode("utf-8")).hexdigest()
+    return f"h:{digest[:12]}"
+
+
+def _correlation_from_payload(payload: Mapping[str, Any] | None) -> str | None:
+    if payload is None:
+        return None
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return None
+    correlation_ids = metadata.get("correlation_ids")
+    if not isinstance(correlation_ids, Mapping):
+        return None
+    raw = correlation_ids.get("correlation_id")
+    return str(raw) if raw is not None else None
+
+
 class EventPipelineOrchestrator:
     """Decode → normalize → validate → policy → project → audit."""
 
@@ -82,6 +114,50 @@ class EventPipelineOrchestrator:
             canonical_event=canonical,
             original_event=event,
             effective_event=event,
+        )
+
+    def _stage_labels(
+        self,
+        *,
+        context: PolicyContext | None = None,
+        event: Event | None = None,
+        canonical: Mapping[str, Any] | None = None,
+    ) -> tuple[str, str]:
+        active_event = context.effective_event if context is not None else event
+        correlation_id = (
+            (context.effective_event.correlation_id if context and context.effective_event else None)
+            or (event.correlation_id if event else None)
+            or _correlation_from_payload(canonical)
+        )
+        return _safe_id_label(active_event.event_id if active_event else None), _safe_id_label(correlation_id)
+
+    def _record_stage_latency(
+        self,
+        *,
+        source: str,
+        stage: str,
+        outcome: PipelineOutcome,
+        start: float,
+        event_ref: str,
+        correlation_ref: str,
+    ) -> None:
+        PIPELINE_STAGE_LATENCY_SECONDS.labels(
+            source=source,
+            stage=stage,
+            outcome=outcome.value,
+            event_ref=event_ref,
+            correlation_ref=correlation_ref,
+        ).observe(max(perf_counter() - start, 0.0))
+
+    def _emit_pipeline_log(self, *, stage: str, source: str, outcome: PipelineOutcome, reason: str, event: Event | None, correlation_id: str | None) -> None:
+        logger.info(
+            "pipeline_stage=%s source=%s outcome=%s reason=%s event_id=%s correlation_id=%s",
+            stage,
+            source,
+            outcome.value,
+            reason,
+            event.event_id if event else None,
+            correlation_id,
         )
 
     def _decode(self, payload: Mapping[str, Any], *, source: str) -> tuple[dict[str, Any] | None, PipelineEnvelope | None]:
@@ -122,6 +198,13 @@ class EventPipelineOrchestrator:
         source: str,
     ) -> tuple[PipelineEnvelope | None, PipelineOutcome, PolicyDecision]:
         policy_result = self._policy_pipeline.evaluate(context)
+        PIPELINE_POLICY_OUTCOMES_TOTAL.labels(
+            source=source,
+            decision=policy_result.decision.value,
+            event_type=context.effective_event.event_type if context.effective_event else "unknown",
+            event_ref=_safe_id_label(context.effective_event.event_id if context.effective_event else None),
+            correlation_ref=_safe_id_label(context.effective_event.correlation_id if context.effective_event else None),
+        ).inc()
         if policy_result.decision == PolicyDecision.DENY:
             return PipelineEnvelope(
                 outcome=PipelineOutcome.REJECTED,
@@ -158,81 +241,152 @@ class EventPipelineOrchestrator:
         projector: Projector | None = None,
         auditor: Auditor | None = None,
     ) -> PipelineEnvelope:
-        decoded, decode_error = self._decode(payload, source=source)
-        if decode_error is not None:
-            return decode_error
-        assert decoded is not None
+        with tracer.start_as_current_span("ume.pipeline.run") as span:
+            if hasattr(span, "set_attribute"):
+                span.set_attribute("ume.source", source)
+                span.set_attribute("ume.adapter", adapter)
 
-        canonical, event, normalize_error = self._normalize(
-            decoded, source=source, adapter=adapter, raw_payload=raw_payload
-        )
-        if normalize_error is not None:
-            return normalize_error
-        assert canonical is not None and event is not None
+            decode_start = perf_counter()
+            decoded, decode_error = self._decode(payload, source=source)
+            if decode_error is not None:
+                self._record_stage_latency(source=source, stage="decode", outcome=decode_error.outcome, start=decode_start, event_ref="none", correlation_ref="none")
+                self._emit_pipeline_log(stage="decode", source=source, outcome=decode_error.outcome, reason=decode_error.reason, event=None, correlation_id=None)
+                return decode_error
+            assert decoded is not None
+            self._record_stage_latency(source=source, stage="decode", outcome=PipelineOutcome.APPLIED, start=decode_start, event_ref="none", correlation_ref="none")
 
-        context = self._base_context(
-            source=source,
-            raw_payload=raw_payload,
-            decoded=decoded,
-            canonical=canonical,
-            event=event,
-        )
-        policy_error, provisional_outcome, policy_decision = self._policy(context, source=source)
-        if policy_error is not None:
-            return policy_error
-
-        if context.effective_event is None:
-            return PipelineEnvelope(
-                outcome=PipelineOutcome.QUARANTINED,
-                source=source,
-                stage="project",
-                reason="effective_event_missing",
-                canonical_event=context.canonical_event,
-                policy_decision=policy_decision,
+            normalize_start = perf_counter()
+            canonical, event, normalize_error = self._normalize(
+                decoded, source=source, adapter=adapter, raw_payload=raw_payload
             )
+            if normalize_error is not None:
+                event_ref, correlation_ref = self._stage_labels(canonical=decoded)
+                self._record_stage_latency(source=source, stage="validate", outcome=normalize_error.outcome, start=normalize_start, event_ref=event_ref, correlation_ref=correlation_ref)
+                self._emit_pipeline_log(stage="validate", source=source, outcome=normalize_error.outcome, reason=normalize_error.reason, event=None, correlation_id=None)
+                return normalize_error
+            assert canonical is not None and event is not None
+            event_ref, correlation_ref = self._stage_labels(event=event, canonical=canonical)
+            self._record_stage_latency(source=source, stage="validate", outcome=PipelineOutcome.APPLIED, start=normalize_start, event_ref=event_ref, correlation_ref=correlation_ref)
+            PIPELINE_INGRESS_TOTAL.labels(
+                source=source,
+                adapter=adapter,
+                event_type=event.event_type,
+                event_ref=event_ref,
+                correlation_ref=correlation_ref,
+            ).inc()
 
-        details: dict[str, Any] = {}
-        if projector is not None:
-            try:
-                projected = projector(context)
-                if projected:
-                    details.update(projected)
-            except ProcessingError as exc:
-                return PipelineEnvelope(
-                    outcome=PipelineOutcome.REJECTED,
+            context = self._base_context(
+                source=source,
+                raw_payload=raw_payload,
+                decoded=decoded,
+                canonical=canonical,
+                event=event,
+            )
+            if hasattr(span, "set_attribute"):
+                span.set_attribute("ume.event_id", event.event_id)
+                if event.correlation_id:
+                    span.set_attribute("ume.correlation_id", event.correlation_id)
+
+            policy_start = perf_counter()
+            policy_error, provisional_outcome, policy_decision = self._policy(context, source=source)
+            event_ref, correlation_ref = self._stage_labels(context=context)
+            if policy_error is not None:
+                self._record_stage_latency(source=source, stage="policy", outcome=policy_error.outcome, start=policy_start, event_ref=event_ref, correlation_ref=correlation_ref)
+                self._emit_pipeline_log(stage="policy", source=source, outcome=policy_error.outcome, reason=policy_error.reason, event=context.effective_event, correlation_id=context.effective_event.correlation_id if context.effective_event else None)
+                return policy_error
+            self._record_stage_latency(source=source, stage="policy", outcome=provisional_outcome, start=policy_start, event_ref=event_ref, correlation_ref=correlation_ref)
+
+            if context.effective_event is None:
+                envelope = PipelineEnvelope(
+                    outcome=PipelineOutcome.QUARANTINED,
                     source=source,
                     stage="project",
-                    reason=f"processing_error:{exc}",
+                    reason="effective_event_missing",
                     canonical_event=context.canonical_event,
-                    event=context.effective_event,
                     policy_decision=policy_decision,
                 )
-            except Exception as exc:
-                return PipelineEnvelope(
-                    outcome=PipelineOutcome.REJECTED,
+                PIPELINE_APPLY_FAILURES_TOTAL.labels(
                     source=source,
                     stage="project",
-                    reason=f"projection_failed:{exc}",
-                    canonical_event=context.canonical_event,
-                    event=context.effective_event,
-                    policy_decision=policy_decision,
-                )
+                    error_category="effective_event_missing",
+                    event_type="unknown",
+                    event_ref=event_ref,
+                    correlation_ref=correlation_ref,
+                ).inc()
+                return envelope
 
-        self._policy_pipeline.audit_post_apply(context)
-        envelope = PipelineEnvelope(
-            outcome=provisional_outcome,
-            source=source,
-            stage="audit",
-            reason="mutation_applied",
-            canonical_event=context.canonical_event,
-            event=context.effective_event,
-            policy_decision=policy_decision,
-            redacted=provisional_outcome == PipelineOutcome.REDACTED,
-            details=details,
-        )
-        if auditor is not None:
-            auditor(envelope)
-        return envelope
+            details: dict[str, Any] = {}
+            if projector is not None:
+                project_start = perf_counter()
+                try:
+                    projected = projector(context)
+                    if projected:
+                        details.update(projected)
+                except ProcessingError as exc:
+                    PIPELINE_APPLY_FAILURES_TOTAL.labels(
+                        source=source,
+                        stage="project",
+                        error_category="processing_error",
+                        event_type=context.effective_event.event_type,
+                        event_ref=event_ref,
+                        correlation_ref=correlation_ref,
+                    ).inc()
+                    failure = PipelineEnvelope(
+                        outcome=PipelineOutcome.REJECTED,
+                        source=source,
+                        stage="project",
+                        reason=f"processing_error:{exc}",
+                        canonical_event=context.canonical_event,
+                        event=context.effective_event,
+                        policy_decision=policy_decision,
+                    )
+                    self._record_stage_latency(source=source, stage="project", outcome=failure.outcome, start=project_start, event_ref=event_ref, correlation_ref=correlation_ref)
+                    return failure
+                except Exception as exc:
+                    PIPELINE_APPLY_FAILURES_TOTAL.labels(
+                        source=source,
+                        stage="project",
+                        error_category="projection_failed",
+                        event_type=context.effective_event.event_type,
+                        event_ref=event_ref,
+                        correlation_ref=correlation_ref,
+                    ).inc()
+                    failure = PipelineEnvelope(
+                        outcome=PipelineOutcome.REJECTED,
+                        source=source,
+                        stage="project",
+                        reason=f"projection_failed:{exc}",
+                        canonical_event=context.canonical_event,
+                        event=context.effective_event,
+                        policy_decision=policy_decision,
+                    )
+                    self._record_stage_latency(source=source, stage="project", outcome=failure.outcome, start=project_start, event_ref=event_ref, correlation_ref=correlation_ref)
+                    return failure
+                self._record_stage_latency(source=source, stage="project", outcome=provisional_outcome, start=project_start, event_ref=event_ref, correlation_ref=correlation_ref)
+
+            self._policy_pipeline.audit_post_apply(context)
+            envelope = PipelineEnvelope(
+                outcome=provisional_outcome,
+                source=source,
+                stage="audit",
+                reason="mutation_applied",
+                canonical_event=context.canonical_event,
+                event=context.effective_event,
+                policy_decision=policy_decision,
+                redacted=provisional_outcome == PipelineOutcome.REDACTED,
+                details=details,
+            )
+            self._emit_pipeline_log(
+                stage="audit",
+                source=source,
+                outcome=envelope.outcome,
+                reason=envelope.reason,
+                event=context.effective_event,
+                correlation_id=context.effective_event.correlation_id,
+            )
+            if auditor is not None:
+                auditor(envelope)
+            return envelope
 
     async def run_async(
         self,
@@ -244,30 +398,38 @@ class EventPipelineOrchestrator:
         projector: AsyncProjector | None = None,
         auditor: AsyncAuditor | None = None,
     ) -> PipelineEnvelope:
+        decode_start = perf_counter()
         decoded, decode_error = self._decode(payload, source=source)
         if decode_error is not None:
+            self._record_stage_latency(source=source, stage="decode", outcome=decode_error.outcome, start=decode_start, event_ref="none", correlation_ref="none")
             return decode_error
         assert decoded is not None
+        self._record_stage_latency(source=source, stage="decode", outcome=PipelineOutcome.APPLIED, start=decode_start, event_ref="none", correlation_ref="none")
 
+        normalize_start = perf_counter()
         canonical, event, normalize_error = self._normalize(
             decoded, source=source, adapter=adapter, raw_payload=raw_payload
         )
         if normalize_error is not None:
+            event_ref, correlation_ref = self._stage_labels(canonical=decoded)
+            self._record_stage_latency(source=source, stage="validate", outcome=normalize_error.outcome, start=normalize_start, event_ref=event_ref, correlation_ref=correlation_ref)
             return normalize_error
         assert canonical is not None and event is not None
+        event_ref, correlation_ref = self._stage_labels(event=event, canonical=canonical)
+        self._record_stage_latency(source=source, stage="validate", outcome=PipelineOutcome.APPLIED, start=normalize_start, event_ref=event_ref, correlation_ref=correlation_ref)
+        PIPELINE_INGRESS_TOTAL.labels(source=source, adapter=adapter, event_type=event.event_type, event_ref=event_ref, correlation_ref=correlation_ref).inc()
 
-        context = self._base_context(
-            source=source,
-            raw_payload=raw_payload,
-            decoded=decoded,
-            canonical=canonical,
-            event=event,
-        )
+        context = self._base_context(source=source, raw_payload=raw_payload, decoded=decoded, canonical=canonical, event=event)
+        policy_start = perf_counter()
         policy_error, provisional_outcome, policy_decision = self._policy(context, source=source)
+        event_ref, correlation_ref = self._stage_labels(context=context)
         if policy_error is not None:
+            self._record_stage_latency(source=source, stage="policy", outcome=policy_error.outcome, start=policy_start, event_ref=event_ref, correlation_ref=correlation_ref)
             return policy_error
+        self._record_stage_latency(source=source, stage="policy", outcome=provisional_outcome, start=policy_start, event_ref=event_ref, correlation_ref=correlation_ref)
 
         if context.effective_event is None:
+            PIPELINE_APPLY_FAILURES_TOTAL.labels(source=source, stage="project", error_category="effective_event_missing", event_type="unknown", event_ref=event_ref, correlation_ref=correlation_ref).inc()
             return PipelineEnvelope(
                 outcome=PipelineOutcome.QUARANTINED,
                 source=source,
@@ -279,12 +441,14 @@ class EventPipelineOrchestrator:
 
         details: dict[str, Any] = {}
         if projector is not None:
+            project_start = perf_counter()
             try:
                 projected = await projector(context)
                 if projected:
                     details.update(projected)
             except ProcessingError as exc:
-                return PipelineEnvelope(
+                PIPELINE_APPLY_FAILURES_TOTAL.labels(source=source, stage="project", error_category="processing_error", event_type=context.effective_event.event_type, event_ref=event_ref, correlation_ref=correlation_ref).inc()
+                failure = PipelineEnvelope(
                     outcome=PipelineOutcome.REJECTED,
                     source=source,
                     stage="project",
@@ -293,8 +457,11 @@ class EventPipelineOrchestrator:
                     event=context.effective_event,
                     policy_decision=policy_decision,
                 )
+                self._record_stage_latency(source=source, stage="project", outcome=failure.outcome, start=project_start, event_ref=event_ref, correlation_ref=correlation_ref)
+                return failure
             except Exception as exc:
-                return PipelineEnvelope(
+                PIPELINE_APPLY_FAILURES_TOTAL.labels(source=source, stage="project", error_category="projection_failed", event_type=context.effective_event.event_type, event_ref=event_ref, correlation_ref=correlation_ref).inc()
+                failure = PipelineEnvelope(
                     outcome=PipelineOutcome.REJECTED,
                     source=source,
                     stage="project",
@@ -303,6 +470,9 @@ class EventPipelineOrchestrator:
                     event=context.effective_event,
                     policy_decision=policy_decision,
                 )
+                self._record_stage_latency(source=source, stage="project", outcome=failure.outcome, start=project_start, event_ref=event_ref, correlation_ref=correlation_ref)
+                return failure
+            self._record_stage_latency(source=source, stage="project", outcome=provisional_outcome, start=project_start, event_ref=event_ref, correlation_ref=correlation_ref)
 
         self._policy_pipeline.audit_post_apply(context)
         envelope = PipelineEnvelope(

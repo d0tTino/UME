@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from time import time
 
 from .graph_adapter import IGraphAdapter
 from .policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from .processing_errors import ProcessingError
+from .metrics import PIPELINE_REPLAY_LAG_SECONDS
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .event_ledger import EventLedger
@@ -35,6 +37,8 @@ def replay_from_ledger(
             apply_event_to_graph(context.effective_event, graph, schema_version=context.effective_event.schema_version)
         except ProcessingError:
             continue
+        event_timestamp = int(context.effective_event.timestamp)
+        PIPELINE_REPLAY_LAG_SECONDS.labels(source="cli_replay").set(max(time() - event_timestamp, 0.0))
         pipeline.audit_post_apply(context)
         last = off
     return last

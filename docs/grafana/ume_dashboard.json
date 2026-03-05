@@ -2,28 +2,54 @@
   "title": "UME Dashboard",
   "uid": "ume-dashboard",
   "schemaVersion": 37,
-  "version": 1,
+  "version": 2,
   "panels": [
     {
+      "id": 1,
       "type": "timeseries",
-      "title": "Request Rate",
+      "title": "Pipeline Ingress Rate",
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [{"expr": "rate(ume_http_requests_total[1m])"}],
-      "id": 1
+      "targets": [
+        {"expr": "sum by (source) (rate(ume_pipeline_ingress_total[5m]))"}
+      ]
     },
     {
+      "id": 2,
       "type": "timeseries",
-      "title": "Recall Latency (ms)",
+      "title": "Pipeline Stage Latency P95",
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [{"expr": "rate(ume_recall_latency_ms_sum[5m]) / rate(ume_recall_latency_ms_count[5m])"}],
-      "id": 2
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, stage) (rate(ume_pipeline_stage_latency_seconds_bucket[5m])))"
+        }
+      ]
     },
     {
+      "id": 3,
       "type": "timeseries",
-      "title": "Ledger Compacted Bytes",
+      "title": "Policy Outcomes",
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [{"expr": "ume_ledger_compacted_bytes"}],
-      "id": 3
+      "targets": [
+        {"expr": "sum by (decision) (rate(ume_pipeline_policy_outcomes_total[5m]))"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Apply Failures",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (error_category) (rate(ume_pipeline_apply_failures_total[5m]))"}
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Replay Lag (s)",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "max by (source) (ume_pipeline_replay_lag_seconds)"}
+      ]
     }
   ]
 }
