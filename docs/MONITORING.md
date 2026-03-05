@@ -1,101 +1,35 @@
-# Monitoring
+# Monitoring Spec
 
-UME exposes Prometheus metrics at `/metrics`. This guide shows how to collect
-those metrics with Prometheus and visualize them in Grafana.
+UME exposes Prometheus metrics at `/metrics`. This spec defines the **required**
+canonical pipeline metrics and label contracts.
 
-## Scraping Metrics with Prometheus
+## Canonical pipeline metrics
 
-Add a job for UME in your `prometheus.yml`:
+| Metric | Type | Required labels | Description |
+| --- | --- | --- | --- |
+| `ume_pipeline_ingress_total` | Counter | `source`, `adapter`, `event_type`, `event_ref`, `correlation_ref` | Ingress rate into canonical `EventPipelineOrchestrator` path. |
+| `ume_pipeline_stage_latency_seconds` | Histogram | `source`, `stage`, `outcome`, `event_ref`, `correlation_ref` | Stage boundary latency for `decode`, `validate`, `policy`, and `project`. |
+| `ume_pipeline_policy_outcomes_total` | Counter | `source`, `decision`, `event_type`, `event_ref`, `correlation_ref` | Policy outcomes (`ALLOW`, `DENY`, `QUARANTINE`, `REDACTED`). |
+| `ume_pipeline_apply_failures_total` | Counter | `source`, `stage`, `error_category`, `event_type`, `event_ref`, `correlation_ref` | Failures while applying/projection (`processing_error`, `projection_failed`, etc.). |
+| `ume_pipeline_replay_lag_seconds` | Gauge | `source` | Lag between replay wall-clock and replayed event timestamp. |
 
-```yaml
-global:
-  scrape_interval: 15s
+## Label safety and ID propagation
 
-scrape_configs:
-  - job_name: 'ume'
-    metrics_path: /metrics
-    static_configs:
-      - targets: ['ume:8000']
-```
+- `event_id` and `correlation_id` MUST propagate through:
+  - pipeline logs,
+  - tracing span attributes,
+  - metric labels.
+- Metric labels MUST use safe references (`event_ref`, `correlation_ref`) derived
+  from a one-way hash prefix (`h:<12_hex_chars>`), not raw IDs.
+- Missing IDs MUST use `none`.
 
-## Docker Compose Example
+## Baseline PromQL queries
 
-The repository `docker/docker-compose.yml` now includes optional Prometheus and
-Grafana services. The Grafana service mounts
-`docs/grafana/ume_dashboard.json` so the default dashboard is available out of
-the box. An abbreviated example stack looks like:
-
-```yaml
-version: '3'
-services:
-  ume:
-    build: ..
-    ports:
-      - "8000:8000"
-  prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports:
-      - "9090:9090"
-  grafana:
-    image: grafana/grafana
-    volumes:
-      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
-      - ../docs/grafana/ume_dashboard.json:/var/lib/grafana/dashboards/ume_dashboard.json:ro
-    ports:
-      - "3000:3000"
-```
-
-Start the stack with `docker-compose up`. Prometheus will scrape
-`ume:8000/metrics`, and Grafana will be available at `http://localhost:3000`.
-
-## Viewing Results in Grafana
-
-1. Open `http://localhost:3000` and log in with the default `admin`/`admin`
-   credentials.
-2. Add a Prometheus data source pointing to `http://prometheus:9090`.
-3. Create a dashboard and add graphs using the `ume_http_requests_total` and
-   other metrics exposed by UME, or import the ready-made dashboard from
-   `docs/grafana/ume_dashboard.json`.
-
-## Example Grafana Panels
-
-Here are a few Prometheus queries you can use when building graphs:
-
-| Metric | Purpose | Example Query |
-| ------ | ------- | ------------- |
-| `ume_request_latency_seconds` | Average request latency | `rate(ume_request_latency_seconds_sum[5m]) / rate(ume_request_latency_seconds_count[5m])` |
-| `ume_vector_query_latency_seconds` | Latency of vector similarity search | `rate(ume_vector_query_latency_seconds_sum[5m]) / rate(ume_vector_query_latency_seconds_count[5m])` |
-| `ume_vector_index_size` | Number of vectors stored | `ume_vector_index_size` |
-| `ume_stale_vector_count` | Vectors older than the freshness limit | `ume_stale_vector_count` |
-| `ume_recall_latency_seconds` | Latency of recall operations | `rate(ume_recall_latency_seconds_sum[5m]) / rate(ume_recall_latency_seconds_count[5m])` |
-| `ume_ledger_compacted_bytes` | Bytes removed during the last ledger compaction | `ume_ledger_compacted_bytes` |
-
-You can combine these metrics in Grafana to visualize API performance and index
-growth over time.
-
-The metrics summary endpoint expects the configured vector store to expose a
-`get_index_size()` method or `get_vector_timestamps()` mapping. If neither is
-implemented, it falls back to counting the legacy `idx_to_id` attribute when
-present.
-
-## Distributed Tracing with OpenTelemetry
-
-Set the `UME_OTLP_ENDPOINT` environment variable to enable trace export via OTLP.
-When configured, UME will emit spans for HTTP endpoints and graph operations.
-You can point this endpoint at an OpenTelemetry Collector or any backend that
-accepts OTLP over HTTP.
-
-Example collector service in `docker-compose.yml`:
-
-```yaml
-  collector:
-    image: otel/opentelemetry-collector-contrib
-    ports:
-      - "4318:4318"
-```
-
-Configure the collector to forward traces to Jaeger, Tempo, or another tracing
-backend. With the collector running and `UME_OTLP_ENDPOINT=http://localhost:4318`,
-traces will include spans for API calls and key graph operations.
+- Ingress rate: `sum by (source) (rate(ume_pipeline_ingress_total[5m]))`
+- P95 stage latency:
+  - `histogram_quantile(0.95, sum by (le, stage) (rate(ume_pipeline_stage_latency_seconds_bucket[5m])))`
+- Policy outcomes:
+  - `sum by (decision) (rate(ume_pipeline_policy_outcomes_total[5m]))`
+- Apply failures:
+  - `sum by (error_category) (rate(ume_pipeline_apply_failures_total[5m]))`
+- Replay lag: `max by (source) (ume_pipeline_replay_lag_seconds)`

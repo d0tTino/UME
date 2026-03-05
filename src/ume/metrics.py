@@ -200,6 +200,36 @@ INGEST_EVENTS_TOTAL = Counter(
     ["event_type"],
 )
 
+PIPELINE_INGRESS_TOTAL = Counter(
+    "ume_pipeline_ingress_total",
+    "Total events entering the canonical pipeline",
+    ["source", "adapter", "event_type", "event_ref", "correlation_ref"],
+)
+
+PIPELINE_STAGE_LATENCY_SECONDS = Histogram(
+    "ume_pipeline_stage_latency_seconds",
+    "Latency for canonical pipeline stages",
+    ["source", "stage", "outcome", "event_ref", "correlation_ref"],
+)
+
+PIPELINE_POLICY_OUTCOMES_TOTAL = Counter(
+    "ume_pipeline_policy_outcomes_total",
+    "Policy decisions emitted by the canonical pipeline",
+    ["source", "decision", "event_type", "event_ref", "correlation_ref"],
+)
+
+PIPELINE_APPLY_FAILURES_TOTAL = Counter(
+    "ume_pipeline_apply_failures_total",
+    "Projection/apply failures in the canonical pipeline",
+    ["source", "stage", "error_category", "event_type", "event_ref", "correlation_ref"],
+)
+
+PIPELINE_REPLAY_LAG_SECONDS = Gauge(
+    "ume_pipeline_replay_lag_seconds",
+    "Lag between now and replayed event timestamps",
+    ["source"],
+)
+
 # Endpoint latency metrics
 SEMANTIC_SEARCH_LATENCY = Histogram(
     "ume_semantic_search_latency_seconds",
@@ -253,4 +283,9 @@ __all__ = [
     "LEDGER_COMPACTED_BYTES",
     "INGEST_EVENTS_TOTAL",
     "SEMANTIC_SEARCH_LATENCY",
+    "PIPELINE_INGRESS_TOTAL",
+    "PIPELINE_STAGE_LATENCY_SECONDS",
+    "PIPELINE_POLICY_OUTCOMES_TOTAL",
+    "PIPELINE_APPLY_FAILURES_TOTAL",
+    "PIPELINE_REPLAY_LAG_SECONDS",
 ]
