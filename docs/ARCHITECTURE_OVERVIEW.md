@@ -4,6 +4,33 @@ This document is the canonical architecture reference for backend selection and
 runtime bootstrap in UME. It describes the *actual* creation paths used by the
 codebase today.
 
+
+## Layered package layout
+
+UME now uses explicit package boundaries:
+
+- `ume.kernel`: core platform contracts and orchestration primitives
+  - `ume.kernel.events`
+  - `ume.kernel.policy`
+  - `ume.kernel.graph_adapter`
+  - `ume.kernel.processing`
+  - `ume.kernel.ledger`
+- `ume.domains.<name>`: feature/domain packs implementing domain-specific logic
+
+### Extension points for domain logic
+
+Domain modules integrate through extension hooks instead of direct coupling to core pipeline modules.
+Use `ume.domains.extensions.DomainExtension` and `run_domain_extensions(...)` to attach domain behavior from mutation/pipeline entry points.
+
+### Static dependency enforcement
+
+Kernel/domain boundaries are statically enforced:
+
+- Linter: `python scripts/lint_dependencies.py`
+- Tests: `tests/architecture/test_dependency_boundaries.py`
+
+These checks fail when any kernel module imports `ume.domains` directly.
+
 ## 1) Graph backend creation flow
 
 **Primary API:** `ume.factories.create_graph_adapter()` (`src/ume/factories.py`).
