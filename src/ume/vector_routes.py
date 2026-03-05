@@ -15,6 +15,7 @@ from .permissions_adapter import PermissionsGraphAdapter
 from .vector_store import VectorStore
 from .graph_routes import _maybe_call
 from . import embedding
+from .capabilities import VECTOR_SIMILARITY_CAPABILITY
 from .metrics import (
     RECALL_SCORE,
     RECALL_LATENCY,
@@ -23,6 +24,14 @@ from .metrics import (
 )
 
 router = APIRouter()
+
+def _ensure_vector_similarity(store: VectorStore) -> None:
+    negotiation = getattr(store, "capability_negotiation", None)
+    if negotiation is not None and not negotiation.supports(VECTOR_SIMILARITY_CAPABILITY):
+        raise HTTPException(
+            status_code=501,
+            detail="Configured vector backend does not support similarity queries",
+        )
 
 
 class VectorAddRequest(BaseModel):
@@ -51,6 +60,7 @@ def api_search_vectors(
     store: VectorStore = Depends(deps.get_vector_store),
 ) -> Dict[str, Any]:
     """Find the IDs of the ``k`` nearest vectors to ``vector``."""
+    _ensure_vector_similarity(store)
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
     ids = store.query(vector, k=k)
@@ -72,6 +82,7 @@ async def api_semantic_search(
     """Return attributes for the ``k`` nearest nodes to ``req.query``."""
     start = time.perf_counter()
     vector = embedding.generate_embedding(req.query)
+    _ensure_vector_similarity(store)
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
     if req.k <= 0:
@@ -101,6 +112,7 @@ async def api_recall(
     if vector is None and query is not None:
         vector = embedding.generate_embedding(query)
     assert vector is not None
+    _ensure_vector_similarity(store)
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
     start = time.perf_counter()
@@ -138,6 +150,7 @@ async def api_recall_stream(
     if vector is None and query is not None:
         vector = embedding.generate_embedding(query)
     assert vector is not None
+    _ensure_vector_similarity(store)
     if len(vector) != store.dim:
         raise HTTPException(status_code=400, detail="Invalid vector dimension")
 

@@ -12,6 +12,7 @@ from ume.plugins.registry import (
     discover_plugins_from_entry_points,
     ensure_plugins_discovered,
     get_plugin_constructor,
+    get_plugin_metadata,
     list_plugins,
     register_lazy_plugin,
     register_plugin,
@@ -28,18 +29,33 @@ class GraphAdapterRegistrationError(PluginRegistrationError):
     """Raised when graph adapter registration metadata is invalid."""
 
 
-def register_graph_backend(name: str, constructor: GraphAdapterConstructor) -> None:
+def register_graph_backend(
+    name: str,
+    constructor: GraphAdapterConstructor,
+    *,
+    capabilities: set[str] | frozenset[str] | None = None,
+) -> None:
     """Register a graph backend constructor under ``name``."""
-    register_plugin(GRAPH_BACKEND_CAPABILITY, name, constructor)
+    register_plugin(
+        GRAPH_BACKEND_CAPABILITY,
+        name,
+        constructor,
+        metadata=ConstructorMetadata(capabilities=frozenset(capabilities or set())),
+    )
 
 
-def register_lazy_graph_backend(name: str, loader: LazyConstructorLoader) -> None:
+def register_lazy_graph_backend(
+    name: str,
+    loader: LazyConstructorLoader,
+    *,
+    capabilities: set[str] | frozenset[str] | None = None,
+) -> None:
     """Register a deferred loader for backend ``name``."""
     register_lazy_plugin(
         GRAPH_BACKEND_CAPABILITY,
         name,
         loader,
-        metadata=ConstructorMetadata(lazy=True),
+        metadata=ConstructorMetadata(lazy=True, capabilities=frozenset(capabilities or set())),
     )
 
 
@@ -69,6 +85,14 @@ def create_registered_graph_adapter(
         db_path,
         default=default,
     )
+
+
+
+
+def get_graph_backend_capabilities(name: str) -> frozenset[str]:
+    """Return declared capabilities for backend ``name``."""
+    metadata = get_plugin_metadata(GRAPH_BACKEND_CAPABILITY, name)
+    return metadata.capabilities
 
 
 def available_graph_backends() -> list[str]:

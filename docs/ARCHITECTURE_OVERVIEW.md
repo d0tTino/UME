@@ -131,3 +131,32 @@ UME keeps machine-validated contract bundles under `src/ume/schemas/v1`, `v2`, a
 - **Deprecation window:** minimum two minor releases or 90 days before removing deprecated fields in the next major.
 
 CI enforces compatibility with `scripts/check_schema_compatibility.py`, and replay compatibility is covered by `tests/test_event_contract.py`.
+
+
+## 7) Backend capability matrix
+
+Backend registrations now carry declared capability metadata so runtime features
+can negotiate support before executing capability-dependent operations.
+
+### Graph backend capabilities
+
+| Backend | transactional | bulk_write | native_acl | Fallbacks |
+| --- | --- | --- | --- | --- |
+| sqlite / persistent | no | yes | no | application-side ACL filtering |
+| postgres | yes | yes | no | application-side ACL filtering |
+| redis | no | yes | no | application-side ACL filtering |
+| arango | yes | yes | no | application-side ACL filtering |
+| neo4j | yes | yes | no | application-side ACL filtering |
+
+### Vector backend capabilities
+
+| Backend | vector_similarity | bulk_write |
+| --- | --- | --- |
+| faiss | yes | yes |
+| chroma | yes | yes |
+| milvus | yes | yes |
+| pinecone (optional) | yes | yes |
+
+API capability metadata is exposed at `GET /health/capabilities`. Vector query
+routes also verify `vector_similarity` support and return `501` when the selected
+backend does not provide it.

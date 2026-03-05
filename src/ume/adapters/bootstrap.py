@@ -12,12 +12,12 @@ def register_builtin_graph_backends() -> None:
     if _BUILTINS_REGISTERED:
         return
 
-    register_graph_backend("sqlite", _create_persistent_graph)
-    register_graph_backend("persistent", _create_persistent_graph)
-    register_graph_backend("postgres", _create_postgres_graph)
-    register_graph_backend("redis", _create_redis_graph)
-    register_graph_backend("arango", _create_arango_graph)
-    register_lazy_graph_backend("neo4j", _load_neo4j_constructor)
+    register_graph_backend("sqlite", _create_persistent_graph, capabilities={"bulk_write"})
+    register_graph_backend("persistent", _create_persistent_graph, capabilities={"bulk_write"})
+    register_graph_backend("postgres", _create_postgres_graph, capabilities={"transactional", "bulk_write"})
+    register_graph_backend("redis", _create_redis_graph, capabilities={"bulk_write"})
+    register_graph_backend("arango", _create_arango_graph, capabilities={"transactional", "bulk_write"})
+    register_lazy_graph_backend("neo4j", _load_neo4j_constructor, capabilities={"transactional", "bulk_write"})
 
     _BUILTINS_REGISTERED = True
 

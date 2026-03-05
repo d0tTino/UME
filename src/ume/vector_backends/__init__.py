@@ -61,9 +61,19 @@ logger = logging.getLogger(__name__)
 VECTOR_BACKEND_CAPABILITY = "vector_backend"
 ENTRYPOINT_GROUP = "ume.vector_backends"
 
-def register_backend(name: str, cls: type[VectorBackend]) -> None:
+def register_backend(
+    name: str,
+    cls: type[VectorBackend],
+    *,
+    capabilities: set[str] | frozenset[str] | None = None,
+) -> None:
     """Register a vector backend class under ``name``."""
-    register_plugin(VECTOR_BACKEND_CAPABILITY, name, cls)
+    register_plugin(
+        VECTOR_BACKEND_CAPABILITY,
+        name,
+        cls,
+        metadata=ConstructorMetadata(capabilities=frozenset(capabilities or set())),
+    )
 
 def get_backend(name: str) -> type[VectorBackend]:
     """Return the backend class registered under ``name``."""
@@ -702,11 +712,11 @@ class MilvusBackend(VectorBackend):
             self.delete(vid)
 
 
-register_backend("faiss", FaissBackend)
-register_backend("chroma", ChromaBackend)
-register_backend("milvus", MilvusBackend)
+register_backend("faiss", FaissBackend, capabilities={"vector_similarity", "bulk_write"})
+register_backend("chroma", ChromaBackend, capabilities={"vector_similarity", "bulk_write"})
+register_backend("milvus", MilvusBackend, capabilities={"vector_similarity", "bulk_write"})
 if PineconeBackend is not None:
-    register_backend("pinecone", PineconeBackend)
+    register_backend("pinecone", PineconeBackend, capabilities={"vector_similarity", "bulk_write"})
 
 
 # Load any third-party backends exposed via entry points

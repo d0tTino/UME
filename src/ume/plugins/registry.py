@@ -19,6 +19,7 @@ class ConstructorMetadata:
     entry_point_group: str | None = None
     module_path: str | None = None
     lazy: bool = False
+    capabilities: frozenset[str] = field(default_factory=frozenset)
     details: dict[str, Any] = field(default_factory=dict)
 
 
@@ -92,6 +93,7 @@ def get_plugin_constructor(
                 entry_point_group=current.entry_point_group,
                 module_path=current.module_path,
                 lazy=False,
+                capabilities=current.capabilities,
                 details=current.details,
             )
     if constructor is not None:
@@ -131,6 +133,16 @@ def list_plugins(*, capability: str | None = None) -> list[dict[str, Any]]:
                 }
             )
     return listed
+
+
+def get_plugin_metadata(capability: str, name: str) -> ConstructorMetadata:
+    """Return registration metadata for a specific plugin entry."""
+    capability_key = capability.lower()
+    name_key = name.lower()
+    metadata = _PLUGIN_METADATA.get(capability_key, {}).get(name_key)
+    if metadata is None:
+        raise ValueError(f"Unknown {capability} plugin: {name}")
+    return metadata
 
 
 def clear_plugins(*, capability: str | None = None) -> None:
@@ -189,4 +201,3 @@ def ensure_plugins_discovered(
             return
         discover()
         _DISCOVERED_GROUPS.add(key)
-

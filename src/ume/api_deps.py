@@ -18,7 +18,8 @@ from .graph_adapter import IGraphAdapter
 from .async_graph_adapter import IAsyncGraphAdapter
 from .query import Neo4jQueryEngine
 from .vector_store import VectorStore
-from .permissions_adapter import PermissionsGraphAdapter
+from .permissions_adapter import ApplicationAclFilteringAdapter, PermissionsGraphAdapter
+from .capabilities import NATIVE_ACL_CAPABILITY
 
 
 logger = logging.getLogger(__name__)
@@ -174,7 +175,10 @@ def get_permissions_graph(
             detail="Graph does not support permission checks",
         )
 
-    return PermissionsGraphAdapter(base_graph, user_id=user_id, group_id=group_id)
+    negotiation = getattr(base_graph, "capability_negotiation", None)
+    if negotiation is not None and negotiation.supports(NATIVE_ACL_CAPABILITY):
+        return PermissionsGraphAdapter(base_graph, user_id=user_id, group_id=group_id)
+    return ApplicationAclFilteringAdapter(base_graph, user_id=user_id, group_id=group_id)
 
 
 def get_vector_store() -> VectorStore:

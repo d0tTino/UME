@@ -318,3 +318,9 @@ class PermissionsGraphAdapter(IGraphAdapter):
             source_id, target_id, max_depth, edge_label, since_timestamp
         )
         return self._filter_visible(path)
+
+
+class ApplicationAclFilteringAdapter(PermissionsGraphAdapter):
+    """Explicit fallback adapter for ACL filtering in application code."""
+
+    fallback_reason = "backend_missing_native_acl"
