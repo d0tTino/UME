@@ -8,7 +8,7 @@ The authoritative implementation is:
 
 - `ume.pipeline.core.EventPipelineOrchestrator` for stage orchestration.
 - Transport adapters in `ume.events.adapters` + `ume.events.ingress` for ingress normalization.
-- `ume.services.event_processor.EventProcessorService` as the single service entrypoint used by CLI/API/consumer integrations.
+- `ume.services.event_processor.EventProcessorService` as the single service entrypoint used by CLI/API/consumer integrations (implemented as a thin facade over `EventPipelineOrchestrator`).
 
 Legacy entrypoints in `ume.projection_engine`, `ume.pipeline.graph_consumer`, and direct `ume.services.mutate.run_mutation*` calls are compatibility wrappers and are deprecated.
 

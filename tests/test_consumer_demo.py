@@ -55,12 +55,14 @@ def test_consumer_demo_processes_messages(monkeypatch):
         consumer_demo, "KafkaError", SimpleNamespace(_PARTITION_EOF=None)
     )
     parsed = []
-    def _fake_ingress(payload, adapter="default"):
-        parsed.append(payload)
-        assert adapter == "kafka"
-        return payload, payload
 
-    monkeypatch.setattr(consumer_demo, "ingest_transport_payload", _fake_ingress)
+    def _fake_process_payload(payload, *, source, adapter):
+        parsed.append(payload)
+        assert source == "consumer_demo"
+        assert adapter == "kafka"
+        return SimpleNamespace(outcome=consumer_demo.PipelineOutcome.APPLIED, event=payload, stage="audit", reason="mutation_applied")
+
+    monkeypatch.setattr(consumer_demo.DEFAULT_EVENT_PROCESSOR, "process_payload", _fake_process_payload)
     monkeypatch.setattr(consumer_demo, "generate_embedding", lambda text: [0.0])
 
     consumer_demo.main()

@@ -12,8 +12,6 @@ from .mutate import (
     MutationError,
     build_graph_projector,
     raise_for_rejected_outcome,
-    run_mutation,
-    run_mutation_async,
 )
 
 
@@ -32,13 +30,12 @@ class EventProcessorService:
         raw_payload: bytes | None = None,
         projector: Callable[[Any], dict[str, Any] | None] | None = None,
     ) -> PipelineEnvelope:
-        return run_mutation(
+        return self._orchestrator.run(
             payload,
             source=source,
             adapter=adapter,
             raw_payload=raw_payload,
             projector=projector,
-            orchestrator=self._orchestrator,
         )
 
     async def process_payload_async(
@@ -50,13 +47,12 @@ class EventProcessorService:
         raw_payload: bytes | None = None,
         projector: Callable[[Any], Any] | None = None,
     ) -> PipelineEnvelope:
-        return await run_mutation_async(
+        return await self._orchestrator.run_async(
             payload,
             source=source,
             adapter=adapter,
             raw_payload=raw_payload,
             projector=projector,
-            orchestrator=self._orchestrator,
         )
 
     def mutate_graph(
