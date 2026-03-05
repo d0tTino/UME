@@ -1,6 +1,7 @@
 import importlib
 import sys
 import types
+from enum import Enum
 
 
 def test_replay_graph_builds_graph(monkeypatch, capsys):
@@ -61,6 +62,12 @@ def test_replay_graph_builds_graph(monkeypatch, capsys):
         return graph
 
     replay_mod = types.ModuleType("ume.replay")
+
+    class ReplayMode(str, Enum):
+        STRICT_HISTORICAL = "strict_historical"
+        CURRENT_POLICY = "current_policy"
+
+    replay_mod.ReplayMode = ReplayMode
     replay_mod.graph_from_event_ledger = graph_from_event_ledger
 
     stub = types.ModuleType("ume")

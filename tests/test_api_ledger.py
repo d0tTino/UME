@@ -242,3 +242,41 @@ def test_bookmark_persistence_and_replay(tmp_path, monkeypatch):
     replay_from_ledger(g, ledger2, start_offset=ledger2.last_processed_offset + 1)
     assert set(g.get_all_node_ids()) == {"n2"}
 
+
+
+def test_replay_endpoint_mode_selection(tmp_path, monkeypatch):
+    ledger = EventLedger(str(tmp_path / "ledger.db"))
+    ledger.append(
+        0,
+        {
+            "event_type": "CREATE_NODE",
+            "timestamp": 1,
+            "node_id": "historical",
+            "payload": {
+                "node_id": "historical",
+                "user_id": "u-no-consent",
+                "scope": "graph.write",
+            },
+            "metadata": {"policy_result": "applied"},
+        },
+    )
+    monkeypatch.setattr("ume.ledger_routes.event_ledger", ledger)
+
+    client = TestClient(app)
+    token = _token(client)
+
+    strict = client.get(
+        "/ledger/replay",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"replay_mode": "strict_historical"},
+    )
+    assert strict.status_code == 200
+    assert "historical" in strict.json()["nodes"]
+
+    current = client.get(
+        "/ledger/replay",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"replay_mode": "current_policy"},
+    )
+    assert current.status_code == 200
+    assert "historical" not in current.json()["nodes"]

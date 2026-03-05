@@ -60,3 +60,25 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 KAFKA_CLEAN_EVENTS_TOPIC=ume-clean-events
 KAFKA_GROUP_ID=ume_client_group
 ```
+
+
+## Replay guarantees
+
+Replay behavior is deterministic for a fixed input ledger and schema transform set.
+
+For the same ordered event log, identical replay cutoffs (`end_offset`/`end_timestamp`), and the same schema transformation bundle, UME guarantees:
+
+- the same accepted/rejected/quarantined event set for the selected replay mode;
+- the same final node and edge state in the reconstructed graph;
+- stable schema-versioned mutation behavior for mixed-version ledgers.
+
+Determinism is enforced with golden replay fixtures in `tests/data/replay_golden/` and CI replay regression tests.
+
+### Replay modes
+
+Replay policy side effects are configurable through replay mode selection:
+
+- `current_policy` (default): re-runs policy evaluation using currently loaded policy stages. This is useful for forward-looking audits and simulations after policy updates.
+- `strict_historical`: trusts persisted `policy_result` values in each ledger record and skips historical policy re-evaluation. This is useful for exact historical reconstruction and incident forensics.
+
+When `strict_historical` is selected, deny/reject/quarantine outcomes in ledger metadata are treated as terminal and are not re-evaluated against the current policy stack.
