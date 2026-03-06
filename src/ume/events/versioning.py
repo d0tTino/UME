@@ -7,6 +7,8 @@ from typing import Any, Mapping
 
 from packaging.version import Version
 
+from .schema_resolution import resolve_active_schema
+
 
 def normalize_schema_version(value: Any) -> str | None:
     if isinstance(value, str):
@@ -23,17 +25,13 @@ def resolve_schema_version(
     fallback_version: str | None = None,
     default_version: str,
 ) -> str:
-    metadata = canonical_event.get("metadata") if isinstance(canonical_event, Mapping) else None
-    metadata_schema = None
-    if isinstance(metadata, Mapping):
-        metadata_schema = metadata.get("schema_version")
-
-    return (
-        normalize_schema_version(explicit_version)
-        or normalize_schema_version(metadata_schema)
-        or normalize_schema_version(fallback_version)
-        or default_version
-    )
+    """Backward-compatible wrapper around :func:`resolve_active_schema`."""
+    return resolve_active_schema(
+        canonical_event,
+        explicit_version=explicit_version,
+        fallback_version=fallback_version,
+        default_version=default_version,
+    ).active_version
 
 
 def _major(version: str) -> int:

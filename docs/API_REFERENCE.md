@@ -116,6 +116,17 @@ UME event contracts are versioned with semantic versions and validated against J
 - During deprecation, producers should emit both old/new representations when possible.
 - Removal only occurs in the next major bundle after migration guidance and replay transforms are available.
 
+### Supported schema transitions
+
+UME supports only adjacent major-version replay transforms in both directions:
+
+- ✅ Supported upgrades: `1.x -> 2.x`, `2.x -> 3.x`.
+- ✅ Supported downgrades: `3.x -> 2.x`, `2.x -> 1.x`.
+- ❌ Unsupported jumps: `1.x -> 3.x` and `3.x -> 1.x` as single-step transforms. These must be performed as chained adjacent transforms.
+- ❌ Unsupported unknown majors (for example `4.x`) until an explicit transform path is added.
+
+Live ingress resolves active schema once from event metadata (`metadata.schema_version`) and uses that same resolved version for policy evaluation and projection in-process.
+
 ## Ingestion API
 
 The standalone ingestion service listens on port `8001` and publishes raw events to Kafka.

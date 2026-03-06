@@ -28,6 +28,7 @@ from jsonschema import ValidationError
 from ..consent_ledger import consent_ledger
 from ..event import Event, EventError, parse_event
 from ..events.contract import canonical_to_camel_dict, canonicalize_event
+from ..events.schema_resolution import annotate_canonical_schema
 from ..plugins.alignment import PolicyViolationError, get_plugins, load_plugins
 from ..schema_utils import validate_event_dict
 
@@ -230,7 +231,11 @@ class TransportValidationStage:
                     raise ValueError("missing transport payload")
                 context.transport_data = json.loads(context.raw_payload.decode("utf-8"))
 
-            context.canonical_event = canonicalize_event(context.transport_data)
+            canonical = canonicalize_event(context.transport_data)
+            canonical, resolution = annotate_canonical_schema(canonical, default_version="1.0.0")
+            context.canonical_event = canonical
+            context.details.setdefault("active_schema_version", resolution.active_version)
+            context.details.setdefault("schema_resolution_source", resolution.source)
             validate_event_dict(canonical_to_camel_dict(context.canonical_event))
             parsed = parse_event(context.canonical_event)
             context.original_event = parsed

@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping, Literal, Callable
 
 from ..event import Event, parse_event
+from ..processing import DEFAULT_VERSION
 from ..schema_utils import validate_canonical_event
 from .adapters import adapt_cli_payload, adapt_grpc_payload, adapt_kafka_payload
 from .contract import canonicalize_event
+from .schema_resolution import annotate_canonical_schema
 
 IngressAdapter = Literal["default", "kafka", "grpc", "cli"]
 
@@ -28,6 +30,7 @@ def ingest_transport_payload(
 
     adapted = _ADAPTERS[adapter](payload)
     canonical = canonicalize_event(adapted)
+    canonical, _ = annotate_canonical_schema(canonical, default_version=DEFAULT_VERSION)
     validate_canonical_event(canonical)
     event = parse_event(canonical)
     return canonical, event

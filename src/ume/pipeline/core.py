@@ -106,7 +106,10 @@ class EventPipelineOrchestrator:
         canonical: dict[str, Any],
         event: Event,
     ) -> PolicyContext:
-        return PolicyContext(
+        metadata = canonical.get("metadata", {}) if isinstance(canonical, Mapping) else {}
+        active_schema = metadata.get("schema_version") if isinstance(metadata, Mapping) else None
+        resolution_source = metadata.get("schema_resolution_source") if isinstance(metadata, Mapping) else None
+        context = PolicyContext(
             source=source,
             raw_payload=raw_payload,
             transport_data=decoded,
@@ -114,6 +117,11 @@ class EventPipelineOrchestrator:
             original_event=event,
             effective_event=event,
         )
+        if active_schema is not None:
+            context.details["active_schema_version"] = str(active_schema)
+        if resolution_source is not None:
+            context.details["schema_resolution_source"] = str(resolution_source)
+        return context
 
     def _stage_labels(
         self,
