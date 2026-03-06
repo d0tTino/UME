@@ -45,5 +45,5 @@ def test_producer_demo_emits_schema_valid_create_node(monkeypatch):
 
     event = json.loads(raw.decode("utf-8"))
     assert event["eventType"] == "CREATE_NODE"
-    assert event["nodeId"] == "demo_node_1"
+    assert event["node_id"] == "demo_node_1"
     assert event["payload"]["node_id"] == "demo_node_1"

@@ -13,9 +13,8 @@ from ume.config import settings
 from ume.logging_utils import configure_logging
 import time
 from confluent_kafka import Producer, KafkaException, Message
-from ume import Event, EventType
+from ume import EventType
 from ume.schema_utils import validate_event_dict
-from ume.events.contract import canonicalize_event, canonical_to_camel_dict
 from jsonschema import ValidationError
 
 configure_logging()
@@ -50,36 +49,23 @@ def main() -> None:
     conf.update(ssl_config())
     producer = Producer(conf)
 
-    # Construct an Event instance
+    # Construct a flat v3 external producer contract payload.
     demo_node_id = "demo_node_1"
-    event_payload_data = {
+    data_dict = {
+        "eventType": EventType.CREATE_NODE.value,
+        "timestamp": int(time.time()),
+        "eventId": "demo-create-node-1",
+        "schemaVersion": "3.0.0",
+        "sourceService": "producer_demo",
         "node_id": demo_node_id,
-        "attributes": {
-            "message": "Hello from producer_demo with Event class!",
-            "source": "producer_demo",
+        "payload": {
+            "node_id": demo_node_id,
+            "attributes": {
+                "message": "Hello from producer_demo with Event class!",
+                "source": "producer_demo",
+            },
         },
     }
-    event_to_send = Event(
-        event_type=EventType.CREATE_NODE.value,
-        timestamp=int(time.time()),
-        payload=event_payload_data,
-        source="producer_demo",  # Add source
-        node_id=demo_node_id,
-    )
-
-    # Convert Event object to dict for JSON serialization
-    data_dict = canonical_to_camel_dict(
-        canonicalize_event(
-            {
-                "event_id": event_to_send.event_id,
-                "event_type": event_to_send.event_type,
-                "timestamp": event_to_send.timestamp,
-                "payload": event_to_send.payload,
-                "source": event_to_send.source,
-                "node_id": event_to_send.node_id,
-            }
-        )
-    )
 
     try:
         validate_event_dict(data_dict)
@@ -89,7 +75,7 @@ def main() -> None:
 
     data = json.dumps(data_dict).encode("utf-8")
 
-    logger.info(f"Producing event object to topic '{TOPIC}': {event_to_send}")
+    logger.info(f"Producing external contract payload to topic '{TOPIC}': {data_dict}")
     # Asynchronously produce a message, the delivery report callback will be triggered from poll()
     try:
         producer.produce(TOPIC, value=data, callback=delivery_report)

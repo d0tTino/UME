@@ -1,17 +1,60 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "UME Event Envelope",
+  "title": "UME v3 External Producer Event",
   "type": "object",
+  "required": [
+    "eventType",
+    "timestamp"
+  ],
   "properties": {
-    "schema_version": {
+    "eventType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "eventId": {
       "type": "string"
     },
-    "event": {
+    "schemaVersion": {
+      "type": "string"
+    },
+    "sourceService": {
+      "type": "string"
+    },
+    "correlationId": {
+      "type": "string"
+    },
+    "subjectEntity": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {"type": "string"},
+        "type": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "target_node_id": {
+      "type": "string"
+    },
+    "label": {
+      "type": "string"
+    },
+    "payload": {
       "type": "object"
     }
   },
-  "required": [
-    "schema_version",
-    "event"
-  ]
+  "additionalProperties": false
 }

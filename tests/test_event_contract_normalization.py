@@ -1,58 +1,44 @@
-from ume.events.contract import canonicalize_event
+from ume.events.contract import canonical_to_camel_dict, canonicalize_event
+import pytest
 
 
-def test_legacy_shapes_normalize_to_same_canonical_form() -> None:
-    expected = {
-        "metadata": {
-            "event_id": "e-1",
-            "event_type": "CREATE_NODE",
-            "timestamp": 1,
-            "schema_version": "1.0.0",
-            "source": "demo",
-            "correlation_ids": {"correlation_id": "c-1"},
-            "subject_entity": {"id": "u1", "type": "user"},
-        },
-        "graph": {"node_id": "n1", "target_node_id": None, "label": None},
+def test_external_contract_round_trip_preserves_fields() -> None:
+    external = {
+        "eventId": "e-1",
+        "eventType": "CREATE_NODE",
+        "timestamp": 1,
+        "schemaVersion": "3.0.0",
+        "sourceService": "demo",
+        "correlationId": "c-1",
+        "subjectEntity": {"id": "u1", "type": "user"},
+        "node_id": "n1",
         "payload": {"node_id": "n1", "attributes": {"name": "Alice"}},
     }
 
-    legacy_shapes = [
-        {
-            "eventId": "e-1",
-            "eventType": "CREATE_NODE",
-            "timestamp": 1,
-            "schema_version": "1.0.0",
-            "sourceService": "demo",
-            "correlationId": "c-1",
-            "subjectEntity": {"id": "u1", "type": "user"},
-            "node_id": "n1",
-            "payload": {"node_id": "n1", "attributes": {"name": "Alice"}},
-        },
-        {
-            "event_id": "e-1",
-            "event_type": "CREATE_NODE",
-            "timestamp": 1,
-            "schema_version": "1.0.0",
-            "source": "demo",
-            "correlation_id": "c-1",
-            "subject_entity": {"id": "u1", "type": "user"},
-            "node_id": "n1",
-            "payload": {"node_id": "n1", "attributes": {"name": "Alice"}},
-        },
-        {
-            "schemaVersion": "1.0.0",
-            "event": {
-                "eventId": "e-1",
-                "eventType": "CREATE_NODE",
-                "timestamp": 1,
-                "sourceService": "demo",
-                "correlationId": "c-1",
-                "subjectEntity": {"id": "u1", "type": "user"},
-                "nodeId": "n1",
-                "payload": {"node_id": "n1", "attributes": {"name": "Alice"}},
-            },
-        },
-    ]
+    canonical = canonicalize_event(external)
+    assert canonical_to_camel_dict(canonical) == external
 
-    for shape in legacy_shapes:
-        assert canonicalize_event(shape) == expected
+
+def test_external_contract_round_trip_edge_event() -> None:
+    external = {
+        "eventType": "CREATE_EDGE",
+        "timestamp": "2024-01-01T00:00:00Z",
+        "eventId": "edge-1",
+        "sourceService": "demo",
+        "node_id": "a",
+        "target_node_id": "b",
+        "label": "LINKS_TO",
+    }
+
+    canonical = canonicalize_event(external)
+    assert canonical_to_camel_dict(canonical) == {**external, "payload": {}}
+
+
+def test_event_envelope_is_rejected() -> None:
+    with pytest.raises(ValueError, match="event envelope contract"):
+        canonicalize_event(
+            {
+                "schemaVersion": "3.0.0",
+                "event": {"eventType": "CREATE_NODE", "timestamp": 1},
+            }
+        )

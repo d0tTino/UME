@@ -294,7 +294,7 @@ Validate and apply an event to the graph. This endpoint is also available as
 
 **Body Parameters**
 
-- `event_type` – the name of the event, e.g. `CREATE_NODE`
+- `eventType` – the name of the event, e.g. `CREATE_NODE`
 - `timestamp` – integer timestamp for the event
 - `node_id` – ID of the acting node when applicable
 - `target_node_id` – ID of the target node when applicable
@@ -309,7 +309,7 @@ Example request:
 curl -X POST http://localhost:8000/events \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"event_type":"CREATE_NODE","timestamp":1,"node_id":"n1","payload":{"node_id":"n1"}}'
+  -d '{"eventType":"CREATE_NODE","timestamp":1,"eventId":"evt-1","sourceService":"api-client","node_id":"n1","payload":{"node_id":"n1"}}'
 ```
 
 ### POST `/events/batch`
@@ -322,7 +322,7 @@ Example request:
 curl -X POST http://localhost:8000/events/batch \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '[{"event_type":"CREATE_NODE","timestamp":1,"node_id":"n1","payload":{"node_id":"n1"}}]'
+  -d '[{"eventType":"CREATE_NODE","timestamp":1,"eventId":"evt-1","sourceService":"api-client","node_id":"n1","payload":{"node_id":"n1"}}]'
 ```
 
 
