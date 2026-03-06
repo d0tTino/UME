@@ -76,6 +76,7 @@ class PolicyContext:
     effective_event: Event | None = None
     graph_read_view: Dict[str, Any] | None = None
     redacted: bool = False
+    producer_auth: Dict[str, Any] = field(default_factory=dict)
     details: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -115,6 +116,9 @@ class PolicyContext:
                 "payload": event.payload,
                 "correlation_id": event.correlation_id,
                 "schema_version": event.schema_version,
+                "producer_id": event.producer_id,
+                "tenant": event.tenant,
+                "producer_signature": event.producer_signature,
             }
 
         source_doc: Dict[str, Any] = {"transport": self.source}
@@ -126,6 +130,12 @@ class PolicyContext:
             "graph": self.graph_read_view or {},
             "actor": actor,
             "source": source_doc,
+            "producer": {
+                "authenticated": bool(self.producer_auth.get("authenticated", False)),
+                "authorized": bool(self.producer_auth.get("authorized", False)),
+                "method": self.producer_auth.get("method"),
+                "claims": self.producer_auth.get("claims", {}),
+            },
             "metadata": {
                 "redacted": self.redacted,
                 "canonical_metadata": (self.canonical_event or {}).get("metadata", {}),
@@ -246,6 +256,91 @@ class TransportValidationStage:
                 context,
                 stage=self.name,
                 reason=f"transport_validation_failed: {exc}",
+            )
+        return None
+
+
+class ProducerAuthStage:
+    name = "pre_apply_producer_auth"
+
+    def run(self, context: PolicyContext) -> Optional[PolicyResult]:
+        event = context.effective_event
+        if event is None:
+            return _result(
+                PolicyDecision.QUARANTINE,
+                context,
+                stage=self.name,
+                reason="event_missing_before_producer_auth",
+            )
+
+        auth_method = "none"
+        claims: Dict[str, Any] = {}
+        metadata = (context.canonical_event or {}).get("metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        producer_id = event.producer_id
+        tenant = event.tenant
+        signature = event.producer_signature
+
+        if isinstance(signature, str) and signature.startswith("jwt:"):
+            auth_method = "jwt"
+            token_claims = signature[len("jwt:") :].strip()
+            if token_claims:
+                for piece in token_claims.split(";"):
+                    key, sep, value = piece.partition("=")
+                    if sep and key.strip():
+                        claims[key.strip()] = value.strip()
+                claims.setdefault("sub", producer_id)
+                claims.setdefault("tenant", tenant)
+        elif isinstance(signature, str) and signature.strip():
+            auth_method = "signature"
+            claims = {"producer_id": producer_id, "tenant": tenant}
+        elif producer_id and tenant:
+            auth_method = "acl"
+            claims = {"producer_id": producer_id, "tenant": tenant}
+
+        authenticated = bool(producer_id and tenant and auth_method != "none")
+        allowed_producer_mapping = context.event_payload.get("acl", {})
+        authorized = False
+        if authenticated and claims.get("acl_allow") == "true":
+            authorized = True
+        elif authenticated and isinstance(allowed_producer_mapping, dict):
+            allowed = allowed_producer_mapping.get(str(tenant))
+            if isinstance(allowed, list):
+                authorized = str(producer_id) in {str(item) for item in allowed}
+
+        context.producer_auth = {
+            "authenticated": authenticated,
+            "authorized": authorized,
+            "method": auth_method,
+            "claims": claims,
+            "producer_id": producer_id,
+            "tenant": tenant,
+        }
+        context.details.update(
+            {
+                "producer_auth_method": auth_method,
+                "producer_authenticated": authenticated,
+                "producer_authorized": authorized,
+                "producer_id": producer_id,
+                "tenant": tenant,
+            }
+        )
+
+        if not authenticated:
+            return _result(
+                PolicyDecision.DENY,
+                context,
+                stage=self.name,
+                reason="producer_not_authenticated",
+            )
+        if not authorized:
+            return _result(
+                PolicyDecision.DENY,
+                context,
+                stage=self.name,
+                reason="producer_not_authorized",
             )
         return None
 
@@ -517,10 +612,19 @@ def _default_stage_registry(
     )
     registry.register(
         PolicyStageRegistration(
-            name=ConsentStage.name,
+            name=ProducerAuthStage.name,
             phase="pre_apply",
             stage_type="decision",
             order=20,
+            factory=lambda: ProducerAuthStage(),
+        )
+    )
+    registry.register(
+        PolicyStageRegistration(
+            name=ConsentStage.name,
+            phase="pre_apply",
+            stage_type="decision",
+            order=30,
             factory=lambda: ConsentStage(),
         )
     )
@@ -529,7 +633,7 @@ def _default_stage_registry(
             name=AlignmentStage.name,
             phase="pre_apply",
             stage_type="decision",
-            order=30,
+            order=40,
             factory=lambda: AlignmentStage(plugin_provider),
         )
     )
@@ -538,7 +642,7 @@ def _default_stage_registry(
             name=PiiRedactionStage.name,
             phase="pre_persist",
             stage_type="transform",
-            order=40,
+            order=50,
             factory=lambda: PiiRedactionStage(redactor),
         )
     )
@@ -547,7 +651,7 @@ def _default_stage_registry(
             name=AuditStage.name,
             phase="post_apply",
             stage_type="post_apply",
-            order=50,
+            order=60,
             factory=lambda: AuditStage(),
         )
     )

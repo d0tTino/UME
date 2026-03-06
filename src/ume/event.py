@@ -52,6 +52,9 @@ class Event:
     correlation_id: Optional[str] = None
     subject_entity: Optional[Dict[str, str]] = None
     source_service: Optional[str] = None
+    producer_id: Optional[str] = None
+    tenant: Optional[str] = None
+    producer_signature: Optional[str] = None
     schema_version: Optional[str] = None
 
 
@@ -104,6 +107,9 @@ def parse_event(data: Dict[str, Any]) -> Event:
 
     subject_entity_val = metadata.get("subject_entity")
     source_service_val = metadata.get("source")
+    producer_id_val = metadata.get("producer_id")
+    tenant_val = metadata.get("tenant")
+    producer_signature_val = metadata.get("producer_signature")
 
     node_id_val = graph.get("node_id")
     target_node_id_val = graph.get("target_node_id")
@@ -124,6 +130,18 @@ def parse_event(data: Dict[str, Any]) -> Event:
     if source_service_val is not None and not isinstance(source_service_val, str):
         raise EventError(
             f"Invalid type for 'source': expected str, got {type(source_service_val).__name__}"
+        )
+    if producer_id_val is not None and not isinstance(producer_id_val, str):
+        raise EventError(
+            f"Invalid type for 'producer_id': expected str, got {type(producer_id_val).__name__}"
+        )
+    if tenant_val is not None and not isinstance(tenant_val, str):
+        raise EventError(
+            f"Invalid type for 'tenant': expected str, got {type(tenant_val).__name__}"
+        )
+    if producer_signature_val is not None and not isinstance(producer_signature_val, str):
+        raise EventError(
+            f"Invalid type for 'producer_signature': expected str, got {type(producer_signature_val).__name__}"
         )
     if subject_entity_val is not None:
         if not isinstance(subject_entity_val, dict):
@@ -185,5 +203,8 @@ def parse_event(data: Dict[str, Any]) -> Event:
         correlation_id=correlation_id_val,
         subject_entity=subject_entity_val,
         source_service=source_service_val,
+        producer_id=producer_id_val,
+        tenant=tenant_val,
+        producer_signature=producer_signature_val,
         schema_version=schema_version_val,
     )

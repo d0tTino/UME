@@ -30,7 +30,10 @@ def test_policy_decision_parity_allow(monkeypatch):
         "eventType": "CREATE_NODE",
         "timestamp": 1,
         "nodeId": "n1",
-        "payload": {"attributes": {"name": "Alice"}},
+        "producerId": "producer-1",
+        "tenant": "tenant-a",
+        "signature": "sig-valid",
+        "payload": {"attributes": {"name": "Alice"}, "acl": {"tenant-a": ["producer-1"]}},
     }
 
     decisions = {
@@ -50,7 +53,10 @@ def test_policy_decision_parity_deny_for_consent(monkeypatch):
         "eventType": "CREATE_NODE",
         "timestamp": 1,
         "nodeId": "n1",
-        "payload": {"user_id": "u1", "scope": "email", "attributes": {"name": "Alice"}},
+        "producerId": "producer-1",
+        "tenant": "tenant-a",
+        "signature": "sig-valid",
+        "payload": {"user_id": "u1", "scope": "email", "attributes": {"name": "Alice"}, "acl": {"tenant-a": ["producer-1"]}},
     }
 
     decisions = {
@@ -73,7 +79,10 @@ def test_policy_decision_parity_redacted(monkeypatch):
         "eventType": "CREATE_NODE",
         "timestamp": 1,
         "nodeId": "n1",
-        "payload": {"email": "user@example.com", "attributes": {"name": "Alice"}},
+        "producerId": "producer-1",
+        "tenant": "tenant-a",
+        "signature": "sig-valid",
+        "payload": {"email": "user@example.com", "attributes": {"name": "Alice"}, "acl": {"tenant-a": ["producer-1"]}},
     }
 
     decisions = [

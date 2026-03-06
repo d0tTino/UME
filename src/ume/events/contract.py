@@ -12,6 +12,9 @@ _CAMEL_TO_SNAKE = {
     "correlationId": "correlation_id",
     "sourceService": "source",
     "subjectEntity": "subject_entity",
+    "producerId": "producer_id",
+    "nodeId": "node_id",
+    "targetNodeId": "target_node_id",
 }
 
 _SNAKE_TO_CAMEL = {
@@ -31,6 +34,9 @@ class CanonicalMetadata:
     timestamp: int | str | None
     schema_version: str | None
     source: str | None
+    producer_id: str | None
+    tenant: str | None
+    producer_signature: str | None
     correlation_id: str | None
     subject_entity: Dict[str, str] | None
 
@@ -41,6 +47,9 @@ class CanonicalMetadata:
             "timestamp": self.timestamp,
             "schema_version": self.schema_version,
             "source": self.source,
+            "producer_id": self.producer_id,
+            "tenant": self.tenant,
+            "producer_signature": self.producer_signature,
             "correlation_ids": {"correlation_id": self.correlation_id},
             "subject_entity": self.subject_entity,
         }
@@ -83,6 +92,9 @@ def _envelope_from_data(data: Mapping[str, Any]) -> CanonicalEnvelope:
         timestamp=data.get("timestamp"),
         schema_version=data.get("schema_version"),
         source=data.get("source"),
+        producer_id=data.get("producer_id"),
+        tenant=data.get("tenant"),
+        producer_signature=data.get("producer_signature"),
         correlation_id=data.get("correlation_id"),
         subject_entity=data.get("subject_entity"),
     )
@@ -117,6 +129,8 @@ def _to_external_contract(data: Mapping[str, Any]) -> Dict[str, Any]:
     normalized = _to_snake_keys(data)
     if "source" in normalized and "source_service" not in normalized:
         normalized["source_service"] = normalized["source"]
+    if "signature" in normalized and "producer_signature" not in normalized:
+        normalized["producer_signature"] = normalized["signature"]
 
     external: Dict[str, Any] = {
         "eventId": normalized.get("event_id"),
@@ -124,6 +138,9 @@ def _to_external_contract(data: Mapping[str, Any]) -> Dict[str, Any]:
         "timestamp": normalized.get("timestamp"),
         "payload": normalized.get("payload", {}),
         "sourceService": normalized.get("source_service"),
+        "producerId": normalized.get("producer_id"),
+        "tenant": normalized.get("tenant"),
+        "signature": normalized.get("producer_signature"),
         "schemaVersion": normalized.get("schema_version"),
         "node_id": normalized.get("node_id"),
         "target_node_id": normalized.get("target_node_id"),
@@ -143,6 +160,9 @@ def canonicalize_event(data: Mapping[str, Any]) -> Dict[str, Any]:
     resolved = {
         **snake_data,
         "source": snake_data.get("source_service") or snake_data.get("source"),
+        "producer_id": snake_data.get("producer_id"),
+        "tenant": snake_data.get("tenant"),
+        "producer_signature": snake_data.get("producer_signature") or snake_data.get("signature"),
         "schema_version": snake_data.get("schema_version"),
     }
     return _envelope_from_data(resolved).as_dict()
@@ -162,6 +182,9 @@ def canonical_to_legacy_dict(canonical: Mapping[str, Any]) -> Dict[str, Any]:
         "timestamp": metadata.get("timestamp"),
         "payload": payload if isinstance(payload, dict) else payload,
         "sourceService": metadata.get("source"),
+        "producerId": metadata.get("producer_id"),
+        "tenant": metadata.get("tenant"),
+        "signature": metadata.get("producer_signature"),
         "node_id": graph.get("node_id"),
         "target_node_id": graph.get("target_node_id"),
         "label": graph.get("label"),
