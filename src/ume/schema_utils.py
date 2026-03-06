@@ -54,10 +54,9 @@ def _load_schema(event_type: str, major: int) -> Dict[str, Any]:
 
 def validate_event_dict(event_data: Dict[str, Any]) -> None:
     """Validate transport event data after normalizing to canonical contract."""
-    schema_version = event_data.get("schema_version")
+    schema_version = event_data.get("schemaVersion") or event_data.get("schema_version")
     major = _major_from_schema_version(schema_version if isinstance(schema_version, str) else None)
-    if "event" in event_data:
-        validate(instance=event_data, schema=_load_envelope_schema(major))
+    validate(instance=event_data, schema=_load_envelope_schema(major))
     canonical = canonicalize_event(event_data)
     validate_canonical_event(canonical)
 
@@ -69,7 +68,7 @@ def validate_canonical_event(canonical: Mapping[str, Any]) -> None:
     schema_version = canonical["metadata"].get("schema_version")
     major = _major_from_schema_version(schema_version)
 
-    validate(instance=normalized, schema=_load_canonical_schema(major))
+    validate(instance=canonical, schema=_load_canonical_schema(major))
 
     event_type = normalized.get("eventType")
     if not isinstance(event_type, str):

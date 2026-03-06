@@ -8,16 +8,20 @@ from typing import Any, Dict, Mapping
 _CAMEL_TO_SNAKE = {
     "eventId": "event_id",
     "eventType": "event_type",
-    "nodeId": "node_id",
-    "targetNodeId": "target_node_id",
     "schemaVersion": "schema_version",
     "correlationId": "correlation_id",
     "sourceService": "source",
     "subjectEntity": "subject_entity",
 }
 
-_SNAKE_TO_CAMEL = {v: k for k, v in _CAMEL_TO_SNAKE.items()}
-_SNAKE_TO_CAMEL["source"] = "sourceService"
+_SNAKE_TO_CAMEL = {
+    "event_id": "eventId",
+    "event_type": "eventType",
+    "schema_version": "schemaVersion",
+    "correlation_id": "correlationId",
+    "subject_entity": "subjectEntity",
+    "source": "sourceService",
+}
 
 
 @dataclass(frozen=True)
@@ -104,15 +108,42 @@ def _to_snake_keys(data: Mapping[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def canonicalize_event(data: Mapping[str, Any]) -> Dict[str, Any]:
-    """Normalize any accepted transport shape into the canonical envelope dict."""
+def _to_external_contract(data: Mapping[str, Any]) -> Dict[str, Any]:
+    """Normalize adapter output to the single external producer contract."""
 
-    snake_data = _to_snake_keys(data)
-    event_data = snake_data.get("event") if isinstance(snake_data.get("event"), Mapping) else snake_data
+    if "event" in data:
+        raise ValueError("event envelope contract is not accepted; send flat event fields")
+
+    normalized = _to_snake_keys(data)
+    if "source" in normalized and "source_service" not in normalized:
+        normalized["source_service"] = normalized["source"]
+
+    external: Dict[str, Any] = {
+        "eventId": normalized.get("event_id"),
+        "eventType": normalized.get("event_type"),
+        "timestamp": normalized.get("timestamp"),
+        "payload": normalized.get("payload", {}),
+        "sourceService": normalized.get("source_service"),
+        "schemaVersion": normalized.get("schema_version"),
+        "node_id": normalized.get("node_id"),
+        "target_node_id": normalized.get("target_node_id"),
+        "label": normalized.get("label"),
+        "correlationId": normalized.get("correlation_id"),
+        "subjectEntity": normalized.get("subject_entity"),
+    }
+    return {k: v for k, v in external.items() if v is not None}
+
+
+def canonicalize_event(data: Mapping[str, Any]) -> Dict[str, Any]:
+    """Normalize flat external producer event into the canonical envelope dict."""
+
+    external_data = _to_external_contract(data)
+    snake_data = _to_snake_keys(external_data)
 
     resolved = {
-        **event_data,
-        "schema_version": snake_data.get("schema_version") or event_data.get("schema_version"),
+        **snake_data,
+        "source": snake_data.get("source_service") or snake_data.get("source"),
+        "schema_version": snake_data.get("schema_version"),
     }
     return _envelope_from_data(resolved).as_dict()
 

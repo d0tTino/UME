@@ -123,7 +123,7 @@ The current system consists of the following main components:
 
 ### Event Schema
 
-The events exchanged in UME follow a canonical schema. Each event contains a minimal
+The events exchanged in UME follow a single flat external producer contract. Each event contains a minimal
 set of common fields and any number of type‑specific attributes.
 
 **Example Event:**
@@ -152,9 +152,8 @@ set of common fields and any number of type‑specific attributes.
 | `sourceService` | Name of the service that emitted the event. |
 | `payload` | Event‑specific attributes. |
 
-`parse_event()` accepts both `eventType` (preferred) and legacy `event_type`
-as the event type key. Timestamps are accepted as Unix epoch integers or
-ISO&nbsp;8601 strings (including `Z` suffix) and are normalized internally to an
+Ingress adapters convert the external contract into UME's internal canonical envelope (`metadata` + `graph` + `payload`) before parsing.
+Timestamps are accepted as Unix epoch integers or ISO&nbsp;8601 strings (including `Z` suffix) and are normalized internally to an
 epoch integer on the parsed `Event`.
 
 All official event types such as `CREATE_NODE` or `CREATE_EDGE` have
@@ -196,7 +195,7 @@ event-type-specific checks:
 
 Compatibility note:
 
-* Required for all events: `eventType` (or alias `event_type`) and `timestamp`.
+* Required for all external producer events: `eventType` and `timestamp`.
 * Optional for all events: `eventId`, `correlationId`, `subjectEntity`,
   `sourceService`.
 * Edge-family events (`CREATE_EDGE`, `DELETE_EDGE`, `CREATE_ONTOLOGY_RELATION`,

@@ -17,11 +17,13 @@ except Exception:  # pragma: no cover - optional integration dependency
 
 
 def adapt_kafka_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
-    normalized = dict(deepcopy(payload))
+    normalized = dict(deepcopy(payload.get("event", payload)))
     if "nodeId" in normalized and "node_id" not in normalized:
         normalized["node_id"] = normalized["nodeId"]
     if "targetNodeId" in normalized and "target_node_id" not in normalized:
         normalized["target_node_id"] = normalized["targetNodeId"]
+    if "schemaVersion" in payload and "schemaVersion" not in normalized:
+        normalized["schemaVersion"] = payload["schemaVersion"]
     return normalized
 
 
