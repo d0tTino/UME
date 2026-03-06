@@ -42,6 +42,7 @@ services:
         condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      UME_DB_PATH: "/data/ume_graph.db"
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f privacy_agent.py || exit 1"]
       interval: 10s
@@ -110,7 +111,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
-    command: poetry run python src/ume/consumer_demo.py
+    command: poetry run python -m ume.services.projection_worker
     depends_on:
       redpanda:
         condition: service_healthy
@@ -118,11 +119,33 @@ services:
       - ../.env
     environment:
       KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      UME_DB_PATH: "/data/ume_graph.db"
+    volumes:
+      - ume-db:/data
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f consumer_demo.py || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f ume.services.projection_worker || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  graph-smoke-check:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    command: poetry run python examples/compose_projection_smoke_check.py
+    profiles: ["smoke"]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      graph-consumer:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      UME_DB_PATH: "/data/ume_graph.db"
+    volumes:
+      - ume-db:/data
 
   prometheus:
     image: prom/prometheus
