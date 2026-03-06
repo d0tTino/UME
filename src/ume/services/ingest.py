@@ -9,12 +9,11 @@ from ume_client import events_pb2 as _events_pb2
 from google.protobuf import struct_pb2
 from ..event import Event, EventError, EventType
 from ..events.ingress import ingest_transport_payload
-from ..events.versioning import resolve_schema_version
+from ..events.schema_resolution import resolve_active_schema
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
 from ..graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..anomaly_detection import AnomalyDetector
-from ..schema_manager import DEFAULT_SCHEMA_MANAGER
 from .mutate import (
     MutationError,
     build_graph_projector,
@@ -62,13 +61,6 @@ def apply_event(
         apply_event_to_graph(event, graph, schema_version=event.schema_version)
     else:
         apply_event_to_graph(event, graph, schema_version=schema_version)
-
-
-def _fallback_schema_version() -> str:
-    try:
-        return DEFAULT_SCHEMA_MANAGER.get_schema().version
-    except Exception:  # pragma: no cover - schema resources missing
-        return ""
 
 
 def _build_graph_projector(
@@ -130,11 +122,10 @@ def ingest_events_batch(
 def dict_to_envelope(data: Dict[str, Any]) -> Any:
     """Convert a raw event dictionary to :class:`~ume_client.events_pb2.EventEnvelope`."""
     canonical, evt = ingest_transport_payload(data, adapter="grpc")
-    schema_version = resolve_schema_version(
+    schema_version = resolve_active_schema(
         canonical,
-        fallback_version=_fallback_schema_version(),
         default_version=DEFAULT_VERSION,
-    )
+    ).active_version
     struct_payload = struct_pb2.Struct()
     struct_payload.update(evt.payload)
     meta = events_pb2.BaseEvent(
@@ -175,7 +166,10 @@ def dict_to_envelope(data: Dict[str, Any]) -> Any:
 
 def envelope_to_event_dict(envelope: Any) -> Dict[str, Any]:
     """Convert an :class:`~ume_client.events_pb2.EventEnvelope` into a raw event dictionary."""
-    schema_version = envelope.schema_version or _fallback_schema_version()
+    schema_version = resolve_active_schema(
+        {"metadata": {"schema_version": envelope.schema_version}},
+        default_version=DEFAULT_VERSION,
+    ).active_version
     if envelope.HasField("create_node"):
         meta = envelope.create_node.meta
     elif envelope.HasField("update_node_attributes"):

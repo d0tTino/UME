@@ -12,7 +12,7 @@ from ..event import EventError
 from ..domains.classification import apply_classification
 from ..domains.extensions import DomainExtension, run_domain_extensions
 from ..events.ingress import IngressAdapter
-from ..events.versioning import resolve_schema_version
+from ..events.schema_resolution import resolve_active_schema
 from ..config import settings
 from ..graph_adapter import IGraphAdapter
 from ..pipeline.core import (
@@ -22,7 +22,6 @@ from ..pipeline.core import (
 from ..policy.pipeline import PolicyDecision
 from ..policy.graph_view import build_graph_read_view
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
-from ..schema_manager import DEFAULT_SCHEMA_MANAGER
 
 
 class MutationErrorCategory(str, Enum):
@@ -43,13 +42,6 @@ class MutationError(Exception):
     def __str__(self) -> str:
         return f"{self.category.value}:{self.reason}"
 
-
-
-def _fallback_schema_version() -> str:
-    try:
-        return DEFAULT_SCHEMA_MANAGER.get_schema().version
-    except Exception:  # pragma: no cover - schema resources missing
-        return ""
 
 
 def categorize_envelope_error(envelope: PipelineEnvelope) -> MutationErrorCategory:
@@ -168,12 +160,14 @@ def build_graph_projector(
             neighborhood_depth=settings.UME_POLICY_GRAPH_NEIGHBORHOOD_DEPTH,
             max_neighborhood_nodes=settings.UME_POLICY_GRAPH_MAX_NEIGHBORHOOD_NODES,
         )
-        effective_version = resolve_schema_version(
+        resolution = resolve_active_schema(
             canonical,
             explicit_version=schema_version,
-            fallback_version=_fallback_schema_version(),
             default_version=DEFAULT_VERSION,
         )
+        effective_version = resolution.active_version
+        context.details.setdefault("active_schema_version", effective_version)
+        context.details.setdefault("schema_resolution_source", resolution.source)
         details = run_domain_extensions(context, active_extensions)
         apply_event_to_graph(event, graph, schema_version=effective_version)
         return {**details, "schema_version": effective_version}
