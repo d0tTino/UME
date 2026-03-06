@@ -16,7 +16,6 @@ from ..events.versioning import resolve_schema_version
 from ..config import settings
 from ..graph_adapter import IGraphAdapter
 from ..pipeline.core import (
-    EventPipelineOrchestrator,
     PipelineEnvelope,
     PipelineOutcome,
 )
@@ -44,8 +43,6 @@ class MutationError(Exception):
     def __str__(self) -> str:
         return f"{self.category.value}:{self.reason}"
 
-
-_orchestrator = EventPipelineOrchestrator()
 
 
 def _fallback_schema_version() -> str:
@@ -91,16 +88,22 @@ def run_mutation(
     adapter: IngressAdapter = "default",
     raw_payload: bytes | None = None,
     projector: Callable[[Any], dict[str, Any] | None] | None = None,
-    orchestrator: EventPipelineOrchestrator | None = None,
+    orchestrator: Any | None = None,
 ) -> PipelineEnvelope:
-    if orchestrator is None:
+    warnings.warn(
+        "ume.services.mutate.run_mutation is hard-deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    if orchestrator is not None:
         warnings.warn(
-            "ume.services.mutate.run_mutation is deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload by 2026-01-31",
+            "orchestrator parameter is ignored; use EventProcessorService directly if you need orchestrator injection",
             DeprecationWarning,
             stacklevel=2,
         )
-    active_orchestrator = orchestrator or _orchestrator
-    envelope = active_orchestrator.run(
+    from .event_processor import DEFAULT_EVENT_PROCESSOR
+
+    envelope = DEFAULT_EVENT_PROCESSOR.process_payload(
         payload,
         source=source,
         adapter=adapter,
@@ -117,16 +120,22 @@ async def run_mutation_async(
     adapter: IngressAdapter = "default",
     raw_payload: bytes | None = None,
     projector: Callable[[Any], Any] | None = None,
-    orchestrator: EventPipelineOrchestrator | None = None,
+    orchestrator: Any | None = None,
 ) -> PipelineEnvelope:
-    if orchestrator is None:
+    warnings.warn(
+        "ume.services.mutate.run_mutation_async is hard-deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload_async",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    if orchestrator is not None:
         warnings.warn(
-            "ume.services.mutate.run_mutation_async is deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload_async by 2026-01-31",
+            "orchestrator parameter is ignored; use EventProcessorService directly if you need orchestrator injection",
             DeprecationWarning,
             stacklevel=2,
         )
-    active_orchestrator = orchestrator or _orchestrator
-    envelope = await active_orchestrator.run_async(
+    from .event_processor import DEFAULT_EVENT_PROCESSOR
+
+    envelope = await DEFAULT_EVENT_PROCESSOR.process_payload_async(
         payload,
         source=source,
         adapter=adapter,

@@ -12,6 +12,8 @@ The authoritative implementation is:
 
 Legacy entrypoints in `ume.projection_engine`, `ume.pipeline.graph_consumer`, and direct `ume.services.mutate.run_mutation*` calls are compatibility wrappers and are deprecated.
 
+Conformance is enforced by the mutation route parity matrix in `tests/test_mutation_entrypoint_parity.py`, which asserts equivalent `PipelineEnvelope` outcomes across Kafka/API/CLI/gRPC paths for identical payloads.
+
 ## Authoritative stage sequence
 
 All ingress paths (Kafka, CLI, gRPC, API) MUST execute the same stages in the same order:

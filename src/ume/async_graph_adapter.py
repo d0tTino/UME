@@ -12,8 +12,8 @@ from .persistent_graph import PersistentGraph
 from .processing import DEFAULT_VERSION, apply_event_to_graph
 from .event import Event, EventError
 from .graph_adapter import IGraphAdapter, AsyncAdapterMixin
-from .pipeline.core import EventPipelineOrchestrator
-from .services.mutate import MutationError, raise_for_rejected_outcome, run_mutation_async
+from .services.mutate import MutationError, raise_for_rejected_outcome
+from .services.event_processor import EventProcessorService
 
 
 class IAsyncGraphAdapter(ABC):
@@ -276,7 +276,7 @@ class _AsyncToSyncGraphAdapter(IGraphAdapter):
         )
 
 
-_orchestrator = EventPipelineOrchestrator()
+_async_event_processor = EventProcessorService()
 
 
 async def _apply_event_via_registry(
@@ -331,11 +331,10 @@ async def ingest_event_async(
         await _apply_event_via_registry(effective_event, graph, schema_version=effective_version)
         return {"schema_version": effective_version}
 
-    result = await run_mutation_async(
+    result = await _async_event_processor.process_payload_async(
         canonical,
         source="async_ingest",
         projector=_project,
-        orchestrator=_orchestrator,
     )
     try:
         raise_for_rejected_outcome(result)

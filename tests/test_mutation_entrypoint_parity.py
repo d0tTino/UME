@@ -6,6 +6,7 @@ pytest.importorskip("google.protobuf.json_format")
 
 from ume.event import EventError
 from ume.graph import MockGraph
+from ume.pipeline.core import PipelineEnvelope
 from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR
 import ume.services.ingest as ingest_service
 from ume.services.mutate import MutationErrorCategory, categorize_envelope_error
@@ -20,10 +21,16 @@ def _base_event() -> dict[str, object]:
     }
 
 
+def _route_payload(adapter: str, event: dict[str, object]) -> dict[str, object]:
+    if adapter == "grpc":
+        return ingest_service.envelope_to_event_dict(ingest_service.dict_to_envelope(event))
+    return event
+
+
 def _process_for_graph(event: dict[str, object], *, source: str, adapter: str):
     graph = MockGraph()
     envelope = DEFAULT_EVENT_PROCESSOR.mutate_graph(
-        event,
+        _route_payload(adapter, event),
         graph=graph,
         source=source,
         adapter=adapter,
@@ -31,27 +38,35 @@ def _process_for_graph(event: dict[str, object], *, source: str, adapter: str):
     return envelope, graph.dump()
 
 
-def test_cli_kafka_grpc_allow_parity() -> None:
+ROUTE_MATRIX: tuple[tuple[str, str], ...] = (
+    ("cli_prompt", "cli"),
+    ("kafka_graph_consumer", "kafka"),
+    ("graph_routes", "default"),
+    ("grpc_server", "grpc"),
+)
+
+
+def _assert_equivalent_outcomes(envelopes: list[PipelineEnvelope]) -> None:
+    baseline = envelopes[0]
+    for envelope in envelopes[1:]:
+        assert envelope.outcome == baseline.outcome
+        assert envelope.stage == baseline.stage
+        assert envelope.reason == baseline.reason
+        assert envelope.event_type == baseline.event_type
+
+
+def test_mutation_routes_allow_parity_matrix() -> None:
     event = _base_event()
 
-    cli_envelope, cli_dump = _process_for_graph(event, source="cli_prompt", adapter="cli")
-    kafka_envelope, kafka_dump = _process_for_graph(
-        event,
-        source="kafka_graph_consumer",
-        adapter="kafka",
-    )
+    outputs = [_process_for_graph(event, source=source, adapter=adapter) for source, adapter in ROUTE_MATRIX]
 
-    grpc_envelope, grpc_dump = _process_for_graph(
-        ingest_service.envelope_to_event_dict(ingest_service.dict_to_envelope(event)),
-        source="grpc_server",
-        adapter="grpc",
-    )
-
-    assert cli_envelope.outcome.value == kafka_envelope.outcome.value == grpc_envelope.outcome.value
-    assert cli_dump == kafka_dump == grpc_dump
+    envelopes = [output[0] for output in outputs]
+    graph_dumps = [output[1] for output in outputs]
+    _assert_equivalent_outcomes(envelopes)
+    assert graph_dumps[1:] == [graph_dumps[0]] * (len(graph_dumps) - 1)
 
 
-def test_cli_kafka_grpc_policy_deny_parity(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_mutation_routes_policy_deny_parity_matrix(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("ume.policy.pipeline.consent_ledger.has_consent", lambda *_: False)
     event = _base_event()
     event["payload"] = {
@@ -60,41 +75,29 @@ def test_cli_kafka_grpc_policy_deny_parity(monkeypatch: pytest.MonkeyPatch) -> N
         "attributes": {"name": "Alice"},
     }
 
-    cli_envelope, _ = _process_for_graph(event, source="cli_prompt", adapter="cli")
-    kafka_envelope, _ = _process_for_graph(event, source="kafka_graph_consumer", adapter="kafka")
-    grpc_envelope, _ = _process_for_graph(
-        ingest_service.envelope_to_event_dict(ingest_service.dict_to_envelope(event)),
-        source="grpc_server",
-        adapter="grpc",
-    )
+    envelopes = [
+        _process_for_graph(event, source=source, adapter=adapter)[0]
+        for source, adapter in ROUTE_MATRIX
+    ]
 
-    assert categorize_envelope_error(cli_envelope) == MutationErrorCategory.POLICY_DENY
-    assert categorize_envelope_error(kafka_envelope) == MutationErrorCategory.POLICY_DENY
-    assert categorize_envelope_error(grpc_envelope) == MutationErrorCategory.POLICY_DENY
+    _assert_equivalent_outcomes(envelopes)
+    assert all(categorize_envelope_error(envelope) == MutationErrorCategory.POLICY_DENY for envelope in envelopes)
 
     with pytest.raises(EventError) as exc:
         ingest_service.ingest_event(event, MockGraph())
     assert str(exc.value).startswith("policy_deny:")
 
 
-def test_cli_kafka_grpc_validation_parity() -> None:
+def test_mutation_routes_validation_parity_matrix() -> None:
     invalid_event = {"eventType": "CREATE_NODE", "payload": {"attributes": {"x": 1}}}
 
-    cli_envelope, _ = _process_for_graph(invalid_event, source="cli_prompt", adapter="cli")
-    kafka_envelope, _ = _process_for_graph(
-        invalid_event,
-        source="kafka_graph_consumer",
-        adapter="kafka",
-    )
-    grpc_envelope, _ = _process_for_graph(
-        invalid_event,
-        source="grpc_server",
-        adapter="grpc",
-    )
+    envelopes = [
+        _process_for_graph(invalid_event, source=source, adapter=adapter)[0]
+        for source, adapter in ROUTE_MATRIX
+    ]
 
-    assert categorize_envelope_error(cli_envelope) == MutationErrorCategory.VALIDATION
-    assert categorize_envelope_error(kafka_envelope) == MutationErrorCategory.VALIDATION
-    assert categorize_envelope_error(grpc_envelope) == MutationErrorCategory.VALIDATION
+    _assert_equivalent_outcomes(envelopes)
+    assert all(categorize_envelope_error(envelope) == MutationErrorCategory.VALIDATION for envelope in envelopes)
 
     with pytest.raises(EventError) as exc:
         ingest_service.ingest_event(invalid_event, MockGraph())
