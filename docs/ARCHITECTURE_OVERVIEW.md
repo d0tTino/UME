@@ -31,6 +31,15 @@ Kernel/domain boundaries are statically enforced:
 
 These checks fail when any kernel module imports `ume.domains` directly.
 
+## Canonical mutation/projection runtime contract
+
+All mutation-capable ingress routes (API, CLI, Kafka, gRPC, and compatibility consumers) now converge on a single runtime contract:
+
+- `ume.services.event_processor.EventProcessorService` is the service boundary used by integrations.
+- `ume.pipeline.core.EventPipelineOrchestrator` is the only stage orchestration runtime behind that service boundary.
+
+`ume.projection_engine` is maintained as a thin compatibility adapter that delegates to the same orchestrator path, and `ume.services.mutate.run_mutation*` is hard-deprecated compatibility surface retained only for migration support.
+
 ## 1) Graph backend creation flow
 
 **Primary API:** `ume.factories.create_graph_adapter()` (`src/ume/factories.py`).

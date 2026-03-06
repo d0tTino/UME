@@ -9,11 +9,15 @@ import warnings
 from confluent_kafka import Consumer, KafkaError, KafkaException
 
 from .config import settings
-from .utils import ssl_config, event_to_snake
+from .utils import ssl_config
 from .event import EventError
 from .events.types import EventType
-from .services.mutate import MutationError, build_graph_projector as _build_graph_projector, raise_for_rejected_outcome
-from .services.event_processor import EventProcessorService
+from .services.mutate import (
+    MutationError,
+    build_graph_projector as _build_graph_projector,
+    raise_for_rejected_outcome,
+)
+from .services.event_processor import DEFAULT_EVENT_PROCESSOR
 from .graph_adapter import IGraphAdapter
 from .logging_utils import configure_logging
 
@@ -60,7 +64,6 @@ def run_projection_engine(
             return
         owns_consumer = True
 
-    processor = EventProcessorService()
     projector = build_graph_projector(graph, classify=False)
     logger.info("Projection engine started with group_id %s", gid)
     try:
@@ -78,9 +81,8 @@ def run_projection_engine(
                 continue
 
             try:
-                data_camel = json.loads(msg.value().decode("utf-8"))
-                data = event_to_snake(data_camel)
-                envelope = processor.process_payload(
+                data = json.loads(msg.value().decode("utf-8"))
+                envelope = DEFAULT_EVENT_PROCESSOR.process_payload(
                     data,
                     source="projection_engine",
                     adapter="kafka",
