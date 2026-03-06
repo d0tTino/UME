@@ -12,7 +12,10 @@ def test_redaction_builds_new_effective_event_without_mutating_original_event(mo
         "eventType": "CREATE_NODE",
         "timestamp": 1,
         "nodeId": "n1",
-        "payload": {"email": "user@example.com", "attributes": {"name": "Alice"}},
+        "producerId": "producer-1",
+        "tenant": "tenant-a",
+        "signature": "sig-valid",
+        "payload": {"email": "user@example.com", "attributes": {"name": "Alice"}, "acl": {"tenant-a": ["producer-1"]}},
     }
     canonical, event = ingest_transport_payload(event_data)
     original_payload_copy = dict(event.payload)
@@ -49,7 +52,10 @@ def test_redaction_audit_details_include_hashes_not_raw_payload(monkeypatch) -> 
         "eventType": "CREATE_NODE",
         "timestamp": 1,
         "nodeId": "n1",
-        "payload": {"email": "user@example.com", "attributes": {"name": "Alice"}},
+        "producerId": "producer-1",
+        "tenant": "tenant-a",
+        "signature": "sig-valid",
+        "payload": {"email": "user@example.com", "attributes": {"name": "Alice"}, "acl": {"tenant-a": ["producer-1"]}},
     }
     result = build_default_policy_pipeline(redactor=_redactor).evaluate(
         PolicyContext(source="service", transport_data=event_data)

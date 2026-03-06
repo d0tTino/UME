@@ -2,42 +2,107 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "UME v3 Internal Canonical Event",
   "type": "object",
-  "required": ["metadata", "graph", "payload"],
+  "required": [
+    "metadata",
+    "graph",
+    "payload"
+  ],
   "properties": {
     "metadata": {
       "type": "object",
-      "required": ["event_type", "timestamp", "correlation_ids"],
+      "required": [
+        "event_type",
+        "timestamp",
+        "correlation_ids"
+      ],
       "properties": {
-        "event_id": {"type": ["string", "null"]},
-        "event_type": {"type": "string", "minLength": 1},
-        "timestamp": {
-          "oneOf": [
-            {"type": "string", "format": "date-time"},
-            {"type": "integer"}
+        "event_id": {
+          "type": [
+            "string",
+            "null"
           ]
         },
-        "schema_version": {"type": ["string", "null"]},
-        "source": {"type": ["string", "null"]},
+        "event_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timestamp": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "correlation_ids": {
           "type": "object",
           "properties": {
-            "correlation_id": {"type": ["string", "null"]}
+            "correlation_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           },
-          "required": ["correlation_id"],
+          "required": [
+            "correlation_id"
+          ],
           "additionalProperties": false
         },
         "subject_entity": {
           "oneOf": [
             {
               "type": "object",
-              "required": ["id", "type"],
+              "required": [
+                "id",
+                "type"
+              ],
               "properties": {
-                "id": {"type": "string"},
-                "type": {"type": "string"}
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
               },
               "additionalProperties": false
             },
-            {"type": "null"}
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "producer_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tenant": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "producer_signature": {
+          "type": [
+            "string",
+            "null"
           ]
         }
       },
@@ -45,11 +110,30 @@
     },
     "graph": {
       "type": "object",
-      "required": ["node_id", "target_node_id", "label"],
+      "required": [
+        "node_id",
+        "target_node_id",
+        "label"
+      ],
       "properties": {
-        "node_id": {"type": ["string", "null"]},
-        "target_node_id": {"type": ["string", "null"]},
-        "label": {"type": ["string", "null"]}
+        "node_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_node_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       },
       "additionalProperties": false
     },

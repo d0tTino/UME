@@ -35,6 +35,7 @@ configuration in either:
   "policy_pipeline": {
     "stages": [
       "pre_parse_transport",
+      "pre_apply_producer_auth",
       "pre_apply_consent",
       "pre_apply_alignment",
       "pre_persist_redaction",
@@ -49,6 +50,7 @@ When both are provided, the environment variable takes precedence.
 ## Built-in stages
 
 - `pre_parse_transport` (decision)
+- `pre_apply_producer_auth` (decision) — verifies producer identity (`producer_id`, `tenant`) via signature/JWT/ACL mapping and denies unauthenticated/unauthorized events by default.
 - `pre_apply_consent` (decision)
 - `pre_apply_alignment` (decision)
 - `pre_persist_redaction` (transform)

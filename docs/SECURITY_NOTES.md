@@ -66,3 +66,11 @@ Privileged operations (graph mutations and redactions) must emit signed audit re
 - **Policy bypass risk:** direct internal mutation functions can bypass policy if used as ingress.
 - **Mitigation:** external transport adapters must use the canonical event processor/pipeline; tests assert deny-stage parity across pathways.
 - **Audit forgery risk:** mitigated via signature chain and per-deployment signing keys.
+
+
+## Producer authorization outcome auditing
+
+Ingressed canonical metadata now carries producer identity fields (`producer_id`, `tenant`) and optional `producer_signature`.
+The policy pipeline verifies producer authentication/authorization in `pre_apply_producer_auth` before policy alignment checks.
+Unauthenticated or unauthorized producer events are denied by default.
+Audit records include producer auth outcome fields: method, authenticated flag, authorized flag, producer_id, and tenant.

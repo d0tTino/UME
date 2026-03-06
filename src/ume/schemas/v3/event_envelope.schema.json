@@ -36,10 +36,17 @@
     },
     "subjectEntity": {
       "type": "object",
-      "required": ["id", "type"],
+      "required": [
+        "id",
+        "type"
+      ],
       "properties": {
-        "id": {"type": "string"},
-        "type": {"type": "string"}
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },
@@ -54,6 +61,15 @@
     },
     "payload": {
       "type": "object"
+    },
+    "producerId": {
+      "type": "string"
+    },
+    "tenant": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "string"
     }
   },
   "additionalProperties": false
