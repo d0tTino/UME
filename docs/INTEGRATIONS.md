@@ -1,9 +1,18 @@
 # Integration Adapters
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 UME ships with simple wrappers for popular frameworks. Each adapter forwards events
 to a running UME instance and exposes a `send_events` and `recall` API. A
 `store_events` alias using the `/store` endpoint is also available. Async variants
 are provided with the `Async` prefix.
+
+## Canonical terminology
+
+- **backend**: runtime implementation selected by configuration (for example graph/vector backends).
+- **adapter**: bridge layer used by integrations and graph/vector systems.
+- **canonical event**: normalized event payload forwarded by integration clients.
+- **orchestrator**: `EventPipelineOrchestrator`, which processes canonical events after ingestion.
 
 ### Authentication
 Set `UME_API_TOKEN` in your environment or pass ``api_key`` when creating a

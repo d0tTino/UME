@@ -1,5 +1,7 @@
 # Example .env
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 The `.env` file allows you to override default settings defined in `src/ume/config.py`. Values in this file are loaded before reading your shell environment.
 
 An `env.example` file with the following contents is included at the project root.

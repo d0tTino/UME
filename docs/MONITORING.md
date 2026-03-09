@@ -1,5 +1,7 @@
 # Monitoring Spec
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 UME exposes Prometheus metrics at `/metrics`. This spec defines the **required**
 canonical pipeline metrics and label contracts.
 

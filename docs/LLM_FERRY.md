@@ -1,5 +1,7 @@
 # LLM Ferry
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 `LLMFerry` is a lightweight [GraphListener](docs/GRAPH_LISTENERS.md) that sends summary information about graph events to an external HTTP service. It can be used to notify an LLM-based agent or any other API whenever nodes or edges are created or updated.
 
 ## Example Usage

@@ -1,6 +1,8 @@
 # API Reference
 
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This document summarizes the HTTP routes exposed by the UME FastAPI application.
 Acquire a token from `/auth/token` using the OAuth2 password flow and include it as a
 `Bearer` token in the `Authorization` header. Tokens expire after `UME_OAUTH_TTL` seconds.
@@ -8,6 +10,13 @@ Acquire a token from `/auth/token` using the OAuth2 password flow and include it
 For gRPC clients, send the configured `UME_GRPC_TOKEN` as a bearer token in the
 `authorization` metadata. The helper class `AsyncUMEClient` accepts this token
 via its `token` argument and attaches it automatically.
+
+## Canonical terminology
+
+- **backend**: selected runtime implementation (`UME_GRAPH_BACKEND`, `UME_VECTOR_BACKEND`).
+- **adapter**: interface implementation created for a backend (for example via `create_graph_adapter()`).
+- **canonical event**: normalized event payload used by policy/projection paths.
+- **orchestrator**: `ume.pipeline.core.EventPipelineOrchestrator`, the canonical stage coordinator.
 
 ## Backend Factory and Plugin Terms
 

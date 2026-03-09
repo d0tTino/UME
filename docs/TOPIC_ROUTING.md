@@ -1,5 +1,7 @@
 # Event Topic Routing Conventions
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 The stream processor derives destination topics from canonical metadata and publishes
 canonical outbound envelopes with routing metadata attached. This keeps downstream
 services from recomputing policy/routing context.

@@ -1,5 +1,7 @@
 # Configuration Templates
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 The following examples illustrate minimal configuration files for common environments.
 These YAML snippets are intended as starting points and can be adapted to suit
 your infrastructure.

@@ -27,7 +27,7 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: poetry run pre-commit run --all-files --show-diff-on-failure --color always
 
-      - name: Check docs terminology consistency
+      - name: Check docs architecture terminology and canonical-links consistency
         if: steps.changes.outputs.run == 'true'
         run: python scripts/check_arch_terms.py
 

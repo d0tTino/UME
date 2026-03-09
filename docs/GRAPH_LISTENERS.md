@@ -1,5 +1,7 @@
 # Graph Listeners
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 UME exposes a simple listener interface that allows external components to react to changes in the knowledge graph.  A *GraphListener* is notified whenever nodes or edges are created, updated or deleted.  This is useful for triggering side effects (e.g. caching, analytics) without coupling that logic to the graph adapter itself.
 
 ## Implementing a Listener

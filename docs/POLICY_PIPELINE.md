@@ -1,5 +1,7 @@
 # Policy Pipeline Extension Guide
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 The policy pipeline is split into **decision** and **transform** stages.
 
 ## Stage contract

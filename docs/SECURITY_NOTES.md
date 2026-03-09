@@ -1,5 +1,7 @@
 # Security Notes
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This document describes UME's security architecture and trust boundaries.
 
 ## Security authority and trust boundaries

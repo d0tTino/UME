@@ -5,6 +5,13 @@ UME (Universal Memory Engine) is designed to provide a robust, evolving memory f
 
 The primary motivation behind UME is to equip AI agents with a form of persistent, long-term memory that can adapt over time. This capability is crucial for enabling more complex reasoning, facilitating nuanced inter-agent communication through shared contextual understanding, and ultimately, building more intelligent and autonomous systems. By structuring memory as an event-sourced knowledge graph, UME aims to offer a flexible and scalable solution for these challenges.
 
+## Canonical Terminology
+
+- **backend**: a storage/runtime implementation selected by environment (for example `UME_GRAPH_BACKEND`, `UME_VECTOR_BACKEND`).
+- **adapter**: a concrete interface implementation that bridges UME contracts to a selected backend (for example graph or integration adapters).
+- **canonical event**: the normalized event representation that passes through policy and projection stages.
+- **orchestrator**: the runtime stage coordinator (`EventPipelineOrchestrator`) used by all mutation-capable ingress paths.
+
 ## Core Modules
 The engine is built from a few key components:
 - **Ingestion API** (`src/ume/ingestion_api.py`)
@@ -31,7 +38,8 @@ The engine is built from a few key components:
   - Command-line utility for producing events, inspecting the graph, and running maintenance tasks.
   - Includes `replay-graph` to rebuild a graph from ledger events.
 - **Projection Engine** (`src/ume/projection_engine.py`)
-  - Long-running service that consumes sanitized events from Kafka and applies them to the graph via the configured adapter.
+  - Long-running compatibility service that consumes sanitized events from Kafka and delegates stage orchestration to the canonical orchestrator path.
+  - Applies events through the configured graph adapter for the selected graph backend.
   - Maintains the knowledge graph and forwards embeddings to the vector store.
   - The graph can be rebuilt from the ledger using `ume replay-graph`.
 
@@ -73,7 +81,7 @@ concrete modules directly (for example, `ume.vector_store` or
 ### Event Flow
 ```
 Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-events
-    --> Projection Engine --> Graph Adapter --> Storage (SQLite/Neo4j/Arango) & Vector Store
+    --> EventPipelineOrchestrator --> Graph adapter/backend --> Storage (SQLite/Neo4j/Arango) & Vector Store
 ```
 
 ## Project Setup
@@ -152,7 +160,7 @@ set of common fields and any number of type‑specific attributes.
 | `sourceService` | Name of the service that emitted the event. |
 | `payload` | Event‑specific attributes. |
 
-Ingress adapters convert the external contract into UME's internal canonical envelope (`metadata` + `graph` + `payload`) before parsing.
+Ingress adapters convert the external contract into UME's internal canonical event (`metadata` + `graph` + `payload`) before parsing.
 Timestamps are accepted as Unix epoch integers or ISO&nbsp;8601 strings (including `Z` suffix) and are normalized internally to an
 epoch integer on the parsed `Event`.
 

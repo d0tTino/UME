@@ -1,5 +1,7 @@
 # Access Control
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This document defines how UME enforces authN/authZ and where deny decisions occur.
 
 ## Canonical decision points
