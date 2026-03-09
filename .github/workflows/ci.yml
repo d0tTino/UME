@@ -56,7 +56,21 @@ jobs:
       - name: Run schema compatibility checks
         run: poetry run python scripts/check_schema_compatibility.py
 
-  unit-tests:
+  architecture-tests-required:
+    runs-on: ubuntu-latest
+    needs: [lint-and-install, schema-compatibility]
+    if: needs.lint-and-install.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: poetry install --with dev --extras vector --extras embedding
+      - name: Run architecture suite
+        run: poetry run pytest tests/architecture
+
+  unit-tests-required:
     runs-on: ubuntu-latest
     needs: [lint-and-install, schema-compatibility]
     if: needs.lint-and-install.outputs.run == 'true'
@@ -64,14 +78,11 @@ jobs:
       UME_AUDIT_SIGNING_KEY: test-key
       UME_ENCRYPTION_ENABLED: 'true'
       UME_ENCRYPTION_KEY: c2VjcmV0a2V5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-python-poetry
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
       - name: Install dependencies
         run: poetry install --with dev --extras vector --extras embedding
       - name: Set up Node.js
@@ -82,10 +93,62 @@ jobs:
         run: |
           npm --prefix frontend install
           npm --prefix frontend test -- --config frontend/vitest.config.js
-      - name: Run unit tests with coverage
+      - name: Run unit tests with coverage report
         run: |
-          poetry run pytest --cov=ume --cov-report xml --cov-fail-under=30 -m "not integration"
+          poetry run pytest --cov=ume --cov-report xml -m "not integration"
           poetry run pytest tests/test_dossier_migration.py
+      - name: Coverage stage 1 (fail under 50%)
+        run: poetry run coverage report --fail-under=50
+      - name: Upload unit coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage-xml
+          path: coverage.xml
+
+  changed-lines-coverage-required:
+    runs-on: ubuntu-latest
+    needs: [lint-and-install, unit-tests-required]
+    if: needs.lint-and-install.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: '3.12'
+      - name: Install diff-cover
+        run: poetry run python -m pip install diff-cover
+      - name: Download unit coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-coverage-xml
+      - name: Enforce changed-lines coverage
+        run: poetry run diff-cover coverage.xml --compare-branch=origin/main --fail-under=85
+
+  unit-tests-optional:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: [lint-and-install, unit-tests-required]
+    if: needs.lint-and-install.outputs.run == 'true'
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11']
+        coverage-threshold: [65, 75]
+    env:
+      UME_AUDIT_SIGNING_KEY: test-key
+      UME_ENCRYPTION_ENABLED: 'true'
+      UME_ENCRYPTION_KEY: c2VjcmV0a2V5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: poetry install --with dev --extras vector --extras embedding
+      - name: Run optional unit suite
+        run: poetry run pytest --cov=ume --cov-report term -m "not integration"
+      - name: Coverage optional gate
+        run: poetry run coverage report --fail-under=${{ matrix.coverage-threshold }}
 
 
   replay-regression:
@@ -102,18 +165,15 @@ jobs:
       - name: Run replay regression suite
         run: poetry run pytest tests/test_replay_regression.py
 
-  integration-tests:
+  integration-tests-required:
     runs-on: ubuntu-latest
     needs: lint-and-install
     if: needs.lint-and-install.outputs.run == 'true'
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-python-poetry
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
       - name: Install dependencies
         run: poetry install --with dev --extras vector --extras embedding
       - name: Run integration tests
@@ -123,7 +183,7 @@ jobs:
 
   compose-smoke:
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
+    needs: [architecture-tests-required, unit-tests-required, changed-lines-coverage-required, integration-tests-required]
     steps:
       - uses: actions/checkout@v4
       - name: Start stack
