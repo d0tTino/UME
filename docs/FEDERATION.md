@@ -1,5 +1,7 @@
 # Federating UME Across Data Centers
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This document outlines several approaches for running multiple UME deployments in different regions while keeping their graphs synchronized.
 
 ## Event Log Replication

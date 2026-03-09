@@ -1,5 +1,7 @@
 # TLS Setup and Certificate Rotation
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This guide explains how to enable TLS for Redpanda and the FastAPI service and how to rotate certificates.
 
 ## Generating Certificates

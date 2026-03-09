@@ -1,5 +1,7 @@
 # Vector Store Benchmark
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 The `benchmark_vector_store` utility measures how quickly the FAISS index can be built and queried.
 It now supports running the benchmark multiple times and reports the average build time and query latency.
 

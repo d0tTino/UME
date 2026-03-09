@@ -1,5 +1,7 @@
 # UME Graph Model
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This document defines the initial ontology used by the Universal Memory Engine.
 It describes node types, edge labels and general versioning guidelines for the
 graph representation.

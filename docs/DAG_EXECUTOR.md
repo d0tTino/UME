@@ -1,5 +1,7 @@
 # DAGExecutor Guide
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 The `DAGExecutor` coordinates small units of work that depend on each other. Each
 operation is represented by a `Task` which specifies a unique name, the
 callable to run, optional dependencies, and the resource it consumes.

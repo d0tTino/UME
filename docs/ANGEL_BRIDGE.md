@@ -1,5 +1,7 @@
 # Angel Bridge
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 `AngelBridge` consumes recent sanitized events and emits a short daily summary.
 The service keeps external systems informed about activity without exposing the
 full event stream.

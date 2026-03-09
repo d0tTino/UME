@@ -1,5 +1,7 @@
 # Event Tags and Anomalies
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 ## Event Tags
 
 UME classifies each ingested event and appends the resulting tags to the event's `classification` field. Tags originate from registered classifiers. Built‑in classifiers include a keyword matcher and optional external services such as `tino_storm`.

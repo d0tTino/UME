@@ -1,5 +1,7 @@
 # Windows 11 Quickstart
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This guide outlines how to set up the development environment on Windows 11.
 It walks through enabling WSL, installing the required tools, cloning the
 repository and running `codex_setup.sh`.

@@ -1,5 +1,7 @@
 # Dossier Overview
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 The user dossier is a lightweight collection of YAML files that track basic profile information and notes. UME loads the dossier from the directory specified by `UME_DOSSIER_PATH` (defaults to `~/.ume_dossier`). The directory is created automatically when missing.
 
 ## File Structure

@@ -1,5 +1,7 @@
 # Self-Hosted GitHub Runner Setup
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This guide explains how to configure a self-hosted runner for UME's GitHub Actions workflows.
 
 ## Prerequisites

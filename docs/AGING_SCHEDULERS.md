@@ -1,5 +1,7 @@
 # Aging Schedulers
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 UME exposes several helpers that maintain memory freshness. They can run
 side by side and each focuses on a specific layer of storage.
 

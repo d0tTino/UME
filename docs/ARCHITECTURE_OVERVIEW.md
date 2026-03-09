@@ -40,6 +40,25 @@ All mutation-capable ingress routes (API, CLI, Kafka, gRPC, and compatibility co
 
 `ume.projection_engine` is maintained as a thin compatibility adapter that delegates to the same orchestrator path, and `ume.services.mutate.run_mutation*` is hard-deprecated compatibility surface retained only for migration support.
 
+## Architecture status
+
+### Implemented components
+
+- Canonical event ingestion paths for API, CLI, Kafka, and gRPC through `EventProcessorService`.
+- `EventPipelineOrchestrator` as the canonical orchestration runtime for validation, policy, and projection stages.
+- Graph backend factory + plugin discovery via `create_graph_adapter()` and `ume.graph_adapters`.
+- Vector backend factory + plugin discovery via `create_vector_store()` and `ume.vector_backends`.
+- Explicit runtime bootstrap via `bootstrap_runtime("ume")`.
+- Event-contract lifecycle controls (`v1`/`v2`/`v3` schemas + compatibility checks in CI).
+- Capability metadata exposure and runtime capability checks for graph/vector operations.
+
+### Planned components
+
+- Expanded backend capability negotiation for advanced graph features (for example native ACL primitives and richer transactional semantics).
+- Additional canonical-event schema lines beyond `v3` with adjacent-version transforms when new majors are introduced.
+- Broader plugin ecosystem coverage for optional vector backends and integration adapters.
+- Continued reduction of compatibility shims in `ume.projection_engine` and mutation legacy surfaces once downstream migrations are complete.
+
 ## 1) Graph backend creation flow
 
 **Primary API:** `ume.factories.create_graph_adapter()` (`src/ume/factories.py`).

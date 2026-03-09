@@ -1,5 +1,7 @@
 # Projection Engine Contract
 
+
+> Canonical architecture reference: [`ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md).
 This document defines the **canonical projection pipeline contract** for UME.
 
 ## Canonical implementation
