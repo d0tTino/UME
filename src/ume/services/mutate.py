@@ -9,6 +9,7 @@ from enum import Enum
 from typing import Any, Callable
 
 from ..event import EventError
+from ..event_ledger import event_ledger
 from ..domains.classification import apply_classification
 from ..domains.extensions import DomainExtension, run_domain_extensions
 from ..events.ingress import IngressAdapter
@@ -22,6 +23,7 @@ from ..pipeline.core import (
 from ..policy.pipeline import PolicyDecision
 from ..policy.graph_view import build_graph_read_view
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
+from ..vector_outbox import enqueue_vector_outbox_event
 
 
 class MutationErrorCategory(str, Enum):
@@ -170,6 +172,11 @@ def build_graph_projector(
         context.details.setdefault("schema_resolution_source", resolution.source)
         details = run_domain_extensions(context, active_extensions)
         apply_event_to_graph(event, graph, schema_version=effective_version)
+        enqueue_vector_outbox_event(
+            event_ledger,
+            event,
+            ledger_offset=None,
+        )
         return {**details, "schema_version": effective_version}
 
     return _project

@@ -8,9 +8,11 @@ from .graph_adapter import IGraphAdapter
 from .policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from .processing_errors import ProcessingError
 from .metrics import PIPELINE_REPLAY_LAG_SECONDS
+from .vector_outbox import replay_vector_index_from_ledger_outbox
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from .event_ledger import EventLedger
+    from .vector_store import VectorBackend
 
 
 class ReplayMode(str, Enum):
@@ -143,3 +145,13 @@ def snapshot_from_event_ledger(
         replay_mode=replay_mode,
     )
     return graph.dump()
+
+
+def rebuild_vector_index_from_outbox(
+    ledger: "EventLedger",
+    store: "VectorBackend",
+    *,
+    end_offset: int | None = None,
+) -> int:
+    """Rebuild vector index deterministically from delivered outbox entries."""
+    return replay_vector_index_from_ledger_outbox(ledger, store, end_offset=end_offset)
