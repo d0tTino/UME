@@ -84,12 +84,37 @@ pre-commit run detect-secrets --files path/to/file
 
 ### Pull Requests
 
- - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR. Unit tests must run with coverage reporting, verified with:
-   ```bash
-   pytest --cov=ume --cov-fail-under=30
-   ```
+ - Ensure `pre-commit` hooks pass and that `pytest` succeeds before opening a PR.
 - All PRs are reviewed by a maintainer and must pass CI (tests, Ruff lint, formatting checks, and mypy) before merging.
 - The CI workflow automatically skips these checks when a pull request only modifies documentation or code comments.
+
+### CI quality gates (required vs optional)
+
+The CI suite is split into explicit required and optional quality gates:
+
+- **Required gates (must pass to merge):**
+  - Lint/install bootstrap and schema-compatibility checks.
+  - Architecture suite (`tests/architecture`) on Python 3.12.
+  - Unit suite on Python 3.12 with staged total coverage gate at **50%**.
+  - Changed-lines coverage enforcement with `diff-cover` at **85%** against `origin/main`.
+  - Integration suite on Python 3.12.
+  - Docker compose smoke checks.
+- **Optional gates (informational, non-blocking):**
+  - Additional unit matrix runs on Python 3.10/3.11 with staged aspirational coverage gates at **65%** and **75%**.
+
+The staged thresholds are designed to ratchet quality progressively (`30 → 50 → 65 → 75`) while avoiding sudden contributor disruption.
+
+### Test depth rubric by feature risk
+
+Use this rubric to decide required test depth for a change:
+
+| Feature risk level | Typical examples | Required test depth |
+| --- | --- | --- |
+| **Low** | Refactors with no behavior change, minor wiring updates, safe defaults | Update/add focused unit tests; changed-lines coverage must stay ≥85% |
+| **Medium** | New domain logic, policy edge-cases, adapter behavior updates | Unit tests + architecture coverage where boundaries are touched; add at least one integration path if behavior crosses process or persistence boundaries |
+| **High** | Auth/authz changes, mutation/event pipeline changes, transport adapters, data migration/compatibility behavior | Comprehensive unit tests, architecture tests, and integration tests covering happy-path + failure modes + bypass/abuse cases; include replay/regression coverage where applicable |
+
+When unsure, classify the change at the next higher risk tier.
 
 ### Security checklist for new routes/events/adapters
 
