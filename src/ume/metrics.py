@@ -193,6 +193,28 @@ STALE_VECTOR_COUNT = Gauge(
     "Current number of vectors exceeding the freshness limit",
 )
 
+
+VECTOR_OUTBOX_PENDING = Gauge(
+    "ume_vector_outbox_pending",
+    "Number of vector outbox records ready for delivery",
+)
+VECTOR_OUTBOX_LAG_SECONDS = Gauge(
+    "ume_vector_outbox_lag_seconds",
+    "Age in seconds of the oldest pending vector outbox record",
+)
+VECTOR_OUTBOX_DELIVERED_TOTAL = Counter(
+    "ume_vector_outbox_delivered_total",
+    "Total number of vector outbox records delivered",
+)
+VECTOR_OUTBOX_DELIVERY_ERRORS_TOTAL = Counter(
+    "ume_vector_outbox_delivery_errors_total",
+    "Total number of vector outbox delivery errors",
+)
+VECTOR_OUTBOX_DELIVERY_LATENCY_SECONDS = Histogram(
+    "ume_vector_outbox_delivery_latency_seconds",
+    "Latency from outbox enqueue to successful delivery",
+)
+
 # Ingestion metrics
 INGEST_EVENTS_TOTAL = Counter(
     "ume_ingest_events_total",

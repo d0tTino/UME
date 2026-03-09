@@ -51,6 +51,7 @@ from .retention import (
 from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter  # noqa: F401
 from .vector_store import VectorStoreListener
+from .vector_outbox import VectorOutboxDispatcher
 from .factories import create_vector_store, graph_capability_negotiation, vector_capability_negotiation
 from ._internal.listeners import register_listener, unregister_listener
 
@@ -94,6 +95,7 @@ TOKEN_CLEANUP_INTERVAL = 60.0
 _token_cleanup_task: asyncio.Task | None = None
 _ledger_compaction_stop: Callable[[], None] | None = None
 _vector_listener: VectorStoreListener | None = None
+_vector_outbox_dispatcher: VectorOutboxDispatcher | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -227,19 +229,26 @@ async def _start_token_cleanup() -> None:
 @app.on_event("startup")
 def _register_vector_listener() -> None:
     """Register VectorStoreListener for automatic indexing."""
-    global _vector_listener
+    global _vector_listener, _vector_outbox_dispatcher
     store = getattr(app.state, "vector_store", None)
     if store is None:
         return
     listener = VectorStoreListener(store)
     register_listener(listener)
     _vector_listener = listener
+    from .event_ledger import event_ledger
+    dispatcher = VectorOutboxDispatcher(event_ledger, store)
+    dispatcher.start()
+    _vector_outbox_dispatcher = dispatcher
 
 
 @app.on_event("shutdown")
 def _unregister_vector_listener() -> None:
     """Remove the VectorStoreListener if it was registered."""
-    global _vector_listener
+    global _vector_listener, _vector_outbox_dispatcher
+    if _vector_outbox_dispatcher is not None:
+        _vector_outbox_dispatcher.stop()
+        _vector_outbox_dispatcher = None
     if _vector_listener is not None:
         unregister_listener(_vector_listener)
         _vector_listener = None
