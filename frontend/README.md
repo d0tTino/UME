@@ -2,6 +2,8 @@
 
 This directory contains a small React dashboard for the UME API. It allows you to log in, view graph statistics and recent audit events, toggle alignment policies, monitor PII redaction activity, and edit Rego policies.
 
+Architecture guidance is documented in [`docs/FRONTEND_ARCHITECTURE.md`](../docs/FRONTEND_ARCHITECTURE.md), which captures framework-neutral layering and the explicit decision to use React for this repository.
+
 ## Development
 
 Install dependencies with npm (Node 18+ required):

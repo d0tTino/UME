@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import hashlib
+import json
 import time
 from typing import Any, AsyncGenerator, Dict, List
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Body, Depends, HTTPException, Header, Query
 try:  # pragma: no cover - optional dependency
     from fastapi_limiter.depends import RateLimiter
 except Exception:  # pragma: no cover - provide stub for tests without limiter
@@ -30,6 +33,8 @@ from .query import Neo4jQueryEngine, build_events_query
 from .event import EventError
 from .processing import ProcessingError
 from .graph_schema import DEFAULT_SCHEMA
+from .event_ledger import event_ledger
+from .realtime_contracts import GraphDigestControlEvent, GraphDigestEvent
 from .rbac_adapter import AccessDeniedError
 from ume.services.ingest import ingest_event, ingest_events_batch
 
@@ -229,6 +234,26 @@ class EventRequest(BaseModel):
         }
     
 
+def _event_payload_hash(payload: Dict[str, Any] | None) -> str:
+    serialized = json.dumps(payload or {}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _to_graph_digest(offset: int, event: Dict[str, Any]) -> GraphDigestEvent:
+    return GraphDigestEvent(
+        offset=offset,
+        event_id=event.get("event_id") or event.get("eventId"),
+        event_type=str(event.get("event_type") or event.get("eventType") or "UNKNOWN"),
+        source_service=event.get("source") or event.get("sourceService"),
+        schema_version=event.get("schema_version") or event.get("schemaVersion"),
+        timestamp=event.get("timestamp"),
+        node_id=event.get("node_id"),
+        target_node_id=event.get("target_node_id") or event.get("targetNodeId"),
+        label=event.get("label"),
+        payload_hash=_event_payload_hash(event.get("payload")),
+    )
+
+
 @router.get("/query")
 def run_cypher(
     cypher: str,
@@ -309,6 +334,90 @@ async def api_constrained_path_stream(
         for node in filtered:
             yield {"data": node}
             await asyncio.sleep(0)
+
+    return EventSourceResponse(_gen())
+
+
+@router.get("/graph/digest/stream")
+async def api_graph_digest_stream(
+    cursor: int | None = Query(None, ge=0, description="Start streaming from this ledger offset"),
+    last_event_id: int | None = Query(None, ge=0, alias="lastEventId"),
+    last_event_id_header: int | None = Header(None, alias="Last-Event-ID"),
+    max_events: int | None = Query(None, ge=1, description="Optional cap for emitted digest events"),
+    _: str = Depends(deps.get_current_role),
+) -> EventSourceResponse:
+    """Stream ledger-backed graph digest events via SSE with bounded buffering."""
+
+    queue: asyncio.Queue[dict[str, str]] = asyncio.Queue(maxsize=64)
+    dropped_events = 0
+    stop_event = asyncio.Event()
+
+    resume_from = last_event_id_header if last_event_id_header is not None else last_event_id
+    start_offset = max((cursor if cursor is not None else 0), (resume_from + 1) if resume_from is not None else 0)
+
+    async def _producer() -> None:
+        nonlocal dropped_events
+        next_offset = start_offset
+        emitted = 0
+        heartbeat_interval_s = 5.0
+        last_heartbeat = time.monotonic()
+        while not stop_event.is_set():
+            batch = event_ledger.range(start=next_offset, limit=100)
+            if batch:
+                for offset, event in batch:
+                    digest = _to_graph_digest(offset, event)
+                    frame = {"event": "graph_digest", "id": str(offset), "data": digest.model_dump_json()}
+                    if queue.full():
+                        try:
+                            queue.get_nowait()
+                            dropped_events += 1
+                        except asyncio.QueueEmpty:
+                            pass
+                    await queue.put(frame)
+                    next_offset = offset + 1
+                    emitted += 1
+                    if max_events is not None and emitted >= max_events:
+                        stop_event.set()
+                        break
+                if dropped_events > 0:
+                    ctrl = GraphDigestControlEvent(
+                        kind="backpressure",
+                        cursor_offset=next_offset - 1,
+                        dropped_events=dropped_events,
+                    )
+                    await queue.put({"event": "control", "data": ctrl.model_dump_json()})
+                    dropped_events = 0
+                last_heartbeat = time.monotonic()
+            else:
+                now = time.monotonic()
+                if now - last_heartbeat >= heartbeat_interval_s:
+                    heartbeat = GraphDigestControlEvent(
+                        kind="heartbeat",
+                        cursor_offset=max(next_offset - 1, -1),
+                    )
+                    await queue.put({"event": "control", "data": heartbeat.model_dump_json()})
+                    last_heartbeat = now
+                await asyncio.sleep(0.1)
+
+    async def _gen() -> AsyncGenerator[dict[str, str], None]:
+        producer_task = asyncio.create_task(_producer())
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=0.2)
+                except asyncio.TimeoutError:
+                    if stop_event.is_set() and queue.empty():
+                        break
+                    continue
+                yield event
+                await asyncio.sleep(0)
+                if stop_event.is_set() and queue.empty():
+                    break
+        finally:
+            stop_event.set()
+            producer_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await producer_task
 
     return EventSourceResponse(_gen())
 
