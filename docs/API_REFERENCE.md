@@ -221,6 +221,26 @@ curl -X POST http://localhost:8000/snapshot/load \
   -d '{"path":"backup.json"}'
 ```
 
+### GET `/graph/digest/stream`
+Consume real-time graph digest events via SSE.
+- **Auth**: bearer token required.
+- **Query parameters**:
+  - `cursor` (optional): absolute starting ledger offset.
+  - `lastEventId` (optional): reconnect from `lastEventId + 1`.
+- **Headers**:
+  - `Last-Event-ID` (optional): standard SSE resume marker; takes precedence over `lastEventId`.
+- **SSE events**:
+  - `graph_digest`: payload follows `ume.realtime_contracts.GraphDigestEvent`.
+  - `control`: payload follows `ume.realtime_contracts.GraphDigestControlEvent` with `heartbeat` and `backpressure` kinds.
+
+Example request:
+
+```bash
+curl -N "http://localhost:8000/graph/digest/stream?cursor=0"   -H "Authorization: Bearer <token>"   -H "Accept: text/event-stream"
+```
+
+See [`docs/REALTIME_STREAMING.md`](REALTIME_STREAMING.md) for the full contract and backpressure behavior.
+
 ### GET `/ledger/events`
 List entries in the event ledger.
 - **Query parameters**: `start` (default `0`), optional `end`, optional `limit`.
