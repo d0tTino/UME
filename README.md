@@ -84,6 +84,10 @@ Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-eve
     --> EventPipelineOrchestrator --> Graph adapter/backend --> Storage (SQLite/Neo4j/Arango) & Vector Store
 ```
 
+## Security Baseline
+
+Before deploying outside local development, review the minimum secure deployment checklist in [`docs/SECURITY_NOTES.md#minimum-secure-deployment-settings`](docs/SECURITY_NOTES.md#minimum-secure-deployment-settings).
+
 ## Project Setup
 
 This section outlines the necessary tools for developing and running the Universal Memory Engine (UME). For step-by-step installation and setup instructions, please refer to the [Quickstart](#quickstart) section.
