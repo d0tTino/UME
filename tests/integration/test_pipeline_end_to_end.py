@@ -127,7 +127,7 @@ def test_pipeline_end_to_end(tmp_path, monkeypatch):
     register_listener(listener)
 
     consumer_thread = threading.Thread(
-        target=graph_consumer.run_graph_consumer,
+        target=graph_consumer.run_event_pipeline_consumer,
         args=(graph,),
         kwargs={"group_id": "pipeline_group"},
     )
@@ -171,7 +171,7 @@ def test_generic_events_go_to_ledger(tmp_path, monkeypatch, caplog):
 
     graph = MockGraph()
     with caplog.at_level("WARNING"):
-        graph_consumer.run_graph_consumer(graph, group_id="g")
+        graph_consumer.run_event_pipeline_consumer(graph, group_id="g")
 
     assert ledger.range() == [
         (0, {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}})
@@ -200,7 +200,7 @@ def test_generic_enveloped_events_go_to_ledger(tmp_path, monkeypatch, caplog):
 
     graph = MockGraph()
     with caplog.at_level("WARNING"):
-        graph_consumer.run_graph_consumer(graph, group_id="g")
+        graph_consumer.run_event_pipeline_consumer(graph, group_id="g")
 
     assert ledger.range() == [
         (0, {"eventType": "CUSTOM", "timestamp": 1, "payload": {"foo": "bar"}})

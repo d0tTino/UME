@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import warnings
 
 from confluent_kafka import Consumer, KafkaException, KafkaError
 
@@ -29,7 +28,7 @@ DEFAULT_GROUP_ID = settings.KAFKA_GROUP_ID
 VALID_EVENT_TYPES = {e.value for e in EventType}
 
 
-def run_graph_consumer(
+def run_event_pipeline_consumer(
     graph: IGraphAdapter,
     *,
     group_id: str | None = None,
@@ -59,11 +58,6 @@ def run_graph_consumer(
             return
         owns_consumer = True
 
-    warnings.warn(
-        "ume.pipeline.graph_consumer.run_graph_consumer is deprecated; use ume.services.event_processor.EventProcessorService in integrations by 2026-01-31",
-        DeprecationWarning,
-        stacklevel=2,
-    )
     processor = EventProcessorService()
 
     def _record_invalid_event(*, offset: int, envelope: PipelineEnvelope) -> None:

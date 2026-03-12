@@ -56,14 +56,18 @@ def test_graph_consumer_applies_events(tmp_path, monkeypatch: pytest.MonkeyPatch
             "eventId": "evt-1",
             "timestamp": 1,
             "nodeId": "n1",
-            "payload": {"node_id": "n1"},
+            "producerId": "p1",
+            "tenant": "t1",
+            "payload": {"node_id": "n1", "acl": {"t1": ["p1"]}},
         },
         {
             "eventType": "CREATE_NODE",
             "eventId": "evt-2",
             "timestamp": 1,
             "nodeId": "n2",
-            "payload": {"node_id": "n2"},
+            "producerId": "p1",
+            "tenant": "t1",
+            "payload": {"node_id": "n2", "acl": {"t1": ["p1"]}},
         },
         {
             "eventType": "CREATE_EDGE",
@@ -72,7 +76,9 @@ def test_graph_consumer_applies_events(tmp_path, monkeypatch: pytest.MonkeyPatch
             "nodeId": "n1",
             "targetNodeId": "n2",
             "label": "TAGGED_AS",
-            "payload": {},
+            "producerId": "p1",
+            "tenant": "t1",
+            "payload": {"acl": {"t1": ["p1"]}},
         },
     ]
     msgs = [DummyMessage(json.dumps(e).encode("utf-8"), i) for i, e in enumerate(events)]
@@ -80,7 +86,7 @@ def test_graph_consumer_applies_events(tmp_path, monkeypatch: pytest.MonkeyPatch
     _patch_modules(monkeypatch, consumer, ledger)
 
     graph = MockGraph()
-    graph_consumer.run_graph_consumer(graph)
+    graph_consumer.run_event_pipeline_consumer(graph)
 
     assert graph.node_exists("n1")
     assert graph.node_exists("n2")
@@ -97,7 +103,9 @@ def test_graph_consumer_replay_is_deterministic_for_rejections(
             "eventId": "det-1",
             "timestamp": 1,
             "nodeId": "n1",
-            "payload": {"node_id": "n1"},
+            "producerId": "p1",
+            "tenant": "t1",
+            "payload": {"node_id": "n1", "acl": {"t1": ["p1"]}},
         },
         {
             "eventType": "CREATE_EDGE",
@@ -106,13 +114,17 @@ def test_graph_consumer_replay_is_deterministic_for_rejections(
             "nodeId": "n1",
             "targetNodeId": "n2",
             "label": "UNKNOWN_LABEL",
-            "payload": {},
+            "producerId": "p1",
+            "tenant": "t1",
+            "payload": {"acl": {"t1": ["p1"]}},
         },
         {
             "eventType": "NOT_A_REAL_EVENT",
             "eventId": "det-3",
             "timestamp": 1,
-            "payload": {},
+            "producerId": "p1",
+            "tenant": "t1",
+            "payload": {"acl": {"t1": ["p1"]}},
         },
     ]
 
@@ -123,7 +135,7 @@ def test_graph_consumer_replay_is_deterministic_for_rejections(
         _patch_modules(monkeypatch, consumer, ledger)
 
         graph = MockGraph()
-        graph_consumer.run_graph_consumer(graph)
+        graph_consumer.run_event_pipeline_consumer(graph)
         rejected = [item for item in ledger.range() if item[1].get("eventType") == "REJECTED_EVENT"]
         return graph.dump(), rejected
 
