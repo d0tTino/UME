@@ -93,16 +93,16 @@ pre-commit run detect-secrets --files path/to/file
 The CI suite is split into explicit required and optional quality gates:
 
 - **Required gates (must pass to merge):**
-  - Lint/install bootstrap and schema-compatibility checks.
-  - Architecture suite (`tests/architecture`) on Python 3.12.
-  - Unit suite on Python 3.12 with staged total coverage gate at **50%**.
+  - Lint/install bootstrap, event-schema regression checks, and architecture suite (`tests/architecture`) on Python 3.12.
+  - Unit suite on Python 3.12 with staged total coverage gate at **70%**.
   - Changed-lines coverage enforcement with `diff-cover` at **85%** against `origin/main`.
+  - Policy outcomes regression suite (`tests/test_policy_pipeline_parity.py` and `tests/test_security_controls.py`) and replay determinism regression suite (`tests/test_replay_regression.py`) on Python 3.12.
   - Integration suite on Python 3.12.
   - Docker compose smoke checks.
 - **Optional gates (informational, non-blocking):**
-  - Additional unit matrix runs on Python 3.10/3.11 with staged aspirational coverage gates at **65%** and **75%**.
+  - Additional unit matrix runs on Python 3.10/3.11 with staged aspirational coverage gates at **80%** and **85%**.
 
-The staged thresholds are designed to ratchet quality progressively (`30 → 50 → 65 → 75`) while avoiding sudden contributor disruption.
+The staged thresholds are designed to ratchet quality progressively (`30 → 50 → 70 → 80+`) while avoiding sudden contributor disruption.
 
 ### Test depth rubric by feature risk
 
