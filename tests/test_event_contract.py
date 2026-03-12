@@ -5,6 +5,7 @@ import pytest
 pytest.importorskip("google.protobuf.json_format")
 
 from ume.events.contract import canonical_to_camel_dict, canonicalize_event
+from ume.events.legacy_transform import apply_legacy_transform
 from ume.events.versioning import downgrade_event, upgrade_event
 from ume.schema_utils import validate_canonical_event, validate_event_dict
 from ume.schemas.contracts import load_bundle_schema, supported_contract_majors
@@ -30,21 +31,10 @@ def _canonical(version: str = "1.0.0") -> dict[str, object]:
     }
 
 
-def test_legacy_shapes_normalize_to_same_canonical_form() -> None:
+def test_legacy_shapes_require_explicit_transform_then_normalize() -> None:
     expected = _canonical()
 
     legacy_shapes = [
-        {
-            "eventId": "e-1",
-            "eventType": "CREATE_NODE",
-            "timestamp": 1,
-            "schema_version": "1.0.0",
-            "sourceService": "demo",
-            "correlationId": "c-1",
-            "subjectEntity": {"id": "u1", "type": "user"},
-            "node_id": "n1",
-            "payload": {"node_id": "n1", "attributes": {"name": "Alice"}},
-        },
         {
             "event_id": "e-1",
             "event_type": "CREATE_NODE",
@@ -72,7 +62,12 @@ def test_legacy_shapes_normalize_to_same_canonical_form() -> None:
     ]
 
     for shape in legacy_shapes:
-        assert canonicalize_event(shape) == expected
+        assert canonicalize_event(apply_legacy_transform(shape)) == expected
+
+
+def test_canonicalize_event_rejects_legacy_shapes_without_explicit_transform() -> None:
+    with pytest.raises(ValueError, match="legacy_transform"):
+        canonicalize_event({"event_type": "CREATE_NODE", "timestamp": 1})
 
 
 def test_contract_bundles_exist_and_can_be_loaded() -> None:
@@ -107,10 +102,10 @@ def test_upgrade_and_downgrade_transformers_support_replay_compatibility() -> No
 
 def test_json_schema_and_protobuf_converters_accept_canonicalized_shape() -> None:
     event = {
-        "event_type": "CREATE_EDGE",
-        "event_id": "e-2",
+        "eventType": "CREATE_EDGE",
+        "eventId": "e-2",
         "timestamp": 2,
-        "schema_version": "1.0.0",
+        "schemaVersion": "1.0.0",
         "node_id": "n1",
         "target_node_id": "n2",
         "label": "RELATES_TO",

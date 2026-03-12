@@ -563,3 +563,8 @@ uvicorn ume.api:app
 Then visit [http://localhost:8000/docs](http://localhost:8000/docs) in your browser.
 The raw OpenAPI schema is available at
 [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json).
+
+
+## Legacy migration section
+
+Legacy envelopes and snake_case metadata keys are supported only through `ume.events.legacy_transform.apply_legacy_transform()`. New code paths must not parse both shapes directly.

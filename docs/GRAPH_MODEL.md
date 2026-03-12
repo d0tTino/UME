@@ -248,7 +248,7 @@ parsing, values are normalized to an epoch integer in the `Event` object.
 
 Current runtime behavior in `parse_event()` + `apply_event_to_graph()`:
 
-* Required for all events: `eventType` (or `event_type`) and `timestamp`.
+* Required for all events: `eventType` and `timestamp`.
 * Optional common fields: `eventId`, `correlationId`, `subjectEntity`,
   `sourceService`.
 * Node-create family (`CREATE_NODE`, `RESEARCH_JOB_STARTED`):
@@ -348,10 +348,11 @@ Producer (canonical JSON) --> ume-raw-events --> Privacy Agent --> ume-clean-eve
 As events pass from ingestion through projection they retain the canonical
 schema, ensuring consistent processing across components.
 
-Compatibility note: `eventType` is the preferred wire field. `parse_event()`
-still accepts snake_case `event_type` for backward compatibility, but new
-producers should emit `eventType`. For edge-family events, omitted `payload`
-defaults to `{}`.
+Compatibility note: the primary ingest path accepts only the authoritative external contract (`eventType`, camelCase metadata keys, graph snake_case keys). For edge-family events, omitted `payload` defaults to `{}`.
+
+### Legacy migration
+
+Historical payload variants (`event` wrapper or snake_case metadata keys) must be normalized via `ume.events.legacy_transform.apply_legacy_transform()` before canonicalization.
 
 As events move from the ingestion API through the Privacy Agent
 and into the projection engine, they keep this schema. The engine

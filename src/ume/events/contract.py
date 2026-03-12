@@ -5,6 +5,28 @@ from datetime import datetime
 from typing import Any, Dict, Mapping
 
 
+"""Event contract transformations.
+
+Authoritative ingress contract (external): flat producer payload with camelCase
+metadata keys and snake_case graph keys:
+
+    eventId, eventType, timestamp, schemaVersion, sourceService,
+    producerId, tenant, signature, correlationId, subjectEntity,
+    node_id, target_node_id, label, payload
+
+Authoritative internal contract (canonical):
+
+    {
+      "metadata": {...},
+      "graph": {...},
+      "payload": {...}
+    }
+
+Transform direction is strictly external -> canonical in this module.
+Legacy/backward shape upgrades must happen in ``ume.events.legacy_transform``.
+"""
+
+
 _CAMEL_TO_SNAKE = {
     "eventId": "event_id",
     "eventType": "event_type",
@@ -121,38 +143,38 @@ def _to_snake_keys(data: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _to_external_contract(data: Mapping[str, Any]) -> Dict[str, Any]:
-    """Normalize adapter output to the single external producer contract."""
+    """Validate/normalize the single authoritative external producer contract."""
 
     if "event" in data:
-        raise ValueError("event envelope contract is not accepted; send flat event fields")
-
-    normalized = _to_snake_keys(data)
-    if "source" in normalized and "source_service" not in normalized:
-        normalized["source_service"] = normalized["source"]
-    if "signature" in normalized and "producer_signature" not in normalized:
-        normalized["producer_signature"] = normalized["signature"]
+        raise ValueError(
+            "event envelope contract is not accepted; run ume.events.legacy_transform first"
+        )
+    if "event_type" in data or "event_id" in data or "schema_version" in data:
+        raise ValueError(
+            "snake_case ingest fields are not accepted; run ume.events.legacy_transform first"
+        )
 
     external: Dict[str, Any] = {
-        "eventId": normalized.get("event_id"),
-        "eventType": normalized.get("event_type"),
-        "timestamp": normalized.get("timestamp"),
-        "payload": normalized.get("payload", {}),
-        "sourceService": normalized.get("source_service"),
-        "producerId": normalized.get("producer_id"),
-        "tenant": normalized.get("tenant"),
-        "signature": normalized.get("producer_signature"),
-        "schemaVersion": normalized.get("schema_version"),
-        "node_id": normalized.get("node_id"),
-        "target_node_id": normalized.get("target_node_id"),
-        "label": normalized.get("label"),
-        "correlationId": normalized.get("correlation_id"),
-        "subjectEntity": normalized.get("subject_entity"),
+        "eventId": data.get("eventId"),
+        "eventType": data.get("eventType"),
+        "timestamp": data.get("timestamp"),
+        "payload": data.get("payload", {}),
+        "sourceService": data.get("sourceService"),
+        "producerId": data.get("producerId"),
+        "tenant": data.get("tenant"),
+        "signature": data.get("signature"),
+        "schemaVersion": data.get("schemaVersion"),
+        "node_id": data.get("node_id"),
+        "target_node_id": data.get("target_node_id"),
+        "label": data.get("label"),
+        "correlationId": data.get("correlationId"),
+        "subjectEntity": data.get("subjectEntity"),
     }
     return {k: v for k, v in external.items() if v is not None}
 
 
 def canonicalize_event(data: Mapping[str, Any]) -> Dict[str, Any]:
-    """Normalize flat external producer event into the canonical envelope dict."""
+    """Transform authoritative external ingest payload into canonical envelope."""
 
     external_data = _to_external_contract(data)
     snake_data = _to_snake_keys(external_data)

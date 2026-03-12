@@ -70,7 +70,7 @@ def parse_event(data: Dict[str, Any]) -> Event:
 
     if not {"metadata", "graph", "payload"} <= data.keys():
         raise EventError(
-            "parse_event expects canonicalized data with 'metadata', 'graph', and 'payload'"
+            "parse_event expects canonicalized data with 'metadata', 'graph', and 'payload'; apply ume.events.legacy_transform before canonicalization for historical transport shapes"
         )
 
     metadata = data.get("metadata")

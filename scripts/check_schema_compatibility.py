@@ -32,9 +32,42 @@ def _seed_event(version: str) -> dict[str, object]:
     }
 
 
+def _enforce_single_shape_parsing() -> None:
+    """Fail if non-legacy ingress code parses both modern + legacy shapes directly."""
+
+    forbidden_needles = (
+        'payload.get("event", payload)',
+        'payload.get("event")',
+        'normalized = dict(deepcopy(payload.get("event", payload)))',
+    )
+    allowed = {Path("src/ume/events/legacy_transform.py")}
+    scan_files = [
+        Path("src/ume/event.py"),
+        Path("src/ume/events/contract.py"),
+        *Path("src/ume/events/adapters").glob("*.py"),
+    ]
+
+    violations: list[str] = []
+    for rel in scan_files:
+        if rel in allowed:
+            continue
+        content = (ROOT / rel).read_text()
+        for needle in forbidden_needles:
+            if needle in content:
+                violations.append(f"{rel}: contains forbidden dual-shape parser marker {needle!r}")
+
+    if violations:
+        raise SystemExit(
+            "Direct dual-shape parsing is forbidden outside ume.events.legacy_transform:\n"
+            + "\n".join(sorted(violations))
+        )
+
+
 def main() -> int:
     from ume.events.versioning import downgrade_event, upgrade_event
     from ume.schemas.contracts import supported_contract_majors
+
+    _enforce_single_shape_parsing()
 
     majors = list(supported_contract_majors())
 
