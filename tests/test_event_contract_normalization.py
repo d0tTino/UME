@@ -35,7 +35,7 @@ def test_external_contract_round_trip_edge_event() -> None:
 
 
 def test_event_envelope_is_rejected() -> None:
-    with pytest.raises(ValueError, match="event envelope contract"):
+    with pytest.raises(ValueError, match="legacy_transform"):
         canonicalize_event(
             {
                 "schemaVersion": "3.0.0",

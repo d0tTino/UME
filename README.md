@@ -160,7 +160,7 @@ set of common fields and any number of type‑specific attributes.
 | `sourceService` | Name of the service that emitted the event. |
 | `payload` | Event‑specific attributes. |
 
-Ingress adapters convert the external contract into UME's internal canonical event (`metadata` + `graph` + `payload`) before parsing.
+Ingress accepts one authoritative external contract only (`eventType`, `eventId`, `schemaVersion`, `sourceService`, `node_id`, ...). That external shape is transformed exactly once into UME's internal canonical event (`metadata` + `graph` + `payload`) before parsing.
 Timestamps are accepted as Unix epoch integers or ISO&nbsp;8601 strings (including `Z` suffix) and are normalized internally to an
 epoch integer on the parsed `Event`.
 
@@ -204,14 +204,17 @@ event-type-specific checks:
 Compatibility note:
 
 * Required for all external producer events: `eventType` and `timestamp`.
-* Optional for all events: `eventId`, `correlationId`, `subjectEntity`,
-  `sourceService`.
+* Optional for all events: `eventId`, `correlationId`, `subjectEntity`, `sourceService`.
 * Edge-family events (`CREATE_EDGE`, `DELETE_EDGE`, `CREATE_ONTOLOGY_RELATION`,
   `DATA_SOURCE_QUERIED`, `ENTITY_DISCOVERED`) require `node_id`,
   `target_node_id`, `label`; `payload` is optional and defaults to `{}`.
 * Node-family update events (`UPDATE_NODE_ATTRIBUTES`, `DOCUMENT_ARCHIVED`)
   require `payload.attributes`; `DOCUMENT_ARCHIVED` defaults
   `attributes.archived` to `true` during processing when omitted.
+
+### Legacy migration (explicit transform only)
+
+Historical payloads (`event` envelope wrapper, snake_case metadata keys such as `event_type`) are no longer parsed directly on the primary ingress path. Use `ume.events.legacy_transform.apply_legacy_transform()` to migrate those payloads into the authoritative external contract, then call canonicalization/parsing.
 
 #### CREATE_EDGE Event
 

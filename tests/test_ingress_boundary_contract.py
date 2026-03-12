@@ -44,7 +44,7 @@ def test_ingress_paths_produce_identical_canonical_output() -> None:
     assert kafka_event == grpc_event == cli_event
 
 
-def test_ingress_accepts_legacy_nested_event_shape() -> None:
+def test_ingress_accepts_legacy_nested_event_shape_via_adapter_transform() -> None:
     legacy_payload = {
         "schemaVersion": "2.0.0",
         "event": {
