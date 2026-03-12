@@ -1,110 +1,15 @@
-"""Kafka consumer that projects sanitized events into the graph."""
+"""Projection worker entrypoint.
+
+This module previously exposed ``run_projection_engine`` as a compatibility shim.
+The shim was removed after its deprecation sunset; use
+``ume.services.projection_worker.run_projection_worker`` directly.
+"""
 
 from __future__ import annotations
 
-import json
-import logging
-import warnings
+from .services.projection_worker import main, run_projection_worker
 
-from confluent_kafka import Consumer, KafkaError, KafkaException
-
-from .config import settings
-from .utils import ssl_config
-from .event import EventError
-from .events.types import EventType
-from .services.mutate import (
-    MutationError,
-    build_graph_projector as _build_graph_projector,
-    raise_for_rejected_outcome,
-)
-from .services.event_processor import DEFAULT_EVENT_PROCESSOR
-from .graph_adapter import IGraphAdapter
-from .logging_utils import configure_logging
-
-
-configure_logging()
-logger = logging.getLogger(__name__)
-
-BOOTSTRAP_SERVERS = settings.KAFKA_BOOTSTRAP_SERVERS
-TOPIC = settings.KAFKA_CLEAN_EVENTS_TOPIC
-GROUP_ID = settings.KAFKA_GROUP_ID
-
-VALID_EVENT_TYPES = {e.value for e in EventType}
-
-# compatibility export retained for legacy tests/integrations
-build_graph_projector = _build_graph_projector
-
-
-def run_projection_engine(
-    graph: IGraphAdapter,
-    *,
-    group_id: str | None = None,
-    consumer: Consumer | None = None,
-) -> None:
-    """Consume sanitized events and update ``graph`` accordingly."""
-    warnings.warn(
-        "ume.projection_engine.run_projection_engine is deprecated; use ume.services.event_processor.EventProcessorService-based consumers by 2026-01-31",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    gid = group_id or GROUP_ID
-    owns_consumer = False
-    if consumer is None:
-        conf = {
-            "bootstrap.servers": BOOTSTRAP_SERVERS,
-            "group.id": gid,
-            "auto.offset.reset": "earliest",
-        }
-        conf.update(ssl_config())
-        try:
-            consumer = Consumer(conf)
-            consumer.subscribe([TOPIC])
-        except KafkaException as exc:  # pragma: no cover - network errors
-            logger.error("Failed to start projection consumer: %s", exc)
-            return
-        owns_consumer = True
-
-    projector = build_graph_projector(graph, classify=False)
-    logger.info("Projection engine started with group_id %s", gid)
-    try:
-        while True:
-            try:
-                msg = consumer.poll(1.0)
-            except KafkaException as exc:  # pragma: no cover - network errors
-                logger.error("Poll failed: %s", exc)
-                continue
-            if msg is None:
-                continue
-            if msg.error():
-                if msg.error().code() != KafkaError._PARTITION_EOF:
-                    logger.error("Kafka error: %s", msg.error())
-                continue
-
-            try:
-                data = json.loads(msg.value().decode("utf-8"))
-                envelope = DEFAULT_EVENT_PROCESSOR.process_payload(
-                    data,
-                    source="projection_engine",
-                    adapter="kafka",
-                    raw_payload=msg.value(),
-                    projector=projector,
-                )
-                if envelope.event and envelope.event.event_type not in VALID_EVENT_TYPES:
-                    raise EventError(f"unknown_event_type:{envelope.event.event_type}")
-                raise_for_rejected_outcome(envelope)
-            except (json.JSONDecodeError, EventError, MutationError) as exc:
-                logger.error("Invalid event skipped: %s", exc)
-    except KeyboardInterrupt:  # pragma: no cover - manual interrupt
-        logger.info("Projection engine shutting down")
-    finally:
-        if owns_consumer:
-            consumer.close()
-
-def main() -> None:
-    from .resources import create_graph
-
-    graph = create_graph()
-    run_projection_engine(graph)
+__all__ = ["main", "run_projection_worker"]
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution

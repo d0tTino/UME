@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import warnings
 from importlib import import_module
 from typing import Any
 
 from .bootstrap.config import load_config
+from .deprecations import warn_deprecated
 from .event import Event, EventError, EventType, parse_event
 from .graph_adapter import IGraphAdapter
 
@@ -144,11 +144,12 @@ def __getattr__(name: str) -> object:
     if name in _RUNTIME_EXPORTS:
         from .bootstrap.runtime import bootstrap_runtime
 
-        warnings.warn(
-            f"ume.{name} now requires explicit runtime bootstrap; falling back to "
-            "compatibility shim. Call ume.bootstrap.runtime.bootstrap_runtime() "
-            "from service entry points.",
-            DeprecationWarning,
+        warn_deprecated(
+            "ume.__getattr__.runtime_export_fallback",
+            detail=(
+                f"Requested symbol ume.{name}. Falling back to compatibility shim. "
+                "Call ume.bootstrap.runtime.bootstrap_runtime() from service entry points."
+            ),
             stacklevel=2,
         )
         runtime_exports = bootstrap_runtime(__name__)
@@ -156,10 +157,9 @@ def __getattr__(name: str) -> object:
 
     if name in _COMPAT_EXPORTS:
         mod_name, attr = _COMPAT_EXPORTS[name]
-        warnings.warn(
-            f"ume.{name} is a compatibility export and will move to its module "
-            f"('{mod_name}.{attr}').",
-            DeprecationWarning,
+        warn_deprecated(
+            "ume.__getattr__.compat_exports",
+            detail=f"Requested symbol ume.{name} currently resolves to {mod_name}.{attr}.",
             stacklevel=2,
         )
         value: Any = getattr(import_module(mod_name), attr)

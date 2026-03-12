@@ -92,7 +92,7 @@ def test_golden_path_api_and_kafka_are_equivalent(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(graph_consumer, "event_ledger", ledger)
 
-    graph_consumer.run_graph_consumer(kafka_graph, consumer=consumer)
+    graph_consumer.run_event_pipeline_consumer(kafka_graph, consumer=consumer)
 
     assert api_graph.dump() == kafka_graph.dump()
     assert ledger.last_processed_offset == len(events) - 1

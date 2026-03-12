@@ -1,7 +1,7 @@
 import json
 
 from ume import MockGraph
-from ume import projection_engine
+from ume.services import projection_worker
 
 
 class DummyMessage:
@@ -43,7 +43,7 @@ def test_projection_engine_event_type_contract_import_path(monkeypatch) -> None:
 
         return _project
 
-    monkeypatch.setattr(projection_engine, "build_graph_projector", _capture_projector)
+    monkeypatch.setattr(projection_worker, "build_graph_projector", _capture_projector)
 
     consumer = DummyConsumer(
         [
@@ -52,11 +52,13 @@ def test_projection_engine_event_type_contract_import_path(monkeypatch) -> None:
                 "eventId": "evt-1",
                 "timestamp": 1,
                 "nodeId": "n1",
-                "payload": {"node_id": "n1", "type": "User"},
+                "producerId": "p1",
+                "tenant": "t1",
+                "payload": {"node_id": "n1", "type": "User", "acl": {"t1": ["p1"]}},
             }
         ]
     )
 
-    projection_engine.run_projection_engine(MockGraph(), consumer=consumer)
+    projection_worker.run_projection_worker(MockGraph(), consumer=consumer)
 
     assert captured_event_types == ["CREATE_NODE"]

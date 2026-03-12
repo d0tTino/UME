@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import warnings
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
@@ -24,6 +23,7 @@ from ..policy.pipeline import PolicyDecision
 from ..policy.graph_view import build_graph_read_view
 from ..processing import DEFAULT_VERSION, apply_event_to_graph
 from ..vector_outbox import enqueue_vector_outbox_event
+from ..deprecations import warn_deprecated
 
 
 class MutationErrorCategory(str, Enum):
@@ -84,15 +84,11 @@ def run_mutation(
     projector: Callable[[Any], dict[str, Any] | None] | None = None,
     orchestrator: Any | None = None,
 ) -> PipelineEnvelope:
-    warnings.warn(
-        "ume.services.mutate.run_mutation is hard-deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload",
-        DeprecationWarning,
-        stacklevel=2,
-    )
+    warn_deprecated("ume.services.mutate.run_mutation", stacklevel=2)
     if orchestrator is not None:
-        warnings.warn(
-            "orchestrator parameter is ignored; use EventProcessorService directly if you need orchestrator injection",
-            DeprecationWarning,
+        warn_deprecated(
+            "ume.services.mutate.run_mutation",
+            detail="The orchestrator parameter is ignored; use EventProcessorService directly for orchestrator injection.",
             stacklevel=2,
         )
     from .event_processor import DEFAULT_EVENT_PROCESSOR
@@ -116,15 +112,11 @@ async def run_mutation_async(
     projector: Callable[[Any], Any] | None = None,
     orchestrator: Any | None = None,
 ) -> PipelineEnvelope:
-    warnings.warn(
-        "ume.services.mutate.run_mutation_async is hard-deprecated; use ume.services.event_processor.DEFAULT_EVENT_PROCESSOR.process_payload_async",
-        DeprecationWarning,
-        stacklevel=2,
-    )
+    warn_deprecated("ume.services.mutate.run_mutation_async", stacklevel=2)
     if orchestrator is not None:
-        warnings.warn(
-            "orchestrator parameter is ignored; use EventProcessorService directly if you need orchestrator injection",
-            DeprecationWarning,
+        warn_deprecated(
+            "ume.services.mutate.run_mutation_async",
+            detail="The orchestrator parameter is ignored; use EventProcessorService directly for orchestrator injection.",
             stacklevel=2,
         )
     from .event_processor import DEFAULT_EVENT_PROCESSOR

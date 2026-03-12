@@ -38,7 +38,39 @@ All mutation-capable ingress routes (API, CLI, Kafka, gRPC, and compatibility co
 - `ume.services.event_processor.EventProcessorService` is the service boundary used by integrations.
 - `ume.pipeline.core.EventPipelineOrchestrator` is the only stage orchestration runtime behind that service boundary.
 
-`ume.projection_engine` is maintained as a thin compatibility adapter that delegates to the same orchestrator path, and `ume.services.mutate.run_mutation*` is hard-deprecated compatibility surface retained only for migration support.
+`ume.projection_engine.run_projection_engine` and `ume.pipeline.graph_consumer.run_graph_consumer` were removed after sunset and replaced by orchestrator-native entrypoints. Remaining compatibility shims (`ume.services.mutate.run_mutation*`, `ume.stream_processor`, top-level `ume.__getattr__` fallback exports) are controlled by `ume.deprecations.DEPRECATION_REGISTRY` and a CI callsite guard (`scripts/check_deprecated_callsites.py`).
+
+
+
+### Deprecation migration snippets
+
+```python
+# old mutation path
+from ume.services.mutate import run_mutation_async
+result = await run_mutation_async(payload, source="kafka")
+
+# new service boundary
+from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR
+result = await DEFAULT_EVENT_PROCESSOR.process_payload_async(payload, source="kafka")
+```
+
+```python
+# old projection consumer
+from ume.projection_engine import run_projection_engine
+run_projection_engine(graph)
+
+# new orchestrator worker
+from ume.services.projection_worker import run_projection_worker
+run_projection_worker(graph)
+```
+
+```python
+# old stream import
+from ume import stream_processor
+
+# new stream import
+from ume.pipeline import stream_processor
+```
 
 ## Architecture status
 

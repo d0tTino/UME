@@ -12,7 +12,7 @@ The authoritative implementation is:
 - Transport adapters in `ume.events.adapters` + `ume.events.ingress` for ingress normalization.
 - `ume.services.event_processor.EventProcessorService` as the single service entrypoint used by CLI/API/consumer integrations (implemented as a thin facade over `EventPipelineOrchestrator`).
 
-Legacy entrypoints in `ume.projection_engine`, `ume.pipeline.graph_consumer`, and direct `ume.services.mutate.run_mutation*` calls are compatibility wrappers and are deprecated.
+Legacy entrypoints in `ume.projection_engine`, `ume.pipeline.graph_consumer`, and direct `ume.services.mutate.run_mutation*` calls are tracked in the central deprecation registry (`ume.deprecations.DEPRECATION_REGISTRY`). Past-sunset shims are removed; active shims emit registry-backed runtime warnings.
 
 Conformance is enforced by the mutation route parity matrix in `tests/test_mutation_entrypoint_parity.py`, which asserts equivalent `PipelineEnvelope` outcomes across Kafka/API/CLI/gRPC paths for identical payloads.
 
@@ -36,18 +36,47 @@ Outcomes are normalized as `applied`, `redacted`, `rejected`, or `quarantined`.
 
 ## Deprecation timeline
 
-Deprecated compatibility entrypoints:
+## Deprecated entrypoint inventory and migration map
 
-- `ume.projection_engine.run_projection_engine`
-- `ume.pipeline.graph_consumer.run_graph_consumer`
-- `ume.services.mutate.run_mutation`
-- `ume.services.mutate.run_mutation_async`
+| Legacy entrypoint | Status | Sunset | Replacement |
+| --- | --- | --- | --- |
+| `ume.projection_engine.run_projection_engine` | Removed (past sunset) | 2026-01-31 / 0.2.0 | `ume.services.projection_worker.run_projection_worker` |
+| `ume.pipeline.graph_consumer.run_graph_consumer` | Removed (past sunset) | 2026-01-31 / 0.2.0 | `ume.pipeline.graph_consumer.run_event_pipeline_consumer` |
+| `ume.services.mutate.run_mutation` | Active deprecation | 2026-07-01 / 0.3.0 | `DEFAULT_EVENT_PROCESSOR.process_payload(...)` |
+| `ume.services.mutate.run_mutation_async` | Active deprecation | 2026-07-01 / 0.3.0 | `DEFAULT_EVENT_PROCESSOR.process_payload_async(...)` |
+| `ume.stream_processor` | Active deprecation | 2026-07-01 / 0.3.0 | `ume.pipeline.stream_processor` |
 
-Timeline:
+### Migration snippets
 
-- Deprecated now (warnings emitted at runtime).
-- Removal target: **2026-01-31**.
-- Migration target: `ume.services.event_processor.DEFAULT_EVENT_PROCESSOR`.
+```python
+# old
+from ume.services.mutate import run_mutation
+envelope = run_mutation(payload, source="api")
+
+# new
+from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR
+envelope = DEFAULT_EVENT_PROCESSOR.process_payload(payload, source="api")
+```
+
+```python
+# old
+from ume.pipeline.graph_consumer import run_graph_consumer
+run_graph_consumer(graph)
+
+# new
+from ume.pipeline.graph_consumer import run_event_pipeline_consumer
+run_event_pipeline_consumer(graph)
+```
+
+```python
+# explicit orchestrator wiring
+from ume.pipeline.core import EventPipelineOrchestrator
+from ume.services.event_processor import EventProcessorService
+
+orchestrator = EventPipelineOrchestrator()
+service = EventProcessorService(orchestrator=orchestrator)
+envelope = service.process_payload(payload, source="cli")
+```
 
 ## Configuration
 

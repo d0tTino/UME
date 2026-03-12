@@ -57,7 +57,7 @@ def test_projection_engine_kafka() -> None:
         consumer.subscribe([topic])
 
         graph = MockGraph()
-        projection_engine.run_projection_engine(graph, consumer=consumer)
+        projection_engine.run_projection_worker(graph, consumer=consumer)
         consumer.close()
 
         assert graph.get_node("n1") == {"type": "User"}
