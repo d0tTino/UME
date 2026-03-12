@@ -484,14 +484,23 @@ Strive for clear, concise tests that verify specific behaviors and edge cases.
 
 ## CI Workflow
 
-This project uses GitHub Actions to run linting, type checks, unit tests, and
-coverage reporting. The `coverage` job executes on a self-hosted runner as
-described in [docs/SELF_HOSTED_RUNNER.md](docs/SELF_HOSTED_RUNNER.md). It uses
-`concurrency` with `cancel-in-progress` to terminate earlier runs on the same
-branch. Steps are skipped when only documentation or comments change, so tests
-and linters run only for code modifications. CI validates multiple Python
-versions via a matrix (`3.10`, `3.11`, and `3.12`) in
-[.github/workflows/ci.yml](.github/workflows/ci.yml).
+This project uses GitHub Actions to run required and optional quality gates in
+[.github/workflows/ci.yml](.github/workflows/ci.yml). Steps are skipped when a
+pull request changes only documentation or comments; mutation/code changes must
+pass all required jobs.
+
+Required CI gates include:
+- event schema regression compatibility checks;
+- architecture tests (`tests/architecture`);
+- unit tests on Python 3.12 with total coverage `--fail-under=70`;
+- changed-lines coverage enforcement with `diff-cover --fail-under=85`;
+- policy outcomes regression checks (`tests/test_policy_pipeline_parity.py` and
+  `tests/test_security_controls.py`);
+- replay determinism regression checks (`tests/test_replay_regression.py`);
+- integration tests and compose smoke checks.
+
+Optional CI matrix runs on Python 3.10/3.11 and currently reports aspirational
+coverage thresholds staged at 80% and 85%.
 
 ## Access Control
 

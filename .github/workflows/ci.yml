@@ -44,7 +44,7 @@ jobs:
           npm ci
           npm run build
 
-  schema-compatibility:
+  event-schema-regression-required:
     runs-on: ubuntu-latest
     needs: lint-and-install
     if: needs.lint-and-install.outputs.run == 'true'
@@ -58,7 +58,7 @@ jobs:
 
   architecture-tests-required:
     runs-on: ubuntu-latest
-    needs: [lint-and-install, schema-compatibility]
+    needs: [lint-and-install, event-schema-regression-required]
     if: needs.lint-and-install.outputs.run == 'true'
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
 
   unit-tests-required:
     runs-on: ubuntu-latest
-    needs: [lint-and-install, schema-compatibility]
+    needs: [lint-and-install, event-schema-regression-required]
     if: needs.lint-and-install.outputs.run == 'true'
     env:
       UME_AUDIT_SIGNING_KEY: test-key
@@ -97,8 +97,8 @@ jobs:
         run: |
           poetry run pytest --cov=ume --cov-report xml -m "not integration"
           poetry run pytest tests/test_dossier_migration.py
-      - name: Coverage stage 1 (fail under 50%)
-        run: poetry run coverage report --fail-under=50
+      - name: Coverage stage 2 (fail under 70%)
+        run: poetry run coverage report --fail-under=70
       - name: Upload unit coverage artifact
         uses: actions/upload-artifact@v4
         with:
@@ -133,7 +133,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11']
-        coverage-threshold: [65, 75]
+        coverage-threshold: [80, 85]
     env:
       UME_AUDIT_SIGNING_KEY: test-key
       UME_ENCRYPTION_ENABLED: 'true'
@@ -151,7 +151,22 @@ jobs:
         run: poetry run coverage report --fail-under=${{ matrix.coverage-threshold }}
 
 
-  replay-regression:
+  policy-outcomes-regression-required:
+    runs-on: ubuntu-latest
+    needs: lint-and-install
+    if: needs.lint-and-install.outputs.run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: poetry install --with dev --extras vector --extras embedding
+      - name: Run policy outcomes regression suite
+        run: poetry run pytest tests/test_policy_pipeline_parity.py tests/test_security_controls.py
+
+
+  replay-determinism-required:
     runs-on: ubuntu-latest
     needs: lint-and-install
     if: needs.lint-and-install.outputs.run == 'true'
@@ -183,7 +198,7 @@ jobs:
 
   compose-smoke:
     runs-on: ubuntu-latest
-    needs: [architecture-tests-required, unit-tests-required, changed-lines-coverage-required, integration-tests-required]
+    needs: [architecture-tests-required, unit-tests-required, changed-lines-coverage-required, policy-outcomes-regression-required, replay-determinism-required, integration-tests-required]
     steps:
       - uses: actions/checkout@v4
       - name: Start stack
