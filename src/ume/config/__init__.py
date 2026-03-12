@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     )
 
     # UME Core
+    UME_ENV: str = "development"
     UME_DB_PATH: str = "ume_graph.db"
     UME_GRAPH_BACKEND: str = "sqlite"  # sqlite, postgres, redis, or neo4j
     UME_GRAPH_ADAPTER_MODULES: str | None = None
@@ -72,6 +74,13 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     # Kafka/Redpanda
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_SECURITY_PROTOCOL: str = "PLAINTEXT"
+    KAFKA_SASL_MECHANISM: str | None = None
+    KAFKA_SASL_USERNAME: str | None = None
+    KAFKA_SASL_PASSWORD: str | None = None
+    KAFKA_CA_CERT: str | None = None
+    KAFKA_CLIENT_CERT: str | None = None
+    KAFKA_CLIENT_KEY: str | None = None
     KAFKA_RAW_EVENTS_TOPIC: str = "ume-raw-events"
     KAFKA_CLEAN_EVENTS_TOPIC: str = "ume-clean-events"
     KAFKA_QUARANTINE_TOPIC: str = "ume-quarantine-events"
@@ -128,17 +137,73 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     def model_post_init(self, __context: Any) -> None:  # noqa: D401
         """Validate settings after initialization."""
+        logger = logging.getLogger(__name__)
+        self.apply_secret_file_overrides()
+
+        errors: list[str] = []
+        warnings: list[str] = []
+        dev_mode = self.UME_ENV.lower() in {"dev", "development", "test"}
+
         if self.UME_AUDIT_SIGNING_KEY == DEFAULT_AUDIT_SIGNING_KEY:
+            msg = "UME_AUDIT_SIGNING_KEY must be set to a non-default value"
+            if dev_mode:
+                warnings.append(msg)
+            else:
+                errors.append(msg)
 
-            logging.getLogger(__name__).warning(
-                "Edit the generated .env file to replace the placeholder "
-                "UME_AUDIT_SIGNING_KEY."
+        if not self.UME_API_TOKEN:
+            msg = "UME_API_TOKEN is required for non-development deployments"
+            if dev_mode:
+                warnings.append(msg)
+            else:
+                errors.append(msg)
+
+        if self.UME_OAUTH_PASSWORD == "password":
+            msg = "UME_OAUTH_PASSWORD must not use the default value"
+            if dev_mode:
+                warnings.append(msg)
+            else:
+                errors.append(msg)
+
+        protocol = self.KAFKA_SECURITY_PROTOCOL.upper()
+        if protocol in {"SSL", "SASL_SSL"}:
+            if not self.KAFKA_CA_CERT:
+                errors.append("KAFKA_CA_CERT is required when Kafka TLS is enabled")
+            if protocol == "SSL" and (not self.KAFKA_CLIENT_CERT or not self.KAFKA_CLIENT_KEY):
+                errors.append(
+                    "KAFKA_CLIENT_CERT and KAFKA_CLIENT_KEY are required for KAFKA_SECURITY_PROTOCOL=SSL"
+                )
+
+        if protocol in {"SASL_SSL", "SASL_PLAINTEXT"} and (
+            not self.KAFKA_SASL_USERNAME or not self.KAFKA_SASL_PASSWORD
+        ):
+            errors.append(
+                "KAFKA_SASL_USERNAME and KAFKA_SASL_PASSWORD are required for SASL Kafka protocols"
             )
 
-            raise ValueError(
-                "UME_AUDIT_SIGNING_KEY must be set to a non-default value"
+        for msg in warnings:
+            logger.warning(msg)
+        if errors:
+            raise ValueError("; ".join(errors))
 
-            )
+    def apply_secret_file_overrides(self) -> None:
+        file_mappings = {
+            "UME_AUDIT_SIGNING_KEY_FILE": "UME_AUDIT_SIGNING_KEY",
+            "UME_ENCRYPTION_KEY_FILE": "UME_ENCRYPTION_KEY",
+            "UME_OAUTH_PASSWORD_FILE": "UME_OAUTH_PASSWORD",
+            "UME_API_TOKEN_FILE": "UME_API_TOKEN",
+            "NEO4J_PASSWORD_FILE": "NEO4J_PASSWORD",
+            "KAFKA_SASL_PASSWORD_FILE": "KAFKA_SASL_PASSWORD",
+        }
+        for file_env, target in file_mappings.items():
+            path = os.environ.get(file_env)
+            if not path:
+                continue
+            try:
+                value = open(path, "r", encoding="utf-8").read().strip()
+            except OSError as exc:
+                raise ValueError(f"Failed to read secret file {file_env}: {exc}") from exc
+            object.__setattr__(self, target, value)
 
 from .loader import load_settings  # noqa: E402
 load_settings.cache_clear()

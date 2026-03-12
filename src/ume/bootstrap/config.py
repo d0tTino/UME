@@ -20,6 +20,7 @@ def load_config(package: str) -> tuple[types.ModuleType, type]:
         stub = _make_stub(f"{package}.config")
         sys.modules[f"{package}.config"] = stub
         stub.settings = SimpleNamespace(  # type: ignore[attr-defined]
+            UME_ENV="development",
             UME_DB_PATH="ume_graph.db",
             UME_SNAPSHOT_PATH="ume_snapshot.json",
             UME_SNAPSHOT_DIR=".",
@@ -57,6 +58,13 @@ def load_config(package: str) -> tuple[types.ModuleType, type]:
             NEO4J_USER="neo4j",
             NEO4J_PASSWORD="password",  # pragma: allowlist secret
             KAFKA_BOOTSTRAP_SERVERS="localhost:9092",
+            KAFKA_SECURITY_PROTOCOL="PLAINTEXT",
+            KAFKA_SASL_MECHANISM=None,
+            KAFKA_SASL_USERNAME=None,
+            KAFKA_SASL_PASSWORD=None,
+            KAFKA_CA_CERT=None,
+            KAFKA_CLIENT_CERT=None,
+            KAFKA_CLIENT_KEY=None,
             KAFKA_RAW_EVENTS_TOPIC="ume-raw-events",
             KAFKA_CLEAN_EVENTS_TOPIC="ume-clean-events",
             KAFKA_QUARANTINE_TOPIC="ume-quarantine-events",

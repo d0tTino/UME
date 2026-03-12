@@ -76,3 +76,17 @@ Ingressed canonical metadata now carries producer identity fields (`producer_id`
 The policy pipeline verifies producer authentication/authorization in `pre_apply_producer_auth` before policy alignment checks.
 Unauthenticated or unauthorized producer events are denied by default.
 Audit records include producer auth outcome fields: method, authenticated flag, authorized flag, producer_id, and tenant.
+
+## Minimum secure deployment settings
+
+Use these settings as the minimum baseline for staging/production environments:
+
+- Set `UME_ENV=production` (or `staging`) so missing/default secrets fail fast at startup.
+- Set a strong `UME_AUDIT_SIGNING_KEY` (or `UME_AUDIT_SIGNING_KEY_FILE`) and rotate it regularly.
+- Set `UME_API_TOKEN` (or `UME_API_TOKEN_FILE`) so API routes are not effectively open by default.
+- Set a non-default `UME_OAUTH_PASSWORD` (or `UME_OAUTH_PASSWORD_FILE`).
+- Do not commit plaintext service credentials; provide Neo4j and Kafka credentials via environment or secret files.
+- If Kafka uses `KAFKA_SECURITY_PROTOCOL=SSL` or `SASL_SSL`, provide TLS material (`KAFKA_CA_CERT` and client cert/key for mTLS).
+- If Kafka uses SASL (`SASL_SSL` or `SASL_PLAINTEXT`), set `KAFKA_SASL_USERNAME` and `KAFKA_SASL_PASSWORD` (or `KAFKA_SASL_PASSWORD_FILE`).
+
+The Docker Compose file includes optional profiles (`secure-kafka`, `secure-api`) and secret-file mounts to support this baseline in local and self-hosted deployments.

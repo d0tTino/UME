@@ -1,16 +1,21 @@
 version: '3.8'
+
 services:
   redpanda:
     image: redpandadata/redpanda:latest
     command:
       - redpanda
       - start
-      - --smp 1
+      - --smp
+      - "1"
       - --overprovisioned
-      - --node-id 0
+      - --node-id
+      - "0"
       - --check=false
-      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://localhost:9092
-      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:29092,OUTSIDE://localhost:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
     volumes:
       - ./certs:/etc/redpanda/certs:ro
     ports:
@@ -40,9 +45,17 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+    env_file:
+      - ../.env
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:29092}
+      KAFKA_SECURITY_PROTOCOL: ${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      KAFKA_SASL_MECHANISM: ${KAFKA_SASL_MECHANISM:-}
+      KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-}
+      KAFKA_SASL_PASSWORD_FILE: /run/secrets/kafka_sasl_password
       UME_DB_PATH: "/data/ume_graph.db"
+    secrets:
+      - kafka_sasl_password
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f privacy_agent.py || exit 1"]
       interval: 10s
@@ -52,13 +65,15 @@ services:
   neo4j:
     image: neo4j:5
     environment:
-      - NEO4J_AUTH=neo4j/password # pragma: allowlist secret
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-change-me}
     ports:
       - "7687:7687"
     volumes:
       - neo4j-data:/data
+    secrets:
+      - neo4j_password
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "password", "RETURN 1"]
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$$(cat /run/secrets/neo4j_password 2>/dev/null || printf '%s' '${NEO4J_PASSWORD:-change-me}')\" 'RETURN 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -71,16 +86,32 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+    env_file:
+      - ../.env
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      UME_ENV: ${UME_ENV:-production}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:29092}
+      KAFKA_SECURITY_PROTOCOL: ${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      KAFKA_SASL_MECHANISM: ${KAFKA_SASL_MECHANISM:-}
+      KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-}
+      KAFKA_SASL_PASSWORD_FILE: /run/secrets/kafka_sasl_password
       UME_DB_PATH: "/data/ume_graph.db"
       NEO4J_URI: "bolt://neo4j:7687"
-      NEO4J_USER: "neo4j"
-      NEO4J_PASSWORD: "password" # pragma: allowlist secret
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD_FILE: /run/secrets/neo4j_password
+      UME_API_TOKEN: ${UME_API_TOKEN:-change-me}
+      UME_API_TOKEN_FILE: /run/secrets/ume_api_token
+      UME_OAUTH_PASSWORD: ${UME_OAUTH_PASSWORD:-change-me}
+      UME_OAUTH_PASSWORD_FILE: /run/secrets/ume_oauth_password
     ports:
       - "8000:8000"
     volumes:
       - ume-db:/data
+    secrets:
+      - neo4j_password
+      - kafka_sasl_password
+      - ume_api_token
+      - ume_oauth_password
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f uvicorn || exit 1"]
       interval: 10s
@@ -98,9 +129,16 @@ services:
     env_file:
       - ../.env
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      UME_ENV: ${UME_ENV:-production}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:29092}
+      KAFKA_SECURITY_PROTOCOL: ${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      KAFKA_SASL_MECHANISM: ${KAFKA_SASL_MECHANISM:-}
+      KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-}
+      KAFKA_SASL_PASSWORD_FILE: /run/secrets/kafka_sasl_password
     ports:
       - "8001:8001"
+    secrets:
+      - kafka_sasl_password
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f uvicorn || exit 1"]
       interval: 10s
@@ -118,10 +156,17 @@ services:
     env_file:
       - ../.env
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      UME_ENV: ${UME_ENV:-production}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:29092}
+      KAFKA_SECURITY_PROTOCOL: ${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      KAFKA_SASL_MECHANISM: ${KAFKA_SASL_MECHANISM:-}
+      KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-}
+      KAFKA_SASL_PASSWORD_FILE: /run/secrets/kafka_sasl_password
       UME_DB_PATH: "/data/ume_graph.db"
     volumes:
       - ume-db:/data
+    secrets:
+      - kafka_sasl_password
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f ume.services.projection_worker || exit 1"]
       interval: 10s
@@ -142,10 +187,35 @@ services:
     env_file:
       - ../.env
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: "redpanda:29092"
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:29092}
       UME_DB_PATH: "/data/ume_graph.db"
     volumes:
       - ume-db:/data
+
+  secure-config-check:
+    image: alpine:3.19
+    profiles: ["secure-kafka", "secure-api"]
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        test -n "$$UME_API_TOKEN" || (echo "UME_API_TOKEN is required" && exit 1)
+        test -n "$$UME_OAUTH_PASSWORD" || (echo "UME_OAUTH_PASSWORD is required" && exit 1)
+        if [ "${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}" = "SASL_SSL" ] || [ "${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}" = "SASL_PLAINTEXT" ]; then
+          test -n "$$KAFKA_SASL_USERNAME" || (echo "KAFKA_SASL_USERNAME is required for SASL" && exit 1)
+          test -n "$$KAFKA_SASL_PASSWORD" || (echo "KAFKA_SASL_PASSWORD is required for SASL" && exit 1)
+        fi
+        if [ "${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}" = "SSL" ] || [ "${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}" = "SASL_SSL" ]; then
+          test -n "$$KAFKA_CA_CERT" || (echo "KAFKA_CA_CERT is required for TLS" && exit 1)
+        fi
+        echo "secure profile config check passed"
+    environment:
+      UME_API_TOKEN: ${UME_API_TOKEN:-}
+      UME_OAUTH_PASSWORD: ${UME_OAUTH_PASSWORD:-}
+      KAFKA_SECURITY_PROTOCOL: ${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      KAFKA_SASL_USERNAME: ${KAFKA_SASL_USERNAME:-}
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:-}
+      KAFKA_CA_CERT: ${KAFKA_CA_CERT:-}
 
   prometheus:
     image: prom/prometheus
@@ -164,6 +234,16 @@ services:
       - ../docs/grafana/ume_dashboard.json:/var/lib/grafana/dashboards/ume_dashboard.json:ro
     ports:
       - "3000:3000"
+
+secrets:
+  neo4j_password:
+    file: ./secrets/neo4j_password.txt
+  kafka_sasl_password:
+    file: ./secrets/kafka_sasl_password.txt
+  ume_api_token:
+    file: ./secrets/ume_api_token.txt
+  ume_oauth_password:
+    file: ./secrets/ume_oauth_password.txt
 
 volumes:
   ume-db:
