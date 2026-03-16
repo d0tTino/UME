@@ -46,6 +46,9 @@ class Settings(BaseSettings):  # type: ignore[misc]
     WATCH_PATHS: list[str] = ["."]
     DAG_RESOURCES: dict[str, int] = {"cpu": 1, "io": 1}
     UME_VALUE_STORE_PATH: str | None = None
+    UME_ENABLE_DASHBOARD_STREAM: bool = True
+    UME_DASHBOARD_STREAM_TRANSPORT: str = "sse"
+    UME_DASHBOARD_REST_FALLBACK: bool = True
 
     # Vector store
     UME_VECTOR_BACKEND: str = "faiss"  # faiss, chroma, or plugin name

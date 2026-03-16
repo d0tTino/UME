@@ -27,8 +27,20 @@ This document describes UI architecture in a framework-neutral way, then records
 ### Real-time consumption pattern
 
 - Use a stream client abstraction for `GET /graph/digest/stream`.
+- Use a dashboard stream client abstraction for `GET /dashboard/stream` to drive high-churn panels (`stats`, `recent_events`, PII redaction count).
 - Persist last processed event ID per session to support reconnection.
 - Treat `control.backpressure` events as data-loss signals and trigger a catch-up flow.
+- Keep REST compatibility paths (`/dashboard/stats`, `/dashboard/recent_events`, `/pii/redactions`) for explicit refresh and stream fallback.
+
+### Transport feature flags
+
+The React SPA selects transport at runtime using Vite env flags:
+
+- `VITE_ENABLE_DASHBOARD_STREAM` (`true` by default): master switch for stream subscription.
+- `VITE_DASHBOARD_STREAM_TRANSPORT` (`sse` default): current transport selector.
+- `VITE_DASHBOARD_REST_FALLBACK` (`true` default): whether to fall back to REST when stream errors or backpressure occurs.
+
+Backend capability hints are available via `GET /dashboard/transport_features`.
 
 ### Testing strategy
 

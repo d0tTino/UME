@@ -29,3 +29,11 @@ class GraphDigestControlEvent(BaseModel):
     cursor_offset: int
     dropped_events: int = 0
 
+
+class DashboardDigestEvent(BaseModel):
+    """Sanitized dashboard state emitted for real-time UI updates."""
+
+    cursor_offset: int
+    stats: dict[str, int]
+    recent_events: list[GraphDigestEvent]
+    redacted_count: int

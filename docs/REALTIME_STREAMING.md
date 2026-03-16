@@ -3,8 +3,10 @@
 UME exposes a server-side real-time projection feed over **SSE** at:
 
 - `GET /graph/digest/stream`
+- `GET /dashboard/stream`
 
 This endpoint is the canonical HTTP topic projection API for graph digest consumption.
+`/dashboard/stream` is a dashboard-focused projection that emits sanitized high-churn panel state.
 
 ## Authentication
 
@@ -60,6 +62,32 @@ Control channel payload follows `ume.realtime_contracts.GraphDigestControlEvent`
 }
 ```
 
+### `dashboard_digest`
+
+Dashboard payload follows `ume.realtime_contracts.DashboardDigestEvent`.
+
+```json
+{
+  "cursor_offset": 120,
+  "stats": {
+    "node_count": 32,
+    "edge_count": 71,
+    "vector_index_size": 32
+  },
+  "recent_events": [
+    {
+      "offset": 120,
+      "event_id": "evt-120",
+      "event_type": "UPDATE_NODE_ATTRIBUTES",
+      "payload_hash": "8f7d..."
+    }
+  ],
+  "redacted_count": 11
+}
+```
+
+`recent_events` contains graph digests only (event metadata + payload hash), never raw payload bodies.
+
 ## Backpressure behavior
 
 The stream uses a bounded in-memory queue. When the consumer cannot keep up:
@@ -69,6 +97,14 @@ The stream uses a bounded in-memory queue. When the consumer cannot keep up:
 3. a `control`/`backpressure` event reports how many were dropped.
 
 Clients should treat `backpressure` as a gap signal and resynchronize using the reported `cursor_offset`.
+
+## Reconnection and backfill semantics
+
+- Clients should persist the last consumed SSE `id` and reconnect with `Last-Event-ID`.
+- Server resumes from `Last-Event-ID + 1`.
+- If no reconnect marker is available, clients may use `cursor` for explicit backfill start.
+- If both are supplied, the greater offset wins.
+- On `control.kind=backpressure`, clients should treat local state as potentially stale and perform a REST catch-up (`/dashboard/stats`, `/dashboard/recent_events`, `/pii/redactions`) before continuing stream consumption.
 
 ## Transport notes
 
