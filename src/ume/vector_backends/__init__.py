@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable
+from typing import Dict, Iterable, cast
 from types import TracebackType
 import json
 import logging
@@ -25,6 +25,7 @@ from ..plugins.registry import (
     list_plugins,
     register_plugin,
 )
+from ..capability_schema import build_capability_schema
 
 faiss: Any
 try:  # optional dependency
@@ -68,16 +69,28 @@ def register_backend(
     capabilities: set[str] | frozenset[str] | None = None,
 ) -> None:
     """Register a vector backend class under ``name``."""
+    if capabilities is None:
+        raise ValueError(f"Vector backend '{name}' must declare capabilities")
+    declared = frozenset(capabilities)
     register_plugin(
         VECTOR_BACKEND_CAPABILITY,
         name,
         cls,
-        metadata=ConstructorMetadata(capabilities=frozenset(capabilities or set())),
+        metadata=ConstructorMetadata(
+            capabilities=declared,
+            details={
+                "capability_schema": build_capability_schema(
+                    domain="vector",
+                    backend=name,
+                    declared=declared,
+                ).as_dict()
+            },
+        ),
     )
 
 def get_backend(name: str) -> type[VectorBackend]:
     """Return the backend class registered under ``name``."""
-    return get_plugin_constructor(VECTOR_BACKEND_CAPABILITY, name)
+    return cast(type[VectorBackend], get_plugin_constructor(VECTOR_BACKEND_CAPABILITY, name))
 
 def available_backends() -> Iterable[str]:
     """Return names of all registered backends."""
@@ -96,6 +109,14 @@ def load_entrypoints() -> None:
             metadata=ConstructorMetadata(
                 source="entry_point",
                 entry_point_group=ENTRYPOINT_GROUP,
+                capabilities=frozenset(),
+                details={
+                    "capability_schema": build_capability_schema(
+                        domain="vector",
+                        backend=name,
+                        declared=frozenset(),
+                    ).as_dict()
+                },
             ),
         )
 

@@ -1,8 +1,9 @@
+import pytest
 import types
 import importlib
 from types import SimpleNamespace
 
-from ume.vector_backends import get_backend, available_backends, load_entrypoints
+from ume.vector_backends import get_backend, available_backends, load_entrypoints, register_backend
 from ume.vector_store import VectorBackend
 from ume.plugins.registry import clear_plugins
 
@@ -70,3 +71,8 @@ def test_backend_loaded_on_import(monkeypatch):
 
     assert "dummy_imp" in reloaded.available_backends()
     assert reloaded.get_backend("dummy_imp") is DummyBackend
+
+
+def test_register_backend_requires_capabilities() -> None:
+    with pytest.raises(ValueError, match="must declare capabilities"):
+        register_backend("invalid", DummyBackend)
