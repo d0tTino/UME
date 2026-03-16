@@ -4,6 +4,10 @@ This document is the canonical architecture reference for backend selection and
 runtime bootstrap in UME. It describes the *actual* creation paths used by the
 codebase today.
 
+## Glossary
+
+Use [`GLOSSARY.md`](GLOSSARY.md) as the single source for canonical terminology (`backend`, `adapter`, `canonical event`, and `canonical path`).
+
 
 ## Layered package layout
 
@@ -42,7 +46,7 @@ All mutation-capable ingress routes (API, CLI, Kafka, gRPC, and compatibility co
 
 
 
-### Deprecation migration snippets
+## Legacy migration
 
 ```python
 # old mutation path
@@ -187,7 +191,7 @@ remains lightweight:
 Use this function from long-running entry points (API service, CLI workers,
 projection workers) before constructing graph/vector resources.
 
-## 4) Concept Mapping (legacy -> current)
+## 4) Legacy migration (term mapping)
 
 | Legacy term | Current term/API |
 | --- | --- |
