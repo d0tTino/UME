@@ -1,5 +1,12 @@
 Below is a **phase-by-phase technical road map** that turns Universal Memory + Guardian-Angel into a production-grade, 24 × 7 platform.  Tasks are grouped by the P0–P3 priorities you already approved; “exit criteria” show when to advance.  Hardware guidance and DevOps notes ensure a smooth hand-off from your powerful desktop to a persistent server.
 
+> **Backend reality check (current codebase):**
+> - **Registered graph backends:** `sqlite`/`persistent`, `postgres`, `redis`, `arango`, and lazy-loaded `neo4j`.
+> - **Registered vector backends:** `faiss`, `chroma`, `milvus`, and optional `pinecone`.
+> - **Plugin mechanism:** both graph/vector backends use the shared plugin registry with discovery through Python entry points (`ume.graph_adapters`, `ume.vector_backends`) and optional module-path discovery hooks.
+>
+> This roadmap now uses that backend/plugin terminology as the source of truth.
+
 ---
 ## Exocortic Eudaemon pillars
 
@@ -32,6 +39,37 @@ Below is a **phase-by-phase technical road map** that turns Universal Memory + G
 | **0-D** | Task DAG Manager | Memory | Data scientists | Dag visualises, waits for human | M |
 | **0-E** | Resource Scheduler | Operational Resilience | Ops team | Gaming session shows zero dropped FPS | S |
 | **0-F** | Angel Bridge | Productive Collaboration | Product owner | Angel digest summarises daily log | M |
+
+### Backend and plugin foundation status (P0 scope)
+
+| Area | Current state | Acceptance criteria (testable) | Concrete module(s) / job(s) |
+| --- | --- | --- | --- |
+| Graph backend registry | Built-ins and lazy backend registration are implemented. | `create_graph_adapter()` resolves configured backend and fails fast on unknown backend key. | `src/ume/adapters/bootstrap.py`, `src/ume/adapters/registry.py`, `src/ume/factories.py`; CI `architecture-tests-required`, `unit-tests-required` |
+| Vector backend registry | Built-in vector backends are registered at import and selected by `UME_VECTOR_BACKEND`. | `create_vector_store()` instantiates the configured backend (`faiss`, `chroma`, `milvus`, `pinecone` when installed). | `src/ume/vector_backends/__init__.py`, `src/ume/vector_store.py`; CI `unit-tests-required` |
+| External plugin discovery | Entry-point and module-path discovery contracts are present for extension packages. | `ume-cli plugins` lists discovered plugins; registry metadata includes capability schema. | `src/ume/plugins/registry.py`, `src/ume/adapters/registry.py`, `src/ume/vector_backends/__init__.py`; CI `lint-and-install`, `architecture-tests-required` |
+
+### Retired backend note
+
+- **LanceDB is marked removed/deprecated from roadmap planning.**
+  - **Rationale:** it is not registered in the current vector backend registry, not configurable through documented backend keys, and has no maintained module in the active backend bootstrap path.
+  - **Implication for planning:** no P0/P1 milestone should imply LanceDB support unless a dedicated reintroduction work item (below) is accepted.
+
+### Optional reintroduction contract (only if LanceDB is intentionally revived)
+
+If LanceDB is reintroduced later, it must satisfy all of the following before roadmap status can move from “planned” to “active”:
+
+1. **Interface contract**
+   - Implement the `VectorBackend` interface used by `create_vector_store()` (add/add_many/remove/query/persist/load/close semantics matching existing backends).
+   - Register via `register_backend("lancedb", ...)` with declared capabilities and capability schema metadata.
+   - Support plugin discovery through `ume.vector_backends` entry points.
+2. **Configuration contract**
+   - `UME_VECTOR_BACKEND=lancedb` documented in config templates and validated in runtime settings.
+   - Required env vars (if any) explicitly documented with defaults/fallback behavior.
+3. **Acceptance criteria (testable)**
+   - Unit tests for CRUD + query behavior parity with current backend contract.
+   - Architecture tests validating plugin registration metadata/capability schema.
+   - CI green in `unit-tests-required` and `architecture-tests-required` with `UME_VECTOR_BACKEND=lancedb` test coverage.
+
 ## Hardware pivot planning (parallel with P0)
 
 ### Why EPYC
@@ -103,6 +141,19 @@ Exit: Angel suggests faster model when task slows; provenance UI shows why a bel
 4. **P1 features live** – LLM Ferry + dashboard in daily use.
 5. **Cluster scale-out** – add 2 × 32-core nodes; enable Redpanda tiered storage.
 6. **P2 intelligence** – LoRA tuner producing weekly adapters; Angel auto-selects fastest.
+
+### Milestone-to-module/job traceability
+
+| Milestone | Primary modules/services | Verification jobs/checks |
+| --- | --- | --- |
+| 1. P0 complete, local | `src/ume/services/projection_worker.py`, `src/ume/services/mutate.py`, `src/ume/factories.py` | CI `compose-smoke`, `integration-tests-required`, `replay-determinism-required` |
+| 2. Server procured & imaged | `docker/` stack config + runtime bootstrapping entry points | CI `compose-smoke` |
+| 3. State migration | Event/schema contracts under `src/ume/schemas/` and migration scripts under `scripts/` | CI `event-schema-regression-required`, `replay-determinism-required` |
+| 4. P1 features live | API/CLI/frontend integration points (`src/ume/api*.py`, `ume_cli.py`, `frontend/`) | CI `unit-tests-required`, `integration-tests-required` |
+| 5. Cluster scale-out | Messaging + deployment plumbing (`docker/`, deployment automation, topic config) | CI `compose-smoke` + environment-specific load tests |
+| 6. P2 intelligence | Tuning/selection logic in model-orchestration modules (planned P2 workstream) | CI `architecture-tests-required`, `unit-tests-required` + dedicated P2 benchmarks |
+
+This traceability matrix is the gate for roadmap claims: each milestone should reference at least one concrete module and one runnable CI job/check.
 
 With that scaffold you can start coding tomorrow, migrate seamlessly when the server arrives, and layer on intelligence without ever rewriting the foundations.
 
