@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import hashlib
-import json
 import time
 from typing import Any, AsyncGenerator, Dict, List
 from uuid import uuid4
@@ -34,7 +32,8 @@ from .event import EventError
 from .processing import ProcessingError
 from .graph_schema import DEFAULT_SCHEMA
 from .event_ledger import event_ledger
-from .realtime_contracts import GraphDigestControlEvent, GraphDigestEvent
+from .realtime_contracts import GraphDigestControlEvent
+from .realtime_digest import to_graph_digest
 from .rbac_adapter import AccessDeniedError
 from ume.services.ingest import ingest_event, ingest_events_batch
 
@@ -234,25 +233,6 @@ class EventRequest(BaseModel):
         }
     
 
-def _event_payload_hash(payload: Dict[str, Any] | None) -> str:
-    serialized = json.dumps(payload or {}, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-
-
-def _to_graph_digest(offset: int, event: Dict[str, Any]) -> GraphDigestEvent:
-    return GraphDigestEvent(
-        offset=offset,
-        event_id=event.get("event_id") or event.get("eventId"),
-        event_type=str(event.get("event_type") or event.get("eventType") or "UNKNOWN"),
-        source_service=event.get("source") or event.get("sourceService"),
-        schema_version=event.get("schema_version") or event.get("schemaVersion"),
-        timestamp=event.get("timestamp"),
-        node_id=event.get("node_id"),
-        target_node_id=event.get("target_node_id") or event.get("targetNodeId"),
-        label=event.get("label"),
-        payload_hash=_event_payload_hash(event.get("payload")),
-    )
-
 
 @router.get("/query")
 def run_cypher(
@@ -365,7 +345,7 @@ async def api_graph_digest_stream(
             batch = event_ledger.range(start=next_offset, limit=100)
             if batch:
                 for offset, event in batch:
-                    digest = _to_graph_digest(offset, event)
+                    digest = to_graph_digest(offset, event)
                     frame = {"event": "graph_digest", "id": str(offset), "data": digest.model_dump_json()}
                     if queue.full():
                         try:
