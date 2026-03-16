@@ -198,3 +198,40 @@ def test_vector_capability_negotiation(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert negotiation.supports("vector_similarity")
     assert negotiation.fallbacks == {}
+
+
+def test_get_capability_manifest_includes_versioned_domains(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        factories,
+        "graph_capability_negotiation",
+        lambda backend=None: factories.CapabilityNegotiation(
+            supported=frozenset({"transactional"}),
+            fallbacks={"native_acl": "application_side_acl_filtering"},
+        ),
+    )
+    monkeypatch.setattr(
+        factories,
+        "vector_capability_negotiation",
+        lambda backend=None: factories.CapabilityNegotiation(
+            supported=frozenset({"vector_similarity"}),
+        ),
+    )
+    monkeypatch.setattr(factories, "register_builtin_adapters", lambda: None)
+    monkeypatch.setattr(factories, "available_adapters", lambda: ["langgraph"])
+    monkeypatch.setattr(
+        factories,
+        "integration_capability_negotiation",
+        lambda backend: factories.CapabilityNegotiation(
+            supported=frozenset({"workflow_orchestration"}),
+        ),
+    )
+
+    payload = factories.get_capability_manifest(
+        graph_backend="postgres",
+        vector_backend="faiss",
+    )
+
+    assert payload["graph"]["schema_version"] == "1.0"
+    assert payload["graph"]["domain"] == "graph"
+    assert payload["vector"]["domain"] == "vector"
+    assert payload["integrations"]["langgraph"]["domain"] == "integration"

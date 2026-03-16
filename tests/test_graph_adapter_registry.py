@@ -31,7 +31,7 @@ class _Adapter:
 
 
 def test_registry_default_backend_lookup() -> None:
-    register_graph_backend("persistent", _Adapter)
+    register_graph_backend("persistent", _Adapter, capabilities={"bulk_write"})
 
     adapter = create_registered_graph_adapter("unknown", "graph.db", default="persistent")
 
@@ -40,7 +40,7 @@ def test_registry_default_backend_lookup() -> None:
 
 
 def test_factory_can_use_runtime_registered_backend(monkeypatch: pytest.MonkeyPatch) -> None:
-    register_graph_backend("custom", _Adapter)
+    register_graph_backend("custom", _Adapter, capabilities={"bulk_write"})
     monkeypatch.setattr(factories, "register_builtin_graph_backends", lambda: None)
     monkeypatch.setattr(
         factories,
@@ -62,7 +62,7 @@ def test_discover_graph_backends_from_modules() -> None:
 
     def _register(register, register_lazy) -> None:  # noqa: ANN001
         del register_lazy
-        register("module_custom", _Adapter)
+        register("module_custom", _Adapter, capabilities={"bulk_write"})
 
     module.register_graph_backends = _register  # type: ignore[attr-defined]
     sys.modules[module.__name__] = module
@@ -95,6 +95,12 @@ def test_discover_graph_backends_from_entry_points(monkeypatch: pytest.MonkeyPat
     assert isinstance(adapter, _Adapter)
     assert adapter.db_path == "from-ep.db"
 
+
+
+
+def test_register_graph_backend_requires_capabilities() -> None:
+    with pytest.raises(ValueError, match="must declare capabilities"):
+        register_graph_backend("missing", _Adapter)
 
 def test_registry_exposes_backend_capabilities() -> None:
     register_graph_backend("postgres", _Adapter, capabilities={"transactional"})

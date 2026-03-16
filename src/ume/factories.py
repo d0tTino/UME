@@ -11,11 +11,17 @@ from .rbac_adapter import RoleBasedGraphAdapter
 from .vector_store import VectorBackend, create_vector_store as _create_vector_store
 from .plugins.registry import get_plugin_metadata
 from .vector_backends import VECTOR_BACKEND_CAPABILITY
+from .integrations.registry import (
+    available_adapters,
+    get_adapter_capabilities,
+    register_builtin_adapters,
+)
 from .capabilities import (
     CapabilityNegotiation,
     NATIVE_ACL_CAPABILITY,
     VECTOR_SIMILARITY_CAPABILITY,
 )
+from .capability_schema import build_capability_schema
 from .memory import EpisodicMemory, SemanticMemory
 
 from .graph_adapter import IGraphAdapter
@@ -57,6 +63,61 @@ def vector_capability_negotiation(backend: str | None = None) -> CapabilityNegot
         fallbacks[VECTOR_SIMILARITY_CAPABILITY] = "semantic_search_disabled"
     return CapabilityNegotiation(supported=supported, fallbacks=fallbacks)
 
+
+
+
+def integration_capability_negotiation(backend: str) -> CapabilityNegotiation:
+    """Return integration adapter capability support metadata."""
+    register_builtin_adapters()
+    supported = get_adapter_capabilities(backend)
+    return CapabilityNegotiation(supported=supported, fallbacks={})
+
+
+def get_capability_manifest(
+    *,
+    graph_backend: str | None = None,
+    vector_backend: str | None = None,
+    integration_backends: list[str] | None = None,
+) -> dict[str, object]:
+    """Return canonical backend capability negotiation metadata."""
+    graph_name = (graph_backend or settings.UME_GRAPH_BACKEND).lower()
+    vector_name = (vector_backend or settings.UME_VECTOR_BACKEND).lower()
+
+    graph_negotiation = graph_capability_negotiation(graph_name)
+    vector_negotiation = vector_capability_negotiation(vector_name)
+
+    register_builtin_adapters()
+    adapter_names = integration_backends or sorted(available_adapters())
+    integration_payload: dict[str, dict[str, object]] = {}
+    for adapter_name in adapter_names:
+        negotiation = integration_capability_negotiation(adapter_name)
+        integration_payload[adapter_name] = build_capability_schema(
+            domain="integration",
+            backend=adapter_name,
+            declared=negotiation.supported,
+            supported=negotiation.supported,
+            fallbacks=negotiation.fallbacks,
+        ).as_dict()
+
+    return {
+        "graph_backend": graph_name,
+        "vector_backend": vector_name,
+        "graph": build_capability_schema(
+            domain="graph",
+            backend=graph_name,
+            declared=graph_negotiation.supported,
+            supported=graph_negotiation.supported,
+            fallbacks=graph_negotiation.fallbacks,
+        ).as_dict(),
+        "vector": build_capability_schema(
+            domain="vector",
+            backend=vector_name,
+            declared=vector_negotiation.supported,
+            supported=vector_negotiation.supported,
+            fallbacks=vector_negotiation.fallbacks,
+        ).as_dict(),
+        "integrations": integration_payload,
+    }
 
 def create_graph_adapter(
     db_path: str | None = None,

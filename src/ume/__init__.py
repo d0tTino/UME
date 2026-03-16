@@ -108,6 +108,7 @@ _COMPAT_EXPORTS: dict[str, tuple[str, str]] = {
     "create_graph": ("ume.resources", "create_graph"),
     "graph_factory": ("ume.resources", "graph_factory"),
     "vector_store_factory": ("ume.resources", "vector_store_factory"),
+    "get_capability_manifest": ("ume.factories", "get_capability_manifest"),
     "start_dossier_snapshot_scheduler": (
         "ume.dossier.scheduler",
         "start_dossier_snapshot_scheduler",

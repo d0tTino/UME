@@ -52,7 +52,7 @@ from .rbac_adapter import AccessDeniedError
 from .graph_adapter import IGraphAdapter  # noqa: F401
 from .vector_store import VectorStoreListener
 from .vector_outbox import VectorOutboxDispatcher
-from .factories import create_vector_store, graph_capability_negotiation, vector_capability_negotiation
+from .factories import create_vector_store, get_capability_manifest
 from ._internal.listeners import register_listener, unregister_listener
 
 
@@ -354,14 +354,13 @@ async def validation_error_handler(
 
 
 
+@app.get("/capabilities")
+def capabilities() -> dict[str, Any]:
+    """Canonical capability negotiation endpoint for all backend domains."""
+    return get_capability_manifest()
+
+
 @app.get("/health/capabilities")
 def health_capabilities() -> dict[str, Any]:
-    """Expose backend capability support and active fallbacks."""
-    graph_backend = settings.UME_GRAPH_BACKEND.lower()
-    vector_backend = settings.UME_VECTOR_BACKEND.lower()
-    return {
-        "graph_backend": graph_backend,
-        "vector_backend": vector_backend,
-        "graph": graph_capability_negotiation(graph_backend).as_dict(),
-        "vector": vector_capability_negotiation(vector_backend).as_dict(),
-    }
+    """Backwards-compatible alias for the canonical capability endpoint."""
+    return capabilities()

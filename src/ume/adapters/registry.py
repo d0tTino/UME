@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from importlib import import_module
+from typing import cast
 
 from ume.graph_adapter import IGraphAdapter
 from ume.plugins.registry import (
@@ -17,6 +18,7 @@ from ume.plugins.registry import (
     register_lazy_plugin,
     register_plugin,
 )
+from ume.capability_schema import build_capability_schema
 
 GraphAdapterConstructor = Callable[[str | None], IGraphAdapter]
 LazyConstructorLoader = Callable[[], GraphAdapterConstructor]
@@ -36,11 +38,25 @@ def register_graph_backend(
     capabilities: set[str] | frozenset[str] | None = None,
 ) -> None:
     """Register a graph backend constructor under ``name``."""
+    if capabilities is None:
+        raise GraphAdapterRegistrationError(
+            f"Graph backend '{name}' must declare capabilities"
+        )
+    declared = frozenset(capabilities)
     register_plugin(
         GRAPH_BACKEND_CAPABILITY,
         name,
         constructor,
-        metadata=ConstructorMetadata(capabilities=frozenset(capabilities or set())),
+        metadata=ConstructorMetadata(
+            capabilities=declared,
+            details={
+                "capability_schema": build_capability_schema(
+                    domain="graph",
+                    backend=name,
+                    declared=declared,
+                ).as_dict()
+            },
+        ),
     )
 
 
@@ -51,11 +67,26 @@ def register_lazy_graph_backend(
     capabilities: set[str] | frozenset[str] | None = None,
 ) -> None:
     """Register a deferred loader for backend ``name``."""
+    if capabilities is None:
+        raise GraphAdapterRegistrationError(
+            f"Graph backend '{name}' must declare capabilities"
+        )
+    declared = frozenset(capabilities)
     register_lazy_plugin(
         GRAPH_BACKEND_CAPABILITY,
         name,
         loader,
-        metadata=ConstructorMetadata(lazy=True, capabilities=frozenset(capabilities or set())),
+        metadata=ConstructorMetadata(
+            lazy=True,
+            capabilities=declared,
+            details={
+                "capability_schema": build_capability_schema(
+                    domain="graph",
+                    backend=name,
+                    declared=declared,
+                ).as_dict()
+            },
+        ),
     )
 
 
@@ -79,11 +110,14 @@ def create_registered_graph_adapter(
     default: str | None = None,
 ) -> IGraphAdapter:
     """Instantiate backend ``name`` using the registration table."""
-    return create_plugin(
-        GRAPH_BACKEND_CAPABILITY,
-        name,
-        db_path,
-        default=default,
+    return cast(
+        IGraphAdapter,
+        create_plugin(
+            GRAPH_BACKEND_CAPABILITY,
+            name,
+            db_path,
+            default=default,
+        ),
     )
 
 
@@ -110,7 +144,7 @@ def clear_graph_backend_registry() -> None:
 
 def _register_external_loaded_object(name: str, loaded: object) -> None:
     if callable(loaded):
-        register_graph_backend(name, loaded)
+        register_graph_backend(name, loaded, capabilities=set())
         return
     if isinstance(loaded, Mapping):
         for backend_name, constructor in loaded.items():
@@ -118,7 +152,7 @@ def _register_external_loaded_object(name: str, loaded: object) -> None:
                 raise GraphAdapterRegistrationError(
                     f"Constructor for backend '{backend_name}' is not callable"
                 )
-            register_graph_backend(str(backend_name), constructor)
+            register_graph_backend(str(backend_name), constructor, capabilities=set())
         return
     raise GraphAdapterRegistrationError(
         f"Entry point '{name}' must load a constructor or backend mapping"
