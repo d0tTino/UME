@@ -13,10 +13,7 @@ via its `token` argument and attaches it automatically.
 
 ## Canonical terminology
 
-- **backend**: selected runtime implementation (`UME_GRAPH_BACKEND`, `UME_VECTOR_BACKEND`).
-- **adapter**: interface implementation created for a backend (for example via `create_graph_adapter()`).
-- **canonical event**: normalized event payload used by policy/projection paths.
-- **orchestrator**: `ume.pipeline.core.EventPipelineOrchestrator`, the canonical stage coordinator.
+Use [`GLOSSARY.md`](GLOSSARY.md) as the single source for canonical terms used in this reference.
 
 ## Backend Factory and Plugin Terms
 
@@ -26,7 +23,7 @@ via its `token` argument and attaches it automatically.
   - `ume.graph_adapters` for graph backends
   - `ume.vector_backends` for vector backends
 
-## Concept Mapping (legacy -> current)
+## Legacy migration
 
 | Legacy term | Current term/API |
 | --- | --- |

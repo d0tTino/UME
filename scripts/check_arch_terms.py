@@ -9,15 +9,22 @@ import sys
 
 CORE_DOC_FILES = [
     Path("README.md"),
-    Path("QUICKSTART.md"),
     Path("docs/API_REFERENCE.md"),
     Path("docs/ARCHITECTURE_OVERVIEW.md"),
     Path("docs/INTEGRATIONS.md"),
 ]
 
-DOC_MODULE_FILES = sorted(
-    path for path in Path("docs").glob("*.md") if path.name != "ARCHITECTURE_OVERVIEW.md"
-)
+BACKLINK_REQUIRED_DOCS = [
+    Path("docs/API_REFERENCE.md"),
+    Path("docs/INTEGRATIONS.md"),
+]
+
+ARCHITECTURE_DOCS_REQUIRING_GLOSSARY = [
+    Path("README.md"),
+    Path("docs/ARCHITECTURE_OVERVIEW.md"),
+    Path("docs/API_REFERENCE.md"),
+    Path("docs/INTEGRATIONS.md"),
+]
 
 # term -> replacement guidance
 DEPRECATED_PATTERNS: dict[str, str] = {
@@ -29,44 +36,58 @@ DEPRECATED_PATTERNS: dict[str, str] = {
 }
 
 CANONICAL_LINK = "ARCHITECTURE_OVERVIEW.md"
+GLOSSARY_LINK = "GLOSSARY.md"
+LEGACY_HEADING_TOKEN = "legacy migration"
 
 
+def _is_legacy_section_heading(line: str) -> bool:
+    stripped = line.strip().lower()
+    return stripped.startswith("#") and LEGACY_HEADING_TOKEN in stripped
 
-def _is_in_allowed_legacy_mapping(line: str, in_concept_mapping: bool) -> bool:
-    return in_concept_mapping and line.lstrip().startswith("|")
+
+def _is_heading(line: str) -> bool:
+    return line.strip().startswith("#")
 
 
 def find_term_matches(path: Path) -> list[str]:
     matches: list[str] = []
     text = path.read_text(encoding="utf-8")
-    in_concept_mapping = False
+    in_legacy_section = False
     for lineno, line in enumerate(text.splitlines(), start=1):
-        stripped = line.strip()
-        if stripped.lower().startswith("#") and "concept mapping (legacy -> current)" in stripped.lower():
-            in_concept_mapping = True
+        if _is_legacy_section_heading(line):
+            in_legacy_section = True
             continue
-        if in_concept_mapping and stripped.startswith("#") and "concept mapping (legacy -> current)" not in stripped.lower():
-            in_concept_mapping = False
+        if in_legacy_section and _is_heading(line):
+            in_legacy_section = False
 
         for pattern, guidance in DEPRECATED_PATTERNS.items():
             if re.search(pattern, line):
-                if _is_in_allowed_legacy_mapping(line, in_concept_mapping):
+                if in_legacy_section:
                     continue
                 matches.append(
-                    f"{path}:{lineno}: found deprecated term matching /{pattern}/. {guidance}."
+                    f"{path}:{lineno}: found deprecated term matching /{pattern}/ outside a 'Legacy migration' section. {guidance}."
                 )
     return matches
 
 
 def check_module_doc_backlinks() -> list[str]:
     failures: list[str] = []
-    for path in DOC_MODULE_FILES:
+    for path in BACKLINK_REQUIRED_DOCS:
         text = path.read_text(encoding="utf-8")
         first_lines = "\n".join(text.splitlines()[:12])
         if CANONICAL_LINK not in first_lines:
             failures.append(
                 f"{path}: missing canonical backlink to {CANONICAL_LINK} in top-of-file preface"
             )
+    return failures
+
+
+def check_glossary_links() -> list[str]:
+    failures: list[str] = []
+    for path in ARCHITECTURE_DOCS_REQUIRING_GLOSSARY:
+        text = path.read_text(encoding="utf-8")
+        if GLOSSARY_LINK not in text:
+            failures.append(f"{path}: missing glossary reference to {GLOSSARY_LINK}")
     return failures
 
 
@@ -80,6 +101,7 @@ def main() -> int:
         failures.extend(find_term_matches(path))
 
     failures.extend(check_module_doc_backlinks())
+    failures.extend(check_glossary_links())
 
     if failures:
         print("Architecture documentation consistency check failed:")

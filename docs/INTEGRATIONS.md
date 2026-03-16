@@ -9,10 +9,7 @@ are provided with the `Async` prefix.
 
 ## Canonical terminology
 
-- **backend**: runtime implementation selected by configuration (for example graph/vector backends).
-- **adapter**: bridge layer used by integrations and graph/vector systems.
-- **canonical event**: normalized event payload forwarded by integration clients.
-- **orchestrator**: `EventPipelineOrchestrator`, which processes canonical events after ingestion.
+Use [`GLOSSARY.md`](GLOSSARY.md) as the single source for canonical terms used by integration docs.
 
 ### Authentication
 Set `UME_API_TOKEN` in your environment or pass ``api_key`` when creating a
@@ -214,6 +211,10 @@ register_adapter("my-adapter", MyAdapter)
 
 The adapter can then be retrieved with
 ``get_adapter("my-adapter")`` and used like any built-in client.
+
+## Legacy migration
+
+In graph-backend context, historical naming such as `UME_GRAPH_ADAPTER` or `get_adapter(...)` should be treated as legacy terminology. Use `UME_GRAPH_BACKEND` with `create_graph_adapter()` for current graph backend selection.
 
 > Note: this integration registry is separate from graph backend selection.
 > Graph backends are instantiated by
