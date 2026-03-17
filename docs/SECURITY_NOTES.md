@@ -90,3 +90,5 @@ Use these settings as the minimum baseline for staging/production environments:
 - If Kafka uses SASL (`SASL_SSL` or `SASL_PLAINTEXT`), set `KAFKA_SASL_USERNAME` and `KAFKA_SASL_PASSWORD` (or `KAFKA_SASL_PASSWORD_FILE`).
 
 The Docker Compose file includes optional profiles (`secure-kafka`, `secure-api`) and secret-file mounts to support this baseline in local and self-hosted deployments.
+
+For local Compose usage, generate secret files at bootstrap time with `./scripts/bootstrap_docker_secrets.sh` (or mount external files by setting `*_SECRET_FILE` compose variables). Do not commit generated `docker/secrets/*.txt` files.

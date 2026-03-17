@@ -6,6 +6,8 @@ The `.env` file allows you to override default settings defined in `src/ume/conf
 
 An `env.example` file with the following contents is included at the project root.
 
+For Docker Compose, secrets must be supplied via environment variables and generated into `docker/secrets/*.txt` at bootstrap (`./scripts/bootstrap_docker_secrets.sh`), or by pointing compose to externally mounted files with `NEO4J_PASSWORD_SECRET_FILE`, `KAFKA_SASL_PASSWORD_SECRET_FILE`, `UME_API_TOKEN_SECRET_FILE`, and `UME_OAUTH_PASSWORD_SECRET_FILE`.
+
 ```bash
 # Path where the CLI stores its SQLite database
 UME_CLI_DB=./ume.db
