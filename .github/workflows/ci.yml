@@ -23,6 +23,10 @@ jobs:
           python-version: '3.12'
           run: ${{ steps.changes.outputs.run }}
 
+      - name: Enforce docker secrets guard
+        if: steps.changes.outputs.run == 'true'
+        run: bash scripts/check_docker_secrets_guard.sh
+
       - name: Run pre-commit
         if: steps.changes.outputs.run == 'true'
         run: poetry run pre-commit run --all-files --show-diff-on-failure --color always

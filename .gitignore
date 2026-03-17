@@ -184,3 +184,8 @@ feedback.db
 event_ledger.db
 vectors.faiss
 vectors.faiss.json
+# Docker runtime secret files (generated locally)
+docker/secrets/*.txt
+!docker/secrets/*.example
+!docker/secrets/README.md
+

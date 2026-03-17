@@ -27,12 +27,22 @@ This quickstart shows how to run a simple producer and consumer locally.
    docker run -d -p 9092:9092 -p 9644:9644 --name redpanda docker.redpanda.com/vectorized/redpanda:latest redpanda start
    ```
 
-4. In one terminal, start the demo consumer:
+
+4. If you plan to run the Docker Compose stack, bootstrap runtime secrets first:
+   ```
+   export NEO4J_PASSWORD=<your-neo4j-password>
+   export UME_API_TOKEN=<your-api-token>
+   export UME_OAUTH_PASSWORD=<your-oauth-password>
+   # Optional when using SASL: export KAFKA_SASL_PASSWORD=<your-kafka-password>
+   ./scripts/bootstrap_docker_secrets.sh
+   ```
+
+5. In one terminal, start the demo consumer:
    ```
    python -m ume.consumer_demo
    ```
 
-5. In another terminal, publish a typed demo event:
+6. In another terminal, publish a typed demo event:
    ```
    python -m ume.producer_demo
    ```
