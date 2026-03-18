@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 
@@ -24,98 +25,142 @@ __all__ = [
     "parse_event",
 ]
 
-_RUNTIME_EXPORTS = {
-    "Neo4jGraph",
-    "VectorBackend",
-    "VectorStore",
-    "VectorStoreListener",
-    "create_default_store",
-    "FaissBackend",
-    "ChromaBackend",
-    "generate_embedding",
-    "OntologyListener",
-    "configure_ontology_graph",
+
+@dataclass(frozen=True)
+class _ShimExport:
+    module: str
+    attr: str
+    deprecation_key: str
+
+
+_RUNTIME_EXPORTS: dict[str, _ShimExport] = {
+    "Neo4jGraph": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.Neo4jGraph",
+    ),
+    "VectorBackend": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.VectorBackend",
+    ),
+    "VectorStore": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.VectorStore",
+    ),
+    "VectorStoreListener": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.VectorStoreListener",
+    ),
+    "create_default_store": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.create_default_store",
+    ),
+    "FaissBackend": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.FaissBackend",
+    ),
+    "ChromaBackend": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.ChromaBackend",
+    ),
+    "generate_embedding": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.generate_embedding",
+    ),
+    "OntologyListener": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.OntologyListener",
+    ),
+    "configure_ontology_graph": _ShimExport(
+        module="ume.bootstrap.runtime",
+        attr="bootstrap_runtime",
+        deprecation_key="ume.__getattr__.runtime_export_fallback.configure_ontology_graph",
+    ),
 }
 
-_COMPAT_EXPORTS: dict[str, tuple[str, str]] = {
-    "MockGraph": ("ume.graph", "MockGraph"),
-    "PersistentGraph": ("ume.persistent_graph", "PersistentGraph"),
-    "PostgresGraph": ("ume.postgres_graph", "PostgresGraph"),
-    "RedisGraphAdapter": ("ume.redis_graph_adapter", "RedisGraphAdapter"),
-    "ArangoGraph": ("ume.arango_graph", "ArangoGraph"),
-    "enable_periodic_snapshot": ("ume.auto_snapshot", "enable_periodic_snapshot"),
-    "disable_periodic_snapshot": ("ume.auto_snapshot", "disable_periodic_snapshot"),
-    "enable_snapshot_autosave_and_restore": (
-        "ume.auto_snapshot",
-        "enable_snapshot_autosave_and_restore",
+_COMPAT_EXPORTS: dict[str, _ShimExport] = {
+    "MockGraph": _ShimExport(
+        module="ume.graph",
+        attr="MockGraph",
+        deprecation_key="ume.__getattr__.compat_exports.MockGraph",
     ),
-    "start_retention_scheduler": ("ume.retention", "start_retention_scheduler"),
-    "stop_retention_scheduler": ("ume.retention", "stop_retention_scheduler"),
-    "start_ledger_compaction_scheduler": (
-        "ume.retention",
-        "start_ledger_compaction_scheduler",
+    "PersistentGraph": _ShimExport(
+        module="ume.persistent_graph",
+        attr="PersistentGraph",
+        deprecation_key="ume.__getattr__.compat_exports.PersistentGraph",
     ),
-    "stop_ledger_compaction_scheduler": (
-        "ume.retention",
-        "stop_ledger_compaction_scheduler",
+    "RoleBasedGraphAdapter": _ShimExport(
+        module="ume.rbac_adapter",
+        attr="RoleBasedGraphAdapter",
+        deprecation_key="ume.__getattr__.compat_exports.RoleBasedGraphAdapter",
     ),
-    "start_memory_aging_scheduler": (
-        "ume.memory_aging",
-        "start_memory_aging_scheduler",
+    "AccessDeniedError": _ShimExport(
+        module="ume.rbac_adapter",
+        attr="AccessDeniedError",
+        deprecation_key="ume.__getattr__.compat_exports.AccessDeniedError",
     ),
-    "stop_memory_aging_scheduler": ("ume.memory_aging", "stop_memory_aging_scheduler"),
-    "start_vector_age_scheduler": ("ume.memory_aging", "start_vector_age_scheduler"),
-    "stop_vector_age_scheduler": ("ume.memory_aging", "stop_vector_age_scheduler"),
-    "RoleBasedGraphAdapter": ("ume.rbac_adapter", "RoleBasedGraphAdapter"),
-    "AccessDeniedError": ("ume.rbac_adapter", "AccessDeniedError"),
-    "PermissionsGraphAdapter": ("ume.permissions_adapter", "PermissionsGraphAdapter"),
-    "PolicyViolationError": ("ume.plugins.alignment", "PolicyViolationError"),
-    "apply_event_to_graph": ("ume.processing", "apply_event_to_graph"),
-    "ProcessingError": ("ume.processing", "ProcessingError"),
-    "log_audit_entry": ("ume.audit", "log_audit_entry"),
-    "get_audit_entries": ("ume.audit", "get_audit_entries"),
-    "snapshot_graph_to_file": ("ume.snapshot", "snapshot_graph_to_file"),
-    "load_graph_from_file": ("ume.snapshot", "load_graph_from_file"),
-    "load_graph_into_existing": ("ume.snapshot", "load_graph_into_existing"),
-    "SnapshotError": ("ume.snapshot", "SnapshotError"),
-    "validate_event_dict": ("ume.schema_utils", "validate_event_dict"),
-    "GraphSchema": ("ume.graph_schema", "GraphSchema"),
-    "load_default_schema": ("ume.graph_schema", "load_default_schema"),
-    "GraphSchemaManager": ("ume.schema_manager", "GraphSchemaManager"),
-    "DEFAULT_SCHEMA_MANAGER": ("ume.schema_manager", "DEFAULT_SCHEMA_MANAGER"),
-    "ssl_config": ("ume.utils", "ssl_config"),
-    "EpisodicMemory": ("ume.memory", "EpisodicMemory"),
-    "SemanticMemory": ("ume.memory", "SemanticMemory"),
-    "ColdMemory": ("ume.memory", "ColdMemory"),
-    "LLMFerry": ("ume.llm_ferry", "LLMFerry"),
-    "score_text": ("ume.reliability", "score_text"),
-    "filter_low_confidence": ("ume.reliability", "filter_low_confidence"),
-    "AgentTask": ("ume.agent_orchestrator", "AgentTask"),
-    "AgentOrchestrator": ("ume.agent_orchestrator", "AgentOrchestrator"),
-    "Supervisor": ("ume.agent_orchestrator", "Supervisor"),
-    "Critic": ("ume.agent_orchestrator", "Critic"),
-    "MessageEnvelope": ("ume.message_bus", "MessageEnvelope"),
-    "ReflectionAgent": ("ume.agent_orchestrator", "ReflectionAgent"),
-    "Task": ("ume.dag_executor", "Task"),
-    "DAGExecutor": ("ume.dag_executor", "DAGExecutor"),
-    "DAGService": ("ume.dag_service", "DAGService"),
-    "ResourceScheduler": ("ume.resource_scheduler", "ResourceScheduler"),
-    "ScheduledTask": ("ume.resource_scheduler", "ScheduledTask"),
-    "Dossier": ("ume.dossier", "Dossier"),
-    "tokenize": ("ume.tokenization", "tokenize"),
-    "create_graph_adapter": ("ume.factories", "create_graph_adapter"),
-    "create_vector_store": ("ume.factories", "create_vector_store"),
-    "create_graph": ("ume.resources", "create_graph"),
-    "graph_factory": ("ume.resources", "graph_factory"),
-    "vector_store_factory": ("ume.resources", "vector_store_factory"),
-    "get_capability_manifest": ("ume.factories", "get_capability_manifest"),
-    "start_dossier_snapshot_scheduler": (
-        "ume.dossier.scheduler",
-        "start_dossier_snapshot_scheduler",
+    "PermissionsGraphAdapter": _ShimExport(
+        module="ume.permissions_adapter",
+        attr="PermissionsGraphAdapter",
+        deprecation_key="ume.__getattr__.compat_exports.PermissionsGraphAdapter",
     ),
-    "stop_dossier_snapshot_scheduler": (
-        "ume.dossier.scheduler",
-        "stop_dossier_snapshot_scheduler",
+    "PolicyViolationError": _ShimExport(
+        module="ume.plugins.alignment",
+        attr="PolicyViolationError",
+        deprecation_key="ume.__getattr__.compat_exports.PolicyViolationError",
+    ),
+    "apply_event_to_graph": _ShimExport(
+        module="ume.processing",
+        attr="apply_event_to_graph",
+        deprecation_key="ume.__getattr__.compat_exports.apply_event_to_graph",
+    ),
+    "ProcessingError": _ShimExport(
+        module="ume.processing",
+        attr="ProcessingError",
+        deprecation_key="ume.__getattr__.compat_exports.ProcessingError",
+    ),
+    "snapshot_graph_to_file": _ShimExport(
+        module="ume.snapshot",
+        attr="snapshot_graph_to_file",
+        deprecation_key="ume.__getattr__.compat_exports.snapshot_graph_to_file",
+    ),
+    "load_graph_from_file": _ShimExport(
+        module="ume.snapshot",
+        attr="load_graph_from_file",
+        deprecation_key="ume.__getattr__.compat_exports.load_graph_from_file",
+    ),
+    "SnapshotError": _ShimExport(
+        module="ume.snapshot",
+        attr="SnapshotError",
+        deprecation_key="ume.__getattr__.compat_exports.SnapshotError",
+    ),
+    "DEFAULT_SCHEMA_MANAGER": _ShimExport(
+        module="ume.schema_manager",
+        attr="DEFAULT_SCHEMA_MANAGER",
+        deprecation_key="ume.__getattr__.compat_exports.DEFAULT_SCHEMA_MANAGER",
+    ),
+    "get_audit_entries": _ShimExport(
+        module="ume.audit",
+        attr="get_audit_entries",
+        deprecation_key="ume.__getattr__.compat_exports.get_audit_entries",
+    ),
+    "Task": _ShimExport(
+        module="ume.dag_executor",
+        attr="Task",
+        deprecation_key="ume.__getattr__.compat_exports.Task",
+    ),
+    "DAGExecutor": _ShimExport(
+        module="ume.dag_executor",
+        attr="DAGExecutor",
+        deprecation_key="ume.__getattr__.compat_exports.DAGExecutor",
     ),
 }
 
@@ -145,8 +190,9 @@ def __getattr__(name: str) -> object:
     if name in _RUNTIME_EXPORTS:
         from .bootstrap.runtime import bootstrap_runtime
 
+        spec = _RUNTIME_EXPORTS[name]
         warn_deprecated(
-            "ume.__getattr__.runtime_export_fallback",
+            spec.deprecation_key,
             detail=(
                 f"Requested symbol ume.{name}. Falling back to compatibility shim. "
                 "Call ume.bootstrap.runtime.bootstrap_runtime() from service entry points."
@@ -157,13 +203,13 @@ def __getattr__(name: str) -> object:
         return runtime_exports[name]
 
     if name in _COMPAT_EXPORTS:
-        mod_name, attr = _COMPAT_EXPORTS[name]
+        spec = _COMPAT_EXPORTS[name]
         warn_deprecated(
-            "ume.__getattr__.compat_exports",
-            detail=f"Requested symbol ume.{name} currently resolves to {mod_name}.{attr}.",
+            spec.deprecation_key,
+            detail=f"Requested symbol ume.{name} currently resolves to {spec.module}.{spec.attr}.",
             stacklevel=2,
         )
-        value: Any = getattr(import_module(mod_name), attr)
+        value: Any = getattr(import_module(spec.module), spec.attr)
         globals()[name] = value
         return value
 

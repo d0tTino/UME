@@ -17,33 +17,24 @@ if _src_path.exists() and str(_src_path) not in sys.path:
     sys.path.insert(0, str(_src_path))
 
 from ume.config import settings
-import ume
 from ume.events.contract import canonicalize_event
-from ume.services.mutate import MutationError
-from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR
-
-# Support tests that provide a lightweight ``ume`` stub without all attributes.
-load_graph_into_existing = getattr(ume, "load_graph_into_existing", lambda *_args, **_kw: None)
-snapshot_graph_to_file = getattr(ume, "snapshot_graph_to_file", lambda *_args, **_kw: None)
-create_graph_adapter = getattr(ume, "create_graph_adapter", lambda *_args, **_kw: None)
-RoleBasedGraphAdapter = getattr(ume, "RoleBasedGraphAdapter", object)
-enable_snapshot_autosave_and_restore = getattr(
-    ume, "enable_snapshot_autosave_and_restore", lambda *_args, **_kw: None
-)
-ProcessingError = getattr(ume, "ProcessingError", Exception)
-EventError = getattr(ume, "EventError", Exception)
-SnapshotError = getattr(ume, "SnapshotError", Exception)
-IGraphAdapter = getattr(ume, "IGraphAdapter", object)
-log_audit_entry = getattr(ume, "log_audit_entry", lambda *_args, **_kw: None)
-get_audit_entries = getattr(ume, "get_audit_entries", lambda *_args, **_kw: [])
+from ume.audit import get_audit_entries, log_audit_entry
+from ume.auto_snapshot import enable_snapshot_autosave_and_restore
 from ume.benchmarks import benchmark_vector_store
+from ume.event import EventError
+from ume.factories import create_graph_adapter
+from ume.graph_adapter import IGraphAdapter
+from ume.rbac_adapter import RoleBasedGraphAdapter
+from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
+from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR
+from ume.services.mutate import MutationError
+from ume.snapshot import SnapshotError, load_graph_into_existing, snapshot_graph_to_file
+from ume.processing import ProcessingError
 
 try:  # optional dependency for federation features
     from ume.federation import MirrorMakerDriver
 except Exception:  # pragma: no cover - federation optional
     MirrorMakerDriver = None  # type: ignore[misc]
-from ume import DEFAULT_SCHEMA_MANAGER
-
 
 class UMEPrompt(Cmd):
     intro = "Welcome to UME CLI. Type help or ? to list commands.\n"
