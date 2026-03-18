@@ -135,7 +135,11 @@ path for graph backends:
 - Optional module discovery from `UME_GRAPH_ADAPTER_MODULES`
 
 This means graph backends can be contributed as plugins and discovered from
-Python package entry points, in addition to built-ins.
+Python package entry points, in addition to built-ins. External registrations
+must now provide explicit capability metadata; `ume.graph_adapters` entry
+points must resolve to either a single backend spec with `constructor` and
+`capabilities`, or a mapping of backend names to those specs. Registrations
+that omit `capabilities` are rejected during discovery.
 
 ## 2) Vector backend creation flow
 

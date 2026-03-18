@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Set as AbstractSet
 from importlib import import_module
-from typing import cast
+from typing import NotRequired, TypedDict, cast
 
 from ume.graph_adapter import IGraphAdapter
 from ume.plugins.registry import (
@@ -25,6 +25,14 @@ LazyConstructorLoader = Callable[[], GraphAdapterConstructor]
 
 GRAPH_BACKEND_CAPABILITY = "graph_backend"
 GRAPH_BACKEND_ENTRYPOINT_GROUP = "ume.graph_adapters"
+
+
+class ExternalGraphBackendSpec(TypedDict):
+    """Strict shape for externally discovered graph backend registrations."""
+
+    constructor: GraphAdapterConstructor
+    capabilities: AbstractSet[str]
+    name: NotRequired[str]
 
 
 class GraphAdapterRegistrationError(PluginRegistrationError):
@@ -121,8 +129,6 @@ def create_registered_graph_adapter(
     )
 
 
-
-
 def get_graph_backend_capabilities(name: str) -> frozenset[str]:
     """Return declared capabilities for backend ``name``."""
     metadata = get_plugin_metadata(GRAPH_BACKEND_CAPABILITY, name)
@@ -131,10 +137,7 @@ def get_graph_backend_capabilities(name: str) -> frozenset[str]:
 
 def available_graph_backends() -> list[str]:
     """Return all known graph backend keys."""
-    return [
-        item["name"]
-        for item in list_plugins(capability=GRAPH_BACKEND_CAPABILITY)
-    ]
+    return [item["name"] for item in list_plugins(capability=GRAPH_BACKEND_CAPABILITY)]
 
 
 def clear_graph_backend_registry() -> None:
@@ -142,20 +145,73 @@ def clear_graph_backend_registry() -> None:
     clear_plugins(capability=GRAPH_BACKEND_CAPABILITY)
 
 
+def _parse_external_backend_spec(
+    entry_name: str,
+    backend_name: str,
+    spec: object,
+) -> tuple[str, GraphAdapterConstructor, AbstractSet[str]]:
+    if not isinstance(spec, Mapping):
+        raise GraphAdapterRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' must provide a mapping "
+            "with constructor and capabilities"
+        )
+
+    constructor = spec.get("constructor")
+    if not callable(constructor):
+        raise GraphAdapterRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' must declare a callable constructor"
+        )
+
+    capabilities = spec.get("capabilities")
+    if capabilities is None:
+        raise GraphAdapterRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' must declare capabilities"
+        )
+    if not isinstance(capabilities, AbstractSet):
+        raise GraphAdapterRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' capabilities must be a set-like collection"
+        )
+
+    resolved_name = spec.get("name")
+    if resolved_name is not None and not isinstance(resolved_name, str):
+        raise GraphAdapterRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' name override must be a string"
+        )
+
+    return (
+        resolved_name or backend_name,
+        cast(GraphAdapterConstructor, constructor),
+        capabilities,
+    )
+
+
 def _register_external_loaded_object(name: str, loaded: object) -> None:
-    if callable(loaded):
-        register_graph_backend(name, loaded, capabilities=set())
-        return
     if isinstance(loaded, Mapping):
-        for backend_name, constructor in loaded.items():
-            if not callable(constructor):
-                raise GraphAdapterRegistrationError(
-                    f"Constructor for backend '{backend_name}' is not callable"
-                )
-            register_graph_backend(str(backend_name), constructor, capabilities=set())
+        if "constructor" in loaded or "capabilities" in loaded:
+            backend_name, constructor, capabilities = _parse_external_backend_spec(
+                name,
+                name,
+                loaded,
+            )
+            register_graph_backend(
+                backend_name, constructor, capabilities=set(capabilities)
+            )
+            return
+
+        for backend_name, spec in loaded.items():
+            resolved_name, constructor, capabilities = _parse_external_backend_spec(
+                name,
+                str(backend_name),
+                spec,
+            )
+            register_graph_backend(
+                resolved_name,
+                constructor,
+                capabilities=set(capabilities),
+            )
         return
     raise GraphAdapterRegistrationError(
-        f"Entry point '{name}' must load a constructor or backend mapping"
+        f"Entry point '{name}' must load a backend spec or backend-spec mapping"
     )
 
 
@@ -197,7 +253,9 @@ def discover_external_graph_backends(*, module_paths: Iterable[str] = ()) -> Non
     discover_graph_backends_from_modules(module_paths)
 
 
-def ensure_external_graph_backends_discovered(*, module_paths: Iterable[str] = ()) -> None:
+def ensure_external_graph_backends_discovered(
+    *, module_paths: Iterable[str] = ()
+) -> None:
     """Run external discovery once per process."""
     ensure_plugins_discovered(
         capability=GRAPH_BACKEND_CAPABILITY,

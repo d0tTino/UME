@@ -1467,6 +1467,22 @@ vector store.
 
 Use `ume-cli plugins` to inspect registered plugins across capabilities, or
 `ume-cli plugins --capability vector_backend` to filter by one capability.
+
+
+Graph backend plugins discovered through `ume.graph_adapters` must declare
+capabilities explicitly. Each entry point should load either a single backend
+spec:
+
+```python
+{
+    "constructor": YourGraphAdapter,
+    "capabilities": {"bulk_write", "transactional"},
+}
+```
+
+or a mapping of backend names to specs with the same shape. Discovery rejects
+registrations that omit `capabilities`, so plugin packages should treat the
+capability set as required metadata.
 ## Running Tests
 
 Install development dependencies before running tests:
