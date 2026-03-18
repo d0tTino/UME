@@ -1,8 +1,8 @@
 import json
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ume.api import app, configure_graph
 from ume.config import settings
 from ume.event_ledger import EventLedger
 from ume.graph import MockGraph
@@ -17,12 +17,13 @@ class _VectorStoreStub:
         return None
 
 
-def _token(client: TestClient) -> str:
-    response = client.post(
-        "/auth/token",
-        data={"username": settings.UME_OAUTH_USERNAME, "password": settings.UME_OAUTH_PASSWORD},
-    )
-    return response.json()["access_token"]
+def _build_client(graph: MockGraph, vector_store: _VectorStoreStub) -> TestClient:
+    app = FastAPI()
+    app.include_router(dashboard_routes.router)
+    app.dependency_overrides[dashboard_routes.get_current_role] = lambda: settings.UME_OAUTH_ROLE
+    dashboard_routes.get_graph = lambda: graph
+    dashboard_routes.get_vector_store = lambda: vector_store
+    return TestClient(app)
 
 
 def _seed_ledger(ledger: EventLedger, count: int) -> None:
@@ -40,33 +41,44 @@ def _seed_ledger(ledger: EventLedger, count: int) -> None:
         )
 
 
-def _read_dashboard_digest_payloads(
+def _read_dashboard_frames(
     client: TestClient,
     *,
-    token: str,
     expected: int,
     headers: dict[str, str] | None = None,
-) -> list[dict[str, object]]:
-    payloads: list[dict[str, object]] = []
-    req_headers = {"Authorization": f"Bearer {token}", "Accept": "text/event-stream"}
+    query: str = "",
+) -> tuple[list[dict[str, object]], str | None]:
+    frames: list[dict[str, object]] = []
+    req_headers = {"Authorization": "Bearer test-token", "Accept": "text/event-stream"}
     if headers:
         req_headers.update(headers)
 
-    with client.stream("GET", f"/dashboard/stream?max_events={expected}", headers=req_headers) as response:
+    content_type = None
+    with client.stream("GET", f"/dashboard/stream?max_events={expected}{query}", headers=req_headers) as response:
         assert response.status_code == 200
-        pending = False
+        content_type = response.headers.get("content-type")
+        current: dict[str, str] = {}
         for line in response.iter_lines():
-            if not line:
-                continue
-            if line.startswith("event: dashboard_digest"):
-                pending = True
-                continue
-            if pending and line.startswith("data: "):
-                payloads.append(json.loads(line[len("data: ") :]))
-                pending = False
-                if len(payloads) >= expected:
+            if line == "":
+                if current.get("data"):
+                    frames.append(
+                        {
+                            "event": current.get("event", "message"),
+                            "id": current.get("id"),
+                            "data": json.loads(current["data"]),
+                        }
+                    )
+                current = {}
+                if len(frames) >= expected:
                     break
-    return payloads
+                continue
+            if line.startswith("event:"):
+                current["event"] = line.split(":", 1)[1].strip()
+            elif line.startswith("id:"):
+                current["id"] = line.split(":", 1)[1].strip()
+            elif line.startswith("data:"):
+                current["data"] = current.get("data", "") + line.split(":", 1)[1].strip()
+    return frames, content_type
 
 
 def test_dashboard_stream_emits_sanitized_updates(tmp_path, monkeypatch) -> None:
@@ -74,39 +86,54 @@ def test_dashboard_stream_emits_sanitized_updates(tmp_path, monkeypatch) -> None
     graph.add_node("n0", {})
     graph.add_node("n1", {})
     graph.add_edge("n0", "n1", "L")
-    configure_graph(graph)
-    app.state.query_engine = type("QE", (), {"execute_cypher": lambda self, q: []})()
-    app.state.vector_store = _VectorStoreStub()
+    vector_store = _VectorStoreStub()
 
     ledger = EventLedger(str(tmp_path / "dashboard_stream.db"))
     _seed_ledger(ledger, 2)
     monkeypatch.setattr(dashboard_routes, "event_ledger", ledger)
 
-    with TestClient(app) as client:
-        payloads = _read_dashboard_digest_payloads(client, token=_token(client), expected=2)
+    with _build_client(graph, vector_store) as client:
+        frames, content_type = _read_dashboard_frames(client, expected=2)
 
-    assert [item["cursor_offset"] for item in payloads] == [0, 1]
-    latest = payloads[-1]
+    assert content_type is not None and content_type.startswith("text/event-stream")
+    assert [frame["event"] for frame in frames] == ["dashboard_digest", "dashboard_digest"]
+    assert [frame["id"] for frame in frames] == ["0", "1"]
+    assert [frame["data"]["cursor_offset"] for frame in frames] == [0, 1]
+    latest = frames[-1]["data"]
     assert latest["stats"] == {"node_count": 2, "edge_count": 1, "vector_index_size": 2}
     assert isinstance(latest["recent_events"], list)
     assert "payload_hash" in latest["recent_events"][0]
+    assert "payload" not in latest["recent_events"][0]
 
 
-def test_dashboard_stream_resumes_with_last_event_id(tmp_path, monkeypatch) -> None:
-    configure_graph(MockGraph())
-    app.state.query_engine = type("QE", (), {"execute_cypher": lambda self, q: []})()
-    app.state.vector_store = _VectorStoreStub()
-
+def test_dashboard_stream_resumes_with_last_event_id_header_precedence(tmp_path, monkeypatch) -> None:
     ledger = EventLedger(str(tmp_path / "dashboard_stream_resume.db"))
-    _seed_ledger(ledger, 4)
+    _seed_ledger(ledger, 5)
     monkeypatch.setattr(dashboard_routes, "event_ledger", ledger)
 
-    with TestClient(app) as client:
-        resumed = _read_dashboard_digest_payloads(
+    with _build_client(MockGraph(), _VectorStoreStub()) as client:
+        frames, _ = _read_dashboard_frames(
             client,
-            token=_token(client),
             expected=2,
             headers={"Last-Event-ID": "1"},
+            query="&lastEventId=0",
         )
 
-    assert [item["cursor_offset"] for item in resumed] == [2, 3]
+    assert [frame["id"] for frame in frames] == ["2", "3"]
+    assert [frame["data"]["cursor_offset"] for frame in frames] == [2, 3]
+
+
+def test_dashboard_stream_uses_greater_of_cursor_and_replay_marker(tmp_path, monkeypatch) -> None:
+    ledger = EventLedger(str(tmp_path / "dashboard_stream_cursor.db"))
+    _seed_ledger(ledger, 5)
+    monkeypatch.setattr(dashboard_routes, "event_ledger", ledger)
+
+    with _build_client(MockGraph(), _VectorStoreStub()) as client:
+        frames, _ = _read_dashboard_frames(
+            client,
+            expected=1,
+            query="&cursor=4&lastEventId=1",
+        )
+
+    assert [frame["id"] for frame in frames] == ["4"]
+    assert frames[0]["data"]["cursor_offset"] == 4

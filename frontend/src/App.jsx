@@ -10,7 +10,7 @@ import GraphNetwork from './GraphNetwork';
 import NodeSearch from './NodeSearch';
 import EdgeList from './EdgeList';
 import LedgerHistory from './LedgerHistory';
-import { subscribeDashboardStream } from './realtimeStream';
+import { createDashboardStreamClient } from './realtimeStream';
 
 const POLICY_CONTENT = {
   'allow.rego': `package ume
@@ -106,8 +106,7 @@ function App() {
 
     loadPolicies();
 
-    const canStream = STREAM_ENABLED && STREAM_TRANSPORT === 'sse';
-    if (!canStream) {
+    if (!STREAM_ENABLED) {
       setStreamStatus('rest');
       void loadStats();
       void loadEvents();
@@ -115,14 +114,15 @@ function App() {
       return;
     }
 
-    setStreamStatus('connecting');
-    const unsubscribe = subscribeDashboardStream({
+    const streamClient = createDashboardStreamClient({ transport: STREAM_TRANSPORT });
+    setStreamStatus(`connecting:${STREAM_TRANSPORT}`);
+    const unsubscribe = streamClient.subscribe({
       token,
       onDigest: (digest) => {
         setStats(digest.stats);
         setEvents(digest.recent_events);
         setRedactedCount(digest.redacted_count);
-        setStreamStatus('connected');
+        setStreamStatus(`connected:${STREAM_TRANSPORT}`);
       },
       onControl: (control) => {
         if (control.kind === 'backpressure' && REST_FALLBACK) {
@@ -133,13 +133,15 @@ function App() {
       },
       onError: () => {
         if (REST_FALLBACK) {
-          setStreamStatus('rest-fallback');
+          setStreamStatus(`rest-fallback:${STREAM_TRANSPORT}`);
           void loadStats();
           void loadEvents();
           void loadRedactions();
+          return;
         }
+        setStreamStatus(`error:${STREAM_TRANSPORT}`);
       },
-      onReconnect: () => setStreamStatus('reconnecting'),
+      onReconnect: () => setStreamStatus(`reconnecting:${STREAM_TRANSPORT}`),
     });
 
     return () => unsubscribe();
