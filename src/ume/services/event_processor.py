@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from ..audit import log_audit_entry
-from ..event import Event, EventError
+from ..kernel.events import Event, EventError
 from ..events.ingress import IngressAdapter
-from ..graph_adapter import IGraphAdapter
+from ..kernel.graph_adapter import IGraphAdapter
 from ..pipeline.core import EventPipelineOrchestrator, PipelineEnvelope
 from .mutate import (
     MutationError,

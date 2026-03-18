@@ -1,21 +1,5 @@
-from __future__ import annotations
+"""Legacy compatibility exports for event type enum."""
 
-from enum import Enum
+from ..kernel.events import EventType
 
-
-class EventType(str, Enum):
-    """Enumeration of built-in event types."""
-
-    CREATE_NODE = "CREATE_NODE"
-    UPDATE_NODE_ATTRIBUTES = "UPDATE_NODE_ATTRIBUTES"
-    CREATE_EDGE = "CREATE_EDGE"
-    DELETE_EDGE = "DELETE_EDGE"
-    REDACT_NODE = "REDACT_NODE"
-    REDACT_EDGE = "REDACT_EDGE"
-    CREATE_ONTOLOGY_RELATION = "CREATE_ONTOLOGY_RELATION"
-    RESEARCH_JOB_STARTED = "RESEARCH_JOB_STARTED"
-    DATA_SOURCE_QUERIED = "DATA_SOURCE_QUERIED"
-    ENTITY_DISCOVERED = "ENTITY_DISCOVERED"
-    DOCUMENT_ARCHIVED = "DOCUMENT_ARCHIVED"
-    ANOMALY_DETECTED = "ANOMALY_DETECTED"
-
+__all__ = ["EventType"]

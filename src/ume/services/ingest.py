@@ -7,11 +7,11 @@ from typing import Iterable, Dict, Any, cast, TYPE_CHECKING
 from google.protobuf.json_format import MessageToDict
 from ume_client import events_pb2 as _events_pb2
 from google.protobuf import struct_pb2
-from ..event import Event, EventError, EventType
+from ..kernel.events import Event, EventError, EventType
 from ..events.ingress import ingest_transport_payload
 from ..events.schema_resolution import resolve_active_schema
-from ..processing import DEFAULT_VERSION, apply_event_to_graph
-from ..graph_adapter import IGraphAdapter
+from ..kernel.processing import DEFAULT_VERSION, apply_event_to_graph
+from ..kernel.graph_adapter import IGraphAdapter
 from ..async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from ..anomaly_detection import AnomalyDetector
 from .mutate import (

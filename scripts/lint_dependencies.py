@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 KERNEL_DIR = ROOT / "src" / "ume" / "kernel"
-DISALLOWED = "ume.domains"
+KERNEL_PREFIX = "ume.kernel"
 
 
 def _module_name(path: Path) -> str:
@@ -15,24 +15,22 @@ def _module_name(path: Path) -> str:
     return ".".join(rel.with_suffix("").parts)
 
 
-def _is_disallowed_import(node: ast.AST, module_name: str) -> bool:
+def _resolve_imported_module(node: ast.AST, module_name: str) -> list[str]:
     if isinstance(node, ast.Import):
-        return any(alias.name == DISALLOWED or alias.name.startswith(f"{DISALLOWED}.") for alias in node.names)
+        return [alias.name for alias in node.names]
+
     if isinstance(node, ast.ImportFrom):
+        package = module_name.split(".")[:-1]
         if node.level:
-            package = module_name.split(".")[:-1]
-            base = package[:]
             up = node.level - 1
-            if up > len(base):
-                resolved = ""
-            else:
-                resolved = ".".join(base[: len(base) - up])
-            if node.module:
-                resolved = f"{resolved}.{node.module}" if resolved else node.module
+            base = package[: len(package) - up] if up <= len(package) else []
+            resolved_base = ".".join(base)
+            target = f"{resolved_base}.{node.module}" if node.module and resolved_base else (node.module or resolved_base)
         else:
-            resolved = node.module or ""
-        return resolved == DISALLOWED or resolved.startswith(f"{DISALLOWED}.")
-    return False
+            target = node.module or ""
+        return [target]
+
+    return []
 
 
 def lint_kernel_dependencies() -> list[str]:
@@ -43,8 +41,11 @@ def lint_kernel_dependencies() -> list[str]:
         module_name = _module_name(path)
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
-            if _is_disallowed_import(node, module_name):
-                violations.append(f"{path.relative_to(ROOT)} imports {DISALLOWED}")
+            for imported in _resolve_imported_module(node, module_name):
+                if imported.startswith("ume.") and not imported.startswith(f"{KERNEL_PREFIX}."):
+                    violations.append(
+                        f"{path.relative_to(ROOT)} imports non-kernel module {imported}"
+                    )
     return violations
 
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..event import Event
-from ..graph_adapter import IGraphAdapter
+from ..kernel.events import Event
+from ..kernel.graph_adapter import IGraphAdapter
 
 
 def build_graph_read_view(

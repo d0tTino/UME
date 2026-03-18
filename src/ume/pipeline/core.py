@@ -9,7 +9,7 @@ import logging
 from time import perf_counter
 from typing import Any, Awaitable, Callable, Mapping
 
-from ..event import Event
+from ..kernel.events import Event
 from ..events.ingress import ingest_transport_payload, IngressAdapter
 from ..metrics import (
     PIPELINE_APPLY_FAILURES_TOTAL,
@@ -17,13 +17,13 @@ from ..metrics import (
     PIPELINE_POLICY_OUTCOMES_TOTAL,
     PIPELINE_STAGE_LATENCY_SECONDS,
 )
-from ..policy.pipeline import (
+from ..kernel.policy import (
     PolicyContext,
     PolicyDecision,
     PolicyPipeline,
     build_default_policy_pipeline,
 )
-from ..processing import ProcessingError
+from ..kernel.processing import ProcessingError
 from ..tracing import tracer
 
 logger = logging.getLogger(__name__)

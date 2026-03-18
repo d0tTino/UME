@@ -8,9 +8,9 @@ import logging
 from confluent_kafka import Consumer, KafkaException, KafkaError
 
 from ..config import settings
-from ..event import EventType
+from ..kernel.events import EventType
 from ..event_ledger import event_ledger
-from ..graph_adapter import IGraphAdapter
+from ..kernel.graph_adapter import IGraphAdapter
 from ..logging_utils import configure_logging
 from ..utils import ssl_config
 from .core import PipelineEnvelope, PipelineOutcome

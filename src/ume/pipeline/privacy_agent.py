@@ -15,7 +15,7 @@ from ..audit import log_audit_entry
 from ..config import settings
 from ..event_ledger import event_ledger
 from ..logging_utils import configure_logging
-from ..policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
+from ..kernel.policy import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from ..plugins.alignment import PolicyViolationError, get_plugins, load_plugins
 from ..tokenization import tokenize
 from ..utils import event_to_camel, event_to_snake, ssl_config

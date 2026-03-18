@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Mapping, Literal, Callable
 
-from ..event import Event, parse_event
-from ..processing import DEFAULT_VERSION
+from ..kernel.events import Event, parse_event
+from ..kernel.processing import DEFAULT_VERSION
 from ..schema_utils import validate_canonical_event
 from .adapters import adapt_cli_payload, adapt_grpc_payload, adapt_kafka_payload
 from .contract import canonicalize_event

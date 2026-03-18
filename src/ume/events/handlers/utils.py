@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from typing import Any
 
-from ...event import Event
+from ...kernel.events import Event
 from ...processing_errors import ProcessingError
 from ...schema_manager import DEFAULT_SCHEMA_MANAGER
 from ...tokenization import tokenize
