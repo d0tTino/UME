@@ -33,13 +33,17 @@ class _Adapter:
 def test_registry_default_backend_lookup() -> None:
     register_graph_backend("persistent", _Adapter, capabilities={"bulk_write"})
 
-    adapter = create_registered_graph_adapter("unknown", "graph.db", default="persistent")
+    adapter = create_registered_graph_adapter(
+        "unknown", "graph.db", default="persistent"
+    )
 
     assert isinstance(adapter, _Adapter)
     assert adapter.db_path == "graph.db"
 
 
-def test_factory_can_use_runtime_registered_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_factory_can_use_runtime_registered_backend(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     register_graph_backend("custom", _Adapter, capabilities={"bulk_write"})
     monkeypatch.setattr(factories, "register_builtin_graph_backends", lambda: None)
     monkeypatch.setattr(
@@ -47,7 +51,9 @@ def test_factory_can_use_runtime_registered_backend(monkeypatch: pytest.MonkeyPa
         "ensure_external_graph_backends_discovered",
         lambda module_paths=(): None,
     )
-    monkeypatch.setattr(factories.settings, "UME_GRAPH_BACKEND", "custom", raising=False)
+    monkeypatch.setattr(
+        factories.settings, "UME_GRAPH_BACKEND", "custom", raising=False
+    )
     monkeypatch.setattr(factories.settings, "UME_ROLE", None, raising=False)
     monkeypatch.setattr(factories, "is_tracing_enabled", lambda: False)
 
@@ -76,13 +82,18 @@ def test_discover_graph_backends_from_modules() -> None:
     assert adapter.db_path == "from-module.db"
 
 
-def test_discover_graph_backends_from_entry_points(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_discover_graph_backends_from_entry_points(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class _FakeEntryPoint:
         name = "ep_custom"
 
         @staticmethod
         def load():
-            return _Adapter
+            return {
+                "constructor": _Adapter,
+                "capabilities": {"bulk_write", "transactional"},
+            }
 
     monkeypatch.setattr(
         "ume.plugins.registry.entry_points",
@@ -94,13 +105,34 @@ def test_discover_graph_backends_from_entry_points(monkeypatch: pytest.MonkeyPat
 
     assert isinstance(adapter, _Adapter)
     assert adapter.db_path == "from-ep.db"
+    assert get_graph_backend_capabilities("ep_custom") == frozenset(
+        {"bulk_write", "transactional"}
+    )
 
 
+def test_discover_graph_backends_from_entry_points_rejects_missing_capabilities(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeEntryPoint:
+        name = "ep_missing_caps"
+
+        @staticmethod
+        def load():
+            return {"constructor": _Adapter}
+
+    monkeypatch.setattr(
+        "ume.plugins.registry.entry_points",
+        lambda group: [_FakeEntryPoint()] if group == "ume.graph_adapters" else [],
+    )
+
+    with pytest.raises(ValueError, match="must declare capabilities"):
+        discover_graph_backends_from_entry_points()
 
 
 def test_register_graph_backend_requires_capabilities() -> None:
     with pytest.raises(ValueError, match="must declare capabilities"):
         register_graph_backend("missing", _Adapter)
+
 
 def test_registry_exposes_backend_capabilities() -> None:
     register_graph_backend("postgres", _Adapter, capabilities={"transactional"})
