@@ -55,20 +55,6 @@ DEPRECATION_REGISTRY: dict[str, DeprecationSpec] = {
         sunset_date=date(2026, 7, 1),
         status="active",
     ),
-    "ume.__getattr__.runtime_export_fallback": DeprecationSpec(
-        key="ume.__getattr__.runtime_export_fallback",
-        replacement="ume.bootstrap.runtime.bootstrap_runtime",
-        sunset_version="0.3.0",
-        sunset_date=date(2026, 7, 1),
-        status="active",
-    ),
-    "ume.__getattr__.compat_exports": DeprecationSpec(
-        key="ume.__getattr__.compat_exports",
-        replacement="Direct module imports from canonical module paths",
-        sunset_version="0.4.0",
-        sunset_date=date(2026, 10, 1),
-        status="active",
-    ),
     "ume.stream_processor": DeprecationSpec(
         key="ume.stream_processor",
         replacement="ume.pipeline.stream_processor",
@@ -77,6 +63,55 @@ DEPRECATION_REGISTRY: dict[str, DeprecationSpec] = {
         status="active",
     ),
 }
+
+for symbol in (
+    "Neo4jGraph",
+    "VectorBackend",
+    "VectorStore",
+    "VectorStoreListener",
+    "create_default_store",
+    "FaissBackend",
+    "ChromaBackend",
+    "generate_embedding",
+    "OntologyListener",
+    "configure_ontology_graph",
+):
+    DEPRECATION_REGISTRY[f"ume.__getattr__.runtime_export_fallback.{symbol}"] = DeprecationSpec(
+        key=f"ume.{symbol}",
+        replacement="ume.bootstrap.runtime.bootstrap_runtime",
+        sunset_version="0.3.0",
+        sunset_date=date(2026, 7, 1),
+        status="active",
+        removal_note="Top-level runtime export fallback retained for external callers only.",
+    )
+
+_COMPAT_REPLACEMENTS = {
+    "MockGraph": "ume.graph.MockGraph",
+    "PersistentGraph": "ume.persistent_graph.PersistentGraph",
+    "RoleBasedGraphAdapter": "ume.rbac_adapter.RoleBasedGraphAdapter",
+    "AccessDeniedError": "ume.rbac_adapter.AccessDeniedError",
+    "PermissionsGraphAdapter": "ume.permissions_adapter.PermissionsGraphAdapter",
+    "PolicyViolationError": "ume.plugins.alignment.PolicyViolationError",
+    "apply_event_to_graph": "ume.processing.apply_event_to_graph",
+    "ProcessingError": "ume.processing.ProcessingError",
+    "snapshot_graph_to_file": "ume.snapshot.snapshot_graph_to_file",
+    "load_graph_from_file": "ume.snapshot.load_graph_from_file",
+    "SnapshotError": "ume.snapshot.SnapshotError",
+    "DEFAULT_SCHEMA_MANAGER": "ume.schema_manager.DEFAULT_SCHEMA_MANAGER",
+    "get_audit_entries": "ume.audit.get_audit_entries",
+    "Task": "ume.dag_executor.Task",
+    "DAGExecutor": "ume.dag_executor.DAGExecutor",
+}
+
+for symbol, replacement in _COMPAT_REPLACEMENTS.items():
+    DEPRECATION_REGISTRY[f"ume.__getattr__.compat_exports.{symbol}"] = DeprecationSpec(
+        key=f"ume.{symbol}",
+        replacement=replacement,
+        sunset_version="0.4.0",
+        sunset_date=date(2026, 10, 1),
+        status="active",
+        removal_note="Top-level compatibility export retained for external callers only.",
+    )
 
 
 def is_past_sunset(spec: DeprecationSpec, *, now: datetime | None = None) -> bool:

@@ -76,6 +76,91 @@ from ume import stream_processor
 from ume.pipeline import stream_processor
 ```
 
+## Deprecated top-level export migration matrix
+
+`src/ume/__init__.py` now keeps only the top-level compatibility exports still exercised by external-facing tests or runtime bootstrap compatibility paths. First-party source modules should import canonical modules directly.
+
+### `_RUNTIME_EXPORTS` audit
+
+| Symbol | Disposition | Replacement import / action | Target removal | Notes |
+| --- | --- | --- | --- | --- |
+| `Neo4jGraph` | keep | Call `ume.bootstrap.runtime.bootstrap_runtime("ume")`, then use `ume.Neo4jGraph` only on the bootstrapped package or import `ume.neo4j_graph.Neo4jGraph` directly where appropriate. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `VectorBackend` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.vector_store.VectorBackend`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `VectorStore` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.vector_store.VectorStore`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `VectorStoreListener` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume._internal.listeners.VectorStoreListener`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `create_default_store` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.vector_store.create_default_store`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `FaissBackend` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.faiss_backend.FaissBackend`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `ChromaBackend` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.chroma_backend.ChromaBackend`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `generate_embedding` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.embedding.generate_embedding`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `OntologyListener` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.embedding.OntologyListener`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+| `configure_ontology_graph` | keep | `ume.bootstrap.runtime.bootstrap_runtime("ume")` or `ume.ontology.configure_ontology_graph`. | `0.3.0` | Runtime bootstrap fallback retained for external callers only. |
+
+### `_COMPAT_EXPORTS` audit
+
+| Symbol | Disposition | Replacement import | Target removal | Notes |
+| --- | --- | --- | --- | --- |
+| `MockGraph` | keep | `from ume.graph import MockGraph` | `0.4.0` | Retained for external/tests compatibility. |
+| `PersistentGraph` | keep | `from ume.persistent_graph import PersistentGraph` | `0.4.0` | Retained for external/tests compatibility. |
+| `PostgresGraph` | remove | `from ume.postgres_graph import PostgresGraph` | removed now | No first-party top-level import callsites remain. |
+| `RedisGraphAdapter` | remove | `from ume.redis_graph_adapter import RedisGraphAdapter` | removed now | No first-party top-level import callsites remain. |
+| `ArangoGraph` | remove | `from ume.arango_graph import ArangoGraph` | removed now | No first-party top-level import callsites remain. |
+| `enable_periodic_snapshot` | remove | `from ume.auto_snapshot import enable_periodic_snapshot` | removed now | Internal callers already use module imports. |
+| `disable_periodic_snapshot` | remove | `from ume.auto_snapshot import disable_periodic_snapshot` | removed now | Internal callers already use module imports. |
+| `enable_snapshot_autosave_and_restore` | remove | `from ume.auto_snapshot import enable_snapshot_autosave_and_restore` | removed now | `ume.cli.prompt` now imports the canonical module directly. |
+| `start_retention_scheduler` | remove | `from ume.retention import start_retention_scheduler` | removed now | Internal callers already use module imports. |
+| `stop_retention_scheduler` | remove | `from ume.retention import stop_retention_scheduler` | removed now | Internal callers already use module imports. |
+| `start_ledger_compaction_scheduler` | remove | `from ume.retention import start_ledger_compaction_scheduler` | removed now | Internal callers already use module imports. |
+| `stop_ledger_compaction_scheduler` | remove | `from ume.retention import stop_ledger_compaction_scheduler` | removed now | Internal callers already use module imports. |
+| `start_memory_aging_scheduler` | remove | `from ume.memory_aging import start_memory_aging_scheduler` | removed now | Internal callers already use module imports. |
+| `stop_memory_aging_scheduler` | remove | `from ume.memory_aging import stop_memory_aging_scheduler` | removed now | Internal callers already use module imports. |
+| `start_vector_age_scheduler` | remove | `from ume.memory_aging import start_vector_age_scheduler` | removed now | Internal callers already use module imports. |
+| `stop_vector_age_scheduler` | remove | `from ume.memory_aging import stop_vector_age_scheduler` | removed now | Internal callers already use module imports. |
+| `RoleBasedGraphAdapter` | keep | `from ume.rbac_adapter import RoleBasedGraphAdapter` | `0.4.0` | Retained for external/tests compatibility. |
+| `AccessDeniedError` | keep | `from ume.rbac_adapter import AccessDeniedError` | `0.4.0` | Retained for external/tests compatibility. |
+| `PermissionsGraphAdapter` | keep | `from ume.permissions_adapter import PermissionsGraphAdapter` | `0.4.0` | Retained for external/tests compatibility. |
+| `PolicyViolationError` | keep | `from ume.plugins.alignment import PolicyViolationError` | `0.4.0` | Retained for external/tests compatibility. |
+| `apply_event_to_graph` | keep | `from ume.processing import apply_event_to_graph` | `0.4.0` | Retained for external/tests compatibility. |
+| `ProcessingError` | keep | `from ume.processing import ProcessingError` | `0.4.0` | Retained for external/tests compatibility. |
+| `log_audit_entry` | remove | `from ume.audit import log_audit_entry` | removed now | `ume.cli.prompt` now imports the canonical module directly. |
+| `get_audit_entries` | keep | `from ume.audit import get_audit_entries` | `0.4.0` | Retained for external/tests compatibility. |
+| `snapshot_graph_to_file` | keep | `from ume.snapshot import snapshot_graph_to_file` | `0.4.0` | Retained for external/tests compatibility. |
+| `load_graph_from_file` | keep | `from ume.snapshot import load_graph_from_file` | `0.4.0` | Retained for external/tests compatibility. |
+| `load_graph_into_existing` | remove | `from ume.snapshot import load_graph_into_existing` | removed now | `ume.cli.prompt` now imports the canonical module directly. |
+| `SnapshotError` | keep | `from ume.snapshot import SnapshotError` | `0.4.0` | Retained for external/tests compatibility. |
+| `validate_event_dict` | remove | `from ume.schema_utils import validate_event_dict` | removed now | Internal callers already use module imports. |
+| `GraphSchema` | remove | `from ume.graph_schema import GraphSchema` | removed now | Internal callers already use module imports. |
+| `load_default_schema` | remove | `from ume.graph_schema import load_default_schema` | removed now | Internal callers already use module imports. |
+| `GraphSchemaManager` | remove | `from ume.schema_manager import GraphSchemaManager` | removed now | Internal callers already use module imports. |
+| `DEFAULT_SCHEMA_MANAGER` | keep | `from ume.schema_manager import DEFAULT_SCHEMA_MANAGER` | `0.4.0` | Internal callers migrated; shim remains for external/tests compatibility. |
+| `ssl_config` | remove | `from ume.utils import ssl_config` | removed now | Internal callers already use module imports. |
+| `EpisodicMemory` | remove | `from ume.memory import EpisodicMemory` | removed now | Internal callers already use package/module imports. |
+| `SemanticMemory` | remove | `from ume.memory import SemanticMemory` | removed now | Internal callers already use package/module imports. |
+| `ColdMemory` | remove | `from ume.memory import ColdMemory` | removed now | Internal callers already use package/module imports. |
+| `LLMFerry` | remove | `from ume.llm_ferry import LLMFerry` | removed now | No first-party top-level import callsites remain. |
+| `score_text` | remove | `from ume.reliability import score_text` | removed now | Internal callers already use module imports. |
+| `filter_low_confidence` | remove | `from ume.reliability import filter_low_confidence` | removed now | Internal callers already use module imports. |
+| `AgentTask` | remove | `from ume.agent_orchestrator import AgentTask` | removed now | No first-party top-level import callsites remain. |
+| `AgentOrchestrator` | remove | `from ume.agent_orchestrator import AgentOrchestrator` | removed now | No first-party top-level import callsites remain. |
+| `Supervisor` | remove | `from ume.agent_orchestrator import Supervisor` | removed now | No first-party top-level import callsites remain. |
+| `Critic` | remove | `from ume.agent_orchestrator import Critic` | removed now | No first-party top-level import callsites remain. |
+| `MessageEnvelope` | remove | `from ume.message_bus import MessageEnvelope` | removed now | No first-party top-level import callsites remain. |
+| `ReflectionAgent` | remove | `from ume.agent_orchestrator import ReflectionAgent` | removed now | No first-party top-level import callsites remain. |
+| `Task` | keep | `from ume.dag_executor import Task` | `0.4.0` | Retained for external/tests compatibility. |
+| `DAGExecutor` | keep | `from ume.dag_executor import DAGExecutor` | `0.4.0` | Retained for external/tests compatibility. |
+| `DAGService` | remove | `from ume.dag_service import DAGService` | removed now | No first-party top-level import callsites remain. |
+| `ResourceScheduler` | remove | `from ume.resource_scheduler import ResourceScheduler` | removed now | No first-party top-level import callsites remain. |
+| `ScheduledTask` | remove | `from ume.resource_scheduler import ScheduledTask` | removed now | No first-party top-level import callsites remain. |
+| `Dossier` | remove | `from ume.dossier import Dossier` | removed now | No first-party top-level import callsites remain. |
+| `tokenize` | remove | `from ume.tokenization import tokenize` | removed now | Internal callers already use module imports. |
+| `create_graph_adapter` | migrate | `from ume.factories import create_graph_adapter` | migrated in-tree, removed now | `ume.cli.prompt` now imports the canonical factory directly. |
+| `create_vector_store` | remove | `from ume.factories import create_vector_store` | removed now | Internal callers already use module imports. |
+| `create_graph` | remove | `from ume.resources import create_graph` | removed now | Internal callers already use module imports. |
+| `graph_factory` | remove | `from ume.resources import graph_factory` | removed now | No first-party top-level import callsites remain. |
+| `vector_store_factory` | remove | `from ume.resources import vector_store_factory` | removed now | No first-party top-level import callsites remain. |
+| `get_capability_manifest` | remove | `from ume.factories import get_capability_manifest` | removed now | Internal callers already use module imports. |
+| `start_dossier_snapshot_scheduler` | remove | `from ume.dossier.scheduler import start_dossier_snapshot_scheduler` | removed now | Internal callers already use module imports. |
+| `stop_dossier_snapshot_scheduler` | remove | `from ume.dossier.scheduler import stop_dossier_snapshot_scheduler` | removed now | Internal callers already use module imports. |
+
 ## Architecture status
 
 ### Implemented components
