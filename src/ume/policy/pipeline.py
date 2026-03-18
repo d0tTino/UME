@@ -19,27 +19,20 @@ import os
 import inspect
 from hashlib import sha256
 from dataclasses import dataclass, field
-from enum import Enum
 from time import time
 from typing import Any, Callable, Dict, List, Optional, Protocol
 
 from jsonschema import ValidationError
 
 from ..consent_ledger import consent_ledger
-from ..event import Event, EventError, parse_event
+from ..kernel.events import EventError, parse_event
+from ..kernel.policy import PolicyContext, PolicyDecision
 from ..events.contract import canonical_to_camel_dict, canonicalize_event
 from ..events.schema_resolution import annotate_canonical_schema
 from ..plugins.alignment import PolicyViolationError, get_plugins, load_plugins
 from ..schema_utils import validate_event_dict
 
 logger = logging.getLogger(__name__)
-
-
-class PolicyDecision(str, Enum):
-    ALLOW = "ALLOW"
-    DENY = "DENY"
-    QUARANTINE = "QUARANTINE"
-    REDACTED = "REDACTED"
 
 
 @dataclass
@@ -64,83 +57,6 @@ class PolicyAuditEvent:
             "details": self.details,
         }
         return payload
-
-
-@dataclass
-class PolicyContext:
-    source: str
-    raw_payload: bytes | None = None
-    transport_data: Dict[str, Any] | None = None
-    canonical_event: Dict[str, Any] | None = None
-    original_event: Event | None = None
-    effective_event: Event | None = None
-    graph_read_view: Dict[str, Any] | None = None
-    redacted: bool = False
-    producer_auth: Dict[str, Any] = field(default_factory=dict)
-    details: Dict[str, Any] = field(default_factory=dict)
-
-    @property
-    def event_payload(self) -> Dict[str, Any]:
-        if self.canonical_event is None:
-            return {}
-        payload = self.canonical_event.get("payload")
-        if isinstance(payload, dict):
-            return payload
-        return {}
-
-    @property
-    def event(self) -> Event | None:
-        """Backward-compatible alias for the effective event."""
-        return self.effective_event
-
-    @property
-    def policy_input(self) -> Dict[str, Any]:
-        event = self.effective_event
-        actor: Dict[str, Any] = {}
-        if event is not None and isinstance(event.subject_entity, dict):
-            actor = dict(event.subject_entity)
-        if not actor:
-            user_id = self.event_payload.get("user_id")
-            if user_id is not None:
-                actor = {"id": str(user_id), "type": "user"}
-
-        event_doc: Dict[str, Any] = {}
-        if event is not None:
-            event_doc = {
-                "event_id": event.event_id,
-                "event_type": event.event_type,
-                "timestamp": event.timestamp,
-                "node_id": event.node_id,
-                "target_node_id": event.target_node_id,
-                "label": event.label,
-                "payload": event.payload,
-                "correlation_id": event.correlation_id,
-                "schema_version": event.schema_version,
-                "producer_id": event.producer_id,
-                "tenant": event.tenant,
-                "producer_signature": event.producer_signature,
-            }
-
-        source_doc: Dict[str, Any] = {"transport": self.source}
-        if event is not None and event.source_service:
-            source_doc["service"] = event.source_service
-
-        return {
-            "event": event_doc,
-            "graph": self.graph_read_view or {},
-            "actor": actor,
-            "source": source_doc,
-            "producer": {
-                "authenticated": bool(self.producer_auth.get("authenticated", False)),
-                "authorized": bool(self.producer_auth.get("authorized", False)),
-                "method": self.producer_auth.get("method"),
-                "claims": self.producer_auth.get("claims", {}),
-            },
-            "metadata": {
-                "redacted": self.redacted,
-                "canonical_metadata": (self.canonical_event or {}).get("metadata", {}),
-            },
-        }
 
 
 @dataclass

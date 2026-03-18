@@ -5,9 +5,9 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Mapping
 
-from ..event import Event
+from ..kernel.events import Event
 from ..events.contract import canonical_to_camel_dict
-from ..policy.pipeline import PolicyDecision
+from ..kernel.policy import PolicyDecision
 from .core import PipelineOutcome
 
 

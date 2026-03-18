@@ -9,7 +9,7 @@ from confluent_kafka import Consumer, KafkaError, KafkaException
 
 from ..config import settings
 from ..events.types import EventType
-from ..graph_adapter import IGraphAdapter
+from ..kernel.graph_adapter import IGraphAdapter
 from ..logging_utils import configure_logging
 from ..pipeline.core import EventPipelineOrchestrator, PipelineOutcome
 from ..resources import create_graph

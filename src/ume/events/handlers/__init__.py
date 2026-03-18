@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...event import EventType
+from ...kernel.events import EventType
 from .base import EventHandler
 from .edge_handlers import (
     CreateEdgeHandler,
