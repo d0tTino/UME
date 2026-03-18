@@ -63,11 +63,41 @@ def _enforce_single_shape_parsing() -> None:
         )
 
 
+def _check_event_contract_parity() -> None:
+    from ume.events.contract_registry import contract_event_types, taxonomy_event_types
+    from ume.events.handlers import EVENT_HANDLER_REGISTRY
+
+    schema_event_types = contract_event_types()
+    taxonomy_types = taxonomy_event_types()
+    parser_types = taxonomy_types
+    handler_types = frozenset(
+        event_type.value if hasattr(event_type, "value") else str(event_type)
+        for event_type in EVENT_HANDLER_REGISTRY
+    )
+
+    layers = {
+        "schema bundle": schema_event_types,
+        "event taxonomy": taxonomy_types,
+        "parser": parser_types,
+        "handler registry": handler_types,
+    }
+    universe = set().union(*layers.values())
+    problems: list[str] = []
+    for layer_name, layer_types in layers.items():
+        missing = sorted(universe - layer_types)
+        if missing:
+            problems.append(f"{layer_name} missing: {', '.join(missing)}")
+
+    if problems:
+        raise SystemExit("Event contract parity check failed:\n" + "\n".join(problems))
+
+
 def main() -> int:
     from ume.events.versioning import downgrade_event, upgrade_event
     from ume.schemas.contracts import supported_contract_majors
 
     _enforce_single_shape_parsing()
+    _check_event_contract_parity()
 
     majors = list(supported_contract_majors())
 

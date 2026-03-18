@@ -27,6 +27,12 @@ Legacy/backward shape upgrades must happen in ``ume.events.legacy_transform``.
 """
 
 
+class CanonicalPayload(dict[str, Any]):
+    def __init__(self, *args: Any, payload_present: bool = True, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.payload_present = payload_present
+
+
 _CAMEL_TO_SNAKE = {
     "eventId": "event_id",
     "eventType": "event_type",
@@ -103,7 +109,7 @@ class CanonicalEnvelope:
         return {
             "metadata": self.metadata.as_dict(),
             "graph": self.graph.as_dict(),
-            "payload": self.payload if isinstance(self.payload, dict) else self.payload,
+            "payload": self.payload,
         }
 
 
@@ -125,9 +131,13 @@ def _envelope_from_data(data: Mapping[str, Any]) -> CanonicalEnvelope:
         target_node_id=data.get("target_node_id"),
         label=data.get("label"),
     )
-    payload = data.get("payload", {})
-    if not isinstance(payload, dict):
-        payload = payload
+    if "payload" in data:
+        payload_raw = data["payload"]
+        payload = payload_raw if isinstance(payload_raw, dict) else payload_raw
+        if isinstance(payload, dict) and not isinstance(payload, CanonicalPayload):
+            payload = CanonicalPayload(payload, payload_present=True)
+    else:
+        payload = CanonicalPayload(payload_present=False)
     return CanonicalEnvelope(metadata=metadata, graph=graph, payload=payload)
 
 
@@ -149,7 +159,7 @@ def _to_external_contract(data: Mapping[str, Any]) -> Dict[str, Any]:
         raise ValueError(
             "event envelope contract is not accepted; run ume.events.legacy_transform first"
         )
-    if "event_type" in data or "event_id" in data or "schema_version" in data:
+    if "event_type" in data or "event_id" in data:
         raise ValueError(
             "snake_case ingest fields are not accepted; run ume.events.legacy_transform first"
         )
@@ -158,18 +168,19 @@ def _to_external_contract(data: Mapping[str, Any]) -> Dict[str, Any]:
         "eventId": data.get("eventId"),
         "eventType": data.get("eventType"),
         "timestamp": data.get("timestamp"),
-        "payload": data.get("payload", {}),
         "sourceService": data.get("sourceService"),
         "producerId": data.get("producerId"),
         "tenant": data.get("tenant"),
         "signature": data.get("signature"),
-        "schemaVersion": data.get("schemaVersion"),
+        "schemaVersion": data.get("schemaVersion") if "schemaVersion" in data else data.get("schema_version"),
         "node_id": data.get("node_id"),
         "target_node_id": data.get("target_node_id"),
         "label": data.get("label"),
         "correlationId": data.get("correlationId"),
         "subjectEntity": data.get("subjectEntity"),
     }
+    if "payload" in data:
+        external["payload"] = data.get("payload")
     return {k: v for k, v in external.items() if v is not None}
 
 
@@ -202,7 +213,7 @@ def canonical_to_legacy_dict(canonical: Mapping[str, Any]) -> Dict[str, Any]:
         "eventId": metadata.get("event_id"),
         "eventType": metadata.get("event_type"),
         "timestamp": metadata.get("timestamp"),
-        "payload": payload if isinstance(payload, dict) else payload,
+        "payload": dict(payload) if isinstance(payload, Mapping) else payload,
         "sourceService": metadata.get("source"),
         "producerId": metadata.get("producer_id"),
         "tenant": metadata.get("tenant"),

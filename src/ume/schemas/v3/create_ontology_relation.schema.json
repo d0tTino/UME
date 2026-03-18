@@ -5,14 +5,15 @@
     "eventType",
     "timestamp",
     "node_id",
+    "target_node_id",
+    "label",
     "eventId",
-    "sourceService",
-    "payload"
+    "sourceService"
   ],
   "properties": {
     "eventType": {
       "type": "string",
-      "const": "UPDATE_NODE_ATTRIBUTES"
+      "const": "CREATE_ONTOLOGY_RELATION"
     },
     "timestamp": {
       "oneOf": [
@@ -53,25 +54,16 @@
     "node_id": {
       "type": "string"
     },
-    "payload": {
-      "type": "object",
-      "required": [
-        "attributes"
-      ],
-      "properties": {
-        "attributes": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": true
-    },
     "target_node_id": {
       "type": "string"
     },
     "label": {
       "type": "string"
+    },
+    "payload": {
+      "type": "object"
     }
   },
   "additionalProperties": false,
-  "title": "UPDATE_NODE_ATTRIBUTES"
+  "title": "CREATE_ONTOLOGY_RELATION"
 }

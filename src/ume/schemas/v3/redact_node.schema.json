@@ -6,13 +6,12 @@
     "timestamp",
     "node_id",
     "eventId",
-    "sourceService",
-    "payload"
+    "sourceService"
   ],
   "properties": {
     "eventType": {
       "type": "string",
-      "const": "UPDATE_NODE_ATTRIBUTES"
+      "const": "REDACT_NODE"
     },
     "timestamp": {
       "oneOf": [
@@ -54,16 +53,7 @@
       "type": "string"
     },
     "payload": {
-      "type": "object",
-      "required": [
-        "attributes"
-      ],
-      "properties": {
-        "attributes": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": true
+      "type": "object"
     },
     "target_node_id": {
       "type": "string"
@@ -73,5 +63,5 @@
     }
   },
   "additionalProperties": false,
-  "title": "UPDATE_NODE_ATTRIBUTES"
+  "title": "REDACT_NODE"
 }
