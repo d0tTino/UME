@@ -1,6 +1,5 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "DELETE_EDGE",
   "type": "object",
   "required": [
     "eventType",
@@ -14,7 +13,7 @@
   "properties": {
     "eventType": {
       "type": "string",
-      "minLength": 1
+      "const": "DELETE_EDGE"
     },
     "timestamp": {
       "oneOf": [
@@ -46,7 +45,8 @@
         "type": {
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "sourceService": {
       "type": "string"
@@ -63,5 +63,7 @@
     "payload": {
       "type": "object"
     }
-  }
+  },
+  "additionalProperties": false,
+  "title": "DELETE_EDGE"
 }

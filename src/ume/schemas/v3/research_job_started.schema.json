@@ -12,7 +12,7 @@
   "properties": {
     "eventType": {
       "type": "string",
-      "const": "UPDATE_NODE_ATTRIBUTES"
+      "const": "RESEARCH_JOB_STARTED"
     },
     "timestamp": {
       "oneOf": [
@@ -54,16 +54,7 @@
       "type": "string"
     },
     "payload": {
-      "type": "object",
-      "required": [
-        "attributes"
-      ],
-      "properties": {
-        "attributes": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": true
+      "type": "object"
     },
     "target_node_id": {
       "type": "string"
@@ -73,5 +64,5 @@
     }
   },
   "additionalProperties": false,
-  "title": "UPDATE_NODE_ATTRIBUTES"
+  "title": "RESEARCH_JOB_STARTED"
 }

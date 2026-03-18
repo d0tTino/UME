@@ -10,6 +10,14 @@
     "create_node.schema.json",
     "update_node_attributes.schema.json",
     "create_edge.schema.json",
-    "delete_edge.schema.json"
+    "delete_edge.schema.json",
+    "research_job_started.schema.json",
+    "document_archived.schema.json",
+    "redact_node.schema.json",
+    "redact_edge.schema.json",
+    "create_ontology_relation.schema.json",
+    "data_source_queried.schema.json",
+    "entity_discovered.schema.json",
+    "anomaly_detected.schema.json"
   ]
 }

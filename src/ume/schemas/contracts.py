@@ -21,6 +21,10 @@ def bundle_path_for_major(major: int) -> Path:
     return resources.files("ume.schemas").joinpath(f"v{major}")
 
 
+def load_bundle_manifest(major: int) -> dict[str, Any]:
+    return load_bundle_schema(major, "bundle.json")
+
+
 def load_bundle_schema(major: int, schema_name: str) -> dict[str, Any]:
     path = bundle_path_for_major(major).joinpath(schema_name)
     with path.open("r", encoding="utf-8") as handle:
