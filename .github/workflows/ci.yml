@@ -39,6 +39,10 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: poetry run python scripts/check_deprecated_callsites.py
 
+      - name: Enforce protobuf generated file layout
+        if: steps.changes.outputs.run == 'true'
+        run: poetry run python scripts/check_generated_protos.py
+
       - name: Set up Node.js
         if: steps.changes.outputs.run == 'true'
         uses: actions/setup-node@v3
