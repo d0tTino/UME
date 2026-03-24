@@ -13,14 +13,12 @@ from ..domains.classification import apply_classification
 from ..domains.extensions import DomainExtension, run_domain_extensions
 from ..events.ingress import IngressAdapter
 from ..events.schema_resolution import resolve_active_schema
-from ..config import settings
 from ..kernel.graph_adapter import IGraphAdapter
 from ..pipeline.core import (
     PipelineEnvelope,
     PipelineOutcome,
 )
 from ..kernel.policy import PolicyDecision
-from ..policy.graph_view import build_graph_read_view
 from ..kernel.processing import DEFAULT_VERSION, apply_event_to_graph
 from ..vector_outbox import enqueue_vector_outbox_event
 from ..deprecations import warn_deprecated
@@ -147,13 +145,6 @@ def build_graph_projector(
         event = context.effective_event
         if canonical is None or event is None:
             raise EventError("missing_canonical_or_event")
-        context.graph_read_view = build_graph_read_view(
-            graph,
-            event=event,
-            max_snapshot_nodes=settings.UME_POLICY_GRAPH_MAX_SNAPSHOT_NODES,
-            neighborhood_depth=settings.UME_POLICY_GRAPH_NEIGHBORHOOD_DEPTH,
-            max_neighborhood_nodes=settings.UME_POLICY_GRAPH_MAX_NEIGHBORHOOD_NODES,
-        )
         resolution = resolve_active_schema(
             canonical,
             explicit_version=schema_version,

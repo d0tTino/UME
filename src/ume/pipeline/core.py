@@ -10,6 +10,7 @@ from time import perf_counter
 from typing import Any, Awaitable, Callable, Mapping
 
 from ..kernel.events import Event
+from ..kernel.graph_adapter import IGraphAdapter
 from ..events.ingress import ingest_transport_payload, IngressAdapter
 from ..metrics import (
     PIPELINE_APPLY_FAILURES_TOTAL,
@@ -92,7 +93,9 @@ class EventPipelineOrchestrator:
         self,
         *,
         policy_pipeline: PolicyPipeline | None = None,
+        graph_adapter: IGraphAdapter | None = None,
     ) -> None:
+        self._graph_adapter = graph_adapter
         self._policy_pipeline = policy_pipeline or build_default_policy_pipeline(
             redactor=lambda payload: (payload, False)
         )
@@ -105,6 +108,7 @@ class EventPipelineOrchestrator:
         decoded: dict[str, Any],
         canonical: dict[str, Any],
         event: Event,
+        graph_adapter: IGraphAdapter | None = None,
     ) -> PolicyContext:
         metadata = canonical.get("metadata", {}) if isinstance(canonical, Mapping) else {}
         active_schema = metadata.get("schema_version") if isinstance(metadata, Mapping) else None
@@ -116,6 +120,7 @@ class EventPipelineOrchestrator:
             canonical_event=canonical,
             original_event=event,
             effective_event=event,
+            graph_adapter=graph_adapter or self._graph_adapter,
         )
         if active_schema is not None:
             context.details["active_schema_version"] = str(active_schema)
@@ -247,6 +252,7 @@ class EventPipelineOrchestrator:
         raw_payload: bytes | None = None,
         projector: Projector | None = None,
         auditor: Auditor | None = None,
+        graph_adapter: IGraphAdapter | None = None,
     ) -> PipelineEnvelope:
         with tracer.start_as_current_span("ume.pipeline.run") as span:
             if hasattr(span, "set_attribute"):
@@ -288,6 +294,7 @@ class EventPipelineOrchestrator:
                 decoded=decoded,
                 canonical=canonical,
                 event=event,
+                graph_adapter=graph_adapter,
             )
             if hasattr(span, "set_attribute"):
                 span.set_attribute("ume.event_id", event.event_id)
@@ -404,6 +411,7 @@ class EventPipelineOrchestrator:
         raw_payload: bytes | None = None,
         projector: AsyncProjector | None = None,
         auditor: AsyncAuditor | None = None,
+        graph_adapter: IGraphAdapter | None = None,
     ) -> PipelineEnvelope:
         decode_start = perf_counter()
         decoded, decode_error = self._decode(payload, source=source)
@@ -426,7 +434,14 @@ class EventPipelineOrchestrator:
         self._record_stage_latency(source=source, stage="validate", outcome=PipelineOutcome.APPLIED, start=normalize_start, event_ref=event_ref, correlation_ref=correlation_ref)
         PIPELINE_INGRESS_TOTAL.labels(source=source, adapter=adapter, event_type=event.event_type, event_ref=event_ref, correlation_ref=correlation_ref).inc()
 
-        context = self._base_context(source=source, raw_payload=raw_payload, decoded=decoded, canonical=canonical, event=event)
+        context = self._base_context(
+            source=source,
+            raw_payload=raw_payload,
+            decoded=decoded,
+            canonical=canonical,
+            event=event,
+            graph_adapter=graph_adapter,
+        )
         policy_start = perf_counter()
         policy_error, provisional_outcome, policy_decision = self._policy(context, source=source)
         event_ref, correlation_ref = self._stage_labels(context=context)
