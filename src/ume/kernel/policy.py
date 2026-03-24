@@ -5,9 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from importlib import import_module
 from enum import Enum
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 from .events import Event
+
+if TYPE_CHECKING:
+    from .graph_adapter import IGraphAdapter
 
 
 class PolicyDecision(str, Enum):
@@ -26,6 +29,7 @@ class PolicyContext:
     original_event: Event | None = None
     effective_event: Event | None = None
     graph_read_view: Dict[str, Any] | None = None
+    graph_adapter: IGraphAdapter | None = None
     redacted: bool = False
     producer_auth: Dict[str, Any] = field(default_factory=dict)
     details: Dict[str, Any] = field(default_factory=dict)

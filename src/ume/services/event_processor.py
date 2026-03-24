@@ -30,6 +30,7 @@ class EventProcessorService:
         adapter: IngressAdapter = "default",
         raw_payload: bytes | None = None,
         projector: Callable[[Any], dict[str, Any] | None] | None = None,
+        graph_adapter: IGraphAdapter | None = None,
     ) -> PipelineEnvelope:
         return self._orchestrator.run(
             payload,
@@ -37,6 +38,7 @@ class EventProcessorService:
             adapter=adapter,
             raw_payload=raw_payload,
             projector=projector,
+            graph_adapter=graph_adapter,
         )
 
     async def process_payload_async(
@@ -47,6 +49,7 @@ class EventProcessorService:
         adapter: IngressAdapter = "default",
         raw_payload: bytes | None = None,
         projector: Callable[[Any], Any] | None = None,
+        graph_adapter: IGraphAdapter | None = None,
     ) -> PipelineEnvelope:
         return await self._orchestrator.run_async(
             payload,
@@ -54,6 +57,7 @@ class EventProcessorService:
             adapter=adapter,
             raw_payload=raw_payload,
             projector=projector,
+            graph_adapter=graph_adapter,
         )
 
     def mutate_graph(
@@ -77,6 +81,7 @@ class EventProcessorService:
                 schema_version=schema_version,
                 classify=classify,
             ),
+            graph_adapter=graph,
         )
         self._audit_privileged_mutation(envelope)
         return envelope

@@ -30,6 +30,8 @@ from ..kernel.policy import PolicyContext, PolicyDecision
 from ..events.contract import canonical_to_camel_dict, canonicalize_event
 from ..events.schema_resolution import annotate_canonical_schema
 from ..plugins.alignment import PolicyViolationError, get_plugins, load_plugins
+from ..policy.graph_view import build_graph_read_view
+from ..config import settings
 from ..schema_utils import validate_event_dict
 
 logger = logging.getLogger(__name__)
@@ -276,6 +278,27 @@ class ConsentStage:
                 reason="missing_consent",
                 details={"user_id": str(user_id), "scope": str(scope)},
             )
+        return None
+
+
+
+
+class GraphViewStage:
+    name = "pre_apply_graph_view"
+
+    def run(self, context: PolicyContext) -> Optional[PolicyResult]:
+        event = context.effective_event
+        graph = context.graph_adapter
+        if event is None or graph is None:
+            return None
+
+        context.graph_read_view = build_graph_read_view(
+            graph,
+            event=event,
+            max_snapshot_nodes=settings.UME_POLICY_GRAPH_MAX_SNAPSHOT_NODES,
+            neighborhood_depth=settings.UME_POLICY_GRAPH_NEIGHBORHOOD_DEPTH,
+            max_neighborhood_nodes=settings.UME_POLICY_GRAPH_MAX_NEIGHBORHOOD_NODES,
+        )
         return None
 
 
@@ -546,10 +569,19 @@ def _default_stage_registry(
     )
     registry.register(
         PolicyStageRegistration(
-            name=AlignmentStage.name,
+            name=GraphViewStage.name,
             phase="pre_apply",
             stage_type="decision",
             order=40,
+            factory=lambda: GraphViewStage(),
+        )
+    )
+    registry.register(
+        PolicyStageRegistration(
+            name=AlignmentStage.name,
+            phase="pre_apply",
+            stage_type="decision",
+            order=50,
             factory=lambda: AlignmentStage(plugin_provider),
         )
     )
@@ -558,7 +590,7 @@ def _default_stage_registry(
             name=PiiRedactionStage.name,
             phase="pre_persist",
             stage_type="transform",
-            order=50,
+            order=60,
             factory=lambda: PiiRedactionStage(redactor),
         )
     )
@@ -567,7 +599,7 @@ def _default_stage_registry(
             name=AuditStage.name,
             phase="post_apply",
             stage_type="post_apply",
-            order=60,
+            order=70,
             factory=lambda: AuditStage(),
         )
     )
