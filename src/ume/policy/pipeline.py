@@ -31,7 +31,7 @@ from ..events.contract import canonical_to_camel_dict, canonicalize_event
 from ..events.schema_resolution import annotate_canonical_schema
 from ..plugins.alignment import PolicyViolationError, get_plugins, load_plugins
 from ..policy.graph_view import build_graph_read_view
-from ..config import settings
+from ..config import settings, get_auth_profile_for_adapter
 from ..schema_utils import validate_event_dict
 
 logger = logging.getLogger(__name__)
@@ -182,6 +182,7 @@ class ProducerAuthStage:
     name = "pre_apply_producer_auth"
 
     def run(self, context: PolicyContext) -> Optional[PolicyResult]:
+        profile_name, auth_profile = get_auth_profile_for_adapter(context.adapter)
         event = context.effective_event
         if event is None:
             return _result(
@@ -228,6 +229,11 @@ class ProducerAuthStage:
             if isinstance(allowed, list):
                 authorized = str(producer_id) in {str(item) for item in allowed}
 
+        allowed_methods = set(auth_profile.get("allowed_methods", ()))
+        if allowed_methods and auth_method not in allowed_methods:
+            authenticated = False
+            authorized = False
+
         context.producer_auth = {
             "authenticated": authenticated,
             "authorized": authorized,
@@ -243,17 +249,27 @@ class ProducerAuthStage:
                 "producer_authorized": authorized,
                 "producer_id": producer_id,
                 "tenant": tenant,
+                "producer_auth_profile": profile_name,
+                "producer_auth_require_authenticated": bool(
+                    auth_profile.get("require_authenticated", True)
+                ),
+                "producer_auth_require_authorized": bool(
+                    auth_profile.get("require_authorized", True)
+                ),
             }
         )
 
-        if not authenticated:
+        require_authenticated = bool(auth_profile.get("require_authenticated", True))
+        require_authorized = bool(auth_profile.get("require_authorized", True))
+
+        if require_authenticated and not authenticated:
             return _result(
                 PolicyDecision.DENY,
                 context,
                 stage=self.name,
                 reason="producer_not_authenticated",
             )
-        if not authorized:
+        if require_authorized and not authorized:
             return _result(
                 PolicyDecision.DENY,
                 context,

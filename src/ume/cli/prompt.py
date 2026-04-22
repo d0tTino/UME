@@ -16,7 +16,7 @@ _src_path = Path(__file__).resolve().parents[3] / "src"
 if _src_path.exists() and str(_src_path) not in sys.path:
     sys.path.insert(0, str(_src_path))
 
-from ume.config import settings
+from ume.config import settings, get_auth_profile_for_adapter
 from ume.events.contract import canonicalize_event
 from ume.audit import get_audit_entries, log_audit_entry
 from ume.auto_snapshot import enable_snapshot_autosave_and_restore
@@ -73,6 +73,18 @@ class UMEPrompt(Cmd):
         self.current_timestamp += timedelta(seconds=1)
         return self.current_timestamp.isoformat()
 
+    def _with_cli_auth_profile(self, event_data: dict[str, object]) -> dict[str, object]:
+        _, auth_profile = get_auth_profile_for_adapter("cli")
+        if not bool(auth_profile.get("inject_local_producer_metadata", False)):
+            return event_data
+        local_event = dict(event_data)
+        local_event.setdefault("producerId", "cli-local-dev")
+        local_event.setdefault("tenant", "local-dev")
+        local_event.setdefault(
+            "signature", "jwt:sub=cli-local-dev;tenant=local-dev;acl_allow=true"
+        )
+        return local_event
+
     # ----- Node commands -----
     def do_new_node(self, arg: str) -> None:
         """new_node <node_id> <json_attributes>"""
@@ -90,7 +102,7 @@ class UMEPrompt(Cmd):
                 "timestamp": self._get_timestamp(),
             }
             DEFAULT_EVENT_PROCESSOR.mutate_graph_or_raise(
-                canonicalize_event(event_data),
+                canonicalize_event(self._with_cli_auth_profile(event_data)),
                 graph=self.graph,
                 source="cli_prompt",
                 adapter="cli",
@@ -119,7 +131,7 @@ class UMEPrompt(Cmd):
                 "timestamp": self._get_timestamp(),
             }
             DEFAULT_EVENT_PROCESSOR.mutate_graph_or_raise(
-                canonicalize_event(event_data),
+                canonicalize_event(self._with_cli_auth_profile(event_data)),
                 graph=self.graph,
                 source="cli_prompt",
                 adapter="cli",
@@ -148,7 +160,7 @@ class UMEPrompt(Cmd):
                 "timestamp": self._get_timestamp(),
             }
             DEFAULT_EVENT_PROCESSOR.mutate_graph_or_raise(
-                canonicalize_event(event_data),
+                canonicalize_event(self._with_cli_auth_profile(event_data)),
                 graph=self.graph,
                 source="cli_prompt",
                 adapter="cli",
@@ -456,4 +468,3 @@ class UMEPrompt(Cmd):
     def do_EOF(self, arg: str) -> bool:
         print("\nGoodbye!")
         return True
-

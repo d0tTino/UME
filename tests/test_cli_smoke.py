@@ -300,6 +300,60 @@ def test_cli_set_peer_and_sync_calls_replicator(monkeypatch: pytest.MonkeyPatch)
     assert "stop" in called
 
 
+def test_cli_dev_profile_injects_local_producer_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ume.cli.prompt as prompt_mod
+
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        prompt_mod,
+        "get_auth_profile_for_adapter",
+        lambda _adapter: (
+            "local-dev",
+            {"inject_local_producer_metadata": True},
+        ),
+    )
+    monkeypatch.setattr(prompt_mod, "canonicalize_event", lambda event: event)
+
+    def fake_mutate(event: dict[str, object], **_: object) -> None:
+        captured.update(event)
+
+    monkeypatch.setattr(prompt_mod.DEFAULT_EVENT_PROCESSOR, "mutate_graph_or_raise", fake_mutate)
+    prompt = prompt_mod.UMEPrompt()
+    prompt.do_new_node('n1 "{}"')
+
+    assert captured["producerId"] == "cli-local-dev"
+    assert captured["tenant"] == "local-dev"
+    assert str(captured["signature"]).startswith("jwt:sub=cli-local-dev")
+
+
+def test_cli_strict_profile_does_not_inject_local_producer_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import ume.cli.prompt as prompt_mod
+
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        prompt_mod,
+        "get_auth_profile_for_adapter",
+        lambda _adapter: (
+            "strict",
+            {"inject_local_producer_metadata": False},
+        ),
+    )
+    monkeypatch.setattr(prompt_mod, "canonicalize_event", lambda event: event)
+
+    def fake_mutate(event: dict[str, object], **_: object) -> None:
+        captured.update(event)
+
+    monkeypatch.setattr(prompt_mod.DEFAULT_EVENT_PROCESSOR, "mutate_graph_or_raise", fake_mutate)
+    prompt = prompt_mod.UMEPrompt()
+    prompt.do_new_node('n1 "{}"')
+
+    assert "producerId" not in captured
+    assert "tenant" not in captured
+    assert "signature" not in captured
+
+
 def test_cli_up_and_down(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     import importlib
     import ume_cli as cli
@@ -1090,4 +1144,3 @@ def test_wrapper_script_runs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     env["PATH"] = f"{bin_dir}{os.pathsep}" + env.get("PATH", "")
     result = subprocess.run(["bash", str(script), "--no-confirm"], env=env, capture_output=True, text=True)
     assert result.returncode == 0
-

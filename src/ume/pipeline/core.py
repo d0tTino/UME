@@ -104,6 +104,7 @@ class EventPipelineOrchestrator:
         self,
         *,
         source: str,
+        adapter: IngressAdapter,
         raw_payload: bytes | None,
         decoded: dict[str, Any],
         canonical: dict[str, Any],
@@ -115,6 +116,7 @@ class EventPipelineOrchestrator:
         resolution_source = metadata.get("schema_resolution_source") if isinstance(metadata, Mapping) else None
         context = PolicyContext(
             source=source,
+            adapter=adapter,
             raw_payload=raw_payload,
             transport_data=decoded,
             canonical_event=canonical,
@@ -290,6 +292,7 @@ class EventPipelineOrchestrator:
 
             context = self._base_context(
                 source=source,
+                adapter=adapter,
                 raw_payload=raw_payload,
                 decoded=decoded,
                 canonical=canonical,
@@ -436,6 +439,7 @@ class EventPipelineOrchestrator:
 
         context = self._base_context(
             source=source,
+            adapter=adapter,
             raw_payload=raw_payload,
             decoded=decoded,
             canonical=canonical,

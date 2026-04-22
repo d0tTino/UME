@@ -1,11 +1,34 @@
 import logging
 import os
-from typing import Any
+from typing import Any, Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 DEFAULT_AUDIT_SIGNING_KEY = "default-key"
+AuthProfileName = Literal["strict", "signed", "local-dev"]
+IngressAdapterName = Literal["cli", "api", "kafka", "grpc", "default"]
+
+AUTH_PROFILES: dict[AuthProfileName, dict[str, Any]] = {
+    "strict": {
+        "require_authenticated": True,
+        "require_authorized": True,
+        "allowed_methods": ("jwt", "signature", "acl"),
+        "inject_local_producer_metadata": False,
+    },
+    "signed": {
+        "require_authenticated": True,
+        "require_authorized": True,
+        "allowed_methods": ("jwt", "signature"),
+        "inject_local_producer_metadata": False,
+    },
+    "local-dev": {
+        "require_authenticated": False,
+        "require_authorized": False,
+        "allowed_methods": ("jwt", "signature", "acl", "none"),
+        "inject_local_producer_metadata": True,
+    },
+}
 
 
 class Settings(BaseSettings):  # type: ignore[misc]
@@ -108,6 +131,10 @@ class Settings(BaseSettings):  # type: ignore[misc]
 
     # gRPC authentication token
     UME_GRPC_TOKEN: str | None = None
+    UME_AUTH_PROFILE_CLI: AuthProfileName | None = None
+    UME_AUTH_PROFILE_API: AuthProfileName | None = None
+    UME_AUTH_PROFILE_KAFKA: AuthProfileName | None = None
+    UME_AUTH_PROFILE_GRPC: AuthProfileName | None = None
 
     # Remote OPA configuration
     OPA_URL: str | None = None
@@ -214,4 +241,38 @@ load_settings.cache_clear()
 # Create a single, importable instance
 settings = load_settings()
 
-__all__ = ["Settings", "settings", "load_settings", "DEFAULT_AUDIT_SIGNING_KEY"]
+
+def _default_adapter_auth_profiles() -> dict[str, AuthProfileName]:
+    dev_mode = settings.UME_ENV.lower() in {"dev", "development", "test"}
+    return {
+        "cli": "local-dev" if dev_mode else "strict",
+        "api": "strict",
+        "kafka": "signed",
+        "grpc": "strict",
+    }
+
+
+def get_auth_profile_for_adapter(adapter: IngressAdapterName) -> tuple[AuthProfileName, dict[str, Any]]:
+    normalized = "api" if adapter == "default" else adapter
+    defaults = _default_adapter_auth_profiles()
+    overrides = {
+        "cli": settings.UME_AUTH_PROFILE_CLI,
+        "api": settings.UME_AUTH_PROFILE_API,
+        "kafka": settings.UME_AUTH_PROFILE_KAFKA,
+        "grpc": settings.UME_AUTH_PROFILE_GRPC,
+    }
+    profile_name = overrides.get(normalized) or defaults.get(normalized, "strict")
+    profile = AUTH_PROFILES[profile_name]
+    return profile_name, dict(profile)
+
+
+__all__ = [
+    "Settings",
+    "settings",
+    "load_settings",
+    "DEFAULT_AUDIT_SIGNING_KEY",
+    "AUTH_PROFILES",
+    "AuthProfileName",
+    "IngressAdapterName",
+    "get_auth_profile_for_adapter",
+]
