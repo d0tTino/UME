@@ -35,6 +35,10 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: python scripts/check_arch_terms.py
 
+      - name: Check deprecated contract terminology legacy labeling
+        if: steps.changes.outputs.run == 'true'
+        run: python scripts/check_contract_terms.py
+
       - name: Check deprecated internal callsites
         if: steps.changes.outputs.run == 'true'
         run: poetry run python scripts/check_deprecated_callsites.py

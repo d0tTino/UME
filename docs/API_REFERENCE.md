@@ -103,6 +103,68 @@ response on success.
 
 UME event contracts are versioned with semantic versions and validated against JSON Schema bundles under `src/ume/schemas/v{major}`.
 
+## Event Contract Shapes and Migration
+
+The canonical event model is documented from two perspectives:
+
+- **Accepted external transport shape** (flat producer-facing keys).
+- **Internal canonical event structure shape** (`metadata` + `graph` + `payload`), which is required by `parse_event`.
+
+### Accepted external transport shape
+
+Ingress accepts flat payload keys including `eventType`, `eventId`, `timestamp`,
+`schemaVersion`, `sourceService`, `producerId`, `tenant`, `signature`,
+`correlationId`, `subjectEntity`, `node_id`, `target_node_id`, `label`, and
+`payload`.
+
+### Internal canonical event structure shape
+
+Runtime parsing requires:
+
+- `metadata.event_type`, `metadata.timestamp`, optional metadata attributes
+- `graph.node_id`, `graph.target_node_id`, `graph.label` (as required per event type)
+- `payload` as an object (or omitted when optional for the event type)
+
+### Required transform for historical payloads
+
+Historical payloads (legacy nested `event` wrapper or legacy snake_case metadata like
+`event_type`) must run through `ume.events.legacy_transform.apply_legacy_transform(...)`
+before canonicalization and parsing.
+
+Canonical migration path:
+
+1. `ume.events.legacy_transform.apply_legacy_transform(...)`
+2. `ume.events.contract.canonicalize_event(...)`
+3. `ume.kernel.events.parse_event(...)`
+
+### Producer migration matrix (legacy/flat -> canonical event structure)
+
+| Producer field (legacy/flat) | Canonical envelope field |
+| --- | --- |
+| `eventType` | `metadata.event_type` |
+| `eventId` | `metadata.event_id` |
+| `timestamp` | `metadata.timestamp` |
+| `schemaVersion` | `metadata.schema_version` |
+| `sourceService` | `metadata.source` |
+| `producerId` | `metadata.producer_id` |
+| `tenant` | `metadata.tenant` |
+| `signature` | `metadata.producer_signature` |
+| `correlationId` | `metadata.correlation_ids.correlation_id` |
+| `subjectEntity` | `metadata.subject_entity` |
+| `node_id` | `graph.node_id` |
+| `target_node_id` | `graph.target_node_id` |
+| `label` | `graph.label` |
+| `payload` | `payload` |
+
+### `parse_event` error examples
+
+- `parse_event expects canonicalized data with 'metadata', 'graph', and 'payload'; apply ume.events.legacy_transform before canonicalization for historical transport shapes`
+- `Missing required event field: eventType`
+- `Invalid type for 'payload': expected dict, got list`
+- `Invalid timestamp format`
+- `Missing required fields for CREATE_EDGE event: node_id, target_node_id, label`
+- `Missing required field 'payload.attributes' for UPDATE_NODE_ATTRIBUTES event.`
+
 ### Required vs optional fields
 
 - **Always required (all majors):** `eventType`, `timestamp`.
