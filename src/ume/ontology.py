@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from .embedding import generate_embedding
 from .event import Event, EventType
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .processing import apply_event_to_graph
 from ._internal.listeners import GraphListener
 

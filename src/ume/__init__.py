@@ -9,7 +9,7 @@ from typing import Any
 from .bootstrap.config import load_config
 from .deprecations import warn_deprecated
 from .event import Event, EventError, EventType, parse_event
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 
 # Load only configuration by default. Optional runtimes are initialized via
 # ``ume.bootstrap.runtime.bootstrap_runtime`` in application entry points.

@@ -14,7 +14,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from .config import settings
 from .rbac_adapter import RoleBasedGraphAdapter
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .async_graph_adapter import IAsyncGraphAdapter
 from .query import Neo4jQueryEngine
 from .vector_store import VectorStore

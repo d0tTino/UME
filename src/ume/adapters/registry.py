@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterable, Mapping, Set as AbstractSet
 from importlib import import_module
 from typing import NotRequired, TypedDict, cast
 
-from ume.graph_adapter import IGraphAdapter
+from ume.kernel.graph_adapter import IGraphAdapter
 from ume.plugins.registry import (
     ConstructorMetadata,
     PluginRegistrationError,

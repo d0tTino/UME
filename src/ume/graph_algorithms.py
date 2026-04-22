@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 from .processing import ProcessingError
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 
 
 def shortest_path(graph: IGraphAdapter, source_id: str, target_id: str) -> List[str]:

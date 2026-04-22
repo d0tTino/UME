@@ -6,7 +6,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, DefaultDict, Dict, List, Optional
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .graph_schema import DEFAULT_SCHEMA
 

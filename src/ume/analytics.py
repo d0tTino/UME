@@ -15,7 +15,7 @@ except ImportError:  # networkx>=3 removes the top-level pagerank helper
         pagerank as _nx_pagerank,
     )
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 
 
 def _to_networkx(graph: IGraphAdapter) -> nx.DiGraph:

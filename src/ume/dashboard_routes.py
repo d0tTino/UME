@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Header, Query
 from sse_starlette.sse import EventSourceResponse
 
 from .audit import get_audit_entries
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .api_deps import get_current_role, get_graph, get_vector_store
 from .event_ledger import event_ledger
 from .realtime_contracts import DashboardDigestEvent, GraphDigestControlEvent

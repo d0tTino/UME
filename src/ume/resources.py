@@ -3,7 +3,7 @@
 
 from typing import Callable
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .factories import create_graph_adapter as _create_base_adapter
 from .vector_store import VectorBackend, create_default_store
 

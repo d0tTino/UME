@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .events.contract import canonicalize_event
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only

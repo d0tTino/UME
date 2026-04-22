@@ -23,7 +23,7 @@ from ume.auto_snapshot import enable_snapshot_autosave_and_restore
 from ume.benchmarks import benchmark_vector_store
 from ume.event import EventError
 from ume.factories import create_graph_adapter
-from ume.graph_adapter import IGraphAdapter
+from ume.kernel.graph_adapter import IGraphAdapter
 from ume.rbac_adapter import RoleBasedGraphAdapter
 from ume.schema_manager import DEFAULT_SCHEMA_MANAGER
 from ume.services.event_processor import DEFAULT_EVENT_PROCESSOR

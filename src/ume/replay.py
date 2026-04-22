@@ -4,7 +4,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from time import time
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .policy.pipeline import PolicyContext, PolicyDecision, build_default_policy_pipeline
 from .processing_errors import ProcessingError
 from .metrics import PIPELINE_REPLAY_LAG_SECONDS

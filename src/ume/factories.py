@@ -24,7 +24,7 @@ from .capabilities import (
 from .capability_schema import build_capability_schema
 from .memory import EpisodicMemory, SemanticMemory
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .tracing import TracingGraphAdapter, is_tracing_enabled
 
 

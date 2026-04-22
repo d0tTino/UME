@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError
 from .processing import ProcessingError

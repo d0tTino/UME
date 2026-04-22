@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from .api_deps import get_graph, get_current_role
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .snapshot import snapshot_graph_to_file, load_graph_into_existing
 from .event_ledger import event_ledger
 from .replay import build_graph_from_ledger
