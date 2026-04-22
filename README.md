@@ -131,40 +131,104 @@ The current system consists of the following main components:
     *   In the demo, it connects to the Kafka/Redpanda broker at `localhost:9092`, subscribes to the `ume-clean-events` topic using the group ID `ume_client_group`.
     *   Upon receiving an event, it logs the event's content. In a more complete system, this component would be responsible for parsing the event, updating the memory graph, triggering actions, or other processing tasks.
 
-### Event Schema
+### Event Contract (Canonical Documentation)
 
-The events exchanged in UME follow a single flat external producer contract. Each event contains a minimal
-set of common fields and any number of type‑specific attributes.
+UME uses a two-stage event contract model:
 
-**Example Event:**
+1. **External transport shape** (producer-facing, flat keys).
+2. **Internal canonical event structure** (runtime-facing, structured sections).
+
+#### Accepted external transport shape
+
+Ingress accepts a flat producer payload (for example `eventType`, `eventId`, `timestamp`, `sourceService`, `node_id`, `target_node_id`, `label`, `payload`).
 
 ```json
 {
-  "eventType": "DEMO_EVENT",
-  "timestamp": "2024-03-15T12:00:00Z",
-  "payload": {"message": "Hello from producer_demo!"},
+  "eventType": "CREATE_EDGE",
   "eventId": "evt-123",
-  "correlationId": "demo-1",
+  "timestamp": "2024-03-15T12:05:21Z",
+  "schemaVersion": "3.0.0",
+  "sourceService": "producer_demo",
+  "producerId": "producer-1",
+  "tenant": "acme",
+  "signature": "sig-abc",
+  "correlationId": "corr-1",
   "subjectEntity": {"id": "demo", "type": "example"},
-  "sourceService": "producer_demo"
+  "node_id": "source_node_alpha",
+  "target_node_id": "target_node_beta",
+  "label": "RELATES_TO",
+  "payload": {"attributes": {"confidence": 0.91}}
 }
 ```
 
-**Canonical Fields**
+#### Internal canonical event structure shape
 
-| Field | Description |
-|-------|-------------|
-| `eventType` | Type of event such as `CREATE_NODE` or `RESEARCH_JOB_STARTED`. |
-| `timestamp` | Event time as either epoch `int` or ISO&nbsp;8601 string; `parse_event()` normalizes it to an epoch integer in the parsed `Event`. |
-| `eventId` | Unique identifier for this event. |
-| `correlationId` | Identifier linking related events. |
-| `subjectEntity` | Object with `id` and `type` describing the entity the event concerns. |
-| `sourceService` | Name of the service that emitted the event. |
-| `payload` | Event‑specific attributes. |
+After canonicalization, runtime code parses this internal envelope:
 
-Ingress accepts one authoritative external contract only (`eventType`, `eventId`, `schemaVersion`, `sourceService`, `node_id`, ...). That external shape is transformed exactly once into UME's internal canonical event (`metadata` + `graph` + `payload`) before parsing.
-Timestamps are accepted as Unix epoch integers or ISO&nbsp;8601 strings (including `Z` suffix) and are normalized internally to an
-epoch integer on the parsed `Event`.
+```json
+{
+  "metadata": {
+    "event_id": "evt-123",
+    "event_type": "CREATE_EDGE",
+    "timestamp": "2024-03-15T12:05:21Z",
+    "schema_version": "3.0.0",
+    "source": "producer_demo",
+    "producer_id": "producer-1",
+    "tenant": "acme",
+    "producer_signature": "sig-abc",
+    "correlation_ids": {"correlation_id": "corr-1"},
+    "subject_entity": {"id": "demo", "type": "example"}
+  },
+  "graph": {
+    "node_id": "source_node_alpha",
+    "target_node_id": "target_node_beta",
+    "label": "RELATES_TO"
+  },
+  "payload": {"attributes": {"confidence": 0.91}}
+}
+```
+
+#### Required legacy transform path
+
+If a producer sends historical shapes (for example nested `event` envelopes or snake_case metadata like `event_type`), ingestion must run:
+
+1. `ume.events.legacy_transform.apply_legacy_transform(...)`
+2. `ume.events.contract.canonicalize_event(...)`
+3. `ume.kernel.events.parse_event(...)`
+
+Direct parsing of historical payloads is intentionally rejected on the canonical parser path.
+
+#### Producer migration matrix (legacy -> canonical event structure)
+
+| Producer field (legacy/flat) | Canonical envelope field |
+| --- | --- |
+| `eventType` | `metadata.event_type` |
+| `eventId` | `metadata.event_id` |
+| `timestamp` | `metadata.timestamp` |
+| `schemaVersion` | `metadata.schema_version` |
+| `sourceService` | `metadata.source` |
+| `producerId` | `metadata.producer_id` |
+| `tenant` | `metadata.tenant` |
+| `signature` | `metadata.producer_signature` |
+| `correlationId` | `metadata.correlation_ids.correlation_id` |
+| `subjectEntity` | `metadata.subject_entity` |
+| `node_id` | `graph.node_id` |
+| `target_node_id` | `graph.target_node_id` |
+| `label` | `graph.label` |
+| `payload` | `payload` |
+
+#### `parse_event` error examples
+
+Representative parser errors include:
+
+- `parse_event expects canonicalized data with 'metadata', 'graph', and 'payload'; apply ume.events.legacy_transform before canonicalization for historical transport shapes`
+- `Missing required event field: eventType`
+- `Invalid canonical metadata`
+- `Invalid timestamp format`
+- `Missing required fields for CREATE_EDGE event: node_id, target_node_id, label`
+- `Missing required field 'payload.attributes' for UPDATE_NODE_ATTRIBUTES event.`
+
+Timestamps are accepted as Unix epoch integers or ISO&nbsp;8601 strings (including `Z` suffix) and normalized to epoch seconds in the parsed `Event`.
 
 All official event types such as `CREATE_NODE` or `CREATE_EDGE` have
 corresponding JSON Schema definitions under `src/ume/schemas`.  Producers
