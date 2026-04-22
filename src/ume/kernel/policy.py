@@ -8,6 +8,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict
 
 from .events import Event
+from ..events.ingress import IngressAdapter
 
 if TYPE_CHECKING:
     from .graph_adapter import IGraphAdapter
@@ -23,6 +24,7 @@ class PolicyDecision(str, Enum):
 @dataclass
 class PolicyContext:
     source: str
+    adapter: IngressAdapter = "default"
     raw_payload: bytes | None = None
     transport_data: Dict[str, Any] | None = None
     canonical_event: Dict[str, Any] | None = None
