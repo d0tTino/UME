@@ -6,7 +6,7 @@ from importlib import import_module, resources
 from types import ModuleType
 from typing import Any, Dict, Iterable, Optional
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 
 from .graph_schema import GraphSchema, load_default_schema
 

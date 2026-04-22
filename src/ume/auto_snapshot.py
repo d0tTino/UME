@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Union
 import logging
 from collections.abc import Callable
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .snapshot import snapshot_graph_to_file, load_graph_into_existing
 
 logger = logging.getLogger(__name__)

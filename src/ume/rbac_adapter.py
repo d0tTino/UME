@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, Optional, List
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 
 
 class AccessDeniedError(PermissionError):

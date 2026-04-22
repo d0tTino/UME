@@ -11,7 +11,7 @@ from neo4j import GraphDatabase, Driver
 from .schema_manager import DEFAULT_SCHEMA_MANAGER
 from .processing import DEFAULT_VERSION
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .graph_algorithms import GraphAlgorithmsMixin
 from .replay_mixin import ReplayMixin

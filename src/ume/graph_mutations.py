@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .graph_schema import DEFAULT_SCHEMA, GraphSchema
 from .processing import ProcessingError
 from .schema_validation import validate_edge, validate_node_attributes

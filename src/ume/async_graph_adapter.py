@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 from .persistent_graph import PersistentGraph
 from .processing import DEFAULT_VERSION, apply_event_to_graph
 from .event import Event, EventError
-from .graph_adapter import IGraphAdapter, AsyncAdapterMixin
+from .kernel.graph_adapter import IGraphAdapter, AsyncAdapterMixin
 from .services.mutate import MutationError, raise_for_rejected_outcome
 from .services.event_processor import EventProcessorService
 

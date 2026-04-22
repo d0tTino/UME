@@ -49,7 +49,7 @@ from .retention import (
 )
 
 from .rbac_adapter import AccessDeniedError
-from .graph_adapter import IGraphAdapter  # noqa: F401
+from .kernel.graph_adapter import IGraphAdapter  # noqa: F401
 from .vector_store import VectorStoreListener
 from .vector_outbox import VectorOutboxDispatcher
 from .factories import create_vector_store, get_capability_manifest

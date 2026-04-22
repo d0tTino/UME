@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import List, cast
 
 from . import api_deps as deps
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .calendar_routes import _ensure_user_node
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError

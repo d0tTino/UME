@@ -5,7 +5,7 @@ import importlib
 import time
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Iterable, cast
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .graph_algorithms import GraphAlgorithmsMixin
 from .audit import log_audit_entry

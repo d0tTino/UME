@@ -24,7 +24,7 @@ from .config import settings
 from .document_guru import reformat_document
 from .reliability import filter_low_confidence
 import inspect
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .async_graph_adapter import IAsyncGraphAdapter, ingest_event_async
 from .permissions_adapter import PermissionsGraphAdapter
 from .query import Neo4jQueryEngine, build_events_query

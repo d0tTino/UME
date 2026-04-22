@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from . import api_deps as deps
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .models import create_user, create_user_group
 from .permissions_adapter import PermissionsGraphAdapter
 from .rbac_adapter import AccessDeniedError

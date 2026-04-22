@@ -5,7 +5,7 @@ from typing import Dict, List
 from fastapi import APIRouter, Depends, HTTPException
 
 from . import api_deps as deps
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .permissions_adapter import PermissionsGraphAdapter
 from .utils import ensure_group_member
 

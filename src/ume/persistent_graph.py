@@ -2,7 +2,7 @@ import sqlite3
 import json
 import time
 from typing import Dict, Any, Optional, List, Tuple, cast
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .audit import log_audit_entry
 from .config import settings

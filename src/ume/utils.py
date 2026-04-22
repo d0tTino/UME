@@ -3,7 +3,7 @@ import os
 
 from fastapi import HTTPException
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .events.contract import canonicalize_event, canonical_to_camel_dict, canonical_to_legacy_dict
 
 

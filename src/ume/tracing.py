@@ -21,7 +21,7 @@ except Exception:  # pragma: no cover - allow tests without opentelemetry instal
 
 
 from .config import settings
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 
 
 class _DummyTracer:

@@ -5,7 +5,7 @@ import importlib
 import json
 from typing import Any, Dict, List, Optional, Tuple, cast, TYPE_CHECKING
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .processing import ProcessingError
 from .graph_algorithms import GraphAlgorithmsMixin
 from .audit import log_audit_entry

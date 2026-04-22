@@ -2,7 +2,7 @@
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Optional, Tuple
 
-from .graph_adapter import IGraphAdapter
+from .kernel.graph_adapter import IGraphAdapter
 from .graph_algorithms import GraphAlgorithmsMixin
 from .graph_schema import DEFAULT_SCHEMA
 from .processing import ProcessingError
