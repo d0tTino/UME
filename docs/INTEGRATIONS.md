@@ -177,14 +177,39 @@ class MemoryBackend(VectorBackend):
 
     # save/load omitted for brevity
 
-register_backend("memory", MemoryBackend)
+register_backend(
+    "memory",
+    MemoryBackend,
+    capabilities={"vector_similarity", "bulk_write"},
+)
 ```
 
-Expose the backend automatically by declaring an entry point in your package:
+Expose the backend automatically by declaring an entry point in your package.
+The entry point target must resolve to a backend spec (or to a mapping of backend
+names to specs), not directly to the backend class. Each spec must include a
+callable `constructor` and a set-like `capabilities` collection; omitting
+`capabilities` is rejected during discovery with a registration error.
+
+```python
+# yourpkg/memory_backend.py
+VECTOR_BACKEND = {
+    "constructor": MemoryBackend,
+    "capabilities": {"vector_similarity", "bulk_write"},
+}
+
+# For one entry point that contributes multiple backends, expose a mapping:
+VECTOR_BACKENDS = {
+    "memory": {
+        "constructor": MemoryBackend,
+        "capabilities": {"vector_similarity", "bulk_write"},
+    }
+}
+```
 
 ```toml
 [project.entry-points."ume.vector_backends"]
-memory = "yourpkg.memory_backend:MemoryBackend"
+memory = "yourpkg.memory_backend:VECTOR_BACKEND"
+# or: memory_backends = "yourpkg.memory_backend:VECTOR_BACKENDS"
 ```
 
 Setting `UME_VECTOR_BACKEND=memory` will then use the plugin when creating a

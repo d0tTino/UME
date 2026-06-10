@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, cast
+from collections.abc import Mapping, Set as AbstractSet
+from typing import Callable, Dict, Iterable, NotRequired, TypedDict, cast
 from types import TracebackType
 import json
 import logging
@@ -20,6 +21,7 @@ from ..vector_store import VectorBackend
 from typing import TYPE_CHECKING
 from ..plugins.registry import (
     ConstructorMetadata,
+    PluginRegistrationError,
     discover_plugins_from_entry_points,
     get_plugin_constructor,
     list_plugins,
@@ -61,6 +63,20 @@ logger = logging.getLogger(__name__)
 
 VECTOR_BACKEND_CAPABILITY = "vector_backend"
 ENTRYPOINT_GROUP = "ume.vector_backends"
+VectorBackendConstructor = Callable[..., VectorBackend]
+
+
+class ExternalVectorBackendSpec(TypedDict):
+    """Strict shape for externally discovered vector backend registrations."""
+
+    constructor: VectorBackendConstructor
+    capabilities: AbstractSet[str]
+    name: NotRequired[str]
+
+
+class VectorBackendRegistrationError(PluginRegistrationError):
+    """Raised when vector backend registration metadata is invalid."""
+
 
 def register_backend(
     name: str,
@@ -70,7 +86,9 @@ def register_backend(
 ) -> None:
     """Register a vector backend class under ``name``."""
     if capabilities is None:
-        raise ValueError(f"Vector backend '{name}' must declare capabilities")
+        raise VectorBackendRegistrationError(
+            f"Vector backend '{name}' must declare capabilities"
+        )
     declared = frozenset(capabilities)
     register_plugin(
         VECTOR_BACKEND_CAPABILITY,
@@ -97,33 +115,115 @@ def available_backends() -> Iterable[str]:
     return [item["name"] for item in list_plugins(capability=VECTOR_BACKEND_CAPABILITY)]
 
 
-def load_entrypoints() -> None:
-    """Load and register backends from ``ENTRYPOINT_GROUP`` entry points."""
-    def _load(name: str, loaded: object) -> None:
-        if not callable(loaded):
-            raise TypeError(f"Vector backend entry point '{name}' is not callable")
-        register_plugin(
-            VECTOR_BACKEND_CAPABILITY,
-            name,
-            loaded,
-            metadata=ConstructorMetadata(
-                source="entry_point",
-                entry_point_group=ENTRYPOINT_GROUP,
-                capabilities=frozenset(),
-                details={
-                    "capability_schema": build_capability_schema(
-                        domain="vector",
-                        backend=name,
-                        declared=frozenset(),
-                    ).as_dict()
-                },
-            ),
+def _expected_vector_spec_schema() -> str:
+    return (
+        "Expected schema: mapping with 'constructor' (callable), "
+        "'capabilities' (set-like collection of strings), and optional 'name' (string)."
+    )
+
+
+def _parse_external_backend_spec(
+    entry_name: str,
+    backend_name: str,
+    spec: object,
+) -> tuple[str, VectorBackendConstructor, AbstractSet[str]]:
+    schema = _expected_vector_spec_schema()
+    if not isinstance(spec, Mapping):
+        raise VectorBackendRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' must provide a "
+            f"backend spec. {schema}"
         )
 
+    constructor = spec.get("constructor")
+    if not callable(constructor):
+        raise VectorBackendRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' must declare a "
+            f"callable constructor. {schema}"
+        )
+
+    capabilities = spec.get("capabilities")
+    if capabilities is None:
+        raise VectorBackendRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' must declare "
+            f"capabilities. {schema}"
+        )
+    if not isinstance(capabilities, AbstractSet):
+        raise VectorBackendRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' capabilities must "
+            f"be a set-like collection. {schema}"
+        )
+
+    resolved_name = spec.get("name")
+    if resolved_name is not None and not isinstance(resolved_name, str):
+        raise VectorBackendRegistrationError(
+            f"Entry point '{entry_name}' backend '{backend_name}' name override must "
+            f"be a string. {schema}"
+        )
+
+    return (
+        resolved_name or backend_name,
+        cast(VectorBackendConstructor, constructor),
+        capabilities,
+    )
+
+
+def _register_external_backend(
+    name: str,
+    constructor: VectorBackendConstructor,
+    capabilities: AbstractSet[str],
+) -> None:
+    declared = frozenset(capabilities)
+    register_plugin(
+        VECTOR_BACKEND_CAPABILITY,
+        name,
+        constructor,
+        metadata=ConstructorMetadata(
+            source="entry_point",
+            entry_point_group=ENTRYPOINT_GROUP,
+            capabilities=declared,
+            details={
+                "capability_schema": build_capability_schema(
+                    domain="vector",
+                    backend=name,
+                    declared=declared,
+                ).as_dict()
+            },
+        ),
+    )
+
+
+def _register_external_loaded_object(name: str, loaded: object) -> None:
+    if isinstance(loaded, Mapping):
+        if "constructor" in loaded or "capabilities" in loaded:
+            backend_name, constructor, capabilities = _parse_external_backend_spec(
+                name,
+                name,
+                loaded,
+            )
+            _register_external_backend(backend_name, constructor, capabilities)
+            return
+
+        for backend_name, spec in loaded.items():
+            resolved_name, constructor, capabilities = _parse_external_backend_spec(
+                name,
+                str(backend_name),
+                spec,
+            )
+            _register_external_backend(resolved_name, constructor, capabilities)
+        return
+
+    raise VectorBackendRegistrationError(
+        f"Entry point '{name}' must load a vector backend spec or backend-spec "
+        f"mapping. {_expected_vector_spec_schema()}"
+    )
+
+
+def load_entrypoints() -> None:
+    """Load and register backends from ``ENTRYPOINT_GROUP`` entry points."""
     discover_plugins_from_entry_points(
         capability=VECTOR_BACKEND_CAPABILITY,
         group=ENTRYPOINT_GROUP,
-        loader=_load,
+        loader=_register_external_loaded_object,
     )
 
 

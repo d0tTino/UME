@@ -255,6 +255,24 @@ plugin discovery:
 - Optional providers are available through plugin modules/entry points (for
   example Pinecone or Milvus integrations)
 
+External vector entry points use the same strict shape as graph backend plugins:
+entry point targets must resolve to either a single backend spec or to a mapping
+of backend names to specs. A vector backend spec is a mapping with this required
+format:
+
+```python
+{
+    "constructor": MemoryBackend,
+    "capabilities": {"vector_similarity", "bulk_write"},
+    # optional: "name": "memory",
+}
+```
+
+The `constructor` value must be callable, and `capabilities` must be a set-like
+collection. Entry points that load a backend class directly, or that omit
+`capabilities`, are rejected during discovery with a vector backend registration
+error that identifies the entry point/backend name and expected schema.
+
 `VectorStore` remains available as a compatibility constructor, but new code
 should use `create_vector_store()`.
 
