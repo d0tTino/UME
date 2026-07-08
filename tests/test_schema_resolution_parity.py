@@ -94,3 +94,30 @@ def test_historical_events_are_normalized_once_then_replayed_uniformly(tmp_path)
     assert canonical["graph"]["node_id"] == "legacy-1"
     assert replay_graph.dump() == graph.dump()
     ledger.close()
+
+
+def test_legacy_and_external_payloads_resolve_to_identical_canonical_contract() -> None:
+    legacy = {
+        "event": {
+            "event_id": "evt-parity",
+            "event_type": "CREATE_EDGE",
+            "timestamp": "2024-01-01T00:00:00Z",
+            "schema_version": "2.0.0",
+            "source": "legacy-service",
+            "nodeId": "a",
+            "targetNodeId": "b",
+            "label": "LINKS_TO",
+        }
+    }
+    external = {
+        "eventId": "evt-parity",
+        "eventType": "CREATE_EDGE",
+        "timestamp": "2024-01-01T00:00:00Z",
+        "schemaVersion": "2.0.0",
+        "sourceService": "legacy-service",
+        "node_id": "a",
+        "target_node_id": "b",
+        "label": "LINKS_TO",
+    }
+
+    assert canonicalize_event(apply_legacy_transform(legacy)) == canonicalize_event(external)

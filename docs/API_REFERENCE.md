@@ -99,47 +99,111 @@ mirror the `/snapshot/save` and `/snapshot/load` HTTP endpoints. Both accept a
 response on success.
 
 
-## Event Contract Version Policy
+## Authoritative External Producer Contract
 
-UME event contracts are versioned with semantic versions and validated against JSON Schema bundles under `src/ume/schemas/v{major}`.
+This section is the single authoritative contract for producers that emit events into UME. Other documents should link here instead of restating the producer payload shape.
 
-## Event Contract Shapes and Migration
+### Boundary summary
 
-The canonical event model is documented from two perspectives:
+1. **External contract accepted at ingress:** producers send one flat JSON object with the field names listed below.
+2. **One canonical transform:** UME converts that external payload with `ume.events.contract.canonicalize_event(...)`. Legacy transports must first be upgraded by `ume.events.legacy_transform.apply_legacy_transform(...)`.
+3. **Parser accepts only canonical form:** `ume.kernel.events.parse_event(...)` accepts only `metadata` + `graph` + `payload`; it rejects producer payloads and legacy wrappers.
 
-- **Accepted external transport shape** (flat producer-facing keys).
-- **Internal canonical event structure shape** (`metadata` + `graph` + `payload`), which is required by `parse_event`.
+### Producer payload fields
 
-### Accepted external transport shape
+Required for every event:
 
-Ingress accepts flat payload keys including `eventType`, `eventId`, `timestamp`,
-`schemaVersion`, `sourceService`, `producerId`, `tenant`, `signature`,
-`correlationId`, `subjectEntity`, `node_id`, `target_node_id`, `label`, and
-`payload`.
+- `eventType` — event operation name, for example `CREATE_NODE` or `CREATE_EDGE`.
+- `timestamp` — Unix timestamp integer or ISO-8601 string.
 
-### Internal canonical event structure shape
+Recommended for all producers and required by schema version `3.x`:
 
-Runtime parsing requires:
+- `eventId` — stable producer event identifier.
+- `sourceService` — stable service name for the producer.
 
-- `metadata.event_type`, `metadata.timestamp`, optional metadata attributes
-- `graph.node_id`, `graph.target_node_id`, `graph.label` (as required per event type)
-- `payload` as an object (or omitted when optional for the event type)
+Optional metadata fields:
 
-### Required transform for historical payloads
+- `schemaVersion` — semantic contract version, for example `3.0.0`.
+- `producerId` — producer instance or principal identifier.
+- `tenant` — tenant or workspace identifier.
+- `signature` — producer signature or integrity token.
+- `correlationId` — request or workflow correlation identifier.
+- `subjectEntity` — object containing `id` and `type` for the event subject.
 
-Historical payloads (legacy nested `event` wrapper or legacy snake_case metadata like
-`event_type`) must run through `ume.events.legacy_transform.apply_legacy_transform(...)`
-before canonicalization and parsing.
+Graph fields, required according to event type:
 
-Canonical migration path:
+- `node_id` — source node identifier.
+- `target_node_id` — target node identifier for edge operations.
+- `label` — edge label for edge operations.
+
+Payload field:
+
+- `payload` — event-specific object. It may be omitted only when optional for the event type.
+
+### Producer example
+
+```json
+{
+  "eventId": "evt-123",
+  "eventType": "CREATE_NODE",
+  "timestamp": "2026-06-22T00:00:00Z",
+  "schemaVersion": "3.0.0",
+  "sourceService": "example-producer",
+  "producerId": "producer-a",
+  "tenant": "tenant-1",
+  "correlationId": "corr-123",
+  "subjectEntity": {"id": "User.u1", "type": "User"},
+  "node_id": "Document.1",
+  "payload": {
+    "node_id": "Document.1",
+    "attributes": {"title": "Launch Checklist"}
+  }
+}
+```
+
+### Canonical parser form
+
+After the one canonical transform, parsers receive this internal shape:
+
+```json
+{
+  "metadata": {
+    "event_id": "evt-123",
+    "event_type": "CREATE_NODE",
+    "timestamp": "2026-06-22T00:00:00Z",
+    "schema_version": "3.0.0",
+    "source": "example-producer",
+    "producer_id": "producer-a",
+    "tenant": "tenant-1",
+    "producer_signature": null,
+    "correlation_ids": {"correlation_id": "corr-123"},
+    "subject_entity": {"id": "User.u1", "type": "User"}
+  },
+  "graph": {
+    "node_id": "Document.1",
+    "target_node_id": null,
+    "label": null
+  },
+  "payload": {
+    "node_id": "Document.1",
+    "attributes": {"title": "Launch Checklist"}
+  }
+}
+```
+
+### Legacy migration: historical inputs only
+
+Historical payloads may contain a nested `event` wrapper or legacy producer metadata aliases such as `event_type`, `event_id`, `schema_version`, `source`, `producer_signature`, `correlation_id`, and `subject_entity`. Those names are not accepted at new ingress. They are permitted only in documented legacy migration contexts and must be transformed once with `apply_legacy_transform(...)` before canonicalization.
+
+Canonical migration path for historical payloads:
 
 1. `ume.events.legacy_transform.apply_legacy_transform(...)`
 2. `ume.events.contract.canonicalize_event(...)`
 3. `ume.kernel.events.parse_event(...)`
 
-### Producer migration matrix (legacy/flat -> canonical event structure)
+### Producer migration matrix (legacy/flat -> canonical parser form)
 
-| Producer field (legacy/flat) | Canonical envelope field |
+| Producer field | Canonical parser field |
 | --- | --- |
 | `eventType` | `metadata.event_type` |
 | `eventId` | `metadata.event_id` |
@@ -165,12 +229,15 @@ Canonical migration path:
 - `Missing required fields for CREATE_EDGE event: node_id, target_node_id, label`
 - `Missing required field 'payload.attributes' for UPDATE_NODE_ATTRIBUTES event.`
 
+## Event Contract Version Policy
+
+UME event contracts are versioned with semantic versions and validated against JSON Schema bundles under `src/ume/schemas/v{major}`.
+
 ### Required vs optional fields
 
 - **Always required (all majors):** `eventType`, `timestamp`.
 - **Version 1.x / 2.x:** identity fields (`eventId`, `sourceService`) are optional for compatibility with historical emitters.
 - **Version 3.x:** `eventId` and `sourceService` are required on all events; replay transformers can synthesize these when upgrading old ledgers.
-- Event-type schemas define additional required fields (`node_id`, `target_node_id`, `label`, `payload`) based on operation type.
 
 ### Additive vs breaking changes
 

@@ -11,6 +11,7 @@ CORE_DOC_FILES = [
     Path("README.md"),
     Path("docs/API_REFERENCE.md"),
     Path("docs/ARCHITECTURE_OVERVIEW.md"),
+    Path("docs/GRAPH_MODEL.md"),
     Path("docs/INTEGRATIONS.md"),
 ]
 
@@ -35,6 +36,38 @@ DEPRECATED_PATTERNS: dict[str, str] = {
     r"\bcanonical envelope\b": "Use canonical event terminology",
 }
 
+CONTRACT_DOC_FILES = [Path("docs/API_REFERENCE.md")]
+CONTRACT_FIELD_PATTERNS: dict[str, str] = {
+    r"`event_type`|\bevent_type\b": (
+        "Use producer-facing eventType except in canonical parser or legacy migration sections"
+    ),
+    r"`event_id`|\bevent_id\b": (
+        "Use producer-facing eventId except in canonical parser or legacy migration sections"
+    ),
+    r"`schema_version`|\bschema_version\b": (
+        "Use producer-facing schemaVersion except in canonical parser, "
+        "version policy, or legacy migration sections"
+    ),
+    r"`producer_signature`|\bproducer_signature\b": (
+        "Use producer-facing signature except in canonical parser or legacy migration sections"
+    ),
+    r"`correlation_id`|\bcorrelation_id\b": (
+        "Use producer-facing correlationId except in canonical parser or legacy migration sections"
+    ),
+    r"`subject_entity`|\bsubject_entity\b": (
+        "Use producer-facing subjectEntity except in canonical parser or legacy migration sections"
+    ),
+}
+
+CONTRACT_ALLOWED_HEADING_TOKENS = (
+    "legacy migration",
+    "historical inputs",
+    "canonical parser",
+    "producer migration matrix",
+    "parse_event error examples",
+    "event contract version policy",
+)
+
 CANONICAL_LINK = "ARCHITECTURE_OVERVIEW.md"
 GLOSSARY_LINK = "GLOSSARY.md"
 LEGACY_HEADING_TOKEN = "legacy migration"
@@ -45,6 +78,13 @@ def _is_legacy_section_heading(line: str) -> bool:
     return stripped.startswith("#") and LEGACY_HEADING_TOKEN in stripped
 
 
+def _is_contract_allowed_section_heading(line: str) -> bool:
+    stripped = line.strip().lower()
+    return stripped.startswith("#") and any(
+        token in stripped for token in CONTRACT_ALLOWED_HEADING_TOKENS
+    )
+
+
 def _is_heading(line: str) -> bool:
     return line.strip().startswith("#")
 
@@ -52,23 +92,47 @@ def _is_heading(line: str) -> bool:
 def find_term_matches(path: Path) -> list[str]:
     matches: list[str] = []
     text = path.read_text(encoding="utf-8")
-    in_legacy_section = False
+    in_approved_section = False
     for lineno, line in enumerate(text.splitlines(), start=1):
-        if _is_legacy_section_heading(line):
-            in_legacy_section = True
+        if _is_legacy_section_heading(line) or _is_contract_allowed_section_heading(line):
+            in_approved_section = True
             continue
-        if in_legacy_section and _is_heading(line):
-            in_legacy_section = False
+        if in_approved_section and _is_heading(line):
+            in_approved_section = False
 
         for pattern, guidance in DEPRECATED_PATTERNS.items():
             if re.search(pattern, line):
-                if in_legacy_section:
+                if in_approved_section or "metadata.schema_version" in line:
                     continue
                 matches.append(
-                    f"{path}:{lineno}: found deprecated term matching /{pattern}/ outside a 'Legacy migration' section. {guidance}."
+                    f"{path}:{lineno}: found deprecated term matching /{pattern}/ "
+                    "outside an approved legacy/canonical contract section. "
+                    f"{guidance}."
                 )
     return matches
 
+
+def find_contract_field_matches(path: Path) -> list[str]:
+    matches: list[str] = []
+    text = path.read_text(encoding="utf-8")
+    in_approved_section = False
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        if _is_contract_allowed_section_heading(line):
+            in_approved_section = True
+            continue
+        if in_approved_section and _is_heading(line):
+            in_approved_section = False
+
+        for pattern, guidance in CONTRACT_FIELD_PATTERNS.items():
+            if re.search(pattern, line):
+                if in_approved_section or "metadata.schema_version" in line:
+                    continue
+                matches.append(
+                    f"{path}:{lineno}: found deprecated producer contract field "
+                    f"matching /{pattern}/ outside an approved legacy/canonical "
+                    f"contract section. {guidance}."
+                )
+    return matches
 
 def check_module_doc_backlinks() -> list[str]:
     failures: list[str] = []
@@ -99,6 +163,12 @@ def main() -> int:
             failures.append(f"{path}: missing expected core doc file")
             continue
         failures.extend(find_term_matches(path))
+
+    for path in CONTRACT_DOC_FILES:
+        if not path.exists():
+            failures.append(f"{path}: missing expected contract doc file")
+            continue
+        failures.extend(find_contract_field_matches(path))
 
     failures.extend(check_module_doc_backlinks())
     failures.extend(check_glossary_links())

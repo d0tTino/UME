@@ -8,6 +8,8 @@ codebase today.
 
 Use [`GLOSSARY.md`](GLOSSARY.md) as the single source for canonical terminology (`backend`, `adapter`, `canonical event`, and `canonical path`).
 
+The authoritative external producer event contract and boundary between ingress normalization, canonicalization, and parsing lives in [`API_REFERENCE.md#authoritative-external-producer-contract`](API_REFERENCE.md#authoritative-external-producer-contract).
+
 
 ## Layered package layout
 

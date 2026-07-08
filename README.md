@@ -9,6 +9,8 @@ The primary motivation behind UME is to equip AI agents with a form of persisten
 
 Use the shared glossary for canonical definitions: [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
+The authoritative external producer event contract is documented in [`docs/API_REFERENCE.md#authoritative-external-producer-contract`](docs/API_REFERENCE.md#authoritative-external-producer-contract).
+
 
 ## Core Modules
 The engine is built from a few key components:
