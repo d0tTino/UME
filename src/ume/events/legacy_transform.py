@@ -5,9 +5,12 @@ from typing import Any, Mapping
 
 
 def apply_legacy_transform(payload: Mapping[str, Any]) -> dict[str, Any]:
-    """Upgrade legacy transport/event shapes to the authoritative external contract.
+    """Upgrade legacy transport/event shapes to the external ingress contract.
 
-    This is the *only* backward-compatibility transform entrypoint. All new ingress
+    Boundary marker: this is the only backward-compatibility transform entrypoint.
+    It normalizes legacy inputs into the authoritative external producer contract;
+    the next hop must be ``ume.events.contract.canonicalize_event(...)``, which is
+    the one canonical transform into parser-ready canonical form. All new ingress
     code should provide already-compliant external payloads and skip this module.
     """
 

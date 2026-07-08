@@ -5,7 +5,13 @@ from datetime import datetime
 from typing import Any, Dict, Mapping
 
 
-"""Event contract transformations.
+"""Canonical transform boundary for UME events.
+
+Boundary marker: this module owns the one canonical transform from the
+authoritative external producer contract accepted at ingress into the canonical
+internal form consumed by parsers. It does not accept historical wrappers or
+legacy producer field aliases; callers must run ``ume.events.legacy_transform``
+first when handling legacy inputs.
 
 Authoritative ingress contract (external): flat producer payload with camelCase
 metadata keys and snake_case graph keys:
@@ -185,7 +191,7 @@ def _to_external_contract(data: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def canonicalize_event(data: Mapping[str, Any]) -> Dict[str, Any]:
-    """Transform authoritative external ingest payload into canonical envelope."""
+    """Perform the single external -> canonical transform accepted by parsers."""
 
     external_data = _to_external_contract(data)
     snake_data = _to_snake_keys(external_data)

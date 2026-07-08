@@ -6,6 +6,8 @@ This document defines the initial ontology used by the Universal Memory Engine.
 It describes node types, edge labels and general versioning guidelines for the
 graph representation.
 
+Producer-facing event fields, canonical transform rules, and parser boundaries are defined in the authoritative external producer contract: [`API_REFERENCE.md#authoritative-external-producer-contract`](API_REFERENCE.md#authoritative-external-producer-contract).
+
 ## Node Types
 
 ### UserMemory

@@ -81,6 +81,13 @@ def _normalize_schema_version(value: Any) -> str | None:
 
 
 def parse_event(data: Dict[str, Any]) -> Event:
+    """Parse only canonical event data produced by ``canonicalize_event``.
+
+    Boundary marker: this parser is deliberately behind ingress normalization and
+    the one canonical transform. It rejects external producer payloads and legacy
+    transport shapes rather than normalizing them itself.
+    """
+
     logger.debug("Parsing canonical event data: %s", data)
 
     if not {"metadata", "graph", "payload"} <= data.keys():
